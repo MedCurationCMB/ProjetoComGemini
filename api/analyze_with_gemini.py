@@ -2,7 +2,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import os
 from supabase import create_client, Client
-from google import genai
+import google.generativeai as genai
 
 # Configuração do cliente Supabase
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
@@ -95,16 +95,21 @@ class handler(BaseHTTPRequestHandler):
             prompt_data = prompt_response.data[0]
             texto_prompt = prompt_data.get('texto_prompt', '')
             
-            # Configurar o cliente Gemini com a chave API fornecida pelo usuário
+            # Inicializar o cliente Gemini com a chave API fornecida pelo usuário
             genai.configure(api_key=api_key)
-            model = genai.models.get('gemini-2.0-flash')
             
             # Preparar o prompt completo
             prompt_completo = f"{texto_prompt}\n\n{content}"
             
             # Chamar a API do Gemini
             try:
+                # Criar um modelo generativo
+                model = genai.GenerativeModel('gemini-2.0-flash')
+                
+                # Gerar resposta
                 response = model.generate_content(prompt_completo)
+                
+                # Extrair o texto da resposta
                 resultado = response.text
                 
                 # Salvar o resultado no Supabase
@@ -130,7 +135,13 @@ class handler(BaseHTTPRequestHandler):
                 }).encode())
                 
         except Exception as e:
+            import traceback
+            traceback_str = traceback.format_exc()
+            
             self.send_response(500)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"error": f"Erro interno do servidor: {str(e)}"}).encode())
+            self.wfile.write(json.dumps({
+                "error": f"Erro interno do servidor: {str(e)}",
+                "traceback": traceback_str
+            }).encode())
