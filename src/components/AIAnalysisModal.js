@@ -1,60 +1,81 @@
-// src/components/AIAnalysisModal.js
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiSend, FiBrain, FiX, FiLoader } from 'react-icons/fi';
 import { supabase } from '../utils/supabaseClient';
 
-const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName, onAnalysisComplete }) => {
+const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName = 'Documento', onAnalysisComplete }) => {
+  // Verificar se recebemos um ID válido
+  if (!documentId) {
+    console.error('AIAnalysisModal: documentId não fornecido');
+    return null;
+  }
+
   const [apiKey, setApiKey] = useState('');
   const [promptId, setPromptId] = useState('');
   const [prompts, setPrompts] = useState([]);
   const [analysis, setAnalysis] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [error, setError] = useState(null);
   
   // Carregar prompts e verificar se já existe análise 
   useEffect(() => {
     if (isOpen && documentId) {
       const fetchData = async () => {
         setInitialLoad(true);
+        setError(null);
+        
         try {
           // Buscar prompts disponíveis
           const { data: { session } } = await supabase.auth.getSession();
           
           if (!session) {
+            setError('Você precisa estar logado para esta ação');
             toast.error('Você precisa estar logado para esta ação');
             return;
           }
           
           // Buscar os prompts disponíveis
-          const promptsResponse = await fetch('/api/get_prompts', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
+          try {
+            const promptsResponse = await fetch('/api/get_prompts', {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+            
+            if (!promptsResponse.ok) {
+              const errorData = await promptsResponse.json();
+              throw new Error(errorData.error || 'Erro ao buscar prompts');
             }
-          });
-          
-          if (!promptsResponse.ok) {
-            const errorData = await promptsResponse.json();
-            throw new Error(errorData.error || 'Erro ao buscar prompts');
+            
+            const promptsData = await promptsResponse.json();
+            setPrompts(promptsData.prompts || []);
+          } catch (promptError) {
+            console.error('Erro ao buscar prompts:', promptError);
+            setError('Falha ao carregar prompts disponíveis');
+            toast.error('Falha ao carregar prompts disponíveis');
           }
           
-          const promptsData = await promptsResponse.json();
-          setPrompts(promptsData.prompts || []);
-          
           // Verificar se já existe análise para este documento
-          const { data, error } = await supabase
-            .from('base_dados_conteudo')
-            .select('retorno_IA')
-            .eq('id', documentId)
-            .single();
-            
-          if (error) {
-            console.error('Erro ao buscar retorno da IA:', error);
-          } else if (data && data.retorno_IA) {
-            setAnalysis(data.retorno_IA);
+          try {
+            const { data, error } = await supabase
+              .from('base_dados_conteudo')
+              .select('retorno_IA')
+              .eq('id', documentId)
+              .single();
+              
+            if (error) {
+              console.error('Erro ao buscar retorno da IA:', error);
+            } else if (data && data.retorno_IA) {
+              setAnalysis(data.retorno_IA);
+            }
+          } catch (analysisError) {
+            console.error('Erro ao verificar análise existente:', analysisError);
+            // Não exibe erro ao usuário aqui, pois é apenas uma verificação preliminar
           }
         } catch (error) {
           console.error('Erro ao carregar dados:', error);
+          setError('Erro ao carregar dados necessários');
           toast.error('Erro ao carregar dados necessários');
         } finally {
           setInitialLoad(false);
@@ -79,12 +100,22 @@ const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName, onAnalysis
     
     try {
       setLoading(true);
+      setError(null);
       
       // Obter a sessão atual do usuário
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        setError('Você precisa estar logado para esta ação');
         toast.error('Você precisa estar logado para esta ação');
+        setLoading(false);
+        return;
+      }
+      
+      // Verificar se o documentId ainda é válido
+      if (!documentId) {
+        setError('ID do documento inválido');
+        toast.error('ID do documento inválido');
         setLoading(false);
         return;
       }
@@ -120,6 +151,7 @@ const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName, onAnalysis
       
     } catch (error) {
       console.error('Erro na análise da IA:', error);
+      setError(error.message || 'Falha ao processar análise');
       toast.error(error.message || 'Falha ao processar análise');
     } finally {
       setLoading(false);
@@ -144,6 +176,12 @@ const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName, onAnalysis
             <FiX />
           </button>
         </div>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+            <p>{error}</p>
+          </div>
+        )}
         
         {initialLoad ? (
           <div className="flex justify-center items-center h-32">
@@ -210,12 +248,21 @@ const AIAnalysisModal = ({ isOpen, onClose, documentId, documentName, onAnalysis
                 className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Selecione um prompt...</option>
-                {prompts.map(prompt => (
-                  <option key={prompt.id} value={prompt.id}>
-                    {prompt.nome}
-                  </option>
-                ))}
+                {Array.isArray(prompts) && prompts.length > 0 ? (
+                  prompts.map(prompt => (
+                    <option key={prompt.id} value={prompt.id}>
+                      {prompt.nome}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>Nenhum prompt disponível</option>
+                )}
               </select>
+              {prompts.length === 0 && !initialLoad && (
+                <p className="text-xs text-red-500 mt-1">
+                  Nenhum prompt encontrado. Verifique se a tabela 'prompts' no Supabase contém registros.
+                </p>
+              )}
             </div>
             
             <div className="flex justify-end">

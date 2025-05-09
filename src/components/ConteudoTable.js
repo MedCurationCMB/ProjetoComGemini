@@ -123,6 +123,11 @@ const ConteudoTable = () => {
 
   // Abrir modal de análise de IA
   const openAIAnalysisModal = (item) => {
+    if (!item || !item.id) {
+      console.error('Documento inválido para análise de IA');
+      toast.error('Não foi possível abrir a análise de IA');
+      return;
+    }
     setSelectedDocumentForAI(item);
     setAiAnalysisModalOpen(true);
   };
@@ -410,13 +415,13 @@ const ConteudoTable = () => {
         </div>
       )}
 
-      {/* Modal para análise de IA */}
-      {aiAnalysisModalOpen && selectedDocumentForAI && (
+      {/* Modal para análise de IA - Com verificação mais robusta de propriedades */}
+      {aiAnalysisModalOpen && selectedDocumentForAI && selectedDocumentForAI.id && (
         <AIAnalysisModal
           isOpen={aiAnalysisModalOpen}
           onClose={() => setAiAnalysisModalOpen(false)}
           documentId={selectedDocumentForAI.id}
-          documentName={selectedDocumentForAI.nome_arquivo}
+          documentName={selectedDocumentForAI.nome_arquivo || 'Documento'}
           onAnalysisComplete={handleAnalysisComplete}
         />
       )}
@@ -502,7 +507,7 @@ const ConteudoTable = () => {
                       }
                     </button>
                     
-                    {/* Botão para Análise de IA */}
+                    {/* Botão para Análise de IA - Verificar se tem conteúdo antes de mostrar */}
                     {item.conteudo && item.conteudo.trim() !== '' && (
                       <button
                         onClick={() => openAIAnalysisModal(item)}
