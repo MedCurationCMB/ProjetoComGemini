@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave } from 'react-icons/fi';
+import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu } from 'react-icons/fi';
+import GeminiAnalysisDialog from './GeminiAnalysisDialog';
 
 const ConteudoTable = () => {
   const [conteudos, setConteudos] = useState([]);
   const [categorias, setCategorias] = useState({});
-  const [projetos, setProjetos] = useState({}); // Novo estado para armazenar projetos
+  const [projetos, setProjetos] = useState({});
   const [loading, setLoading] = useState(true);
   const [textoVisualizando, setTextoVisualizando] = useState(null);
   const [editandoConteudo, setEditandoConteudo] = useState(null);
   const [textoEditado, setTextoEditado] = useState('');
   const [atualizandoTexto, setAtualizandoTexto] = useState(false);
+  const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
+  const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo'); // 'conteudo' ou 'retorno_ia'
 
   useEffect(() => {
     fetchCategorias();
-    fetchProjetos(); // Nova função para buscar projetos
+    fetchProjetos();
     fetchConteudos();
   }, []);
 
@@ -40,7 +43,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Nova função para buscar todos os projetos
+  // Buscar todos os projetos
   const fetchProjetos = async () => {
     try {
       const { data, error } = await supabase
@@ -106,15 +109,25 @@ const ConteudoTable = () => {
     }
   };
 
-  // Visualizar texto extraído
-  const visualizarTexto = (item) => {
-    if (!item.conteudo || item.conteudo.trim() === '') {
-      // Se não houver texto, mostrar modal com mensagem e opção para extrair
-      setEditandoConteudo(item);
-      setTextoEditado('');
-    } else {
-      // Se houver texto, mostrar o texto normalmente
-      setTextoVisualizando(item.conteudo);
+  // Visualizar texto extraído ou resultado da IA
+  const visualizarTexto = (item, tipo = 'conteudo') => {
+    if (tipo === 'conteudo') {
+      if (!item.conteudo || item.conteudo.trim() === '') {
+        // Se não houver texto, mostrar modal com mensagem e opção para extrair
+        setEditandoConteudo(item);
+        setTextoEditado('');
+      } else {
+        // Se houver texto, mostrar o texto normalmente
+        setTextoVisualizando(item.conteudo);
+        setTipoTextoVisualizando('conteudo');
+      }
+    } else if (tipo === 'retorno_ia') {
+      if (item.retorno_ia && item.retorno_ia.trim() !== '') {
+        setTextoVisualizando(item.retorno_ia);
+        setTipoTextoVisualizando('retorno_ia');
+      } else {
+        toast.error('Não há análise de IA disponível para este documento');
+      }
     }
   };
 
@@ -165,6 +178,12 @@ const ConteudoTable = () => {
     } finally {
       setAtualizandoTexto(false);
     }
+  };
+
+  // Função para lidar com a conclusão da análise IA
+  const handleAnalysisComplete = async (resultado) => {
+    // Recarregar a lista para exibir o resultado atualizado
+    await fetchConteudos();
   };
 
   // Nova função para obter URL temporária
@@ -297,7 +316,11 @@ const ConteudoTable = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Texto Extraído</h2>
+              <h2 className="text-xl font-bold">
+                {tipoTextoVisualizando === 'conteudo' 
+                  ? 'Texto Extraído' 
+                  : 'Análise de IA'}
+              </h2>
               <button 
                 onClick={() => setTextoVisualizando(null)}
                 className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
@@ -395,6 +418,15 @@ const ConteudoTable = () => {
         </div>
       )}
 
+      {/* Modal para análise de IA */}
+      {documentoParaAnaliseIA && (
+        <GeminiAnalysisDialog 
+          documentId={documentoParaAnaliseIA}
+          onClose={() => setDocumentoParaAnaliseIA(null)}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
+
       <table className="min-w-full bg-white border border-gray-300">
         <thead>
           <tr>
@@ -434,6 +466,14 @@ const ConteudoTable = () => {
                       ? `${(item.tamanho_arquivo / 1024 / 1024).toFixed(2)} MB` 
                       : 'Tamanho desconhecido'}
                   </div>
+                  {item.retorno_ia && (
+                    <div className="mt-1 flex items-center">
+                      <span className="text-xs inline-flex items-center px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                        <FiCpu className="mr-1 h-3 w-3" />
+                        Análise IA disponível
+                      </span>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {categorias[item.categoria_id] || 'Categoria indisponível'}
@@ -456,6 +496,7 @@ const ConteudoTable = () => {
                     >
                       <FiEye className="h-5 w-5" />
                     </button>
+                    
                     <button
                       onClick={() => downloadPdf(item.id)}
                       className="text-green-600 hover:text-green-900"
@@ -463,8 +504,9 @@ const ConteudoTable = () => {
                     >
                       <FiDownload className="h-5 w-5" />
                     </button>
+                    
                     <button
-                      onClick={() => visualizarTexto(item)}
+                      onClick={() => visualizarTexto(item, 'conteudo')}
                       className="text-purple-600 hover:text-purple-900"
                       title={!item.conteudo || item.conteudo.trim() === '' 
                         ? "Adicionar Texto Extraído" 
@@ -475,6 +517,24 @@ const ConteudoTable = () => {
                         : <FiType className="h-5 w-5" />
                       }
                     </button>
+                    
+                    <button
+                      onClick={() => setDocumentoParaAnaliseIA(item.id)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                      title="Análise com IA"
+                    >
+                      <FiCpu className="h-5 w-5" />
+                    </button>
+                    
+                    {item.retorno_ia && (
+                      <button
+                        onClick={() => visualizarTexto(item, 'retorno_ia')}
+                        className="text-amber-600 hover:text-amber-900"
+                        title="Ver Análise da IA"
+                      >
+                        <FiEye className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

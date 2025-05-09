@@ -1,0 +1,136 @@
+from http.server import BaseHTTPRequestHandler
+import json
+import os
+from supabase import create_client, Client
+from google import genai
+
+# Configuração do cliente Supabase
+supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
+supabase_key = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+class handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        try:
+            # Obtém o tamanho do conteúdo
+            content_length = int(self.headers['Content-Length'])
+            # Lê o conteúdo do corpo da requisição
+            post_data = self.rfile.read(content_length)
+            # Converte para objeto Python
+            data = json.loads(post_data)
+            
+            # Extrai os dados necessários
+            document_id = data.get('document_id')
+            prompt_id = data.get('prompt_id')
+            api_key = data.get('api_key')
+            
+            # Valida os campos necessários
+            if not document_id or not prompt_id or not api_key:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos"}).encode())
+                return
+            
+            # Verificar se o usuário está autenticado através do token JWT
+            auth_header = self.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Token de autenticação não fornecido"}).encode())
+                return
+
+            token = auth_header.split(' ')[1]
+            
+            # Criar cliente Supabase
+            supabase = create_client(supabase_url, supabase_key)
+            
+            # Validar token
+            try:
+                user_response = supabase.auth.get_user(token)
+                user = user_response.user
+                if not user:
+                    raise Exception("Usuário não autenticado")
+            except Exception as auth_error:
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Autenticação inválida: {str(auth_error)}"}).encode())
+                return
+            
+            # Criar um cliente com a chave de serviço
+            service_supabase = create_client(supabase_url, supabase_service_key)
+            
+            # Buscar o documento no Supabase
+            doc_response = service_supabase.table('base_dados_conteudo').select('*').eq('id', document_id).execute()
+            
+            if not doc_response.data:
+                self.send_response(404)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Documento não encontrado"}).encode())
+                return
+            
+            document = doc_response.data[0]
+            content = document.get('conteudo', '')
+            
+            if not content or content.strip() == '':
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Documento não possui texto extraído para análise"}).encode())
+                return
+            
+            # Buscar o prompt no Supabase
+            prompt_response = service_supabase.table('prompts').select('*').eq('id', prompt_id).execute()
+            
+            if not prompt_response.data:
+                self.send_response(404)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Prompt não encontrado"}).encode())
+                return
+            
+            prompt_data = prompt_response.data[0]
+            texto_prompt = prompt_data.get('texto_prompt', '')
+            
+            # Configurar o cliente Gemini com a chave API fornecida pelo usuário
+            genai.configure(api_key=api_key)
+            model = genai.models.get('gemini-2.0-flash')
+            
+            # Preparar o prompt completo
+            prompt_completo = f"{texto_prompt}\n\n{content}"
+            
+            # Chamar a API do Gemini
+            try:
+                response = model.generate_content(prompt_completo)
+                resultado = response.text
+                
+                # Salvar o resultado no Supabase
+                update_response = service_supabase.table('base_dados_conteudo').update({
+                    'retorno_ia': resultado
+                }).eq('id', document_id).execute()
+                
+                # Responder com sucesso
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True,
+                    "resultado": resultado
+                }).encode())
+                
+            except Exception as api_error:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "error": f"Erro na API Gemini: {str(api_error)}"
+                }).encode())
+                
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": f"Erro interno do servidor: {str(e)}"}).encode())
