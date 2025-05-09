@@ -22,10 +22,9 @@ class handler(BaseHTTPRequestHandler):
             # Extrai os dados necessários
             document_id = data.get('document_id')
             prompt_id = data.get('prompt_id')
-            api_key = data.get('api_key')
             
             # Valida os campos necessários
-            if not document_id or not prompt_id or not api_key:
+            if not document_id or not prompt_id:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
@@ -62,6 +61,18 @@ class handler(BaseHTTPRequestHandler):
             # Criar um cliente com a chave de serviço
             service_supabase = create_client(supabase_url, supabase_service_key)
             
+            # Buscar a chave API vigente no Supabase
+            chave_response = service_supabase.table('configuracoes_gemini').select('chave').eq('vigente', True).execute()
+            
+            if not chave_response.data or len(chave_response.data) == 0:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Chave API da Gemini não configurada. Entre em contato com o administrador."}).encode())
+                return
+            
+            api_key = chave_response.data[0].get('chave')
+            
             # Buscar o documento no Supabase
             doc_response = service_supabase.table('base_dados_conteudo').select('*').eq('id', document_id).execute()
             
@@ -95,7 +106,7 @@ class handler(BaseHTTPRequestHandler):
             prompt_data = prompt_response.data[0]
             texto_prompt = prompt_data.get('texto_prompt', '')
             
-            # Inicializar o cliente Gemini com a chave API fornecida pelo usuário
+            # Inicializar o cliente Gemini com a chave API
             genai.configure(api_key=api_key)
             
             # Preparar o prompt completo

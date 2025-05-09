@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabaseClient";
 import { activateUser, deactivateUser } from "../utils/userUtils";
+import GeminiApiKeyManager from "../components/GeminiApiKeyManager";
 
 // Lista de emails de administradores
 const ADMIN_EMAILS = ["rhuanmateuscmb@gmail.com"]; // Substitua pelo seu email de admin
@@ -13,6 +14,7 @@ export default function Admin({ user }) {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios' ou 'gemini'
 
   // Verificar se o usuário é administrador
   const isAdmin = user && ADMIN_EMAILS.includes(user.email);
@@ -30,46 +32,49 @@ export default function Admin({ user }) {
       return;
     }
 
-    // Carregar lista de usuários
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
+    // Carregar lista de usuários se estiver na tab de usuários
+    if (activeTab === 'usuarios') {
+      fetchUsers();
+    }
+  }, [user, isAdmin, router, activeTab]);
 
-        // Obter sessão atual
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+  // Carregar lista de usuários
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
 
-        if (!session) {
-          toast.error("Você precisa estar logado para esta ação");
-          return;
-        }
+      // Obter sessão atual
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        // Chamar a API para buscar todos os usuários
-        const response = await fetch("/api/admin/get-users", {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Erro ao buscar usuários");
-        }
-
-        const data = await response.json();
-        console.log("Usuários recuperados:", data.length);
-        setUsers(data || []);
-      } catch (error) {
-        console.error("Erro ao carregar usuários:", error);
-        toast.error("Não foi possível carregar a lista de usuários");
-      } finally {
-        setLoading(false);
+      if (!session) {
+        toast.error("Você precisa estar logado para esta ação");
+        return;
       }
-    };
 
-    fetchUsers();
-  }, [user, isAdmin, router]);
+      // Chamar a API para buscar todos os usuários
+      const response = await fetch("/api/admin/get-users", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao buscar usuários");
+      }
+
+      const data = await response.json();
+      console.log("Usuários recuperados:", data.length);
+      setUsers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+      toast.error("Não foi possível carregar a lista de usuários");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Função para alternar status ativo/inativo do usuário
   const toggleUserStatus = async (userId, currentStatus) => {
@@ -112,95 +117,138 @@ export default function Admin({ user }) {
   return (
     <div>
       <Head>
-        <title>Administração de Usuários</title>
+        <title>Administração</title>
       </Head>
 
       <Navbar user={user} />
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Administração de Usuários</h1>
+        <h1 className="text-2xl font-bold mb-6">Painel de Administração</h1>
 
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Usuário
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data de Cadastro
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.length > 0 ? (
-                  users.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {item.nome || "Nome não disponível"}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {item.email}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            item.ativo
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {item.ativo ? "Ativo" : "Inativo"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => toggleUserStatus(item.id, item.ativo)}
-                          className={`text-white px-3 py-1 rounded ${
-                            item.ativo
-                              ? "bg-red-600 hover:bg-red-700"
-                              : "bg-green-600 hover:bg-green-700"
-                          }`}
-                        >
-                          {item.ativo ? "Desativar" : "Ativar"}
-                        </button>
-                      </td>
+        {/* Tabs de navegação */}
+        <div className="border-b border-gray-200 mb-6">
+          <ul className="flex flex-wrap -mb-px">
+            <li className="mr-2">
+              <button
+                onClick={() => setActiveTab('usuarios')}
+                className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'usuarios'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Usuários
+              </button>
+            </li>
+            <li className="mr-2">
+              <button
+                onClick={() => setActiveTab('gemini')}
+                className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'gemini'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Configurações da IA
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* Conteúdo da tab atual */}
+        {activeTab === 'usuarios' && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">Gerenciamento de Usuários</h2>
+            
+            {loading ? (
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Usuário
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Data de Cadastro
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
+                      </th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="4"
-                      className="px-6 py-4 text-center text-sm text-gray-500"
-                    >
-                      Nenhum usuário encontrado
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.length > 0 ? (
+                      users.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {item.nome || "Nome não disponível"}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {item.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {new Date(item.created_at).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                item.ativo
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {item.ativo ? "Ativo" : "Inativo"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => toggleUserStatus(item.id, item.ativo)}
+                              className={`text-white px-3 py-1 rounded ${
+                                item.ativo
+                                  ? "bg-red-600 hover:bg-red-700"
+                                  : "bg-green-600 hover:bg-green-700"
+                              }`}
+                            >
+                              {item.ativo ? "Desativar" : "Ativar"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="4"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          Nenhum usuário encontrado
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'gemini' && (
+          <div>
+            <GeminiApiKeyManager />
           </div>
         )}
       </main>

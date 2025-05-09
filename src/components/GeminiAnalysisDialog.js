@@ -1,15 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
-import { FiAward, FiKey, FiZap, FiCpu } from 'react-icons/fi';
+import { FiAward, FiZap, FiCpu } from 'react-icons/fi';
 
 const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
-  const [apiKey, setApiKey] = useState('');
   const [prompts, setPrompts] = useState([]);
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchingPrompts, setFetchingPrompts] = useState(true);
   const [result, setResult] = useState(null);
+  const [chaveDisponivel, setChaveDisponivel] = useState(false);
+
+  // Verificar se existe uma chave configurada
+  useEffect(() => {
+    const verificarChave = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('configuracoes_gemini')
+          .select('*', { count: 'exact', head: true })
+          .eq('vigente', true);
+        
+        if (error) throw error;
+        
+        setChaveDisponivel(count > 0);
+        
+        if (count === 0) {
+          toast.error('Não há chave API configurada para o Gemini. Entre em contato com o administrador.');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar chave API:', error);
+        setChaveDisponivel(false);
+      }
+    };
+    
+    verificarChave();
+  }, []);
 
   // Buscar prompts disponíveis
   useEffect(() => {
@@ -37,8 +62,8 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
 
   // Função para executar a análise
   const handleAnalyze = async () => {
-    if (!apiKey.trim()) {
-      toast.error('Por favor, insira sua chave API do Gemini');
+    if (!chaveDisponivel) {
+      toast.error('Não há chave API configurada para o Gemini. Entre em contato com o administrador.');
       return;
     }
 
@@ -67,8 +92,7 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
         },
         body: JSON.stringify({
           document_id: documentId,
-          prompt_id: selectedPromptId,
-          api_key: apiKey
+          prompt_id: selectedPromptId
         })
       });
       
@@ -110,29 +134,13 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
         
         {!result ? (
           <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-blue-800">
-                <span className="font-semibold">Importante:</span> A chave API que você fornecer será utilizada apenas para esta análise 
-                e não será armazenada em nosso servidor.
-              </p>
-            </div>
-            
-            <div>
-              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <FiKey className="mr-2" /> Chave API do Gemini
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Insira sua chave API do Gemini"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Você pode obter sua chave API no <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a>
-              </p>
-            </div>
+            {!chaveDisponivel && (
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-red-800 font-medium">
+                  Não há chave API configurada para o Gemini. Entre em contato com o administrador para configurar a chave.
+                </p>
+              </div>
+            )}
             
             <div>
               <label htmlFor="promptSelect" className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
@@ -173,9 +181,9 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
             <div className="pt-4">
               <button
                 onClick={handleAnalyze}
-                disabled={loading || !apiKey || !selectedPromptId}
+                disabled={loading || !selectedPromptId || !chaveDisponivel}
                 className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white ${
-                  loading || !apiKey || !selectedPromptId
+                  loading || !selectedPromptId || !chaveDisponivel
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
                 }`}
