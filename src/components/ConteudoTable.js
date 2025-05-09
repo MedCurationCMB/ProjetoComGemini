@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiBrain } from 'react-icons/fi';
-import AIAnalysisModal from './AIAnalysisModal';
+import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave } from 'react-icons/fi';
 
 const ConteudoTable = () => {
   const [conteudos, setConteudos] = useState([]);
   const [categorias, setCategorias] = useState({});
-  const [projetos, setProjetos] = useState({}); // Estado para armazenar projetos
+  const [projetos, setProjetos] = useState({}); // Novo estado para armazenar projetos
   const [loading, setLoading] = useState(true);
   const [textoVisualizando, setTextoVisualizando] = useState(null);
   const [editandoConteudo, setEditandoConteudo] = useState(null);
   const [textoEditado, setTextoEditado] = useState('');
   const [atualizandoTexto, setAtualizandoTexto] = useState(false);
-  const [aiAnalysisModalOpen, setAiAnalysisModalOpen] = useState(false);
-  const [selectedDocumentForAI, setSelectedDocumentForAI] = useState(null);
 
   useEffect(() => {
     fetchCategorias();
-    fetchProjetos(); // Função para buscar projetos
+    fetchProjetos(); // Nova função para buscar projetos
     fetchConteudos();
   }, []);
 
@@ -43,7 +40,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Função para buscar todos os projetos
+  // Nova função para buscar todos os projetos
   const fetchProjetos = async () => {
     try {
       const { data, error } = await supabase
@@ -121,23 +118,6 @@ const ConteudoTable = () => {
     }
   };
 
-  // Abrir modal de análise de IA
-  const openAIAnalysisModal = (item) => {
-    if (!item || !item.id) {
-      console.error('Documento inválido para análise de IA');
-      toast.error('Não foi possível abrir a análise de IA');
-      return;
-    }
-    setSelectedDocumentForAI(item);
-    setAiAnalysisModalOpen(true);
-  };
-
-  // Função para quando a análise é completada
-  const handleAnalysisComplete = (response) => {
-    // Atualizar a lista de documentos para refletir a nova análise
-    fetchConteudos();
-  };
-
   // Salvar o texto editado no Supabase
   const salvarTextoEditado = async () => {
     if (!editandoConteudo || !textoEditado.trim()) {
@@ -187,7 +167,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Função para obter URL temporária
+  // Nova função para obter URL temporária
   const getTemporaryUrl = async (documentId) => {
     try {
       // Obter o token de autenticação atual
@@ -224,7 +204,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Função para abrir PDF
+  // Função modificada para abrir PDF
   const openPdf = async (documentId) => {
     try {
       // Mostrar loading
@@ -251,7 +231,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Função para download do PDF
+  // Função modificada para download do PDF
   const downloadPdf = async (documentId) => {
     try {
       // Mostrar loading
@@ -415,17 +395,6 @@ const ConteudoTable = () => {
         </div>
       )}
 
-      {/* Modal para análise de IA - Com verificação mais robusta de propriedades */}
-      {aiAnalysisModalOpen && selectedDocumentForAI && selectedDocumentForAI.id && (
-        <AIAnalysisModal
-          isOpen={aiAnalysisModalOpen}
-          onClose={() => setAiAnalysisModalOpen(false)}
-          documentId={selectedDocumentForAI.id}
-          documentName={selectedDocumentForAI.nome_arquivo || 'Documento'}
-          onAnalysisComplete={handleAnalysisComplete}
-        />
-      )}
-
       <table className="min-w-full bg-white border border-gray-300">
         <thead>
           <tr>
@@ -506,17 +475,6 @@ const ConteudoTable = () => {
                         : <FiType className="h-5 w-5" />
                       }
                     </button>
-                    
-                    {/* Botão para Análise de IA - Verificar se tem conteúdo antes de mostrar */}
-                    {item.conteudo && item.conteudo.trim() !== '' && (
-                      <button
-                        onClick={() => openAIAnalysisModal(item)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title={item.retorno_IA ? "Ver Análise da IA" : "Solicitar Análise da IA"}
-                      >
-                        <FiBrain className="h-5 w-5" />
-                      </button>
-                    )}
                   </div>
                 </td>
               </tr>
