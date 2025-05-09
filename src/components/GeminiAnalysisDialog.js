@@ -9,12 +9,14 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
   const [loading, setLoading] = useState(false);
   const [fetchingPrompts, setFetchingPrompts] = useState(true);
   const [result, setResult] = useState(null);
-  const [chaveDisponivel, setChaveDisponivel] = useState(false);
+  const [chaveDisponivel, setChaveDisponivel] = useState(null); // Alterado para null inicialmente
+  const [checkingKey, setCheckingKey] = useState(true); // Novo estado para controlar a verificação
 
   // Verificar se existe uma chave configurada
   useEffect(() => {
     const verificarChave = async () => {
       try {
+        setCheckingKey(true);
         const { count, error } = await supabase
           .from('configuracoes_gemini')
           .select('*', { count: 'exact', head: true })
@@ -22,14 +24,18 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
         
         if (error) throw error;
         
-        setChaveDisponivel(count > 0);
+        const hasKey = count > 0;
+        setChaveDisponivel(hasKey);
         
-        if (count === 0) {
+        if (!hasKey) {
           toast.error('Não há chave API configurada para o Gemini. Entre em contato com o administrador.');
         }
       } catch (error) {
         console.error('Erro ao verificar chave API:', error);
         setChaveDisponivel(false);
+        toast.error('Erro ao verificar configuração da API Gemini');
+      } finally {
+        setCheckingKey(false);
       }
     };
     
@@ -132,9 +138,15 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
           </button>
         </div>
         
-        {!result ? (
+        {/* Verificação e carregamento */}
+        {checkingKey ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+            <span>Verificando configuração da API...</span>
+          </div>
+        ) : !result ? (
           <div className="space-y-6">
-            {!chaveDisponivel && (
+            {chaveDisponivel === false && (
               <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                 <p className="text-red-800 font-medium">
                   Não há chave API configurada para o Gemini. Entre em contato com o administrador para configurar a chave.
@@ -181,9 +193,9 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
             <div className="pt-4">
               <button
                 onClick={handleAnalyze}
-                disabled={loading || !selectedPromptId || !chaveDisponivel}
+                disabled={loading || !selectedPromptId || chaveDisponivel === false}
                 className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white ${
-                  loading || !selectedPromptId || !chaveDisponivel
+                  loading || !selectedPromptId || chaveDisponivel === false
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
                 }`}
