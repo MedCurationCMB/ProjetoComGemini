@@ -7,7 +7,6 @@ from datetime import datetime
 import cgi
 import sys
 import traceback
-import asyncio
 from supabase import create_client, Client
 from b2sdk.v2 import InMemoryAccountInfo, B2Api, UploadSourceBytes
 from PyPDF2 import PdfReader
@@ -38,7 +37,7 @@ def extrair_texto_pdf(pdf_file):
         print(f"Erro ao extrair texto do PDF: {str(e)}")
         return ""
 
-async def analisar_com_ia(file_id, texto_extraido, service_supabase):
+def analisar_com_ia(file_id, texto_extraido, service_supabase):
     """Função para analisar o texto com a API Gemini"""
     try:
         # Verificar se o texto extraído existe e não está vazio
@@ -78,6 +77,8 @@ async def analisar_com_ia(file_id, texto_extraido, service_supabase):
         # Preparar o prompt completo
         prompt_completo = f"{texto_prompt}\n\n{texto_extraido}"
         
+        print(f"Enviando texto para análise com IA (Prompt: {texto_prompt[:50]}...)")
+        
         # Chamar a API Gemini
         model = genai.GenerativeModel('gemini-2.0-flash')
         response = model.generate_content(prompt_completo)
@@ -85,16 +86,19 @@ async def analisar_com_ia(file_id, texto_extraido, service_supabase):
         # Extrair o texto da resposta
         resultado = response.text
         
+        print(f"Resposta da IA recebida. Tamanho: {len(resultado)} caracteres")
+        
         # Atualizar o documento com o resultado da análise
         update_response = service_supabase.table('base_dados_conteudo').update({
             'retorno_ia': resultado
         }).eq('id', file_id).execute()
         
-        print(f"Análise de IA concluída para o documento {file_id}")
+        print(f"Análise de IA concluída e salva para o documento {file_id}")
         return resultado
         
     except Exception as e:
         print(f"Erro ao analisar com IA: {str(e)}")
+        traceback.print_exc()  # Imprime stack trace completo
         return None
 
 def get_download_url(bucket, filename, valid_duration=600):
@@ -327,26 +331,28 @@ class handler(BaseHTTPRequestHandler):
                 
                 print("Registro inserido com sucesso no Supabase")
                 
-                # Adicionar esta nova parte: Análise automática com IA se texto foi extraído
+                # Variável para indicar se análise com IA foi realizada
+                analise_realizada = False
+                resultado_analise = None
+                
+                # Verificar se tem texto extraído e realizar análise direta (não assíncrona)
                 if texto_extraido and texto_extraido.strip() != "":
                     print("Texto extraído com sucesso, iniciando análise com IA")
-                    # Executar análise de IA em background (assíncrono)
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    # Executar a função de análise de IA
-                    retorno_ia = loop.run_until_complete(analisar_com_ia(file_id, texto_extraido, service_supabase))
-                    loop.close()
                     
-                    # Adicionar informação sobre a análise de IA ao resultado
-                    if retorno_ia:
-                        print("Análise de IA concluída com sucesso")
+                    # Chamar análise diretamente (sem asyncio)
+                    resultado_analise = analisar_com_ia(file_id, texto_extraido, service_supabase)
+                    
+                    if resultado_analise:
+                        analise_realizada = True
+                        print("Análise de IA completada e salva")
                     else:
-                        print("Análise de IA não gerou resultados ou encontrou erro")
+                        print("Falha ao realizar análise de IA")
                 else:
                     print("Sem texto extraído, pulando análise de IA")
                 
             except Exception as db_error:
                 print(f"Erro ao inserir no banco de dados: {str(db_error)}")
+                print(traceback.format_exc())  # Adicionar stack trace
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
@@ -371,8 +377,8 @@ class handler(BaseHTTPRequestHandler):
                 "data_upload": current_time,
                 "conteudo": texto_extraido,
                 "backblaze_filename": unique_filename,  # Incluindo backblaze_filename na resposta
-                "analise_ia_realizada": texto_extraido and texto_extraido.strip() != "",  # Informar se a análise foi realizada
-                "message": "Arquivo enviado com sucesso"
+                "analise_ia_realizada": analise_realizada,  # Informar se a análise foi realizada
+                "message": "Arquivo enviado com sucesso" + (" e analisado com IA" if analise_realizada else "")
             }).encode())
             
         except Exception as e:
