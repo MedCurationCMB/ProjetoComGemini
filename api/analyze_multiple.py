@@ -20,7 +20,7 @@ class handler(BaseHTTPRequestHandler):
             data = json.loads(post_data)
             
             # Extrai os dados necessários
-            prompt_id = data.get('prompt_id')
+            prompt_id = data.get('prompt_id')  # UUID como string
             text_to_analyze = data.get('text_to_analyze')  # Texto combinado dos documentos
             
             # Valida os campos necessários
@@ -74,6 +74,7 @@ class handler(BaseHTTPRequestHandler):
             api_key = chave_response.data[0].get('chave')
             
             # Buscar o prompt no Supabase
+            # Note que o prompt_id é um UUID, mas o Supabase trata isso automaticamente
             prompt_response = service_supabase.table('prompts').select('*').eq('id', prompt_id).execute()
             
             if not prompt_response.data:

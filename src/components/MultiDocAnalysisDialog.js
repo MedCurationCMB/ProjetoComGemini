@@ -212,50 +212,32 @@ const MultiDocAnalysisDialog = ({ selectedDocuments, onClose, onAnalysisComplete
         return;
       }
       
-      // Buscar o prompt no Supabase
-      const { data: promptData, error: promptError } = await supabase
-        .from('prompts')
-        .select('texto_prompt')
-        .eq('id', selectedPromptId)
-        .single();
+      // Chamar a API de análise
+      const response = await fetch('/api/analyze_multiple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          prompt_id: selectedPromptId,
+          text_to_analyze: textsResult.combinedText
+        })
+      });
       
-      if (promptError || !promptData) {
-        throw new Error('Erro ao obter o texto do prompt');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao processar análise');
       }
       
-      // Buscar chave API do Gemini
-      const { data: keyData, error: keyError } = await supabase
-        .from('configuracoes_gemini')
-        .select('chave')
-        .eq('vigente', true)
-        .single();
-      
-      if (keyError || !keyData) {
-        throw new Error('Erro ao obter a chave API do Gemini');
-      }
-      
-      // Configurar cliente Gemini
-      genai.configure({api_key: keyData.chave});
-      
-      // Criar modelo generativo
-      const model = genai.GenerativeModel('gemini-pro');
-      
-      // Preparar o prompt completo
-      const promptCompleto = `${promptData.texto_prompt}\n\n${textsResult.combinedText}`;
-      
-      // Gerar resposta
-      const response = await model.generateContent(promptCompleto);
-      
-      // Extrair o texto da resposta
-      const resultado = response.text;
-      
-      setResult(resultado);
+      setResult(data.resultado);
       
       // Atualizar o registro com o resultado
-      await updateAnalysisWithResult(analysisId, resultado);
+      await updateAnalysisWithResult(analysisId, data.resultado);
       
       if (onAnalysisComplete) {
-        onAnalysisComplete(resultado, analysisId);
+        onAnalysisComplete(data.resultado, analysisId);
       }
       
       toast.success('Análise concluída com sucesso!');

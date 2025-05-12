@@ -25,7 +25,7 @@ const HistoricoAnalises = () => {
       
       if (error) throw error;
       
-      // Converter array em objeto para fácil acesso por ID
+      // Converter array em objeto para fácil acesso por ID (UUID)
       const promptsObj = {};
       data.forEach(prompt => {
         promptsObj[prompt.id] = prompt.nome_prompt;
@@ -217,16 +217,18 @@ const HistoricoAnalises = () => {
                       onClick={() => visualizarTexto(item, 'retorno')}
                       className="text-indigo-600 hover:text-indigo-900"
                       title="Ver Resultado da Análise"
+                      disabled={!item.retorno_ia}
                     >
-                      <FiCpu className="h-5 w-5" />
+                      <FiCpu className={`h-5 w-5 ${!item.retorno_ia ? 'opacity-50' : ''}`} />
                     </button>
                     
                     <button
                       onClick={() => visualizarTexto(item, 'documentos')}
                       className="text-blue-600 hover:text-blue-900"
                       title="Ver Textos dos Documentos"
+                      disabled={!item.texto_documentos_selecionados}
                     >
-                      <FiEye className="h-5 w-5" />
+                      <FiEye className={`h-5 w-5 ${!item.texto_documentos_selecionados ? 'opacity-50' : ''}`} />
                     </button>
                     
                     <button
