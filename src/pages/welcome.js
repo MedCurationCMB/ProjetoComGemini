@@ -40,7 +40,7 @@ export default function Welcome({ user }) {
             Aqui você pode visualizar nossa base de dados de conteúdo e fazer upload de novos arquivos.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <Link 
               href="/tabela" 
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
@@ -53,6 +53,22 @@ export default function Welcome({ user }) {
               className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Upload de Arquivo PDF
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4 mt-4">
+            <Link 
+              href="/analise-multipla" 
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Análise Múltipla de Documentos
+            </Link>
+            
+            <Link 
+              href="/historico-analises" 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Histórico de Análises
             </Link>
           </div>
             
