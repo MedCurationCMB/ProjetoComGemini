@@ -23,7 +23,7 @@ export default function Tabela({ user }) {
   return (
     <div>
       <Head>
-      <title>Base de Dados de Conteúdo</title>
+        <title>Base de Dados de Conteúdo</title>
       </Head>
 
       <Navbar user={user} />
@@ -32,12 +32,21 @@ export default function Tabela({ user }) {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Base de Dados de Conteúdo</h1>
           
-          <Link 
-            href="/welcome" 
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Voltar
-          </Link>
+          <div className="flex space-x-4">
+            <Link 
+              href="/upload" 
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Novo Upload
+            </Link>
+            
+            <Link 
+              href="/welcome" 
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Voltar
+            </Link>
+          </div>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
