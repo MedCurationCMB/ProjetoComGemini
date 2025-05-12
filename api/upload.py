@@ -36,27 +36,47 @@ def extrair_texto_pdf(pdf_file):
         print(f"Erro ao extrair texto do PDF: {str(e)}")
         return ""
 
-def analisar_com_ia(file_id, texto_extraido, service_supabase):
+def analisar_com_ia(file_id, texto_extraido, categoria_id, service_supabase):
     """Função para analisar o texto com a API Gemini"""
     try:
         # Verificar se o texto extraído existe e não está vazio
         if not texto_extraido or texto_extraido.strip() == '':
             print("Texto extraído vazio, pulando análise de IA")
             return None
-            
-        # Verificar se existe um prompt padrão configurado
-        prompt_response = service_supabase.table('prompts').select('*').eq('padrao', True).execute()
         
-        if not prompt_response.data or len(prompt_response.data) == 0:
-            print("Nenhum prompt padrão configurado, usando prompt genérico")
-            # Usar prompt genérico se não houver prompt padrão
-            prompt_id = None
-            texto_prompt = "Faça uma análise do texto abaixo:"
-        else:
-            # Usar o prompt padrão configurado
-            prompt_data = prompt_response.data[0]
-            prompt_id = prompt_data.get('id')
-            texto_prompt = prompt_data.get('texto_prompt', "Faça uma análise do texto abaixo:")
+        # Primeiro, verificar se existe um prompt vinculado à categoria do documento
+        prompt_id = None
+        texto_prompt = None
+        
+        if categoria_id:
+            # Buscar categoria para verificar se tem prompt_id
+            categoria_response = service_supabase.table('categorias').select('prompt_id').eq('id', categoria_id).execute()
+            
+            if categoria_response.data and len(categoria_response.data) > 0 and categoria_response.data[0].get('prompt_id'):
+                prompt_id = categoria_response.data[0].get('prompt_id')
+                
+                # Buscar o texto do prompt vinculado à categoria
+                prompt_categoria_response = service_supabase.table('prompts').select('texto_prompt').eq('id', prompt_id).execute()
+                
+                if prompt_categoria_response.data and len(prompt_categoria_response.data) > 0:
+                    texto_prompt = prompt_categoria_response.data[0].get('texto_prompt')
+                    print(f"Usando prompt vinculado à categoria (ID: {prompt_id})")
+        
+        # Se não encontrou prompt vinculado à categoria, buscar o prompt padrão
+        if not texto_prompt:
+            prompt_response = service_supabase.table('prompts').select('*').eq('padrao', True).execute()
+            
+            if not prompt_response.data or len(prompt_response.data) == 0:
+                print("Nenhum prompt padrão configurado, usando prompt genérico")
+                # Usar prompt genérico se não houver prompt padrão
+                prompt_id = None
+                texto_prompt = "Faça uma análise do texto abaixo:"
+            else:
+                # Usar o prompt padrão configurado
+                prompt_data = prompt_response.data[0]
+                prompt_id = prompt_data.get('id')
+                texto_prompt = prompt_data.get('texto_prompt', "Faça uma análise do texto abaixo:")
+                print(f"Usando prompt padrão (ID: {prompt_id})")
         
         # Buscar a chave API vigente do Gemini
         chave_response = service_supabase.table('configuracoes_gemini').select('chave').eq('vigente', True).execute()
@@ -345,8 +365,8 @@ class handler(BaseHTTPRequestHandler):
                 if texto_extraido and texto_extraido.strip() != "" and file_id is not None:
                     print("Texto extraído com sucesso, iniciando análise com IA")
                     
-                    # Chamar análise diretamente (sem asyncio)
-                    resultado_analise = analisar_com_ia(file_id, texto_extraido, service_supabase)
+                    # Chamar análise diretamente (sem asyncio), passando também categoria_id
+                    resultado_analise = analisar_com_ia(file_id, texto_extraido, categoria_id, service_supabase)
                     
                     if resultado_analise:
                         analise_realizada = True
