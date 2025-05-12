@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2, FiTag } from 'react-icons/fi';
+import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2 } from 'react-icons/fi';
 
 const HistoricoAnalises = () => {
   const [analises, setAnalises] = useState([]);
@@ -28,10 +28,7 @@ const HistoricoAnalises = () => {
       // Converter array em objeto para fácil acesso por ID (UUID)
       const promptsObj = {};
       data.forEach(prompt => {
-        promptsObj[prompt.id] = {
-          nome: prompt.nome_prompt,
-          texto: prompt.texto_prompt
-        };
+        promptsObj[prompt.id] = prompt.nome_prompt;
       });
       
       setPrompts(promptsObj);
@@ -108,15 +105,6 @@ const HistoricoAnalises = () => {
       setTextoVisualizando(item.texto_documentos_selecionados);
       setTipoTextoVisualizando('documentos');
       setTituloVisualizando('Texto dos Documentos Analisados');
-    } else if (tipo === 'prompt') {
-      if (!item.prompt_id || !prompts[item.prompt_id] || !prompts[item.prompt_id].texto) {
-        toast.error('Não foi possível recuperar o texto do prompt');
-        return;
-      }
-      
-      setTextoVisualizando(prompts[item.prompt_id].texto);
-      setTipoTextoVisualizando('prompt');
-      setTituloVisualizando('Texto do Prompt Utilizado');
     }
   };
 
@@ -211,19 +199,8 @@ const HistoricoAnalises = () => {
                   <div className="flex items-center">
                     <FiCpu className="h-5 w-5 text-purple-500 mr-2" />
                     <div className="text-sm text-gray-900">
-                      {item.prompt_id && prompts[item.prompt_id] 
-                        ? prompts[item.prompt_id].nome 
-                        : 'Prompt não disponível'}
+                      {prompts[item.prompt_id] || 'Prompt não disponível'}
                     </div>
-                    {item.prompt_id && prompts[item.prompt_id] && (
-                      <button
-                        onClick={() => visualizarTexto(item, 'prompt')}
-                        className="ml-2 text-blue-600 hover:text-blue-900"
-                        title="Ver Texto do Prompt"
-                      >
-                        <FiTag className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
