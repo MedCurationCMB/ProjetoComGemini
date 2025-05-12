@@ -7,6 +7,7 @@ from datetime import datetime
 import cgi
 import sys
 import traceback
+import asyncio
 from supabase import create_client, Client
 from b2sdk.v2 import InMemoryAccountInfo, B2Api, UploadSourceBytes
 from PyPDF2 import PdfReader
@@ -36,6 +37,65 @@ def extrair_texto_pdf(pdf_file):
     except Exception as e:
         print(f"Erro ao extrair texto do PDF: {str(e)}")
         return ""
+
+async def analisar_com_ia(file_id, texto_extraido, service_supabase):
+    """Função para analisar o texto com a API Gemini"""
+    try:
+        # Verificar se o texto extraído existe e não está vazio
+        if not texto_extraido or texto_extraido.strip() == '':
+            print("Texto extraído vazio, pulando análise de IA")
+            return None
+            
+        # Verificar se existe um prompt padrão configurado
+        prompt_response = service_supabase.table('prompts').select('*').eq('padrao', True).execute()
+        
+        if not prompt_response.data or len(prompt_response.data) == 0:
+            print("Nenhum prompt padrão configurado, usando prompt genérico")
+            # Usar prompt genérico se não houver prompt padrão
+            prompt_id = None
+            texto_prompt = "Faça uma análise do texto abaixo:"
+        else:
+            # Usar o prompt padrão configurado
+            prompt_data = prompt_response.data[0]
+            prompt_id = prompt_data.get('id')
+            texto_prompt = prompt_data.get('texto_prompt', "Faça uma análise do texto abaixo:")
+        
+        # Buscar a chave API vigente do Gemini
+        chave_response = service_supabase.table('configuracoes_gemini').select('chave').eq('vigente', True).execute()
+        
+        if not chave_response.data or len(chave_response.data) == 0:
+            print("Chave API Gemini não configurada, pulando análise")
+            return None
+            
+        api_key = chave_response.data[0].get('chave')
+        
+        # Importar Google Generative AI
+        import google.generativeai as genai
+        
+        # Configurar API
+        genai.configure(api_key=api_key)
+        
+        # Preparar o prompt completo
+        prompt_completo = f"{texto_prompt}\n\n{texto_extraido}"
+        
+        # Chamar a API Gemini
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt_completo)
+        
+        # Extrair o texto da resposta
+        resultado = response.text
+        
+        # Atualizar o documento com o resultado da análise
+        update_response = service_supabase.table('base_dados_conteudo').update({
+            'retorno_ia': resultado
+        }).eq('id', file_id).execute()
+        
+        print(f"Análise de IA concluída para o documento {file_id}")
+        return resultado
+        
+    except Exception as e:
+        print(f"Erro ao analisar com IA: {str(e)}")
+        return None
 
 def get_download_url(bucket, filename, valid_duration=600):
     """Função para gerar URL de download segura"""
@@ -267,6 +327,24 @@ class handler(BaseHTTPRequestHandler):
                 
                 print("Registro inserido com sucesso no Supabase")
                 
+                # Adicionar esta nova parte: Análise automática com IA se texto foi extraído
+                if texto_extraido and texto_extraido.strip() != "":
+                    print("Texto extraído com sucesso, iniciando análise com IA")
+                    # Executar análise de IA em background (assíncrono)
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    # Executar a função de análise de IA
+                    retorno_ia = loop.run_until_complete(analisar_com_ia(file_id, texto_extraido, service_supabase))
+                    loop.close()
+                    
+                    # Adicionar informação sobre a análise de IA ao resultado
+                    if retorno_ia:
+                        print("Análise de IA concluída com sucesso")
+                    else:
+                        print("Análise de IA não gerou resultados ou encontrou erro")
+                else:
+                    print("Sem texto extraído, pulando análise de IA")
+                
             except Exception as db_error:
                 print(f"Erro ao inserir no banco de dados: {str(db_error)}")
                 self.send_response(500)
@@ -293,6 +371,7 @@ class handler(BaseHTTPRequestHandler):
                 "data_upload": current_time,
                 "conteudo": texto_extraido,
                 "backblaze_filename": unique_filename,  # Incluindo backblaze_filename na resposta
+                "analise_ia_realizada": texto_extraido and texto_extraido.strip() != "",  # Informar se a análise foi realizada
                 "message": "Arquivo enviado com sucesso"
             }).encode())
             
