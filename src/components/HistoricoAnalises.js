@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2 } from 'react-icons/fi';
+import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2, FiCode } from 'react-icons/fi';
 
 const HistoricoAnalises = () => {
   const [analises, setAnalises] = useState([]);
@@ -10,6 +10,9 @@ const HistoricoAnalises = () => {
   const [textoVisualizando, setTextoVisualizando] = useState(null);
   const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('retorno'); // 'retorno' ou 'documentos'
   const [tituloVisualizando, setTituloVisualizando] = useState('');
+
+  // ID do prompt HTML que necessita visualização especial
+  const PROMPT_HTML_ID = "21992115-d737-48bd-90fa-d9f824dd4ceb";
 
   useEffect(() => {
     fetchPrompts();
@@ -108,6 +111,33 @@ const HistoricoAnalises = () => {
     }
   };
 
+  // Nova função para visualizar o HTML em uma nova aba
+  const visualizarHTML = (htmlContent) => {
+    if (!htmlContent || htmlContent.trim() === '') {
+      toast.error('Não há conteúdo HTML para visualizar');
+      return;
+    }
+
+    try {
+      // Criar uma nova janela/aba
+      const newWindow = window.open('', '_blank');
+      
+      if (!newWindow) {
+        toast.error('Não foi possível abrir uma nova aba. Verifique se o bloqueador de pop-ups está desativado.');
+        return;
+      }
+      
+      // Escrever o conteúdo HTML na nova aba
+      newWindow.document.write(htmlContent);
+      newWindow.document.close();
+      
+      toast.success('HTML aberto em nova aba');
+    } catch (error) {
+      console.error('Erro ao visualizar HTML:', error);
+      toast.error('Erro ao abrir conteúdo HTML');
+    }
+  };
+
   // Excluir análise
   const excluirAnalise = async (id) => {
     if (!confirm('Tem certeza que deseja excluir esta análise?')) {
@@ -201,6 +231,11 @@ const HistoricoAnalises = () => {
                     <div className="text-sm text-gray-900">
                       {prompts[item.prompt_id] || 'Prompt não disponível'}
                     </div>
+                    {item.prompt_id === PROMPT_HTML_ID && (
+                      <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        HTML
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -230,6 +265,17 @@ const HistoricoAnalises = () => {
                     >
                       <FiEye className={`h-5 w-5 ${!item.texto_documentos_selecionados ? 'opacity-50' : ''}`} />
                     </button>
+                    
+                    {/* Novo botão para visualizar HTML */}
+                    {item.prompt_id === PROMPT_HTML_ID && item.retorno_ia && (
+                      <button
+                        onClick={() => visualizarHTML(item.retorno_ia)}
+                        className="text-green-600 hover:text-green-900"
+                        title="Visualizar HTML"
+                      >
+                        <FiCode className="h-5 w-5" />
+                      </button>
+                    )}
                     
                     <button
                       onClick={() => excluirAnalise(item.id)}
