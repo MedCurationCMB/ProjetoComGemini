@@ -8,7 +8,7 @@ from urllib.parse import parse_qs
 # Configuração do cliente Supabase
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 supabase_key = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")  # Adicione essa linha
+supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # Configuração do Backblaze B2
@@ -75,13 +75,23 @@ class handler(BaseHTTPRequestHandler):
             # Extrair o ID do documento da URL
             # A URL deve ser algo como /api/get_download_url?id=123
             query_components = parse_qs(self.path.split('?')[1]) if '?' in self.path else {}
-            document_id = query_components.get('id', [''])[0]
+            document_id_str = query_components.get('id', [''])[0]
             
-            if not document_id:
+            if not document_id_str:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "ID do documento não fornecido"}).encode())
+                return
+            
+            # Converter document_id para int se for string de dígitos
+            try:
+                document_id = int(document_id_str)
+            except ValueError:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "ID do documento inválido. Deve ser um número."}).encode())
                 return
             
             # Criar um cliente com a chave de serviço (como em upload.py)

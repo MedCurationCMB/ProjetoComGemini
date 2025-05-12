@@ -15,7 +15,17 @@ class handler(BaseHTTPRequestHandler):
             return self.get_conteudos()
         # Rota para obter conteúdo por ID
         elif self.path.startswith("/api/conteudo/"):
-            id = self.path.split("/")[-1]
+            id_str = self.path.split("/")[-1]
+            # Converter ID para int se possível
+            try:
+                id = int(id_str)
+            except ValueError:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "ID inválido. Deve ser um número inteiro."}).encode())
+                return
+                
             return self.get_conteudo_by_id(id)
         else:
             self.send_response(404)
@@ -69,7 +79,7 @@ class handler(BaseHTTPRequestHandler):
             # Configura o token no cliente Supabase
             supabase.auth.set_auth(token)
             
-            # Busca o conteúdo pelo ID
+            # Busca o conteúdo pelo ID (que agora é um int)
             response = supabase.table('base_dados_conteudo').select('*').eq('id', id).execute()
             
             if not response.data:

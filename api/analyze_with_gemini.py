@@ -31,6 +31,10 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos"}).encode())
                 return
             
+            # Converter document_id para int se for string
+            if isinstance(document_id, str) and document_id.isdigit():
+                document_id = int(document_id)
+            
             # Verificar se o usuário está autenticado através do token JWT
             auth_header = self.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):

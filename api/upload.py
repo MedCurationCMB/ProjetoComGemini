@@ -1,7 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
-import uuid
 import time
 from datetime import datetime
 import cgi
@@ -202,7 +201,7 @@ class handler(BaseHTTPRequestHandler):
             projeto_id = form.getvalue('projeto_id')
             descricao = form.getvalue('descricao') or ""  # Valor padrão vazio se não for fornecido
 
-            # Verificar campos obrigatórios (descricao removida)
+            # Verificar campos obrigatórios
             if not fileitem.filename or not categoria_id or not projeto_id:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
@@ -223,9 +222,6 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "O arquivo não pode ter mais de 10MB"}).encode())
                 return
-            
-            # Gerar um ID único para o arquivo
-            file_id = str(uuid.uuid4())
             
             # Inicializar o cliente Backblaze B2 com tratamento de erro detalhado
             try:
@@ -249,7 +245,9 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Criar um nome de arquivo único para evitar colisões
                 timestamp = int(time.time())
-                unique_filename = f"{file_id}_{timestamp}_{filename}"
+                # Use um timestamp como identificador temporário para o nome do arquivo
+                temp_id = timestamp
+                unique_filename = f"{temp_id}_{timestamp}_{filename}"
                 
                 # Criar um objeto de arquivo temporário para extração de texto
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
@@ -260,7 +258,7 @@ class handler(BaseHTTPRequestHandler):
                 # Fazer upload do arquivo para o Backblaze B2
                 file_info = {
                     'categoria_id': categoria_id,
-                    'projeto_id': projeto_id,  # Adicionando o projeto_id ao file_info
+                    'projeto_id': projeto_id,
                     'descricao': descricao
                 }
                 
@@ -298,18 +296,18 @@ class handler(BaseHTTPRequestHandler):
             MAX_TEXTO_LENGTH = 100000
             texto_extraido = texto_extraido[:MAX_TEXTO_LENGTH] if texto_extraido else ""
             
+            # Não incluir ID no file_data para permitir que o PostgreSQL gere automaticamente
             file_data = {
-                'id': file_id,
                 'nome_arquivo': filename,
                 'tipo_arquivo': filetype,
                 'tamanho_arquivo': filesize,
                 'url_arquivo': download_url,
                 'categoria_id': categoria_id,
-                'projeto_id': projeto_id,  # Adicionando o projeto_id aos metadados
+                'projeto_id': projeto_id,
                 'descricao': descricao,
                 'data_upload': current_time,
-                'conteudo': texto_extraido,  # Adicionar o texto extraído
-                'backblaze_filename': unique_filename  # Adicionar o nome do arquivo no Backblaze
+                'conteudo': texto_extraido,
+                'backblaze_filename': unique_filename
             }
             
             # Criar um cliente Supabase com a chave de serviço para poder inserir dados
@@ -331,12 +329,20 @@ class handler(BaseHTTPRequestHandler):
                 
                 print("Registro inserido com sucesso no Supabase")
                 
+                # Obter o ID gerado pelo banco de dados
+                file_id = response.data[0]['id'] if response.data and len(response.data) > 0 else None
+                
+                if not file_id:
+                    print("Aviso: Não foi possível obter o ID gerado pelo banco de dados")
+                else:
+                    print(f"ID gerado pelo banco: {file_id}")
+                
                 # Variável para indicar se análise com IA foi realizada
                 analise_realizada = False
                 resultado_analise = None
                 
                 # Verificar se tem texto extraído e realizar análise direta (não assíncrona)
-                if texto_extraido and texto_extraido.strip() != "":
+                if texto_extraido and texto_extraido.strip() != "" and file_id is not None:
                     print("Texto extraído com sucesso, iniciando análise com IA")
                     
                     # Chamar análise diretamente (sem asyncio)
@@ -348,7 +354,7 @@ class handler(BaseHTTPRequestHandler):
                     else:
                         print("Falha ao realizar análise de IA")
                 else:
-                    print("Sem texto extraído, pulando análise de IA")
+                    print("Sem texto extraído ou ID não disponível, pulando análise de IA")
                 
             except Exception as db_error:
                 print(f"Erro ao inserir no banco de dados: {str(db_error)}")
@@ -364,6 +370,15 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             
+            # Atualizar o nome do arquivo no Backblaze com o ID real (opcional)
+            if file_id is not None:
+                try:
+                    # Aqui você poderia renomear o arquivo no Backblaze para incluir o ID real
+                    # Isso exigiria código adicional para copiar/renomear no B2
+                    pass
+                except Exception as rename_error:
+                    print(f"Aviso: não foi possível atualizar o nome do arquivo no B2: {str(rename_error)}")
+            
             # Retornar os dados do arquivo
             self.wfile.write(json.dumps({
                 "id": file_id,
@@ -372,12 +387,12 @@ class handler(BaseHTTPRequestHandler):
                 "tamanho_arquivo": filesize,
                 "url_arquivo": download_url,
                 "categoria_id": categoria_id,
-                "projeto_id": projeto_id,  # Incluindo projeto_id na resposta
+                "projeto_id": projeto_id,
                 "descricao": descricao,
                 "data_upload": current_time,
                 "conteudo": texto_extraido,
-                "backblaze_filename": unique_filename,  # Incluindo backblaze_filename na resposta
-                "analise_ia_realizada": analise_realizada,  # Informar se a análise foi realizada
+                "backblaze_filename": unique_filename,
+                "analise_ia_realizada": analise_realizada,
                 "message": "Arquivo enviado com sucesso" + (" e analisado com IA" if analise_realizada else "")
             }).encode())
             
