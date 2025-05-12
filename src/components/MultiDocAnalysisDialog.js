@@ -341,7 +341,7 @@ const MultiDocAnalysisDialog = ({ selectedDocuments, onClose, onAnalysisComplete
                 <div className="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200">
                   <p className="text-sm font-medium text-gray-700">Descrição do prompt:</p>
                   <p className="text-sm text-gray-600 mt-1">
-                    {prompts.find(p => p.id.toString() === selectedPromptId.toString())?.texto_prompt || 'Sem descrição'}
+                    {prompts.find(p => p.id === selectedPromptId)?.texto_prompt || 'Sem descrição'}
                   </p>
                 </div>
               )}
