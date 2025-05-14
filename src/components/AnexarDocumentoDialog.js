@@ -3,7 +3,7 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiUpload, FiFile, FiX } from 'react-icons/fi';
 
-const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, categorias, projetos }) => {
+const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, categorias, projetos, isGeralTable = false }) => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -67,6 +67,13 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       formData.append('categoria_id', controleItem.categoria_id);
       formData.append('projeto_id', controleItem.projeto_id);
       
+      // Adicionar o campo certo dependendo da tabela
+      if (isGeralTable) {
+        formData.append('id_controleconteudogeral', controleId);
+      } else {
+        formData.append('id_controleconteudo', controleId);
+      }
+      
       // Fazer upload para a API
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -99,16 +106,6 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       // Upload completo
       clearInterval(progressInterval);
       setProgress(100);
-      
-      // Associar o documento ao controle de conteúdo
-      const { error: updateError } = await supabase
-        .from('base_dados_conteudo')
-        .update({ id_controleconteudo: controleId })
-        .eq('id', responseData.id);
-      
-      if (updateError) {
-        throw new Error(updateError.message || 'Erro ao vincular documento ao controle');
-      }
       
       // Resetar estado
       setTimeout(() => {
@@ -152,6 +149,10 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
             <p><strong>Projeto:</strong> {projetos[controleItem?.projeto_id] || 'N/A'}</p>
             <p><strong>Categoria:</strong> {categorias[controleItem?.categoria_id] || 'N/A'}</p>
             <p><strong>Descrição:</strong> {controleItem?.descricao || 'N/A'}</p>
+            <p><strong>Tipo de Item:</strong> {isGeralTable ? 'Controle Geral' : 'Controle Base'}</p>
+            {isGeralTable && controleItem?.prazo_entrega && (
+              <p><strong>Prazo:</strong> {new Date(controleItem.prazo_entrega).toLocaleDateString('pt-BR')}</p>
+            )}
           </div>
         </div>
         

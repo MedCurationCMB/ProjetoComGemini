@@ -77,6 +77,13 @@ export default function Welcome({ user }) {
             >
               Controle de Conteúdo
             </Link>
+            
+            <Link 
+              href="/controle-conteudo-geral" 
+              className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Controle de Conteúdo Geral
+            </Link>
           </div>
             
           {isAdmin && (

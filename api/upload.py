@@ -232,6 +232,18 @@ class handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     print(f"Erro ao processar id_controleconteudo: {str(e)}")
                     # Não interromper o processo se houver erro na conversão
+            
+            # Obter id_controleconteudogeral se fornecido
+            id_controleconteudogeral = None
+            if 'id_controleconteudogeral' in form:
+                try:
+                    id_controleconteudogeral_str = form.getvalue('id_controleconteudogeral')
+                    if id_controleconteudogeral_str and id_controleconteudogeral_str.isdigit():
+                        id_controleconteudogeral = int(id_controleconteudogeral_str)
+                        print(f"ID de controle de conteúdo geral fornecido: {id_controleconteudogeral}")
+                except Exception as e:
+                    print(f"Erro ao processar id_controleconteudogeral: {str(e)}")
+                    # Não interromper o processo se houver erro na conversão
 
             # Verificar campos obrigatórios
             if not fileitem.filename or not categoria_id or not projeto_id:
@@ -347,6 +359,11 @@ class handler(BaseHTTPRequestHandler):
                 file_data['id_controleconteudo'] = id_controleconteudo
                 print(f"Vinculando documento ao controle de conteúdo ID: {id_controleconteudo}")
             
+            # Adicionar id_controleconteudogeral se fornecido
+            if id_controleconteudogeral is not None:
+                file_data['id_controleconteudogeral'] = id_controleconteudogeral
+                print(f"Vinculando documento ao controle de conteúdo geral ID: {id_controleconteudogeral}")
+            
             # Criar um cliente Supabase com a chave de serviço para poder inserir dados
             try:
                 print("Conectando ao Supabase com chave de serviço")
@@ -405,6 +422,18 @@ class handler(BaseHTTPRequestHandler):
                         print(f"Erro ao atualizar status do controle de conteúdo: {str(update_error)}")
                         # Não interromper o processo se ocorrer um erro na atualização
                 
+                # Se fornecido um ID de controle de conteúdo geral, atualizar o status na tabela controle_conteudo_geral
+                if id_controleconteudogeral is not None:
+                    try:
+                        update_response = service_supabase.table('controle_conteudo_geral').update({
+                            'tem_documento': True
+                        }).eq('id', id_controleconteudogeral).execute()
+                        
+                        print(f"Status do controle de conteúdo geral atualizado para tem_documento=True, ID: {id_controleconteudogeral}")
+                    except Exception as update_error:
+                        print(f"Erro ao atualizar status do controle de conteúdo geral: {str(update_error)}")
+                        # Não interromper o processo se ocorrer um erro na atualização
+                
             except Exception as db_error:
                 print(f"Erro ao inserir no banco de dados: {str(db_error)}")
                 print(traceback.format_exc())  # Adicionar stack trace
@@ -442,6 +471,7 @@ class handler(BaseHTTPRequestHandler):
                 "conteudo": texto_extraido,
                 "backblaze_filename": unique_filename,
                 "id_controleconteudo": id_controleconteudo,
+                "id_controleconteudogeral": id_controleconteudogeral,
                 "analise_ia_realizada": analise_realizada,
                 "message": "Arquivo enviado com sucesso" + (" e analisado com IA" if analise_realizada else "")
             }).encode())
