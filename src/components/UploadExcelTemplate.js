@@ -104,7 +104,7 @@ const UploadExcelTemplate = () => {
         { header: 'projeto_id', key: 'projeto_id', width: 20 },
         { header: 'categoria_id', key: 'categoria_id', width: 20 },
         { header: 'descricao', key: 'descricao', width: 40 },
-        { header: 'prazo_entrega', key: 'prazo_entrega', width: 15 },
+        { header: 'prazo_entrega_inicial', key: 'prazo_entrega_inicial', width: 15 },
         { header: 'recorrencia', key: 'recorrencia', width: 15 },
         { header: 'tempo_recorrencia', key: 'tempo_recorrencia', width: 15 },
         { header: 'obrigatorio', key: 'obrigatorio', width: 12 }
@@ -115,7 +115,7 @@ const UploadExcelTemplate = () => {
         projeto_id: 'Nome do Projeto',
         categoria_id: 'Nome da Categoria',
         descricao: 'Descrição do item',
-        prazo_entrega: 'Formato: AAAA-MM-DD',
+        prazo_entrega_inicial: 'Formato: AAAA-MM-DD',
         recorrencia: 'dia, mês, ano, sem recorrencia',
         tempo_recorrencia: 'Número inteiro',
         obrigatorio: 'SIM ou NÃO'
@@ -131,7 +131,7 @@ const UploadExcelTemplate = () => {
         projeto_id: Object.values(projetos.idParaNome)[0] || 'Nome do Projeto',
         categoria_id: Object.values(categorias.idParaNome)[0] || 'Nome da Categoria',
         descricao: 'Descrição do item',
-        prazo_entrega: '2023-12-31',
+        prazo_entrega_inicial: '2023-12-31',
         recorrencia: 'mês',
         tempo_recorrencia: 1,
         obrigatorio: 'SIM'
@@ -142,7 +142,7 @@ const UploadExcelTemplate = () => {
         projeto_id: Object.values(projetos.idParaNome)[1] || 'Nome do Projeto',
         categoria_id: Object.values(categorias.idParaNome)[1] || 'Nome da Categoria',
         descricao: 'Outro exemplo de item',
-        prazo_entrega: '2024-06-30',
+        prazo_entrega_inicial: '2024-06-30',
         recorrencia: 'ano',
         tempo_recorrencia: 1,
         obrigatorio: 'NÃO'
@@ -366,7 +366,7 @@ const UploadExcelTemplate = () => {
                 projeto_id: projetoId,
                 categoria_id: categoriaId,
                 descricao: String(row.descricao || '').trim(),
-                prazo_entrega: row.prazo_entrega ? new Date(row.prazo_entrega) : null,
+                prazo_entrega_inicial: row.prazo_entrega_inicial ? new Date(row.prazo_entrega_inicial) : null,
                 recorrencia: recorrencia,
                 tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
                 obrigatorio: obrigatorio,

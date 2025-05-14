@@ -282,7 +282,7 @@ const ControleConteudoTable = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <FiCalendar className="mr-1 text-gray-400" />
-                      {formatDate(item.prazo_entrega)}
+                      {formatDate(item.prazo_entrega_inicial)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
