@@ -220,6 +220,18 @@ class handler(BaseHTTPRequestHandler):
             categoria_id = form.getvalue('categoria_id')
             projeto_id = form.getvalue('projeto_id')
             descricao = form.getvalue('descricao') or ""  # Valor padrão vazio se não for fornecido
+            
+            # Obter id_controleconteudo se fornecido
+            id_controleconteudo = None
+            if 'id_controleconteudo' in form:
+                try:
+                    id_controleconteudo_str = form.getvalue('id_controleconteudo')
+                    if id_controleconteudo_str and id_controleconteudo_str.isdigit():
+                        id_controleconteudo = int(id_controleconteudo_str)
+                        print(f"ID de controle de conteúdo fornecido: {id_controleconteudo}")
+                except Exception as e:
+                    print(f"Erro ao processar id_controleconteudo: {str(e)}")
+                    # Não interromper o processo se houver erro na conversão
 
             # Verificar campos obrigatórios
             if not fileitem.filename or not categoria_id or not projeto_id:
@@ -330,6 +342,11 @@ class handler(BaseHTTPRequestHandler):
                 'backblaze_filename': unique_filename
             }
             
+            # Adicionar id_controleconteudo se fornecido
+            if id_controleconteudo is not None:
+                file_data['id_controleconteudo'] = id_controleconteudo
+                print(f"Vinculando documento ao controle de conteúdo ID: {id_controleconteudo}")
+            
             # Criar um cliente Supabase com a chave de serviço para poder inserir dados
             try:
                 print("Conectando ao Supabase com chave de serviço")
@@ -376,6 +393,18 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     print("Sem texto extraído ou ID não disponível, pulando análise de IA")
                 
+                # Se fornecido um ID de controle de conteúdo, atualizar o status na tabela controle_conteudo
+                if id_controleconteudo is not None:
+                    try:
+                        update_response = service_supabase.table('controle_conteudo').update({
+                            'tem_documento': True
+                        }).eq('id', id_controleconteudo).execute()
+                        
+                        print(f"Status do controle de conteúdo atualizado para tem_documento=True, ID: {id_controleconteudo}")
+                    except Exception as update_error:
+                        print(f"Erro ao atualizar status do controle de conteúdo: {str(update_error)}")
+                        # Não interromper o processo se ocorrer um erro na atualização
+                
             except Exception as db_error:
                 print(f"Erro ao inserir no banco de dados: {str(db_error)}")
                 print(traceback.format_exc())  # Adicionar stack trace
@@ -412,6 +441,7 @@ class handler(BaseHTTPRequestHandler):
                 "data_upload": current_time,
                 "conteudo": texto_extraido,
                 "backblaze_filename": unique_filename,
+                "id_controleconteudo": id_controleconteudo,
                 "analise_ia_realizada": analise_realizada,
                 "message": "Arquivo enviado com sucesso" + (" e analisado com IA" if analise_realizada else "")
             }).encode())
