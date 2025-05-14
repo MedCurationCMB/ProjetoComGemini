@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo } from 'react-icons/fi';
-import AnexarDocumentoDialog from './AnexarDocumentoDialog';
+import { FiCalendar, FiCheck, FiX } from 'react-icons/fi';
 
 const ControleConteudoTable = () => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [loading, setLoading] = useState(true);
-  const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
 
@@ -109,34 +107,6 @@ const ControleConteudoTable = () => {
     }
   };
 
-  // Função para atualizar o status de um documento após upload
-  const handleDocumentoAnexado = async (controleId) => {
-    try {
-      // Atualizar o status na tabela controle_conteudo
-      const { error } = await supabase
-        .from('controle_conteudo')
-        .update({ tem_documento: true })
-        .eq('id', controleId);
-      
-      if (error) throw error;
-      
-      // Atualizar localmente
-      setControles(prevControles => 
-        prevControles.map(item => 
-          item.id === controleId 
-            ? { ...item, tem_documento: true } 
-            : item
-        )
-      );
-      
-      toast.success('Documento anexado com sucesso!');
-      setAnexarDocumentoId(null);
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error('Erro ao atualizar status do documento');
-    }
-  };
-
   // Aplicar filtros
   const aplicarFiltros = () => {
     fetchControles();
@@ -217,18 +187,6 @@ const ControleConteudoTable = () => {
         </div>
       </div>
 
-      {/* Modal para anexar documento */}
-      {anexarDocumentoId && (
-        <AnexarDocumentoDialog
-          controleId={anexarDocumentoId} 
-          onClose={() => setAnexarDocumentoId(null)}
-          onSuccess={() => handleDocumentoAnexado(anexarDocumentoId)}
-          controleItem={controles.find(item => item.id === anexarDocumentoId)}
-          categorias={categorias}
-          projetos={projetos}
-        />
-      )}
-
       {/* Tabela de Controle */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300">
@@ -254,12 +212,6 @@ const ControleConteudoTable = () => {
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Obrigatório
-              </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Ações
               </th>
             </tr>
           </thead>
@@ -308,34 +260,11 @@ const ControleConteudoTable = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {item.tem_documento ? (
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        Documento Anexado
-                      </span>
-                    ) : (
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                        Sem Documento
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {!item.tem_documento && (
-                      <button
-                        onClick={() => setAnexarDocumentoId(item.id)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center"
-                        title="Anexar Documento"
-                      >
-                        <FiUpload className="mr-1" />
-                        Anexar
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado
                 </td>
               </tr>
