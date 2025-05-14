@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
-import AdicionarRepeticoesDialog from './AdicionarRepeticoesDialog';
 
 const ControleConteudoGeralTable = () => {
   const [controles, setControles] = useState([]);
@@ -11,7 +10,6 @@ const ControleConteudoGeralTable = () => {
   const [projetos, setProjetos] = useState({});
   const [loading, setLoading] = useState(true);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
-  const [adicionarRepeticoesId, setAdicionarRepeticoesId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
 
@@ -232,21 +230,6 @@ const ControleConteudoGeralTable = () => {
         />
       )}
 
-      {/* Modal para adicionar repetições */}
-      {adicionarRepeticoesId && (
-        <AdicionarRepeticoesDialog
-          controleId={adicionarRepeticoesId}
-          onClose={() => setAdicionarRepeticoesId(null)}
-          onSuccess={() => {
-            fetchControles(); // Recarregar a tabela após adicionar repetições
-            setAdicionarRepeticoesId(null);
-          }}
-          controleItem={controles.find(item => item.id === adicionarRepeticoesId)}
-          categorias={categorias}
-          projetos={projetos}
-        />
-      )}
-
       {/* Tabela de Controle Geral */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300">
@@ -347,30 +330,16 @@ const ControleConteudoGeralTable = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex flex-col space-y-2">
-                      {!item.tem_documento && (
-                        <button
-                          onClick={() => setAnexarDocumentoId(item.id)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center"
-                          title="Anexar Documento"
-                        >
-                          <FiUpload className="mr-1" />
-                          Anexar
-                        </button>
-                      )}
-                      
-                      {/* Botão para adicionar repetições - mostrar apenas para itens vinculados a controle_conteudo */}
-                      {item.id_controleconteudo && (
-                        <button
-                          onClick={() => setAdicionarRepeticoesId(item.id)}
-                          className="text-green-600 hover:text-green-900 flex items-center"
-                          title="Adicionar Repetições"
-                        >
-                          <FiPlus className="mr-1" />
-                          Repetições
-                        </button>
-                      )}
-                    </div>
+                    {!item.tem_documento && (
+                      <button
+                        onClick={() => setAnexarDocumentoId(item.id)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                        title="Anexar Documento"
+                      >
+                        <FiUpload className="mr-1" />
+                        Anexar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
