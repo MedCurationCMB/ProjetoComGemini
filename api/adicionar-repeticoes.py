@@ -86,15 +86,18 @@ class handler(BaseHTTPRequestHandler):
                 ultima_data_str = data_ultima_response.data[0].get('prazo_entrega')
                 if ultima_data_str:
                     ultima_data = datetime.fromisoformat(ultima_data_str.replace('Z', '+00:00'))
+                    print(f"Última data encontrada: {ultima_data.isoformat()}")
             
             # Se não encontrou última data, usar prazo_entrega_inicial do controle_item
             if not ultima_data and controle_item.get('prazo_entrega_inicial'):
                 ultima_data_str = controle_item.get('prazo_entrega_inicial')
                 ultima_data = datetime.fromisoformat(ultima_data_str.replace('Z', '+00:00'))
+                print(f"Usando data inicial: {ultima_data.isoformat()}")
             
             # Se ainda não tiver data, usar a data atual
             if not ultima_data:
                 ultima_data = datetime.now()
+                print(f"Nenhuma data encontrada, usando data atual: {ultima_data.isoformat()}")
                 
             # Obter os parâmetros de recorrência
             recorrencia = controle_item.get('recorrencia')
@@ -112,24 +115,28 @@ class handler(BaseHTTPRequestHandler):
                     data_atual = data_atual + timedelta(days=tempo_recorrencia)
                 elif recorrencia == 'mês':
                     # Para meses, precisamos ajustar manualmente
-                    nova_data = data_atual
-                    for _ in range(tempo_recorrencia):
-                        mes = nova_data.month + 1
-                        ano = nova_data.year
-                        if mes > 12:
-                            mes = 1
-                            ano += 1
-                        # Ajustar para o último dia do mês se necessário
-                        dia = min(nova_data.day, [31, 29 if ano % 4 == 0 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes-1])
-                        nova_data = nova_data.replace(year=ano, month=mes, day=dia)
-                    data_atual = nova_data
+                    ano = data_atual.year
+                    mes = data_atual.month + tempo_recorrencia
+                    
+                    # Ajustar o ano se necessário
+                    while mes > 12:
+                        mes -= 12
+                        ano += 1
+                    
+                    # Ajustar para o último dia do mês se necessário
+                    dia = min(data_atual.day, [31, 29 if (ano % 4 == 0 and (ano % 100 != 0 or ano % 400 == 0)) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes-1])
+                    
+                    data_atual = data_atual.replace(year=ano, month=mes, day=dia)
                 elif recorrencia == 'ano':
                     # Adicionar anos
-                    nova_data = data_atual.replace(year=data_atual.year + tempo_recorrencia)
+                    ano = data_atual.year + tempo_recorrencia
+                    
                     # Ajustar para 28 de fevereiro em anos não bissextos se for 29/02
-                    if data_atual.month == 2 and data_atual.day == 29 and nova_data.year % 4 != 0:
-                        nova_data = nova_data.replace(day=28)
-                    data_atual = nova_data
+                    dia = data_atual.day
+                    if data_atual.month == 2 and data_atual.day == 29 and not (ano % 4 == 0 and (ano % 100 != 0 or ano % 400 == 0)):
+                        dia = 28
+                    
+                    data_atual = data_atual.replace(year=ano, day=dia)
                 
                 # Criar o novo item com base no controle_item original
                 novo_item = {
@@ -146,6 +153,7 @@ class handler(BaseHTTPRequestHandler):
                 }
                 
                 novos_itens.append(novo_item)
+                print(f"Adicionando nova data: {data_atual.isoformat()}")
             
             # Inserir os novos itens no Supabase
             insert_response = service_supabase.table('controle_conteudo_geral').insert(novos_itens).execute()
@@ -164,6 +172,8 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({
                 "success": True,
                 "repetições_adicionadas": len(novos_itens),
+                "ultima_data_base": ultima_data.isoformat(),
+                "novas_datas": [item['prazo_entrega'] for item in novos_itens],
                 "message": f"{len(novos_itens)} repetições adicionadas com sucesso"
             }).encode())
                 
