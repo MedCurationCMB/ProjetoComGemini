@@ -247,7 +247,7 @@ const ControleConteudoTable = () => {
                 Descrição
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Prazo
+                Prazo de Envio
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Recorrência
