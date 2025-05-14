@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
+import AddConteudoDialog from './AddConteudoDialog';
 
 const ControleConteudoGeralTable = () => {
   const [controles, setControles] = useState([]);
@@ -12,6 +13,7 @@ const ControleConteudoGeralTable = () => {
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     fetchCategorias();
@@ -150,6 +152,12 @@ const ControleConteudoGeralTable = () => {
     setTimeout(fetchControles, 0);
   };
 
+  // Função para ser chamada quando um novo item for adicionado com sucesso
+  const handleItemAdded = () => {
+    fetchControles(); // Recarregar a lista
+    setShowAddDialog(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
@@ -162,7 +170,15 @@ const ControleConteudoGeralTable = () => {
     <div>
       {/* Filtros */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium mb-3">Filtros</h3>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-medium">Filtros</h3>
+          <button
+            onClick={() => setShowAddDialog(true)}
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm"
+          >
+            <FiPlus className="mr-1" /> Adicionar Linha de Conteúdo
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -181,7 +197,6 @@ const ControleConteudoGeralTable = () => {
               ))}
             </select>
           </div>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Categoria
@@ -227,6 +242,14 @@ const ControleConteudoGeralTable = () => {
           categorias={categorias}
           projetos={projetos}
           isGeralTable={true} // Flag para indicar que é a tabela geral
+        />
+      )}
+
+      {/* Modal para adicionar nova linha de conteúdo */}
+      {showAddDialog && (
+        <AddConteudoDialog
+          onClose={() => setShowAddDialog(false)}
+          onSuccess={handleItemAdded}
         />
       )}
 
