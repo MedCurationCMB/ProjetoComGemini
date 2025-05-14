@@ -17,6 +17,20 @@ const UploadExcelTemplate = () => {
     fetchProjetosECategorias();
   }, []);
   
+  // Função para normalizar texto (remover acentos, converter para minúsculas, remover espaços extras)
+  const normalizeText = (text) => {
+    if (!text) return '';
+    
+    // Converter para string, caso seja outro tipo
+    const str = String(text);
+    
+    // Remover acentos
+    const withoutAccents = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Converter para minúsculas e remover espaços extras
+    return withoutAccents.toLowerCase().trim().replace(/\s+/g, ' ');
+  };
+  
   // Função para buscar projetos e categorias
   const fetchProjetosECategorias = async () => {
     try {
@@ -274,6 +288,17 @@ const UploadExcelTemplate = () => {
             throw new Error('A planilha não contém dados válidos');
           }
           
+          // Criar mapeamentos normalizados para projetos e categorias
+          const normalizedProjetoMap = {};
+          Object.entries(projetos.nomeParaId || {}).forEach(([nome, id]) => {
+            normalizedProjetoMap[normalizeText(nome)] = id;
+          });
+          
+          const normalizedCategoriaMap = {};
+          Object.entries(categorias.nomeParaId || {}).forEach(([nome, id]) => {
+            normalizedCategoriaMap[normalizeText(nome)] = id;
+          });
+          
           // Validar os dados e converter nomes para IDs
           const validatedData = [];
           const errors = [];
@@ -283,46 +308,57 @@ const UploadExcelTemplate = () => {
             const rowNumber = i + 3; // +3 porque começamos a contar da linha 3 (após cabeçalho e instrução)
             
             try {
-              // Converter nome do projeto para ID
+              // Converter nome do projeto para ID (com normalização)
               const projetoNome = String(row.projeto_id || '').trim();
-              const projetoId = projetos.nomeParaId[projetoNome.toLowerCase()];
+              const normalizedProjetoNome = normalizeText(projetoNome);
+              const projetoId = normalizedProjetoMap[normalizedProjetoNome];
               
               if (!projetoId) {
                 throw new Error(`Projeto "${projetoNome}" não encontrado (linha ${rowNumber})`);
               }
               
-              // Converter nome da categoria para ID
+              // Converter nome da categoria para ID (com normalização)
               const categoriaNome = String(row.categoria_id || '').trim();
-              const categoriaId = categorias.nomeParaId[categoriaNome.toLowerCase()];
+              const normalizedCategoriaNome = normalizeText(categoriaNome);
+              const categoriaId = normalizedCategoriaMap[normalizedCategoriaNome];
               
               if (!categoriaId) {
                 throw new Error(`Categoria "${categoriaNome}" não encontrada (linha ${rowNumber})`);
               }
               
-              // Processar o campo obrigatório (SIM/NÃO)
-              const obrigatorioText = String(row.obrigatorio || '').trim().toUpperCase();
+              // Processar o campo obrigatório (SIM/NÃO) (com normalização)
+              const obrigatorioText = normalizeText(String(row.obrigatorio || ''));
               let obrigatorio;
               
-              if (obrigatorioText === 'SIM') {
+              if (obrigatorioText === 'sim') {
                 obrigatorio = true;
-              } else if (obrigatorioText === 'NÃO' || obrigatorioText === 'NAO') {
+              } else if (obrigatorioText === 'nao' || obrigatorioText === 'não') {
                 obrigatorio = false;
               } else {
                 throw new Error(`Valor inválido para campo obrigatório: "${row.obrigatorio}". Use "SIM" ou "NÃO" (linha ${rowNumber})`);
               }
               
-              // Processar e validar o campo recorrencia
+              // Processar e validar o campo recorrencia (com normalização)
               let recorrencia = row.recorrencia;
               if (recorrencia) {
-                recorrencia = String(recorrencia).trim();
-                if (!['dia', 'mês', 'mes', 'ano', 'sem recorrencia'].includes(recorrencia.toLowerCase())) {
+                const normalizedRecorrencia = normalizeText(recorrencia);
+                if (!['dia', 'mes', 'mês', 'ano', 'sem recorrencia'].includes(normalizedRecorrencia) && 
+                    !normalizedRecorrencia.startsWith('sem')) {
                   throw new Error(`Valor inválido para recorrência: "${recorrencia}". Use "dia", "mês", "ano" ou "sem recorrencia" (linha ${rowNumber})`);
                 }
                 
-                // Normalizar "mes" para "mês"
-                if (recorrencia.toLowerCase() === 'mes') {
+                // Usar o termo padronizado com base no valor normalizado
+                if (normalizedRecorrencia === 'dia') {
+                  recorrencia = 'dia';
+                } else if (normalizedRecorrencia === 'mes' || normalizedRecorrencia === 'mês') {
                   recorrencia = 'mês';
+                } else if (normalizedRecorrencia === 'ano') {
+                  recorrencia = 'ano';
+                } else if (normalizedRecorrencia.startsWith('sem')) {
+                  recorrencia = 'sem recorrencia';
                 }
+              } else {
+                recorrencia = 'sem recorrencia';
               }
               
               // Criar objeto validado
@@ -331,7 +367,7 @@ const UploadExcelTemplate = () => {
                 categoria_id: categoriaId,
                 descricao: String(row.descricao || '').trim(),
                 prazo_entrega: row.prazo_entrega ? new Date(row.prazo_entrega) : null,
-                recorrencia: recorrencia || 'sem recorrencia',
+                recorrencia: recorrencia,
                 tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
                 obrigatorio: obrigatorio,
                 tem_documento: false // Sempre começa como false
@@ -408,7 +444,6 @@ const UploadExcelTemplate = () => {
     }
   };
   
-  // O resto do componente permanece o mesmo
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
