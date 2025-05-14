@@ -70,6 +70,13 @@ export default function Welcome({ user }) {
             >
               Histórico de Análises
             </Link>
+            
+            <Link 
+              href="/controle-conteudo" 
+              className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Controle de Conteúdo
+            </Link>
           </div>
             
           {isAdmin && (

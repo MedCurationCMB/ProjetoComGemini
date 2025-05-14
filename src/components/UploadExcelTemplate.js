@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiUpload, FiDownload, FiFile, FiX } from 'react-icons/fi';
@@ -8,48 +8,130 @@ const UploadExcelTemplate = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [projetos, setProjetos] = useState({});
+  const [categorias, setCategorias] = useState({});
+  const [loading, setLoading] = useState(true);
+  
+  // Buscar projetos e categorias ao carregar o componente
+  useEffect(() => {
+    fetchProjetosECategorias();
+  }, []);
+  
+  // Função para buscar projetos e categorias
+  const fetchProjetosECategorias = async () => {
+    try {
+      setLoading(true);
+      
+      // Buscar projetos
+      const { data: projetosData, error: projetosError } = await supabase
+        .from('projetos')
+        .select('id, nome');
+      
+      if (projetosError) throw projetosError;
+      
+      // Criar mapeamento de nome para ID e ID para nome
+      const projetosNomeParaId = {};
+      const projetosIdParaNome = {};
+      projetosData.forEach(proj => {
+        projetosNomeParaId[proj.nome.toLowerCase()] = proj.id;
+        projetosIdParaNome[proj.id] = proj.nome;
+      });
+      
+      // Buscar categorias
+      const { data: categoriasData, error: categoriasError } = await supabase
+        .from('categorias')
+        .select('id, nome');
+      
+      if (categoriasError) throw categoriasError;
+      
+      // Criar mapeamento de nome para ID e ID para nome
+      const categoriasNomeParaId = {};
+      const categoriasIdParaNome = {};
+      categoriasData.forEach(cat => {
+        categoriasNomeParaId[cat.nome.toLowerCase()] = cat.id;
+        categoriasIdParaNome[cat.id] = cat.nome;
+      });
+      
+      setProjetos({
+        nomeParaId: projetosNomeParaId,
+        idParaNome: projetosIdParaNome,
+        lista: projetosData
+      });
+      
+      setCategorias({
+        nomeParaId: categoriasNomeParaId,
+        idParaNome: categoriasIdParaNome,
+        lista: categoriasData
+      });
+      
+    } catch (error) {
+      console.error('Erro ao carregar projetos e categorias:', error);
+      toast.error('Não foi possível carregar os dados necessários');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Função para gerar e baixar o template Excel
   const downloadTemplate = async () => {
     try {
+      // Verificar se os dados de projetos e categorias estão carregados
+      if (Object.keys(projetos).length === 0 || Object.keys(categorias).length === 0) {
+        toast.error('Aguarde o carregamento dos dados de projetos e categorias');
+        return;
+      }
+      
       // Criar workbook com ExcelJS
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Template');
       
-      // Definir cabeçalhos
+      // Definir cabeçalhos - Removendo a coluna tem_documento
       worksheet.columns = [
-        { header: 'projeto_id', key: 'projeto_id', width: 15 },
-        { header: 'categoria_id', key: 'categoria_id', width: 15 },
-        { header: 'descricao', key: 'descricao', width: 30 },
+        { header: 'projeto_id', key: 'projeto_id', width: 20 },
+        { header: 'categoria_id', key: 'categoria_id', width: 20 },
+        { header: 'descricao', key: 'descricao', width: 40 },
         { header: 'prazo_entrega', key: 'prazo_entrega', width: 15 },
         { header: 'recorrencia', key: 'recorrencia', width: 15 },
         { header: 'tempo_recorrencia', key: 'tempo_recorrencia', width: 15 },
-        { header: 'obrigatorio', key: 'obrigatorio', width: 12 },
-        { header: 'tem_documento', key: 'tem_documento', width: 15 }
+        { header: 'obrigatorio', key: 'obrigatorio', width: 12 }
       ];
+      
+      // Adicionar uma linha de informação sobre como preencher
+      const infoRow = worksheet.addRow({
+        projeto_id: 'Nome do Projeto',
+        categoria_id: 'Nome da Categoria',
+        descricao: 'Descrição do item',
+        prazo_entrega: 'Formato: AAAA-MM-DD',
+        recorrencia: 'dia, mês, ano, sem recorrencia',
+        tempo_recorrencia: 'Número inteiro',
+        obrigatorio: 'SIM ou NÃO'
+      });
+      
+      // Estilizar a linha de informação
+      infoRow.eachCell(cell => {
+        cell.font = { italic: true, color: { argb: 'FF999999' } };
+      });
       
       // Adicionar dados de exemplo
       worksheet.addRow({
-        projeto_id: 'ID do Projeto',
-        categoria_id: 'ID da Categoria',
+        projeto_id: Object.values(projetos.idParaNome)[0] || 'Nome do Projeto',
+        categoria_id: Object.values(categorias.idParaNome)[0] || 'Nome da Categoria',
         descricao: 'Descrição do item',
-        prazo_entrega: '2023-12-31', // Formato YYYY-MM-DD
-        recorrencia: 'mês', // Opções: dia, mês, ano, sem recorrencia
+        prazo_entrega: '2023-12-31',
+        recorrencia: 'mês',
         tempo_recorrencia: 1,
-        obrigatorio: true, // true ou false
-        tem_documento: false // true ou false
+        obrigatorio: 'SIM'
       });
       
-      // Adicionar um segundo exemplo para clareza
+      // Adicionar um segundo exemplo
       worksheet.addRow({
-        projeto_id: 'ID do Projeto',
-        categoria_id: 'ID da Categoria',
+        projeto_id: Object.values(projetos.idParaNome)[1] || 'Nome do Projeto',
+        categoria_id: Object.values(categorias.idParaNome)[1] || 'Nome da Categoria',
         descricao: 'Outro exemplo de item',
         prazo_entrega: '2024-06-30',
         recorrencia: 'ano',
         tempo_recorrencia: 1,
-        obrigatorio: false,
-        tem_documento: false
+        obrigatorio: 'NÃO'
       });
       
       // Formatar cabeçalhos
@@ -113,6 +195,13 @@ const UploadExcelTemplate = () => {
       return;
     }
     
+    // Verificar se os mapeamentos estão disponíveis
+    if (Object.keys(projetos.nomeParaId || {}).length === 0 || 
+        Object.keys(categorias.nomeParaId || {}).length === 0) {
+      toast.error('Dados de projetos e categorias não carregados. Recarregue a página.');
+      return;
+    }
+    
     try {
       setUploading(true);
       setProgress(0);
@@ -160,18 +249,23 @@ const UploadExcelTemplate = () => {
             }
           }
           
-          // Extrair dados
+          // Extrair dados (pulando a primeira linha que é o cabeçalho e a segunda que é a instrução)
           const excelData = [];
           worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) { // Pular a linha de cabeçalho
+            if (rowNumber > 2) { // Pular as duas primeiras linhas
               const rowData = {};
               row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                const header = headers[colNumber - 1];
-                if (header) {
-                  rowData[header] = cell.value;
+                if (colNumber <= headers.length) {
+                  const header = headers[colNumber - 1];
+                  if (header) {
+                    rowData[header] = cell.value;
+                  }
                 }
               });
-              excelData.push(rowData);
+              // Verificar se a linha tem pelo menos um valor não vazio
+              if (Object.values(rowData).some(val => val !== null && val !== undefined && val !== '')) {
+                excelData.push(rowData);
+              }
             }
           });
           
@@ -180,29 +274,85 @@ const UploadExcelTemplate = () => {
             throw new Error('A planilha não contém dados válidos');
           }
           
-          // Validar os dados
-          const validatedData = excelData.map(row => {
-            // Converter e validar campos
-            const item = {
-              projeto_id: row.projeto_id?.toString().trim(),
-              categoria_id: row.categoria_id?.toString().trim(),
-              descricao: row.descricao?.toString().trim() || '',
-              prazo_entrega: row.prazo_entrega ? new Date(row.prazo_entrega) : null,
-              recorrencia: ['dia', 'mês', 'ano', 'sem recorrencia'].includes(row.recorrencia) 
-                ? row.recorrencia 
-                : 'sem recorrencia',
-              tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
-              obrigatorio: Boolean(row.obrigatorio),
-              tem_documento: Boolean(row.tem_documento)
-            };
+          // Validar os dados e converter nomes para IDs
+          const validatedData = [];
+          const errors = [];
+          
+          for (let i = 0; i < excelData.length; i++) {
+            const row = excelData[i];
+            const rowNumber = i + 3; // +3 porque começamos a contar da linha 3 (após cabeçalho e instrução)
             
-            // Verificar campos obrigatórios
-            if (!item.projeto_id || !item.categoria_id || !item.descricao) {
-              throw new Error('Todos os itens devem ter projeto_id, categoria_id e descrição');
+            try {
+              // Converter nome do projeto para ID
+              const projetoNome = String(row.projeto_id || '').trim();
+              const projetoId = projetos.nomeParaId[projetoNome.toLowerCase()];
+              
+              if (!projetoId) {
+                throw new Error(`Projeto "${projetoNome}" não encontrado (linha ${rowNumber})`);
+              }
+              
+              // Converter nome da categoria para ID
+              const categoriaNome = String(row.categoria_id || '').trim();
+              const categoriaId = categorias.nomeParaId[categoriaNome.toLowerCase()];
+              
+              if (!categoriaId) {
+                throw new Error(`Categoria "${categoriaNome}" não encontrada (linha ${rowNumber})`);
+              }
+              
+              // Processar o campo obrigatório (SIM/NÃO)
+              const obrigatorioText = String(row.obrigatorio || '').trim().toUpperCase();
+              let obrigatorio;
+              
+              if (obrigatorioText === 'SIM') {
+                obrigatorio = true;
+              } else if (obrigatorioText === 'NÃO' || obrigatorioText === 'NAO') {
+                obrigatorio = false;
+              } else {
+                throw new Error(`Valor inválido para campo obrigatório: "${row.obrigatorio}". Use "SIM" ou "NÃO" (linha ${rowNumber})`);
+              }
+              
+              // Processar e validar o campo recorrencia
+              let recorrencia = row.recorrencia;
+              if (recorrencia) {
+                recorrencia = String(recorrencia).trim();
+                if (!['dia', 'mês', 'mes', 'ano', 'sem recorrencia'].includes(recorrencia.toLowerCase())) {
+                  throw new Error(`Valor inválido para recorrência: "${recorrencia}". Use "dia", "mês", "ano" ou "sem recorrencia" (linha ${rowNumber})`);
+                }
+                
+                // Normalizar "mes" para "mês"
+                if (recorrencia.toLowerCase() === 'mes') {
+                  recorrencia = 'mês';
+                }
+              }
+              
+              // Criar objeto validado
+              const item = {
+                projeto_id: projetoId,
+                categoria_id: categoriaId,
+                descricao: String(row.descricao || '').trim(),
+                prazo_entrega: row.prazo_entrega ? new Date(row.prazo_entrega) : null,
+                recorrencia: recorrencia || 'sem recorrencia',
+                tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
+                obrigatorio: obrigatorio,
+                tem_documento: false // Sempre começa como false
+              };
+              
+              // Verificar campos obrigatórios
+              if (!item.descricao) {
+                throw new Error(`Campo descrição é obrigatório (linha ${rowNumber})`);
+              }
+              
+              validatedData.push(item);
+            } catch (rowError) {
+              errors.push(rowError.message);
             }
-            
-            return item;
-          });
+          }
+          
+          // Se houve erros, exibir para o usuário
+          if (errors.length > 0) {
+            const errorMessage = `Foram encontrados ${errors.length} erros:\n\n- ${errors.join('\n- ')}`;
+            throw new Error(errorMessage);
+          }
           
           // Obter a sessão do usuário
           const { data: { session } } = await supabase.auth.getSession();
@@ -269,10 +419,22 @@ const UploadExcelTemplate = () => {
         </p>
         <button
           onClick={downloadTemplate}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={loading}
+          className={`flex items-center px-4 py-2 ${
+            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          } text-white rounded`}
         >
-          <FiDownload className="mr-2" />
-          Baixar Template Excel
+          {loading ? (
+            <>
+              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+              Carregando dados...
+            </>
+          ) : (
+            <>
+              <FiDownload className="mr-2" />
+              Baixar Template Excel
+            </>
+          )}
         </button>
       </div>
       
@@ -366,9 +528,9 @@ const UploadExcelTemplate = () => {
           <div>
             <button
               type="submit"
-              disabled={!file || uploading}
+              disabled={!file || uploading || loading}
               className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                !file || uploading
+                !file || uploading || loading
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
               }`}
