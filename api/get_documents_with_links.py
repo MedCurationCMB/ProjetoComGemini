@@ -39,14 +39,14 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": f"Autenticação inválida: {str(auth_error)}"}).encode())
                 return
             
-            # Buscar os documentos principais
-            # Corrigindo o método order para usar o formato correto
-            docs_response = supabase.table('base_dados_conteudo').select('*').order('created_at', ascending=False).execute()
+            # Buscar os documentos principais - agora sem usar o método order() que está dando problema
+            docs_response = supabase.table('base_dados_conteudo').select('*').execute()
             
             if docs_response.error:
                 raise Exception(docs_response.error.message)
             
-            documents = docs_response.data
+            # Ordenar manualmente os resultados após a busca
+            documents = sorted(docs_response.data, key=lambda x: x.get('created_at', ''), reverse=True)
             
             # Para cada documento, buscar os vínculos na tabela de relacionamento
             for doc in documents:
