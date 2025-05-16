@@ -153,7 +153,7 @@ const ControleConteudoGeralTable = () => {
     }
   };
 
-  // Função para atualizar o status de um documento após upload
+  // Função para atualizar o status de um documento após upload ou vínculo
   const handleDocumentoAnexado = async (controleId, documentoId = null) => {
     try {
       // Atualizar localmente
@@ -162,8 +162,7 @@ const ControleConteudoGeralTable = () => {
           item.id === controleId 
             ? { 
                 ...item, 
-                tem_documento: true,
-                id_basedadosconteudo: documentoId // Adicionar o ID do documento ao estado local
+                tem_documento: true
               } 
             : item
         )
