@@ -391,6 +391,18 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     print(f"ID gerado pelo banco: {file_id}")
                 
+                # Se id_controleconteudogeral foi fornecido, atualize a tabela controle_conteudo_geral
+                if id_controleconteudogeral is not None and file_id is not None:
+                    try:
+                        update_response = service_supabase.table('controle_conteudo_geral').update({
+                            'id_basedadosconteudo': file_id
+                        }).eq('id', id_controleconteudogeral).execute()
+                        
+                        print(f"Atualizado id_basedadosconteudo na tabela controle_conteudo_geral para ID: {id_controleconteudogeral}")
+                    except Exception as update_error:
+                        print(f"Erro ao atualizar id_basedadosconteudo: {str(update_error)}")
+                        # Não interrompemos o processo se ocorrer um erro na atualização
+                
                 # Variável para indicar se análise com IA foi realizada
                 analise_realizada = False
                 resultado_analise = None

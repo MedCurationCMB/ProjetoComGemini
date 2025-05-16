@@ -116,7 +116,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         
         // Notificar sucesso e fechar diálogo
         if (onSuccess) {
-          onSuccess();
+          onSuccess(responseData.id); // Passar o ID do documento para o callback de sucesso
         }
         
         toast.success('Documento anexado com sucesso!');

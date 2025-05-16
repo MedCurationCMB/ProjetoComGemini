@@ -154,21 +154,17 @@ const ControleConteudoGeralTable = () => {
   };
 
   // Função para atualizar o status de um documento após upload
-  const handleDocumentoAnexado = async (controleId) => {
+  const handleDocumentoAnexado = async (controleId, documentoId = null) => {
     try {
-      // Atualizar o status na tabela controle_conteudo_geral
-      const { error } = await supabase
-        .from('controle_conteudo_geral')
-        .update({ tem_documento: true })
-        .eq('id', controleId);
-      
-      if (error) throw error;
-      
       // Atualizar localmente
       setControles(prevControles => 
         prevControles.map(item => 
           item.id === controleId 
-            ? { ...item, tem_documento: true } 
+            ? { 
+                ...item, 
+                tem_documento: true,
+                id_basedadosconteudo: documentoId // Adicionar o ID do documento ao estado local
+              } 
             : item
         )
       );
@@ -294,7 +290,7 @@ const ControleConteudoGeralTable = () => {
         <AnexarDocumentoDialog
           controleId={anexarDocumentoId} 
           onClose={() => setAnexarDocumentoId(null)}
-          onSuccess={() => handleDocumentoAnexado(anexarDocumentoId)}
+          onSuccess={(documentoId) => handleDocumentoAnexado(anexarDocumentoId, documentoId)}
           controleItem={controles.find(item => item.id === anexarDocumentoId)}
           categorias={categorias}
           projetos={projetos}
