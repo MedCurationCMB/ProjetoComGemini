@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu } from 'react-icons/fi';
+import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
 
 const ConteudoTable = () => {
@@ -16,12 +16,21 @@ const ConteudoTable = () => {
   const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
   const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo'); // 'conteudo' ou 'retorno_ia'
   const [tituloVisualizando, setTituloVisualizando] = useState('');
+  const [expandedItems, setExpandedItems] = useState({}); // Controlar quais itens estão expandidos
 
   useEffect(() => {
     fetchCategorias();
     fetchProjetos();
     fetchConteudos();
   }, []);
+
+  // Função para alternar a expansão de um item
+  const toggleExpand = (id) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   // Buscar todas as categorias
   const fetchCategorias = async () => {
@@ -65,6 +74,7 @@ const ConteudoTable = () => {
     }
   };
 
+  // Versão modificada para usar a nova API
   const fetchConteudos = async () => {
     try {
       setLoading(true);
@@ -77,15 +87,23 @@ const ConteudoTable = () => {
         return;
       }
       
-      // Buscar diretamente do Supabase
-      const { data, error } = await supabase
-        .from('base_dados_conteudo')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Chamar a nova API para obter documentos com links
+      const response = await fetch('/api/get_documents_with_links', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao buscar documentos');
+      }
       
+      const data = await response.json();
       setConteudos(Array.isArray(data) ? data : []);
+      
     } catch (error) {
       toast.error('Erro ao carregar conteúdos');
       console.error(error);
@@ -478,7 +496,47 @@ const ConteudoTable = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.id_controleconteudogeral || '-'}
+                  {/* Célula atualizada para exibir todos os IDs vinculados */}
+                  {item.all_linked_ids && item.all_linked_ids.length > 0 ? (
+                    <div className="flex flex-col">
+                      {item.all_linked_ids.length <= 3 || expandedItems[item.id] ? (
+                        // Mostrar todos os IDs
+                        item.all_linked_ids.map((id, index) => (
+                          <span key={index} className="text-sm text-gray-700 py-0.5">
+                            {id}
+                          </span>
+                        ))
+                      ) : (
+                        // Mostrar versão compacta
+                        <>
+                          {item.all_linked_ids.slice(0, 2).map((id, index) => (
+                            <span key={index} className="text-sm text-gray-700 py-0.5">
+                              {id}
+                            </span>
+                          ))}
+                          <button 
+                            onClick={() => toggleExpand(item.id)}
+                            className="text-blue-500 hover:text-blue-700 text-xs mt-1 flex items-center"
+                          >
+                            <FiChevronDown className="mr-1" />
+                            +{item.all_linked_ids.length - 2} mais
+                          </button>
+                        </>
+                      )}
+                      
+                      {expandedItems[item.id] && item.all_linked_ids.length > 3 && (
+                        <button 
+                          onClick={() => toggleExpand(item.id)}
+                          className="text-blue-500 hover:text-blue-700 text-xs mt-1 flex items-center"
+                        >
+                          <FiChevronUp className="mr-1" />
+                          Mostrar menos
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {categorias[item.categoria_id] || 'Categoria indisponível'}
