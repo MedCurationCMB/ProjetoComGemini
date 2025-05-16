@@ -40,7 +40,8 @@ class handler(BaseHTTPRequestHandler):
                 return
             
             # Buscar os documentos principais
-            docs_response = supabase.table('base_dados_conteudo').select('*').order('created_at', {'ascending': False}).execute()
+            # Corrigindo o método order para usar o formato correto
+            docs_response = supabase.table('base_dados_conteudo').select('*').order('created_at', ascending=False).execute()
             
             if docs_response.error:
                 raise Exception(docs_response.error.message)
