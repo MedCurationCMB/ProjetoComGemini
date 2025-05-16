@@ -239,6 +239,9 @@ const ControleConteudoGeralTable = () => {
                 ID
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Base ID
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Projeto
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -273,6 +276,9 @@ const ControleConteudoGeralTable = () => {
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.id_controleconteudo || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {projetos[item.projeto_id] || 'Projeto indisponível'}
@@ -345,7 +351,7 @@ const ControleConteudoGeralTable = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="10" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="11" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado
                 </td>
               </tr>
