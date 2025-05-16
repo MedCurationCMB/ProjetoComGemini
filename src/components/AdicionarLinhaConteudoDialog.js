@@ -1,4 +1,3 @@
-// src/components/AdicionarLinhaConteudoDialog.js
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -9,7 +8,7 @@ const AdicionarLinhaConteudoDialog = ({ onClose, onSuccess, categorias, projetos
   const [isRecorrente, setIsRecorrente] = useState(null);
   const [linhasBase, setLinhasBase] = useState([]);
   const [linhaBaseId, setLinhaBaseId] = useState('');
-  const [numRepeticoes, setNumRepeticoes] = useState(1);
+  const [numRepeticoes, setNumRepeticoes] = useState('1'); // Alterado para string '1'
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
@@ -80,11 +79,15 @@ const AdicionarLinhaConteudoDialog = ({ onClose, onSuccess, categorias, projetos
           return;
         }
         
-        if (!numRepeticoes || numRepeticoes < 1) {
+        // Verificar número de repetições
+        if (!numRepeticoes || numRepeticoes === '' || parseInt(numRepeticoes) < 1) {
           toast.error('Por favor, informe um número válido de repetições');
           setLoading(false);
           return;
         }
+        
+        // Converter para número inteiro
+        const repeticoesValue = parseInt(numRepeticoes);
         
         // 1. Buscar a linha base selecionada
         const { data: linhaBase, error: linhaBaseError } = await supabase
@@ -120,7 +123,7 @@ const AdicionarLinhaConteudoDialog = ({ onClose, onSuccess, categorias, projetos
         // 3. Calcular as novas datas com base na recorrência
         const novasLinhas = [];
         
-        for (let i = 0; i < numRepeticoes; i++) {
+        for (let i = 0; i < repeticoesValue; i++) {
           // Calcular próxima data com base na recorrência
           let novaPrazoEntrega = new Date(ultimoDataPrazo);
           
@@ -295,10 +298,16 @@ const AdicionarLinhaConteudoDialog = ({ onClose, onSuccess, categorias, projetos
                     Número de Repetições
                   </label>
                   <input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     value={numRepeticoes}
-                    onChange={(e) => setNumRepeticoes(parseInt(e.target.value) || 1)}
+                    onChange={(e) => {
+                      // Permite campo vazio ou apenas números
+                      const value = e.target.value;
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setNumRepeticoes(value);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>

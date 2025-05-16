@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus, FiChevronUp, FiChevronDown } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
 
@@ -14,6 +14,7 @@ const ControleConteudoGeralTable = () => {
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
+  const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' }); // Estado para ordenação
 
   useEffect(() => {
     fetchCategorias();
@@ -70,8 +71,7 @@ const ControleConteudoGeralTable = () => {
       
       let query = supabase
         .from('controle_conteudo_geral')
-        .select('*')
-        .order('prazo_entrega', { ascending: true });
+        .select('*');
       
       // Aplicar filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -80,6 +80,24 @@ const ControleConteudoGeralTable = () => {
       
       if (filtroCategoriaId) {
         query = query.eq('categoria_id', filtroCategoriaId);
+      }
+      
+      // Aplicar ordenação
+      if (ordenacao.campo === 'id_controleconteudo') {
+        // Para base_id (id_controleconteudo), precisamos tratar valores nulos
+        query = query.order('id_controleconteudo', { 
+          ascending: ordenacao.direcao === 'asc',
+          nullsFirst: ordenacao.direcao === 'asc' // Valores nulos aparecem primeiro em ordem ascendente
+        });
+      } else {
+        query = query.order(ordenacao.campo, { 
+          ascending: ordenacao.direcao === 'asc' 
+        });
+      }
+      
+      // Adicionar ordenação secundária para garantir consistência quando valores forem iguais
+      if (ordenacao.campo !== 'id') {
+        query = query.order('id', { ascending: true });
       }
       
       const { data, error } = await query;
@@ -94,6 +112,30 @@ const ControleConteudoGeralTable = () => {
       setLoading(false);
     }
   };
+
+  // Função para alternar a ordenação
+  const handleToggleOrdenacao = (campo) => {
+    if (ordenacao.campo === campo) {
+      // Se já estiver ordenando por este campo, inverte a direção
+      setOrdenacao({
+        campo: campo,
+        direcao: ordenacao.direcao === 'asc' ? 'desc' : 'asc'
+      });
+    } else {
+      // Se for um novo campo, começa com ascendente
+      setOrdenacao({
+        campo: campo,
+        direcao: 'asc'
+      });
+    }
+  };
+
+  // Efeito para refazer a busca quando a ordenação mudar
+  useEffect(() => {
+    if (!loading) {
+      fetchControles();
+    }
+  }, [ordenacao]);
 
   // Formata a data para exibição
   const formatDate = (dateString) => {
@@ -157,6 +199,15 @@ const ControleConteudoGeralTable = () => {
     setFiltroCategoriaId('');
     // Refetch sem filtros
     setTimeout(fetchControles, 0);
+  };
+
+  // Componente para exibir o ícone de ordenação
+  const OrdenacaoIcon = ({ campo }) => {
+    if (ordenacao.campo !== campo) return null;
+    
+    return ordenacao.direcao === 'asc' 
+      ? <FiChevronUp className="ml-1 inline-block" /> 
+      : <FiChevronDown className="ml-1 inline-block" />;
   };
 
   if (loading) {
@@ -266,11 +317,23 @@ const ControleConteudoGeralTable = () => {
         <table className="min-w-full bg-white border border-gray-300">
           <thead>
             <tr>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                ID
+              <th 
+                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleToggleOrdenacao('id')}
+              >
+                <div className="flex items-center">
+                  ID
+                  <OrdenacaoIcon campo="id" />
+                </div>
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Base ID
+              <th 
+                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleToggleOrdenacao('id_controleconteudo')}
+              >
+                <div className="flex items-center">
+                  Base ID
+                  <OrdenacaoIcon campo="id_controleconteudo" />
+                </div>
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Projeto
