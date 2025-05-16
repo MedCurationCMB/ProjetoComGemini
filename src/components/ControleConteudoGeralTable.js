@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
+import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
 
 const ControleConteudoGeralTable = () => {
   const [controles, setControles] = useState([]);
@@ -12,6 +13,7 @@ const ControleConteudoGeralTable = () => {
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+  const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
 
   useEffect(() => {
     fetchCategorias();
@@ -137,6 +139,13 @@ const ControleConteudoGeralTable = () => {
     }
   };
 
+  // Função para lidar com o sucesso da adição de linha
+  const handleAdicionarLinhaSuccess = () => {
+    setShowAdicionarLinhaDialog(false);
+    fetchControles(); // Recarrega os dados da tabela
+    toast.success('Operação concluída com sucesso!');
+  };
+
   // Aplicar filtros
   const aplicarFiltros = () => {
     fetchControles();
@@ -162,7 +171,19 @@ const ControleConteudoGeralTable = () => {
     <div>
       {/* Filtros */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium mb-3">Filtros</h3>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-medium">Filtros</h3>
+          
+          {/* Botão Adicionar Linha de Conteúdo */}
+          <button
+            onClick={() => setShowAdicionarLinhaDialog(true)}
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            <FiPlus className="mr-2" />
+            Adicionar Linha de Conteúdo
+          </button>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -227,6 +248,16 @@ const ControleConteudoGeralTable = () => {
           categorias={categorias}
           projetos={projetos}
           isGeralTable={true} // Flag para indicar que é a tabela geral
+        />
+      )}
+
+      {/* Modal para adicionar linha de conteúdo */}
+      {showAdicionarLinhaDialog && (
+        <AdicionarLinhaConteudoDialog
+          onClose={() => setShowAdicionarLinhaDialog(false)}
+          onSuccess={handleAdicionarLinhaSuccess}
+          categorias={categorias}
+          projetos={projetos}
         />
       )}
 
