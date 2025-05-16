@@ -15,6 +15,7 @@ const ConteudoTable = () => {
   const [atualizandoTexto, setAtualizandoTexto] = useState(false);
   const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
   const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo'); // 'conteudo' ou 'retorno_ia'
+  const [tituloVisualizando, setTituloVisualizando] = useState('');
 
   useEffect(() => {
     fetchCategorias();
@@ -120,11 +121,13 @@ const ConteudoTable = () => {
         // Se houver texto, mostrar o texto normalmente
         setTextoVisualizando(item.conteudo);
         setTipoTextoVisualizando('conteudo');
+        setTituloVisualizando('Texto Extraído');
       }
     } else if (tipo === 'retorno_ia') {
       if (item.retorno_ia && item.retorno_ia.trim() !== '') {
         setTextoVisualizando(item.retorno_ia);
         setTipoTextoVisualizando('retorno_ia');
+        setTituloVisualizando('Análise de IA');
       } else {
         toast.error('Não há análise de IA disponível para este documento');
       }
@@ -316,11 +319,7 @@ const ConteudoTable = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                {tipoTextoVisualizando === 'conteudo' 
-                  ? 'Texto Extraído' 
-                  : 'Análise de IA'}
-              </h2>
+              <h2 className="text-xl font-bold">{tituloVisualizando}</h2>
               <button 
                 onClick={() => setTextoVisualizando(null)}
                 className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
@@ -434,6 +433,9 @@ const ConteudoTable = () => {
               Arquivo
             </th>
             <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              ID DO CONTEÚDO
+            </th>
+            <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
               Categoria
             </th>
             <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -474,6 +476,9 @@ const ConteudoTable = () => {
                       </span>
                     </div>
                   )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {item.id_controleconteudogeral || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {categorias[item.categoria_id] || 'Categoria indisponível'}
@@ -541,7 +546,7 @@ const ConteudoTable = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+              <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
                 Nenhum conteúdo encontrado
               </td>
             </tr>
