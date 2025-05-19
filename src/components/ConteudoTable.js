@@ -16,6 +16,7 @@ const ConteudoTable = () => {
   const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
   const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo'); // 'conteudo' ou 'retorno_ia'
   const [tituloVisualizando, setTituloVisualizando] = useState('');
+  const [documentoVinculacoes, setDocumentoVinculacoes] = useState({}); // NOVO: Armazenar vinculações
 
   useEffect(() => {
     fetchCategorias();
@@ -65,6 +66,35 @@ const ConteudoTable = () => {
     }
   };
 
+  // NOVO: Função para buscar vinculações de todos os documentos
+  const fetchDocumentoVinculacoes = async (documentIds) => {
+    try {
+      if (!documentIds || documentIds.length === 0) return {};
+      
+      // Buscar todas as vinculações para os documentos listados
+      const { data, error } = await supabase
+        .from('documento_controle_geral_rel')
+        .select('documento_id, controle_id')
+        .in('documento_id', documentIds);
+      
+      if (error) throw error;
+      
+      // Organizar as vinculações por documento_id
+      const vinculacoes = {};
+      data.forEach(item => {
+        if (!vinculacoes[item.documento_id]) {
+          vinculacoes[item.documento_id] = [];
+        }
+        vinculacoes[item.documento_id].push(item.controle_id);
+      });
+      
+      return vinculacoes;
+    } catch (error) {
+      console.error('Erro ao buscar vinculações de documentos:', error);
+      return {};
+    }
+  };
+
   const fetchConteudos = async () => {
     try {
       setLoading(true);
@@ -85,7 +115,15 @@ const ConteudoTable = () => {
       
       if (error) throw error;
       
-      setConteudos(Array.isArray(data) ? data : []);
+      const documentos = Array.isArray(data) ? data : [];
+      setConteudos(documentos);
+      
+      // NOVO: Buscar vinculações se houver documentos
+      if (documentos.length > 0) {
+        const documentIds = documentos.map(doc => doc.id);
+        const vinculacoes = await fetchDocumentoVinculacoes(documentIds);
+        setDocumentoVinculacoes(vinculacoes);
+      }
     } catch (error) {
       toast.error('Erro ao carregar conteúdos');
       console.error(error);
@@ -304,6 +342,33 @@ const ConteudoTable = () => {
     }
   };
 
+  // NOVO: Função para formatar a exibição de IDs vinculados
+  const formatVinculados = (documentoId) => {
+    const vinculados = documentoVinculacoes[documentoId] || [];
+    
+    if (vinculados.length === 0) {
+      return "-";
+    } else if (vinculados.length <= 3) {
+      return vinculados.join(", ");
+    } else {
+      return `${vinculados.slice(0, 3).join(", ")} +${vinculados.length - 3}`;
+    }
+  };
+
+  // NOVO: Função para visualizar todos os IDs vinculados
+  const visualizarTodosVinculados = (documentoId) => {
+    const vinculados = documentoVinculacoes[documentoId] || [];
+    
+    if (vinculados.length === 0) {
+      toast.info('Não há conteúdos vinculados a este documento');
+      return;
+    }
+    
+    setTextoVisualizando(vinculados.join("\n"));
+    setTipoTextoVisualizando('vinculacoes');
+    setTituloVisualizando('IDs de Conteúdo Vinculados');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
@@ -433,7 +498,7 @@ const ConteudoTable = () => {
               Arquivo
             </th>
             <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-              ID DO CONTEÚDO
+              ID CONTEÚDO VINCULADO
             </th>
             <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
               Categoria
@@ -478,7 +543,14 @@ const ConteudoTable = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.id_controleconteudogeral || '-'}
+                  {/* MODIFICADO: Exibir IDs vinculados da tabela de relacionamento */}
+                  <div 
+                    className="cursor-pointer hover:text-blue-600"
+                    onClick={() => visualizarTodosVinculados(item.id)}
+                    title={documentoVinculacoes[item.id]?.length > 0 ? "Clique para ver todos os IDs vinculados" : "Sem vinculações"}
+                  >
+                    {formatVinculados(item.id)}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {categorias[item.categoria_id] || 'Categoria indisponível'}
