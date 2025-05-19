@@ -354,15 +354,13 @@ class handler(BaseHTTPRequestHandler):
                 'backblaze_filename': unique_filename
             }
             
+            # Remover a atualização direta do id_controleconteudogeral
+            # (essa é a principal mudança)
+            
             # Adicionar id_controleconteudo se fornecido
             if id_controleconteudo is not None:
                 file_data['id_controleconteudo'] = id_controleconteudo
                 print(f"Vinculando documento ao controle de conteúdo ID: {id_controleconteudo}")
-            
-            # Adicionar id_controleconteudogeral se fornecido
-            if id_controleconteudogeral is not None:
-                file_data['id_controleconteudogeral'] = id_controleconteudogeral
-                print(f"Vinculando documento ao controle de conteúdo geral ID: {id_controleconteudogeral}")
             
             # Criar um cliente Supabase com a chave de serviço para poder inserir dados
             try:
@@ -391,17 +389,24 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     print(f"ID gerado pelo banco: {file_id}")
                 
-                # Se id_controleconteudogeral foi fornecido, atualize a tabela controle_conteudo_geral
+                # ALTERAÇÃO: Criar vinculação na tabela de relacionamento se id_controleconteudogeral foi fornecido
                 if id_controleconteudogeral is not None and file_id is not None:
                     try:
+                        # Criar vinculação na tabela de relacionamento
+                        rel_response = service_supabase.table('documento_controle_geral_rel').insert({
+                            'documento_id': file_id,
+                            'controle_id': id_controleconteudogeral
+                        }).execute()
+                        
+                        # Atualizar o flag tem_documento na tabela controle_conteudo_geral
                         update_response = service_supabase.table('controle_conteudo_geral').update({
-                            'id_basedadosconteudo': file_id
+                            'tem_documento': True
                         }).eq('id', id_controleconteudogeral).execute()
                         
-                        print(f"Atualizado id_basedadosconteudo na tabela controle_conteudo_geral para ID: {id_controleconteudogeral}")
-                    except Exception as update_error:
-                        print(f"Erro ao atualizar id_basedadosconteudo: {str(update_error)}")
-                        # Não interrompemos o processo se ocorrer um erro na atualização
+                        print(f"Documento vinculado ao controle geral ID: {id_controleconteudogeral}")
+                    except Exception as rel_error:
+                        print(f"Erro ao criar relação documento-controle: {str(rel_error)}")
+                        # Não interromper o processo se ocorrer um erro na vinculação
                 
                 # Variável para indicar se análise com IA foi realizada
                 analise_realizada = False
@@ -432,18 +437,6 @@ class handler(BaseHTTPRequestHandler):
                         print(f"Status do controle de conteúdo atualizado para tem_documento=True, ID: {id_controleconteudo}")
                     except Exception as update_error:
                         print(f"Erro ao atualizar status do controle de conteúdo: {str(update_error)}")
-                        # Não interromper o processo se ocorrer um erro na atualização
-                
-                # Se fornecido um ID de controle de conteúdo geral, atualizar o status na tabela controle_conteudo_geral
-                if id_controleconteudogeral is not None:
-                    try:
-                        update_response = service_supabase.table('controle_conteudo_geral').update({
-                            'tem_documento': True
-                        }).eq('id', id_controleconteudogeral).execute()
-                        
-                        print(f"Status do controle de conteúdo geral atualizado para tem_documento=True, ID: {id_controleconteudogeral}")
-                    except Exception as update_error:
-                        print(f"Erro ao atualizar status do controle de conteúdo geral: {str(update_error)}")
                         # Não interromper o processo se ocorrer um erro na atualização
                 
             except Exception as db_error:
