@@ -915,14 +915,76 @@ const ConteudoTable = () => {
                   ? "Adicione uma análise manual:" 
                   : "Texto análise:"}
               </label>
-              <textarea
-                id="textoAnalise"
-                value={textoAnaliseEditado}
-                onChange={(e) => setTextoAnaliseEditado(e.target.value)}
-                rows={15}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
-                placeholder="Digite aqui sua análise manual do documento..."
-              ></textarea>
+              
+              {/* Barra de ferramentas básica */}
+              <div className="flex space-x-1 mb-2 p-1 bg-gray-100 rounded border">
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('bold')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Negrito"
+                >
+                  <strong>B</strong>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('italic')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Itálico"
+                >
+                  <em>I</em>
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('underline')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Sublinhado"
+                >
+                  <u>U</u>
+                </button>
+                <div className="border-l border-gray-300 mx-1"></div>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('formatBlock', false, 'h2')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Título"
+                >
+                  H2
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('formatBlock', false, 'h3')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Subtítulo"
+                >
+                  H3
+                </button>
+                <div className="border-l border-gray-300 mx-1"></div>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('insertUnorderedList')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Lista com marcadores"
+                >
+                  • Lista
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => document.execCommand('insertOrderedList')}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Lista numerada"
+                >
+                  1. Lista
+                </button>
+              </div>
+              
+              {/* Editor */}
+              <div
+                contentEditable
+                dangerouslySetInnerHTML={{ __html: textoAnaliseEditado }}
+                onInput={(e) => setTextoAnaliseEditado(e.currentTarget.innerHTML)}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 min-h-[300px] font-sans text-sm"
+              />
             </div>
             
             <div className="flex justify-end">
