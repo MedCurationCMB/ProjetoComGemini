@@ -18,21 +18,27 @@ const ConteudoTable = () => {
   const [tituloVisualizando, setTituloVisualizando] = useState('');
   const [documentoVinculacoes, setDocumentoVinculacoes] = useState({});
   
-  // NOVO: Estado para controlar edição de documentos
+  // Estado para controlar edição de documentos
   const [documentoEditando, setDocumentoEditando] = useState(null);
   const [formEdicao, setFormEdicao] = useState({
     categoria_id: '',
     projeto_id: '',
     descricao: '',
     conteudo: '',
-    retorno_ia: ''
+    retorno_ia: '',
+    texto_analise: '' // Adicionado o campo texto_analise
   });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   
-  // NOVO: Estados para edição do retorno de IA
+  // Estados para edição do retorno de IA
   const [editandoRetornoIA, setEditandoRetornoIA] = useState(null);
   const [retornoIAEditado, setRetornoIAEditado] = useState('');
   const [atualizandoRetornoIA, setAtualizandoRetornoIA] = useState(false);
+  
+  // Novos estados para texto análise
+  const [editandoTextoAnalise, setEditandoTextoAnalise] = useState(null);
+  const [textoAnaliseEditado, setTextoAnaliseEditado] = useState('');
+  const [atualizandoTextoAnalise, setAtualizandoTextoAnalise] = useState(false);
 
   useEffect(() => {
     fetchCategorias();
@@ -185,7 +191,21 @@ const ConteudoTable = () => {
       } else {
         toast.error('Não há análise de IA disponível para este documento');
       }
+    } else if (tipo === 'texto_analise') {
+      if (item.texto_analise && item.texto_analise.trim() !== '') {
+        setTextoVisualizando(item.texto_analise);
+        setTipoTextoVisualizando('texto_analise');
+        setTituloVisualizando('Texto Análise');
+      } else {
+        toast.error('Não há texto análise disponível para este documento');
+      }
     }
+  };
+  
+  // Nova função para abrir o modal de edição/visualização de texto análise
+  const visualizarTextoAnalise = (item) => {
+    setEditandoTextoAnalise(item);
+    setTextoAnaliseEditado(item.texto_analise || '');
   };
 
   // Função para fechar modal de texto
@@ -242,7 +262,7 @@ const ConteudoTable = () => {
     }
   };
 
-  // Nova função para salvar o retorno da IA editado
+  // Função para salvar o retorno da IA editado
   const salvarRetornoIAEditado = async () => {
     if (!editandoRetornoIA || !retornoIAEditado.trim()) {
       toast.error('Por favor, insira o texto da análise antes de salvar');
@@ -296,6 +316,60 @@ const ConteudoTable = () => {
       toast.error('Erro ao salvar a análise de IA');
     } finally {
       setAtualizandoRetornoIA(false);
+    }
+  };
+  
+  // Nova função para salvar o texto análise editado
+  const salvarTextoAnaliseEditado = async () => {
+    if (!editandoTextoAnalise) return;
+
+    try {
+      setAtualizandoTextoAnalise(true);
+
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoTextoAnalise(false);
+        return;
+      }
+
+      // Atualizar o texto análise no Supabase
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ texto_analise: textoAnaliseEditado })
+        .eq('id', editandoTextoAnalise.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setConteudos(conteudos.map(item => 
+        item.id === editandoTextoAnalise.id 
+          ? { ...item, texto_analise: textoAnaliseEditado } 
+          : item
+      ));
+      
+      toast.success('Texto análise atualizado com sucesso!');
+      
+      // Fechar o modal de edição
+      setEditandoTextoAnalise(null);
+      setTextoAnaliseEditado('');
+      
+      // Se estamos editando um documento, atualizar o formulário de edição
+      if (documentoEditando && documentoEditando === editandoTextoAnalise.id) {
+        setFormEdicao(prev => ({
+          ...prev,
+          texto_analise: textoAnaliseEditado
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Erro ao atualizar texto análise:', error);
+      toast.error('Erro ao salvar o texto análise');
+    } finally {
+      setAtualizandoTextoAnalise(false);
     }
   };
 
@@ -447,7 +521,7 @@ const ConteudoTable = () => {
     setTituloVisualizando('IDs de Conteúdo Vinculados');
   };
 
-  // Função para iniciar edição de documento
+  // Função para iniciar edição de documento (atualizada para incluir texto_analise)
   const iniciarEdicaoDocumento = (documento) => {
     setDocumentoEditando(documento.id);
     setFormEdicao({
@@ -455,7 +529,8 @@ const ConteudoTable = () => {
       projeto_id: documento.projeto_id || '',
       descricao: documento.descricao || '',
       conteudo: documento.conteudo || '',
-      retorno_ia: documento.retorno_ia || ''
+      retorno_ia: documento.retorno_ia || '',
+      texto_analise: documento.texto_analise || '' // Adicionando o campo texto_analise
     });
   };
 
@@ -467,7 +542,8 @@ const ConteudoTable = () => {
       projeto_id: '',
       descricao: '',
       conteudo: '',
-      retorno_ia: ''
+      retorno_ia: '',
+      texto_analise: '' // Adicionando o campo texto_analise
     });
   };
 
@@ -480,7 +556,7 @@ const ConteudoTable = () => {
     }));
   };
 
-  // Função para salvar documento editado
+  // Função para salvar documento editado (atualizada para incluir texto_analise)
   const salvarDocumentoEditado = async () => {
     if (!documentoEditando) return;
     
@@ -502,7 +578,8 @@ const ConteudoTable = () => {
         projeto_id: formEdicao.projeto_id,
         descricao: formEdicao.descricao,
         conteudo: formEdicao.conteudo,
-        retorno_ia: formEdicao.retorno_ia
+        retorno_ia: formEdicao.retorno_ia,
+        texto_analise: formEdicao.texto_analise // Adicionando o campo texto_analise
       };
       
       // Atualizar o documento no Supabase
@@ -543,12 +620,21 @@ const ConteudoTable = () => {
     }
   };
 
-  // Função para editar o retorno da IA em um modal separado (nova implementação)
+  // Função para editar o retorno da IA em um modal separado
   const editarRetornoIA = () => {
     const documento = conteudos.find(doc => doc.id === documentoEditando);
     if (documento) {
       setEditandoRetornoIA(documento);
       setRetornoIAEditado(formEdicao.retorno_ia);
+    }
+  };
+  
+  // Nova função para editar o texto análise a partir do modo de edição
+  const editarTextoAnalise = () => {
+    const documento = conteudos.find(doc => doc.id === documentoEditando);
+    if (documento) {
+      setEditandoTextoAnalise(documento);
+      setTextoAnaliseEditado(formEdicao.texto_analise || '');
     }
   };
 
@@ -693,7 +779,7 @@ const ConteudoTable = () => {
         </div>
       )}
 
-      {/* NOVO: Modal para edição/adição de retorno de IA */}
+      {/* Modal para edição/adição de retorno de IA */}
       {editandoRetornoIA && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -755,14 +841,92 @@ const ConteudoTable = () => {
             <div className="flex justify-end">
               <button
                 onClick={salvarRetornoIAEditado}
-                disabled={atualizandoRetornoIA || !retornoIAEditado.trim()}
+                disabled={atualizandoRetornoIA}
                 className={`flex items-center px-4 py-2 rounded ${
-                  atualizandoRetornoIA || !retornoIAEditado.trim()
+                  atualizandoRetornoIA
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
                 {atualizandoRetornoIA ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Novo modal para edição/adição de texto análise */}
+      {editandoTextoAnalise && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicionar Texto Análise" 
+                  : "Editar Texto Análise"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoTextoAnalise(null);
+                  setTextoAnaliseEditado('');
+                  
+                  // Se estamos editando um documento, atualizar o formulário de edição
+                  if (documentoEditando && documentoEditando === editandoTextoAnalise.id) {
+                    setFormEdicao(prev => ({
+                      ...prev,
+                      texto_analise: prev.texto_analise // Manter o mesmo valor, pois cancelamos
+                    }));
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoTextoAnalise.nome_arquivo}
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="textoAnalise" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicione uma análise manual:" 
+                  : "Texto análise:"}
+              </label>
+              <textarea
+                id="textoAnalise"
+                value={textoAnaliseEditado}
+                onChange={(e) => setTextoAnaliseEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Digite aqui sua análise manual do documento..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarTextoAnaliseEditado}
+                disabled={atualizandoTextoAnalise}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoTextoAnalise
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoTextoAnalise ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Salvando...
@@ -928,6 +1092,15 @@ const ConteudoTable = () => {
                             <FiEdit className="mr-1 h-3 w-3" />
                             IA
                           </button>
+                          {/* Novo botão para editar texto análise */}
+                          <button
+                            onClick={editarTextoAnalise}
+                            className="text-teal-600 hover:text-teal-900 px-2 py-1 border border-teal-200 rounded text-xs flex items-center"
+                            title="Editar Texto Análise"
+                          >
+                            <FiEdit className="mr-1 h-3 w-3" />
+                            Análise
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -952,6 +1125,14 @@ const ConteudoTable = () => {
                           <span className="text-xs inline-flex items-center px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
                             <FiCpu className="mr-1 h-3 w-3" />
                             Análise IA disponível
+                          </span>
+                        </div>
+                      )}
+                      {item.texto_analise && (
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs inline-flex items-center px-2 py-0.5 rounded bg-teal-100 text-teal-800">
+                            <FiType className="mr-1 h-3 w-3" />
+                            Texto Análise disponível
                           </span>
                         </div>
                       )}
@@ -1009,6 +1190,20 @@ const ConteudoTable = () => {
                             }
                           </button>
                           
+                          {/* Novo botão para texto análise */}
+                          <button
+                            onClick={() => visualizarTextoAnalise(item)}
+                            className="text-teal-600 hover:text-teal-900"
+                            title={!item.texto_analise || item.texto_analise.trim() === '' 
+                              ? "Adicionar Texto Análise" 
+                              : "Visualizar Texto Análise"}
+                          >
+                            {!item.texto_analise || item.texto_analise.trim() === '' 
+                              ? <FiEdit className="h-5 w-5" />
+                              : <FiType className="h-5 w-5" />
+                            }
+                          </button>
+                          
                           <button
                             onClick={() => setDocumentoParaAnaliseIA(item.id)}
                             className="text-indigo-600 hover:text-indigo-900"
@@ -1022,6 +1217,16 @@ const ConteudoTable = () => {
                               onClick={() => visualizarTexto(item, 'retorno_ia')}
                               className="text-amber-600 hover:text-amber-900"
                               title="Ver Análise da IA"
+                            >
+                              <FiEye className="h-5 w-5" />
+                            </button>
+                          )}
+                          
+                          {item.texto_analise && (
+                            <button
+                              onClick={() => visualizarTexto(item, 'texto_analise')}
+                              className="text-teal-600 hover:text-teal-900"
+                              title="Ver Texto Análise"
                             >
                               <FiEye className="h-5 w-5" />
                             </button>
