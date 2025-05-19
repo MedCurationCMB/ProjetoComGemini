@@ -299,33 +299,71 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
   // Função para atualizar a relação entre documento e controle
   const updateDocumentoRelacao = async (novoDocumentoId) => {
     try {
+      console.log(`Tentando atualizar relação: controle_id=${controleItem.id}, novo documento_id=${novoDocumentoId}`);
+      
       // Verificar se já existe uma relação
-      const { data: existingRel } = await supabase
+      const { data: existingRel, error: selectError } = await supabase
         .from('documento_controle_geral_rel')
-        .select('*')
+        .select('id, documento_id, controle_id')
         .eq('controle_id', controleItem.id)
         .maybeSingle();
       
+      if (selectError) {
+        console.error('Erro ao verificar relação existente:', selectError);
+        throw selectError;
+      }
+      
+      console.log('Relação existente encontrada:', existingRel);
+      
       if (existingRel) {
-        // Atualizar relação existente
-        const { error } = await supabase
+        // Se o documento já é o mesmo, não faz nada
+        if (existingRel.documento_id === novoDocumentoId) {
+          console.log('Documento já vinculado, nenhuma alteração necessária');
+          return;
+        }
+        
+        // Primeiro, vamos excluir a relação antiga para evitar erro de chave única
+        const { error: deleteError } = await supabase
           .from('documento_controle_geral_rel')
-          .update({
-            documento_id: novoDocumentoId
-          })
-          .eq('controle_id', controleItem.id);
+          .delete()
+          .eq('id', existingRel.id);
           
-        if (error) throw error;
-      } else {
-        // Criar nova relação
-        const { error } = await supabase
+        if (deleteError) {
+          console.error('Erro ao excluir relação antiga:', deleteError);
+          throw deleteError;
+        }
+        
+        console.log('Relação antiga excluída com sucesso');
+        
+        // Agora, criar nova relação com o novo documento_id
+        const { error: insertError } = await supabase
           .from('documento_controle_geral_rel')
           .insert({
             documento_id: novoDocumentoId,
             controle_id: controleItem.id
           });
           
-        if (error) throw error;
+        if (insertError) {
+          console.error('Erro ao inserir nova relação:', insertError);
+          throw insertError;
+        }
+        
+        console.log('Nova relação criada com sucesso');
+      } else {
+        // Criar nova relação
+        const { error: insertError } = await supabase
+          .from('documento_controle_geral_rel')
+          .insert({
+            documento_id: novoDocumentoId,
+            controle_id: controleItem.id
+          });
+          
+        if (insertError) {
+          console.error('Erro ao inserir relação:', insertError);
+          throw insertError;
+        }
+        
+        console.log('Relação criada com sucesso');
       }
       
       // Atualizar o flag tem_documento
@@ -334,7 +372,12 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
         .update({ tem_documento: true })
         .eq('id', controleItem.id);
         
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Erro ao atualizar flag tem_documento:', updateError);
+        throw updateError;
+      }
+      
+      console.log('Flag tem_documento atualizado com sucesso');
       
     } catch (error) {
       console.error('Erro ao atualizar relação documento-controle:', error);
