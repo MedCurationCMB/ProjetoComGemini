@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiUpload, FiFile, FiX, FiCloud, FiServer, FiArrowLeft } from 'react-icons/fi';
+import { FiPlus, FiX, FiCheck, FiCalendar, FiUpload, FiCloud, FiFile, FiServer, FiArrowLeft } from 'react-icons/fi';
 
-const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, categorias, projetos, isGeralTable = false }) => {
+const AnexarDocumentoDialog = ({ 
+  controleId, 
+  onClose, 
+  onSuccess, 
+  controleItem, 
+  categorias, 
+  projetos, 
+  isGeralTable = false,
+  isSubstituicao = false, // NOVO: Indica se estamos substituindo um documento 
+  tituloModal = "Anexar Documento" // NOVO: Permite personalizar o título
+}) => {
   // Adicionar um novo estado para controlar o fluxo
   const [step, setStep] = useState('escolha'); // 'escolha', 'computador', 'nuvem'
   const [file, setFile] = useState(null);
@@ -105,6 +115,25 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
+      // Se é uma substituição, primeiro remover vínculos existentes
+      if (isSubstituicao) {
+        try {
+          // Remover todos os vínculos atuais para este controle
+          const { error: deleteError } = await supabase
+            .from('documento_controle_geral_rel')
+            .delete()
+            .eq('controle_id', controleId);
+            
+          if (deleteError) {
+            console.error('Erro ao remover vínculo antigo:', deleteError);
+            // Continuar mesmo com erro, para tentar criar o novo vínculo
+          }
+        } catch (e) {
+          console.error('Erro ao remover vínculos existentes:', e);
+          // Continuar mesmo com erro
+        }
+      }
+      
       // Criar um FormData para enviar o arquivo
       const formData = new FormData();
       formData.append('file', file);
@@ -164,7 +193,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
           onSuccess(responseData.id);
         }
         
-        toast.success('Documento anexado com sucesso!');
+        toast.success(isSubstituicao ? 'Documento substituído com sucesso!' : 'Documento anexado com sucesso!');
       }, 1000);
       
     } catch (error) {
@@ -194,6 +223,25 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
+      // Se é uma substituição, primeiro remover vínculos existentes
+      if (isSubstituicao) {
+        try {
+          // Remover todos os vínculos atuais para este controle
+          const { error: deleteError } = await supabase
+            .from('documento_controle_geral_rel')
+            .delete()
+            .eq('controle_id', controleId);
+            
+          if (deleteError) {
+            console.error('Erro ao remover vínculo antigo:', deleteError);
+            // Continuar mesmo com erro, para tentar criar o novo vínculo
+          }
+        } catch (e) {
+          console.error('Erro ao remover vínculos existentes:', e);
+          // Continuar mesmo com erro
+        }
+      }
+      
       // Criar vinculação na tabela de relacionamento
       const { error } = await supabase
         .from('documento_controle_geral_rel')
@@ -220,7 +268,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       }
       
       // Notificar sucesso e fechar diálogo
-      toast.success('Documento vinculado com sucesso!');
+      toast.success(isSubstituicao ? 'Documento substituído com sucesso!' : 'Documento vinculado com sucesso!');
       
       if (onSuccess) {
         onSuccess(documentoSelecionado);
@@ -270,9 +318,9 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       <div className="bg-white p-6 rounded-lg max-w-lg w-full">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
-            {step === 'escolha' && 'Anexar Documento'}
-            {step === 'computador' && 'Anexar do Computador'}
-            {step === 'nuvem' && 'Anexar da Nuvem'}
+            {step === 'escolha' && tituloModal}
+            {step === 'computador' && (isSubstituicao ? "Substituir do Computador" : "Anexar do Computador")}
+            {step === 'nuvem' && (isSubstituicao ? "Substituir da Nuvem" : "Anexar da Nuvem")}
           </h2>
           <button 
             onClick={onClose}
@@ -312,7 +360,9 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                 className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg"
               >
                 <FiUpload className="mr-3 h-6 w-6" />
-                <span className="font-medium">Anexar do Computador</span>
+                <span className="font-medium">
+                  {isSubstituicao ? "Substituir do Computador" : "Anexar do Computador"}
+                </span>
               </button>
               
               <button
@@ -320,7 +370,9 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                 className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-lg"
               >
                 <FiCloud className="mr-3 h-6 w-6" />
-                <span className="font-medium">Anexar da Nuvem</span>
+                <span className="font-medium">
+                  {isSubstituicao ? "Substituir da Nuvem" : "Anexar da Nuvem"}
+                </span>
               </button>
             </div>
           </div>
@@ -446,7 +498,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
               >
-                {uploading ? 'Enviando...' : 'Anexar Documento'}
+                {uploading ? 'Enviando...' : isSubstituicao ? 'Substituir Documento' : 'Anexar Documento'}
               </button>
             </div>
           </form>
@@ -543,7 +595,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
               >
-                {uploading ? 'Processando...' : 'Vincular Documento'}
+                {uploading ? 'Processando...' : isSubstituicao ? 'Substituir Documento' : 'Vincular Documento'}
               </button>
             </div>
           </div>
