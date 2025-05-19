@@ -3,62 +3,6 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiX } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
-import RichTextEditor from './RichTextEditor';
-
-// Função auxiliar para verificar se o texto é um JSON válido do Slate
-const isJsonString = (str) => {
-  try {
-    const result = JSON.parse(str);
-    return !!result && typeof result === 'object';
-  } catch (e) {
-    return false;
-  }
-};
-
-// Função para renderizar o conteúdo do Slate como HTML
-const renderSlateContent = (content) => {
-  try {
-    const nodes = JSON.parse(content);
-    let html = '';
-    
-    const renderNode = (node) => {
-      if (node.text) {
-        let text = node.text;
-        if (node.bold) text = `<strong>${text}</strong>`;
-        if (node.italic) text = `<em>${text}</em>`;
-        if (node.underline) text = `<u>${text}</u>`;
-        if (node.code) text = `<code>${text}</code>`;
-        return text;
-      }
-      
-      let innerHtml = node.children.map(renderNode).join('');
-      
-      switch (node.type) {
-        case 'paragraph':
-          return `<p>${innerHtml}</p>`;
-        case 'heading-one':
-          return `<h1>${innerHtml}</h1>`;
-        case 'heading-two':
-          return `<h2>${innerHtml}</h2>`;
-        case 'bulleted-list':
-          return `<ul>${innerHtml}</ul>`;
-        case 'numbered-list':
-          return `<ol>${innerHtml}</ol>`;
-        case 'list-item':
-          return `<li>${innerHtml}</li>`;
-        case 'block-quote':
-          return `<blockquote>${innerHtml}</blockquote>`;
-        default:
-          return innerHtml;
-      }
-    };
-    
-    return nodes.map(renderNode).join('');
-  } catch (e) {
-    console.error('Erro ao renderizar conteúdo Slate:', e);
-    return content; // Retorna o conteúdo original em caso de erro
-  }
-};
 
 const ConteudoTable = () => {
   const [conteudos, setConteudos] = useState([]);
@@ -728,20 +672,9 @@ const ConteudoTable = () => {
                 </button>
               </div>
             </div>
-            
-            {tipoTextoVisualizando === 'texto_analise' ? (
-              <div className="p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
-                {isJsonString(textoVisualizando) ? (
-                  <div dangerouslySetInnerHTML={{ __html: renderSlateContent(textoVisualizando) }} />
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: textoVisualizando }} />
-                )}
-              </div>
-            ) : (
-              <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
-                {textoVisualizando || ''}
-              </pre>
-            )}
+            <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+              {textoVisualizando || ''}
+            </pre>
           </div>
         </div>
       )}
@@ -941,7 +874,7 @@ const ConteudoTable = () => {
         </div>
       )}
       
-      {/* Novo modal para edição/adição de texto análise com RichTextEditor */}
+      {/* Novo modal para edição/adição de texto análise */}
       {editandoTextoAnalise && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -982,10 +915,14 @@ const ConteudoTable = () => {
                   ? "Adicione uma análise manual:" 
                   : "Texto análise:"}
               </label>
-              <RichTextEditor
+              <textarea
+                id="textoAnalise"
                 value={textoAnaliseEditado}
-                onChange={setTextoAnaliseEditado}
-              />
+                onChange={(e) => setTextoAnaliseEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Digite aqui sua análise manual do documento..."
+              ></textarea>
             </div>
             
             <div className="flex justify-end">
