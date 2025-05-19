@@ -29,8 +29,10 @@ const ConteudoTable = () => {
   });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   
-  // NOVO: Estado para rastrear quando estamos editando o retorno da IA
-  const [editandoRetornoIA, setEditandoRetornoIA] = useState(false);
+  // NOVO: Estados para edição do retorno de IA
+  const [editandoRetornoIA, setEditandoRetornoIA] = useState(null);
+  const [retornoIAEditado, setRetornoIAEditado] = useState('');
+  const [atualizandoRetornoIA, setAtualizandoRetornoIA] = useState(false);
 
   useEffect(() => {
     fetchCategorias();
@@ -174,31 +176,21 @@ const ConteudoTable = () => {
         setTextoVisualizando(item.conteudo);
         setTipoTextoVisualizando('conteudo');
         setTituloVisualizando('Texto Extraído');
-        setEditandoRetornoIA(false); // Certifique-se de que não estamos em modo de edição
       }
     } else if (tipo === 'retorno_ia') {
       if (item.retorno_ia && item.retorno_ia.trim() !== '') {
         setTextoVisualizando(item.retorno_ia);
         setTipoTextoVisualizando('retorno_ia');
         setTituloVisualizando('Análise de IA');
-        setEditandoRetornoIA(false); // Certifique-se de que não estamos em modo de edição
       } else {
         toast.error('Não há análise de IA disponível para este documento');
       }
     }
   };
 
-  // NOVO: Função para fechar modal de texto com verificação para edição de IA
+  // Função para fechar modal de texto
   const fecharModalTexto = () => {
-    // Se estamos editando o retorno da IA, não fechar quando o texto está vazio
-    if (editandoRetornoIA && tipoTextoVisualizando === 'retorno_ia_editando') {
-      // Não fechar o modal, apenas deixar o usuário continuar editando
-      return;
-    }
-    
-    // Caso contrário, comportamento normal
     setTextoVisualizando(null);
-    setEditandoRetornoIA(false);
   };
 
   // Salvar o texto editado no Supabase
@@ -247,6 +239,63 @@ const ConteudoTable = () => {
       toast.error('Erro ao salvar o texto');
     } finally {
       setAtualizandoTexto(false);
+    }
+  };
+
+  // Nova função para salvar o retorno da IA editado
+  const salvarRetornoIAEditado = async () => {
+    if (!editandoRetornoIA || !retornoIAEditado.trim()) {
+      toast.error('Por favor, insira o texto da análise antes de salvar');
+      return;
+    }
+
+    try {
+      setAtualizandoRetornoIA(true);
+
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoRetornoIA(false);
+        return;
+      }
+
+      // Atualizar o retorno da IA no Supabase
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ retorno_ia: retornoIAEditado })
+        .eq('id', editandoRetornoIA.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setConteudos(conteudos.map(item => 
+        item.id === editandoRetornoIA.id 
+          ? { ...item, retorno_ia: retornoIAEditado } 
+          : item
+      ));
+      
+      toast.success('Análise de IA atualizada com sucesso!');
+      
+      // Fechar o modal de edição
+      setEditandoRetornoIA(null);
+      setRetornoIAEditado('');
+      
+      // Se estamos editando um documento, atualizar o formulário de edição
+      if (documentoEditando && documentoEditando === editandoRetornoIA.id) {
+        setFormEdicao(prev => ({
+          ...prev,
+          retorno_ia: retornoIAEditado
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Erro ao atualizar análise de IA:', error);
+      toast.error('Erro ao salvar a análise de IA');
+    } finally {
+      setAtualizandoRetornoIA(false);
     }
   };
 
@@ -396,7 +445,6 @@ const ConteudoTable = () => {
     setTextoVisualizando(vinculados.join("\n"));
     setTipoTextoVisualizando('vinculacoes');
     setTituloVisualizando('IDs de Conteúdo Vinculados');
-    setEditandoRetornoIA(false); // Certifique-se de que não estamos em modo de edição
   };
 
   // Função para iniciar edição de documento
@@ -492,30 +540,15 @@ const ConteudoTable = () => {
     if (documento) {
       setEditandoConteudo(documento);
       setTextoEditado(formEdicao.conteudo);
-      
-      // Manter o modo de edição do documento ativo
-      // para que as alterações sejam refletidas quando o modal for fechado
     }
   };
 
-  // Função para editar o retorno da IA em um modal separado
+  // Função para editar o retorno da IA em um modal separado (nova implementação)
   const editarRetornoIA = () => {
-    // Abrir um modal para editar o retorno da IA
-    setTextoVisualizando(formEdicao.retorno_ia);
-    setTipoTextoVisualizando('retorno_ia_editando');
-    setTituloVisualizando('Editar Análise de IA');
-    setEditandoRetornoIA(true); // Ativar o modo de edição
-  };
-
-  // Função para salvar o retorno da IA editado
-  const salvarRetornoIAEditado = () => {
-    if (tipoTextoVisualizando === 'retorno_ia_editando') {
-      setFormEdicao(prev => ({
-        ...prev,
-        retorno_ia: textoVisualizando
-      }));
-      setTextoVisualizando(null);
-      setEditandoRetornoIA(false);
+    const documento = conteudos.find(doc => doc.id === documentoEditando);
+    if (documento) {
+      setEditandoRetornoIA(documento);
+      setRetornoIAEditado(formEdicao.retorno_ia);
     }
   };
 
@@ -536,14 +569,6 @@ const ConteudoTable = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">{tituloVisualizando}</h2>
               <div className="flex space-x-2">
-                {tipoTextoVisualizando === 'retorno_ia_editando' && (
-                  <button 
-                    onClick={salvarRetornoIAEditado}
-                    className="text-green-500 hover:text-green-700 bg-green-100 p-2 rounded flex items-center"
-                  >
-                    <FiSave className="mr-1" /> Salvar
-                  </button>
-                )}
                 <button 
                   onClick={fecharModalTexto}
                   className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
@@ -552,17 +577,9 @@ const ConteudoTable = () => {
                 </button>
               </div>
             </div>
-            {tipoTextoVisualizando === 'retorno_ia_editando' ? (
-              <textarea
-                value={textoVisualizando || ''}
-                onChange={(e) => setTextoVisualizando(e.target.value)}
-                className="w-full p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] h-[400px] font-mono"
-              ></textarea>
-            ) : (
-              <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
-                {textoVisualizando || ''}
-              </pre>
-            )}
+            <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+              {textoVisualizando || ''}
+            </pre>
           </div>
         </div>
       )}
@@ -668,6 +685,92 @@ const ConteudoTable = () => {
                   <>
                     <FiSave className="mr-2" />
                     Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOVO: Modal para edição/adição de retorno de IA */}
+      {editandoRetornoIA && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicionar Análise de IA" 
+                  : "Editar Análise de IA"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoRetornoIA(null);
+                  setRetornoIAEditado('');
+                  
+                  // Se estamos editando um documento, atualizar o formulário de edição
+                  if (documentoEditando && documentoEditando === editandoRetornoIA.id) {
+                    setFormEdicao(prev => ({
+                      ...prev,
+                      retorno_ia: prev.retorno_ia // Manter o mesmo valor, pois cancelamos
+                    }));
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoRetornoIA.nome_arquivo}
+              </p>
+              {(!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '') && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+                  <p className="text-yellow-800 font-medium mb-2">Análise de IA não disponível</p>
+                  <p className="text-yellow-700">
+                    Este documento ainda não foi analisado pela IA. Você pode adicionar manualmente uma análise abaixo ou usar o botão de análise com IA na tabela principal.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="retornoIA" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicione uma análise:" 
+                  : "Análise de IA:"}
+              </label>
+              <textarea
+                id="retornoIA"
+                value={retornoIAEditado}
+                onChange={(e) => setRetornoIAEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Digite ou cole a análise da IA aqui..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarRetornoIAEditado}
+                disabled={atualizandoRetornoIA || !retornoIAEditado.trim()}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoRetornoIA || !retornoIAEditado.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoRetornoIA ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
                   </>
                 )}
               </button>
