@@ -1,9 +1,11 @@
+// Componente ControleConteudoGeralTable.js modificado
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus, FiChevronUp, FiChevronDown } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus, FiChevronUp, FiChevronDown, FiEdit } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
+import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog'; // Importar o novo componente
 
 const ControleConteudoGeralTable = () => {
   const [controles, setControles] = useState([]);
@@ -15,6 +17,7 @@ const ControleConteudoGeralTable = () => {
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' }); // Estado para ordenação
+  const [editarItemId, setEditarItemId] = useState(null); // Novo estado para o ID do item sendo editado
 
   useEffect(() => {
     fetchCategorias();
@@ -183,6 +186,13 @@ const ControleConteudoGeralTable = () => {
     toast.success('Operação concluída com sucesso!');
   };
 
+  // Função para lidar com o sucesso da edição de linha
+  const handleEditarSuccess = () => {
+    setEditarItemId(null);
+    fetchControles(); // Recarrega os dados da tabela
+    toast.success('Item atualizado com sucesso!');
+  };
+
   // Aplicar filtros
   const aplicarFiltros = () => {
     fetchControles();
@@ -307,6 +317,17 @@ const ControleConteudoGeralTable = () => {
         />
       )}
 
+      {/* Modal para editar linha de conteúdo */}
+      {editarItemId && (
+        <EditarLinhaConteudoDialog
+          controleItem={controles.find(item => item.id === editarItemId)}
+          onClose={() => setEditarItemId(null)}
+          onSuccess={handleEditarSuccess}
+          categorias={categorias}
+          projetos={projetos}
+        />
+      )}
+
       {/* Tabela de Controle Geral */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300">
@@ -425,16 +446,29 @@ const ControleConteudoGeralTable = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {!item.tem_documento && (
+                    <div className="flex space-x-2">
+                      {/* Botão para editar linha */}
                       <button
-                        onClick={() => setAnexarDocumentoId(item.id)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center"
-                        title="Anexar Documento"
+                        onClick={() => setEditarItemId(item.id)}
+                        className="text-indigo-600 hover:text-indigo-900 flex items-center"
+                        title="Editar Item"
                       >
-                        <FiUpload className="mr-1" />
-                        Anexar
+                        <FiEdit className="mr-1" />
+                        Editar
                       </button>
-                    )}
+                      
+                      {/* Botão para anexar documento (apenas se não tiver documento) */}
+                      {!item.tem_documento && (
+                        <button
+                          onClick={() => setAnexarDocumentoId(item.id)}
+                          className="text-blue-600 hover:text-blue-900 flex items-center"
+                          title="Anexar Documento"
+                        >
+                          <FiUpload className="mr-1" />
+                          Anexar
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
