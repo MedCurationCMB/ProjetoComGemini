@@ -204,8 +204,17 @@ const ConteudoTable = () => {
   
   // Nova função para abrir o modal de edição/visualização de texto análise
   const visualizarTextoAnalise = (item) => {
-    setEditandoTextoAnalise(item);
-    setTextoAnaliseEditado(item.texto_analise || '');
+    // Se tem texto análise, apenas visualiza
+    if (item.texto_analise && item.texto_analise.trim() !== '') {
+      setTextoVisualizando(item.texto_analise);
+      setTipoTextoVisualizando('texto_analise');
+      setTituloVisualizando('Texto Análise');
+    } 
+    // Se não tem texto análise, permite adicionar
+    else {
+      setEditandoTextoAnalise(item);
+      setTextoAnaliseEditado('');
+    }
   };
 
   // Função para fechar modal de texto
@@ -1190,19 +1199,26 @@ const ConteudoTable = () => {
                             }
                           </button>
                           
-                          {/* Novo botão para texto análise */}
-                          <button
-                            onClick={() => visualizarTextoAnalise(item)}
-                            className="text-teal-600 hover:text-teal-900"
-                            title={!item.texto_analise || item.texto_analise.trim() === '' 
-                              ? "Adicionar Texto Análise" 
-                              : "Visualizar Texto Análise"}
-                          >
-                            {!item.texto_analise || item.texto_analise.trim() === '' 
-                              ? <FiEdit className="h-5 w-5" />
-                              : <FiType className="h-5 w-5" />
-                            }
-                          </button>
+                          {/* Na visualização normal */}
+                          {!item.texto_analise || item.texto_analise.trim() === '' ? (
+                            // Se não tiver texto análise, exibe o ícone de edição para adicionar
+                            <button
+                              onClick={() => visualizarTextoAnalise(item)}
+                              className="text-teal-600 hover:text-teal-900"
+                              title="Adicionar Texto Análise"
+                            >
+                              <FiEdit className="h-5 w-5" />
+                            </button>
+                          ) : (
+                            // Se já tiver texto análise, exibe o ícone T para visualizar
+                            <button
+                              onClick={() => visualizarTexto(item, 'texto_analise')}
+                              className="text-teal-600 hover:text-teal-900"
+                              title="Ver Texto Análise"
+                            >
+                              <FiType className="h-5 w-5" />
+                            </button>
+                          )}
                           
                           <button
                             onClick={() => setDocumentoParaAnaliseIA(item.id)}
