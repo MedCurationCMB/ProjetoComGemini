@@ -242,30 +242,35 @@ const AnexarDocumentoDialog = ({
         }
       }
       
-      // Criar vinculação na tabela de relacionamento
-      const { error } = await supabase
+      // PROBLEMA AQUI: Criar vinculação na tabela de relacionamento
+      // O código atual pode não criar um novo vínculo em caso de substituição
+      // porque está verificando um erro que pode não ocorrer quando removemos os vínculos anteriores
+      
+      // SOLUÇÃO: Sempre criar uma nova vinculação, independente do modo (anexar ou substituir)
+      const { error: insertError } = await supabase
         .from('documento_controle_geral_rel')
         .insert({
           documento_id: documentoSelecionado,
           controle_id: controleId
         });
       
-      if (error) {
-        // Verificar se é um erro de duplicidade
-        if (error.code === '23505') { // Código de erro do PostgreSQL para violação de restrição única
-          toast.warning('Este documento já está vinculado a este controle');
+      // Tratar apenas erros que não sejam de duplicidade
+      if (insertError) {
+        // Se for erro de duplicidade (código 23505), podemos ignorar
+        if (insertError.code === '23505') {
+          console.log('Aviso: O documento já estava vinculado a este controle');
         } else {
-          throw error;
+          throw insertError;
         }
-      } else {
-        // Atualizar o flag tem_documento na tabela controle_conteudo_geral
-        const { error: updateError } = await supabase
-          .from('controle_conteudo_geral')
-          .update({ tem_documento: true })
-          .eq('id', controleId);
-        
-        if (updateError) throw updateError;
       }
+      
+      // Atualizar o flag tem_documento na tabela controle_conteudo_geral
+      const { error: updateError } = await supabase
+        .from('controle_conteudo_geral')
+        .update({ tem_documento: true })
+        .eq('id', controleId);
+      
+      if (updateError) throw updateError;
       
       // Notificar sucesso e fechar diálogo
       toast.success(isSubstituicao ? 'Documento substituído com sucesso!' : 'Documento vinculado com sucesso!');
