@@ -1,5 +1,4 @@
 import React from 'react';
-import { FiX } from 'react-icons/fi';
 
 const VisualizarTextoAnalise = ({ htmlContent, onClose }) => {
   return (
@@ -11,7 +10,7 @@ const VisualizarTextoAnalise = ({ htmlContent, onClose }) => {
             onClick={onClose}
             className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
           >
-            <FiX className="h-5 w-5" />
+            Fechar
           </button>
         </div>
         

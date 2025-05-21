@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSave } from 'react-icons/fi';
 import TipTapEditor from './TipTapEditor';
 
 const EditarTextoAnaliseDialog = ({ documento, onClose, onSuccess }) => {
@@ -30,6 +29,8 @@ const EditarTextoAnaliseDialog = ({ documento, onClose, onSuccess }) => {
         return;
       }
 
+      console.log("Salvando HTML:", htmlContent);
+
       // Atualizar o texto análise no Supabase
       const { data, error } = await supabase
         .from('base_dados_conteudo')
@@ -41,7 +42,7 @@ const EditarTextoAnaliseDialog = ({ documento, onClose, onSuccess }) => {
       
       toast.success('Texto análise atualizado com sucesso!');
       
-      // Fechar o modal de edição
+      // Fechar o modal de edição e notificar o sucesso
       if (onSuccess) {
         onSuccess(htmlContent);
       }
@@ -89,27 +90,17 @@ const EditarTextoAnaliseDialog = ({ documento, onClose, onSuccess }) => {
           />
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-end mt-4">
           <button
             onClick={salvarTextoAnalise}
             disabled={atualizando}
-            className={`flex items-center px-4 py-2 rounded ${
+            className={`px-4 py-2 rounded ${
               atualizando
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-700 text-white'
             }`}
           >
-            {atualizando ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Salvando...
-              </>
-            ) : (
-              <>
-                <FiSave className="mr-2" />
-                Salvar Análise
-              </>
-            )}
+            {atualizando ? 'Salvando...' : 'Salvar Análise'}
           </button>
         </div>
       </div>
