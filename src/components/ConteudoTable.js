@@ -222,8 +222,7 @@ const ConteudoTable = () => {
     // Se não tem texto análise, permite adicionar
     else {
       setEditandoTextoAnalise(item);
-      setTextoAnaliseEditado('');
-      // Inicializa o editor Slate com conteúdo vazio
+      // Sempre inicialize com um valor válido para o Slate
       setTextoAnaliseEditadoSlate([
         {
           type: 'paragraph',
@@ -673,12 +672,13 @@ const ConteudoTable = () => {
     const documento = conteudos.find(doc => doc.id === documentoEditando);
     if (documento) {
       setEditandoTextoAnalise(documento);
-      // Inicializa o editor com o conteúdo existente
-      // Uma abordagem simples para início
+      
+      // Sempre inicialize com um valor válido para o Slate
+      const textoInicial = documento.texto_analise || '';
       setTextoAnaliseEditadoSlate([
         {
           type: 'paragraph',
-          children: [{ text: documento.texto_analise || '' }],
+          children: [{ text: textoInicial }],
         },
       ]);
     }
@@ -955,7 +955,12 @@ const ConteudoTable = () => {
               {/* Usando o componente RichTextEditor no lugar do textarea */}
               <RichTextEditor 
                 value={textoAnaliseEditadoSlate} 
-                onChange={value => setTextoAnaliseEditadoSlate(value)} 
+                onChange={newValue => {
+                  // Certifique-se de que o valor é um array válido
+                  if (Array.isArray(newValue)) {
+                    setTextoAnaliseEditadoSlate(newValue);
+                  }
+                }} 
               />
             </div>
             
