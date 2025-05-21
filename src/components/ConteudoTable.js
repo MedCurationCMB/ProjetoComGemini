@@ -3,7 +3,8 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiX } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
-import RichTextEditor from './RichTextEditor';
+import TipTapEditor from './TipTapEditor'; // Alterado de RichTextEditor para TipTapEditor
+import VisualizarTextoAnalise from './VisualizarTextoAnalise'; // Novo componente
 
 const ConteudoTable = () => {
   const [conteudos, setConteudos] = useState([]);
@@ -27,7 +28,7 @@ const ConteudoTable = () => {
     descricao: '',
     conteudo: '',
     retorno_ia: '',
-    texto_analise: '' // Adicionado o campo texto_analise
+    texto_analise: ''
   });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   
@@ -38,16 +39,11 @@ const ConteudoTable = () => {
   
   // Estados para texto análise
   const [editandoTextoAnalise, setEditandoTextoAnalise] = useState(null);
-  const [textoAnaliseEditado, setTextoAnaliseEditado] = useState('');
+  const [textoAnaliseHtml, setTextoAnaliseHtml] = useState(''); // Alterado para armazenar HTML
   const [atualizandoTextoAnalise, setAtualizandoTextoAnalise] = useState(false);
   
-  // Novo estado para o editor Slate
-  const [textoAnaliseEditadoSlate, setTextoAnaliseEditadoSlate] = useState([
-    {
-      type: 'paragraph',
-      children: [{ text: '' }],
-    },
-  ]);
+  // Adicionado para visualizar texto análise com formatação HTML
+  const [visualizandoTextoAnaliseHtml, setVisualizandoTextoAnaliseHtml] = useState(null);
 
   useEffect(() => {
     fetchCategorias();
@@ -201,10 +197,9 @@ const ConteudoTable = () => {
         toast.error('Não há análise de IA disponível para este documento');
       }
     } else if (tipo === 'texto_analise') {
+      // Alterado: Em vez de mostrar texto puro, abrir o componente de visualização HTML
       if (item.texto_analise && item.texto_analise.trim() !== '') {
-        setTextoVisualizando(item.texto_analise);
-        setTipoTextoVisualizando('texto_analise');
-        setTituloVisualizando('Texto Análise');
+        setVisualizandoTextoAnaliseHtml(item.texto_analise);
       } else {
         toast.error('Não há texto análise disponível para este documento');
       }
@@ -213,22 +208,15 @@ const ConteudoTable = () => {
   
   // Nova função para abrir o modal de edição/visualização de texto análise
   const visualizarTextoAnalise = (item) => {
-    // Se tem texto análise, apenas visualiza
+    // Se tem texto análise, apenas visualiza usando o componente de visualização HTML
     if (item.texto_analise && item.texto_analise.trim() !== '') {
-      setTextoVisualizando(item.texto_analise);
-      setTipoTextoVisualizando('texto_analise');
-      setTituloVisualizando('Texto Análise');
+      setVisualizandoTextoAnaliseHtml(item.texto_analise);
     } 
     // Se não tem texto análise, permite adicionar
     else {
       setEditandoTextoAnalise(item);
-      // Sempre inicialize com um valor válido para o Slate
-      setTextoAnaliseEditadoSlate([
-        {
-          type: 'paragraph',
-          children: [{ text: '' }],
-        },
-      ]);
+      // Inicializa com HTML vazio
+      setTextoAnaliseHtml('<p></p>');
     }
   };
 
@@ -343,7 +331,7 @@ const ConteudoTable = () => {
     }
   };
   
-  // Função modificada para salvar o texto análise editado usando Slate.js
+  // Função modificada para salvar o texto análise como HTML
   const salvarTextoAnaliseEditado = async () => {
     if (!editandoTextoAnalise) return;
 
@@ -359,25 +347,10 @@ const ConteudoTable = () => {
         return;
       }
 
-      // Converter o conteúdo do Slate para HTML
-      let textoFinal = '';
-      textoAnaliseEditadoSlate.forEach(node => {
-        if (node.children) {
-          node.children.forEach(child => {
-            let text = child.text || '';
-            if (child.bold) text = `<strong>${text}</strong>`;
-            if (child.italic) text = `<em>${text}</em>`;
-            if (child.underline) text = `<u>${text}</u>`;
-            textoFinal += text;
-          });
-          textoFinal += '\n';
-        }
-      });
-
-      // Atualizar o texto análise no Supabase
+      // Atualizar o texto análise no Supabase com o HTML completo
       const { data, error } = await supabase
         .from('base_dados_conteudo')
-        .update({ texto_analise: textoFinal })
+        .update({ texto_analise: textoAnaliseHtml })
         .eq('id', editandoTextoAnalise.id)
         .select();
       
@@ -386,7 +359,7 @@ const ConteudoTable = () => {
       // Atualizar a lista local
       setConteudos(conteudos.map(item => 
         item.id === editandoTextoAnalise.id 
-          ? { ...item, texto_analise: textoFinal } 
+          ? { ...item, texto_analise: textoAnaliseHtml } 
           : item
       ));
       
@@ -399,7 +372,7 @@ const ConteudoTable = () => {
       if (documentoEditando && documentoEditando === editandoTextoAnalise.id) {
         setFormEdicao(prev => ({
           ...prev,
-          texto_analise: textoFinal
+          texto_analise: textoAnaliseHtml
         }));
       }
       
@@ -568,7 +541,7 @@ const ConteudoTable = () => {
       descricao: documento.descricao || '',
       conteudo: documento.conteudo || '',
       retorno_ia: documento.retorno_ia || '',
-      texto_analise: documento.texto_analise || '' // Adicionando o campo texto_analise
+      texto_analise: documento.texto_analise || ''
     });
   };
 
@@ -581,7 +554,7 @@ const ConteudoTable = () => {
       descricao: '',
       conteudo: '',
       retorno_ia: '',
-      texto_analise: '' // Adicionando o campo texto_analise
+      texto_analise: ''
     });
   };
 
@@ -617,7 +590,7 @@ const ConteudoTable = () => {
         descricao: formEdicao.descricao,
         conteudo: formEdicao.conteudo,
         retorno_ia: formEdicao.retorno_ia,
-        texto_analise: formEdicao.texto_analise // Adicionando o campo texto_analise
+        texto_analise: formEdicao.texto_analise
       };
       
       // Atualizar o documento no Supabase
@@ -673,14 +646,8 @@ const ConteudoTable = () => {
     if (documento) {
       setEditandoTextoAnalise(documento);
       
-      // Sempre inicialize com um valor válido para o Slate
-      const textoInicial = documento.texto_analise || '';
-      setTextoAnaliseEditadoSlate([
-        {
-          type: 'paragraph',
-          children: [{ text: textoInicial }],
-        },
-      ]);
+      // Inicializar o editor com o conteúdo HTML atual ou um parágrafo vazio
+      setTextoAnaliseHtml(documento.texto_analise || '<p></p>');
     }
   };
 
@@ -911,7 +878,7 @@ const ConteudoTable = () => {
         </div>
       )}
       
-      {/* Modal para edição/adição de texto análise com Slate.js */}
+      {/* Modal para edição/adição de texto análise com TipTap */}
       {editandoTextoAnalise && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -952,10 +919,10 @@ const ConteudoTable = () => {
                   : "Texto análise:"}
               </label>
               
-              {/* Usando o componente RichTextEditor no lugar do textarea */}
-              <RichTextEditor 
-                value={textoAnaliseEditadoSlate} 
-                onChange={newValue => setTextoAnaliseEditadoSlate(newValue)} 
+              {/* Substituir o componente RichTextEditor por TipTapEditor */}
+              <TipTapEditor 
+                initialValue={textoAnaliseHtml}
+                onChange={html => setTextoAnaliseHtml(html)}
               />
             </div>
             
@@ -984,6 +951,14 @@ const ConteudoTable = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal para visualização de texto análise com HTML formatado */}
+      {visualizandoTextoAnaliseHtml && (
+        <VisualizarTextoAnalise 
+          htmlContent={visualizandoTextoAnaliseHtml}
+          onClose={() => setVisualizandoTextoAnaliseHtml(null)}
+        />
       )}
 
       {/* Modal para análise de IA */}
@@ -1232,7 +1207,7 @@ const ConteudoTable = () => {
                             }
                           </button>
                           
-                          {/* Na visualização normal - Modificado para remover botão de olho e manter apenas o "T" */}
+                          {/* Na visualização normal - Modificado para usar o componente VisualizarTextoAnalise */}
                           {!item.texto_analise || item.texto_analise.trim() === '' ? (
                             // Se não tiver texto análise, exibe o ícone de edição para adicionar
                             <button
@@ -1245,7 +1220,7 @@ const ConteudoTable = () => {
                           ) : (
                             // Se já tiver texto análise, exibe o ícone T para visualizar
                             <button
-                              onClick={() => visualizarTexto(item, 'texto_analise')}
+                              onClick={() => visualizarTextoAnalise(item)}
                               className="text-teal-600 hover:text-teal-900"
                               title="Ver Texto Análise"
                             >
@@ -1270,8 +1245,6 @@ const ConteudoTable = () => {
                               <FiEye className="h-5 w-5" />
                             </button>
                           )}
-                          
-                          {/* Removido o botão de olho para texto análise aqui para evitar redundância */}
                         </div>
                         <div>
                           <button
