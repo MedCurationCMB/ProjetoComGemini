@@ -1,5 +1,4 @@
 import React from 'react';
-import './TipTapEditor.css'; // Importar os mesmos estilos para consistência
 
 const VisualizarTextoAnalise = ({ htmlContent, onClose }) => {
   return (
@@ -15,12 +14,10 @@ const VisualizarTextoAnalise = ({ htmlContent, onClose }) => {
           </button>
         </div>
         
-        <div className="tiptap-preview prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200">
-          <div 
-            className="tiptap-editor ProseMirror" 
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          />
-        </div>
+        <div 
+          className="prose max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
       </div>
     </div>
   );

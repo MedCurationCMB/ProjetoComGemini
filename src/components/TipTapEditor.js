@@ -1,9 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-
-// Estilização para os elementos do editor
-import './TipTapEditor.css'; // Vamos criar este arquivo CSS para estilização adicional
 
 const TipTapEditor = ({ initialValue, onChange, onSave }) => {
   // Inicializa o editor com StarterKit e conteúdo inicial
@@ -14,11 +11,6 @@ const TipTapEditor = ({ initialValue, onChange, onSave }) => {
       if (onChange) {
         onChange(editor.getHTML());
       }
-    },
-    editorProps: {
-      attributes: {
-        class: 'tiptap-editor-content p-3 min-h-[250px] focus:outline-none prose prose-sm max-w-none',
-      },
     },
   });
 
@@ -34,7 +26,7 @@ const TipTapEditor = ({ initialValue, onChange, onSave }) => {
   }
 
   return (
-    <div className="border border-gray-300 rounded-md tiptap-editor">
+    <div className="border border-gray-300 rounded-md">
       {/* Toolbar exatamente como no projeto de teste */}
       <div className="flex flex-wrap border-b p-2 bg-gray-50 space-x-1">
         <button
@@ -96,7 +88,10 @@ const TipTapEditor = ({ initialValue, onChange, onSave }) => {
       </div>
 
       {/* Editor Content */}
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className="p-3 min-h-[250px] focus:outline-none prose prose-sm max-w-none"
+      />
 
       {/* Save Button (if applicable) */}
       {onSave && (
