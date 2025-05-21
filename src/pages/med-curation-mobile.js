@@ -1,11 +1,11 @@
-// Arquivo atualizado: src/pages/med-curation-mobile.js
+// Arquivo: src/pages/med-curation-mobile.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiChevronLeft, FiPlusCircle, FiDownload, FiEdit, FiX, FiExternalLink } from 'react-icons/fi';
+import { FiSearch, FiChevronLeft, FiPlusCircle, FiEdit, FiX, FiExternalLink, FiEye } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -166,21 +166,50 @@ export default function MedCurationMobile({ user }) {
       : textContent;
   };
 
-  // Nova função para download do PDF
-  const baixarDocumentoPDF = async (documento) => {
+  // Função para visualizar o PDF
+  const abrirPdf = async (documento) => {
     try {
-      toast.loading('Preparando download...');
+      // Mostrar loading
+      toast.loading('Preparando arquivo para visualização...');
       
-      // Aqui você implementaria a lógica para obter a URL de download
-      // Simulando um delay para representar o processamento
-      setTimeout(() => {
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         toast.dismiss();
-        toast.success('Download iniciado');
-      }, 1000);
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      // Obter URL temporária
+      const response = await fetch(`/api/get_download_url?id=${documento.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao gerar o link de acesso');
+      }
+      
+      const result = await response.json();
+      
+      if (!result || !result.url) {
+        throw new Error('Não foi possível gerar o link de acesso');
+      }
+      
+      // Remover toast de loading
+      toast.dismiss();
+      
+      // Abrir em nova aba
+      window.open(result.url, '_blank');
     } catch (error) {
       toast.dismiss();
-      toast.error('Erro ao preparar o download');
-      console.error('Erro ao baixar documento:', error);
+      console.error('Erro ao abrir PDF:', error);
+      toast.error('Erro ao processar o arquivo');
     }
   };
 
@@ -303,6 +332,16 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
+      {/* Add Button - Fixed at bottom right */}
+      <div className="fixed right-4 bottom-4">
+        <Link
+          href="/upload"
+          className="bg-green-500 text-white rounded-full p-3 shadow-lg hover:bg-green-600 transition-colors"
+        >
+          <FiPlusCircle className="h-6 w-6" />
+        </Link>
+      </div>
+
       {/* Diálogo de Detalhes do Documento */}
       {documentoSelecionado && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-end md:items-center justify-center">
@@ -350,11 +389,11 @@ export default function MedCurationMobile({ user }) {
                 {/* Action Buttons */}
                 <div className="flex space-x-2 mb-6">
                   <button 
-                    onClick={() => baixarDocumentoPDF(documentoSelecionado)}
+                    onClick={() => abrirPdf(documentoSelecionado)}
                     className="flex-1 bg-blue-100 text-blue-700 py-2 rounded-md flex items-center justify-center"
                   >
-                    <FiDownload className="mr-2" />
-                    Baixar PDF
+                    <FiEye className="mr-2" />
+                    Visualizar PDF
                   </button>
                   <button 
                     onClick={() => editarAnalise(documentoSelecionado)}
