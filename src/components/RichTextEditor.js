@@ -447,4 +447,4 @@ const MarkButton = ({ format, icon }) => {
   );
 };
 
-export default RichTextEditor
+export default RichTextEditor;
