@@ -31,7 +31,7 @@ const HOTKEYS = {
 const LIST_TYPES = ['numbered-list', 'bulleted-list'];
 const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'];
 
-// Valor inicial padrão
+// Valor inicial padrão (em conformidade com o seu sistema)
 const DEFAULT_VALUE = [
   {
     type: 'paragraph',
@@ -40,31 +40,16 @@ const DEFAULT_VALUE = [
 ];
 
 const RichTextEditor = ({ value, onChange }) => {
-  // Criar um editor Slate que é usável no ambiente React
+  // Criar um editor Slate
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
-  // Usar estado interno para gerenciar o valor do editor
-  const [editorValue, setEditorValue] = useState(() => {
-    try {
-      // Tente usar o valor passado, se for válido
-      if (Array.isArray(value) && value.length > 0) {
-        return value;
-      }
-      // Se não for um array válido, use o valor padrão
-      return DEFAULT_VALUE;
-    } catch (error) {
-      console.error("Erro ao inicializar valor do editor:", error);
-      return DEFAULT_VALUE;
+  // Usar o valor fornecido como prop ou o valor padrão
+  const initialValue = useMemo(() => {
+    if (Array.isArray(value) && value.length > 0) {
+      return value;
     }
-  });
-
-  // Função para lidar com mudanças no editor
-  const handleChange = newValue => {
-    setEditorValue(newValue);
-    if (onChange && typeof onChange === 'function') {
-      onChange(newValue);
-    }
-  };
+    return DEFAULT_VALUE;
+  }, [value]);
 
   // Callbacks para renderização
   const renderElement = useCallback(props => <Element {...props} />, []);
@@ -74,17 +59,19 @@ const RichTextEditor = ({ value, onChange }) => {
     <div className="border border-gray-300 rounded-md">
       <Slate 
         editor={editor} 
-        value={editorValue}
-        onChange={handleChange}
+        initialValue={initialValue}
+        onChange={onChange}
       >
         <Toolbar>
           <MarkButton format="bold" icon={<FiBold />} />
           <MarkButton format="italic" icon={<FiItalic />} />
           <MarkButton format="underline" icon={<FiUnderline />} />
           <MarkButton format="code" icon={<FiCode />} />
+          <div className="border-l mx-2 border-gray-300"></div>
           <BlockButton format="heading-one" icon={<FiType className="h-5 w-5" />} />
           <BlockButton format="heading-two" icon={<FiHash className="h-5 w-5" />} />
           <BlockButton format="block-quote" icon={<FiCornerUpRight className="h-5 w-5" />} />
+          <div className="border-l mx-2 border-gray-300"></div>
           <BlockButton format="numbered-list" icon={<span className="font-bold">1.</span>} />
           <BlockButton format="bulleted-list" icon={<FiList />} />
           <div className="border-l mx-2 border-gray-300"></div>
