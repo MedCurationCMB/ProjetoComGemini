@@ -1,9 +1,9 @@
 // src/components/RichTextEditor.js
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import isHotkey from 'is-hotkey';
-import { createEditor, Transforms, Editor, Text } from 'slate';
-import { Slate, Editable, withReact, useSlate } from 'slate-react';
+import { Editor, Element as SlateElement, Transforms, createEditor } from 'slate';
 import { withHistory } from 'slate-history';
+import { Editable, Slate, useSlate, withReact } from 'slate-react';
 import { 
   FiBold, 
   FiItalic, 
@@ -19,18 +19,19 @@ import {
   FiCornerUpRight
 } from 'react-icons/fi';
 
-// Configurações
+// Configurações de atalho
 const HOTKEYS = {
   'mod+b': 'bold',
   'mod+i': 'italic',
   'mod+u': 'underline',
-  'mod+`': 'code'
+  'mod+`': 'code',
 };
 
+// Tipos de lista e alinhamento
 const LIST_TYPES = ['numbered-list', 'bulleted-list'];
 const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'];
 
-// Valor inicial padrão
+// Valor inicial padrão (em conformidade com o seu sistema)
 const DEFAULT_VALUE = [
   {
     type: 'paragraph',
@@ -38,214 +39,28 @@ const DEFAULT_VALUE = [
   },
 ];
 
-// Função simplificada para HTML -> Slate
-const htmlToSlate = (html) => {
-  try {
-    // Se vazio, retorna valor padrão
-    if (!html || typeof html !== 'string' || html.trim() === '') {
-      return DEFAULT_VALUE;
-    }
-
-    // Estamos usando uma abordagem simplificada para extrair o texto
-    // Isso não preservará toda a formatação, mas é muito mais robusta
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    
-    // Extrai texto e estrutura básica
-    const extractTextStructure = (node) => {
-      // Se for texto simples, retorna o objeto de texto
-      if (node.nodeType === Node.TEXT_NODE) {
-        return { text: node.textContent || '' };
-      }
-
-      // Para elementos, processa de acordo com a tag
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const children = Array.from(node.childNodes).flatMap(extractTextStructure);
-        
-        // Se não houver filhos, adiciona um texto vazio
-        if (children.length === 0) {
-          children.push({ text: '' });
-        }
-        
-        // Mapeia tags HTML para tipos Slate
-        switch (node.nodeName.toLowerCase()) {
-          case 'h1':
-            return [{ type: 'heading-one', children }];
-          case 'h2':
-            return [{ type: 'heading-two', children }];
-          case 'blockquote':
-            return [{ type: 'block-quote', children }];
-          case 'ul':
-            return [{ type: 'bulleted-list', children }];
-          case 'ol':
-            return [{ type: 'numbered-list', children }];
-          case 'li':
-            return [{ type: 'list-item', children }];
-          case 'p':
-            return [{ type: 'paragraph', children }];
-          case 'strong':
-          case 'b':
-            return children.map(child => 
-              Text.isText(child) ? { ...child, bold: true } : child
-            );
-          case 'em':
-          case 'i':
-            return children.map(child => 
-              Text.isText(child) ? { ...child, italic: true } : child
-            );
-          case 'u':
-            return children.map(child => 
-              Text.isText(child) ? { ...child, underline: true } : child
-            );
-          case 'code':
-            return children.map(child => 
-              Text.isText(child) ? { ...child, code: true } : child
-            );
-          default: 
-            // Para outras tags, apenas retorna os filhos
-            return children;
-        }
-      }
-      
-      // Para outros tipos de nó, retorna um array vazio
-      return [];
-    };
-    
-    // Processa o documento e obtém a estrutura
-    const nodes = extractTextStructure(tempDiv).filter(node => node !== null && node !== undefined);
-    
-    // Se não houver nós válidos, retorna valor padrão
-    if (nodes.length === 0) {
-      return DEFAULT_VALUE;
-    }
-    
-    return nodes;
-  } catch (error) {
-    console.error('Erro ao converter HTML para Slate:', error);
-    return DEFAULT_VALUE;
-  }
-};
-
-// Função simples para Slate -> HTML
-const slateToHtml = (nodes) => {
-  try {
-    if (!Array.isArray(nodes) || nodes.length === 0) {
-      return '';
-    }
-    
-    // Função recursiva para converter nós em HTML
-    const nodeToHtml = (node) => {
-      // Se for texto, processa marcas de formatação
-      if (Text.isText(node)) {
-        let text = node.text || '';
-        
-        // Escape HTML entities
-        text = text.replace(/&/g, '&amp;')
-                   .replace(/</g, '&lt;')
-                   .replace(/>/g, '&gt;')
-                   .replace(/"/g, '&quot;')
-                   .replace(/'/g, '&#039;');
-        
-        // Aplicar formatação
-        if (node.bold) {
-          text = `<strong>${text}</strong>`;
-        }
-        if (node.italic) {
-          text = `<em>${text}</em>`;
-        }
-        if (node.underline) {
-          text = `<u>${text}</u>`;
-        }
-        if (node.code) {
-          text = `<code>${text}</code>`;
-        }
-        return text;
-      }
-      
-      // Se não tiver filhos, retorna string vazia
-      if (!node.children || !Array.isArray(node.children)) {
-        return '';
-      }
-      
-      // Processa os filhos em HTML
-      const childrenHtml = node.children.map(nodeToHtml).join('');
-      
-      // Cria o atributo de estilo para alinhamento, se presente
-      const style = node.align ? ` style="text-align: ${node.align}"` : '';
-      
-      // Mapeia tipos Slate para tags HTML
-      switch (node.type) {
-        case 'heading-one':
-          return `<h1${style}>${childrenHtml}</h1>`;
-        case 'heading-two':
-          return `<h2${style}>${childrenHtml}</h2>`;
-        case 'block-quote':
-          return `<blockquote${style}>${childrenHtml}</blockquote>`;
-        case 'bulleted-list':
-          return `<ul${style}>${childrenHtml}</ul>`;
-        case 'numbered-list':
-          return `<ol${style}>${childrenHtml}</ol>`;
-        case 'list-item':
-          return `<li${style}>${childrenHtml}</li>`;
-        case 'paragraph':
-        default:
-          return `<p${style}>${childrenHtml}</p>`;
-      }
-    };
-    
-    // Converte cada nó e junta em uma string HTML
-    return nodes.map(nodeToHtml).join('');
-  } catch (error) {
-    console.error('Erro ao converter Slate para HTML:', error);
-    return '';
-  }
-};
-
-// Componente principal
 const RichTextEditor = ({ value, onChange }) => {
-  // Criar editor
+  // Criar um editor Slate
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
-  // Determinar valor inicial
+  // Usar o valor fornecido como prop ou o valor padrão
   const initialValue = useMemo(() => {
-    try {
-      if (typeof value === 'string') {
-        return htmlToSlate(value);
-      }
-      
-      if (Array.isArray(value) && value.length > 0) {
-        return value;
-      }
-      
-      return DEFAULT_VALUE;
-    } catch (error) {
-      console.error('Erro ao determinar valor inicial:', error);
-      return DEFAULT_VALUE;
+    if (Array.isArray(value) && value.length > 0) {
+      return value;
     }
+    return DEFAULT_VALUE;
   }, [value]);
-  
-  // Funções de renderização
+
+  // Callbacks para renderização
   const renderElement = useCallback(props => <Element {...props} />, []);
   const renderLeaf = useCallback(props => <Leaf {...props} />, []);
-  
-  // Função para lidar com mudanças no editor
-  const handleChange = value => {
-    try {
-      if (onChange && typeof onChange === 'function') {
-        const html = slateToHtml(value);
-        onChange(html);
-      }
-    } catch (error) {
-      console.error('Erro ao processar mudança:', error);
-    }
-  };
-  
+
   return (
     <div className="border border-gray-300 rounded-md">
       <Slate 
         editor={editor} 
         initialValue={initialValue}
-        onChange={handleChange}
+        onChange={onChange}
       >
         <Toolbar>
           <MarkButton format="bold" icon={<FiBold />} />
@@ -272,15 +87,12 @@ const RichTextEditor = ({ value, onChange }) => {
           className="p-3 min-h-[250px] focus:outline-none"
           spellCheck={false}
           onKeyDown={event => {
-            try {
-              for (const hotkey in HOTKEYS) {
-                if (isHotkey(hotkey, event)) {
-                  event.preventDefault();
-                  toggleMark(editor, HOTKEYS[hotkey]);
-                }
+            // Adicionar suporte para teclas de atalho
+            for (const hotkey in HOTKEYS) {
+              if (isHotkey(hotkey, event)) {
+                event.preventDefault();
+                toggleMark(editor, HOTKEYS[hotkey]);
               }
-            } catch (error) {
-              console.error('Erro no manipulador de teclado:', error);
             }
           }}
         />
@@ -289,7 +101,7 @@ const RichTextEditor = ({ value, onChange }) => {
   );
 };
 
-// Componentes auxiliares
+// Componente de barra de ferramentas
 const Toolbar = ({ children }) => {
   return (
     <div className="flex flex-wrap border-b p-2 bg-gray-50">
@@ -300,67 +112,62 @@ const Toolbar = ({ children }) => {
 
 // Utilitários de formatação
 const toggleBlock = (editor, format) => {
-  try {
-    const isActive = isBlockActive(editor, format, TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type');
-    const isList = LIST_TYPES.includes(format);
+  const isActive = isBlockActive(
+    editor,
+    format,
+    TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type'
+  );
+  const isList = LIST_TYPES.includes(format);
 
-    Transforms.unwrapNodes(editor, {
-      match: n => !Editor.isEditor(n) && LIST_TYPES.includes(n.type) && !TEXT_ALIGN_TYPES.includes(format),
-      split: true,
-    });
+  Transforms.unwrapNodes(editor, {
+    match: n =>
+      !Editor.isEditor(n) &&
+      SlateElement.isElement(n) &&
+      LIST_TYPES.includes(n.type) &&
+      !TEXT_ALIGN_TYPES.includes(format),
+    split: true,
+  });
 
-    const newProps = TEXT_ALIGN_TYPES.includes(format)
-      ? { align: isActive ? undefined : format }
-      : { type: isActive ? 'paragraph' : isList ? 'list-item' : format };
+  let newProps = TEXT_ALIGN_TYPES.includes(format)
+    ? { align: isActive ? undefined : format }
+    : { type: isActive ? 'paragraph' : isList ? 'list-item' : format };
 
-    Transforms.setNodes(editor, newProps);
+  Transforms.setNodes(editor, newProps);
 
-    if (!isActive && isList) {
-      Transforms.wrapNodes(editor, { type: format, children: [] });
-    }
-  } catch (error) {
-    console.error('Erro ao alternar bloco:', error);
+  if (!isActive && isList) {
+    Transforms.wrapNodes(editor, { type: format, children: [] });
   }
 };
 
 const toggleMark = (editor, format) => {
-  try {
-    const isActive = isMarkActive(editor, format);
-    if (isActive) {
-      Editor.removeMark(editor, format);
-    } else {
-      Editor.addMark(editor, format, true);
-    }
-  } catch (error) {
-    console.error('Erro ao alternar marca:', error);
-  }
+  const isActive = isMarkActive(editor, format);
+  isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true);
 };
 
 const isBlockActive = (editor, format, blockType = 'type') => {
-  try {
-    const { selection } = editor;
-    if (!selection) return false;
-
-    const [match] = Editor.nodes(editor, {
+  const { selection } = editor;
+  if (!selection) return false;
+  
+  const [match] = Array.from(
+    Editor.nodes(editor, {
       at: Editor.unhangRange(editor, selection),
-      match: n => !Editor.isEditor(n) && n[blockType] === format,
-    });
-
-    return !!match;
-  } catch (error) {
-    console.error('Erro ao verificar bloco ativo:', error);
-    return false;
-  }
+      match: n => {
+        if (!Editor.isEditor(n) && SlateElement.isElement(n)) {
+          return blockType === 'align'
+            ? n.align === format
+            : n.type === format;
+        }
+        return false;
+      },
+    })
+  );
+  
+  return !!match;
 };
 
 const isMarkActive = (editor, format) => {
-  try {
-    const marks = Editor.marks(editor);
-    return marks ? marks[format] === true : false;
-  } catch (error) {
-    console.error('Erro ao verificar marca ativa:', error);
-    return false;
-  }
+  const marks = Editor.marks(editor);
+  return marks ? marks[format] === true : false;
 };
 
 // Componentes de renderização
