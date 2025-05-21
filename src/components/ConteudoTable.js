@@ -955,12 +955,7 @@ const ConteudoTable = () => {
               {/* Usando o componente RichTextEditor no lugar do textarea */}
               <RichTextEditor 
                 value={textoAnaliseEditadoSlate} 
-                onChange={newValue => {
-                  // Certifique-se de que o valor é um array válido
-                  if (Array.isArray(newValue)) {
-                    setTextoAnaliseEditadoSlate(newValue);
-                  }
-                }} 
+                onChange={newValue => setTextoAnaliseEditadoSlate(newValue)} 
               />
             </div>
             

@@ -1,13 +1,44 @@
 // src/components/RichTextEditor.js
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { createEditor, Transforms, Editor, Text } from 'slate';
 import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { FiBold, FiItalic, FiUnderline, FiList, FiAlignLeft, FiAlignCenter, FiAlignRight } from 'react-icons/fi';
 
+// Valor inicial padrão
+const DEFAULT_VALUE = [
+  {
+    type: 'paragraph',
+    children: [{ text: '' }],
+  },
+];
+
 const RichTextEditor = ({ value, onChange }) => {
   // Criar um editor Slate que é usável no ambiente React
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
+  
+  // Usar estado interno para gerenciar o valor do editor
+  const [editorValue, setEditorValue] = useState(() => {
+    try {
+      // Tente usar o valor passado, se for válido
+      if (Array.isArray(value) && value.length > 0) {
+        return value;
+      }
+      // Se não for um array válido, use o valor padrão
+      return DEFAULT_VALUE;
+    } catch (error) {
+      console.error("Erro ao inicializar valor do editor:", error);
+      return DEFAULT_VALUE;
+    }
+  });
+
+  // Função para lidar com mudanças no editor
+  const handleChange = newValue => {
+    setEditorValue(newValue);
+    if (onChange && typeof onChange === 'function') {
+      onChange(newValue);
+    }
+  };
 
   // Define função para verificar se o texto está formatado
   const isFormatActive = useCallback(
@@ -87,7 +118,11 @@ const RichTextEditor = ({ value, onChange }) => {
 
   return (
     <div className="border border-gray-300 rounded-md">
-      <Slate editor={editor} value={value} onChange={onChange}>
+      <Slate 
+        editor={editor} 
+        initialValue={editorValue}
+        onChange={handleChange}
+      >
         <div className="flex border-b p-2 bg-gray-50">
           <FormatButton format="bold" icon={<FiBold />} />
           <FormatButton format="italic" icon={<FiItalic />} />
