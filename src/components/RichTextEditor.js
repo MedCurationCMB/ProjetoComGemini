@@ -260,9 +260,9 @@ const RichTextEditor = ({ value, onChange }) => {
   // Criar um editor Slate
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
-  // Estado para controlar o conteúdo do editor
-  const [editorContent, setEditorContent] = useState(() => {
-    // Se o valor for HTML, converter para formato Slate
+  // Determinar o valor inicial para o editor
+  const initialValue = useMemo(() => {
+    // Se o valor for uma string (HTML), deserializar para formato Slate
     if (typeof value === 'string') {
       return deserialize(value);
     }
@@ -274,13 +274,6 @@ const RichTextEditor = ({ value, onChange }) => {
     
     // Caso contrário, usar valor padrão
     return DEFAULT_VALUE;
-  });
-  
-  // Atualizar o conteúdo quando a prop value mudar
-  useEffect(() => {
-    if (typeof value === 'string' && value !== serialize(editorContent)) {
-      setEditorContent(deserialize(value));
-    }
   }, [value]);
 
   // Callbacks para renderização
@@ -289,8 +282,6 @@ const RichTextEditor = ({ value, onChange }) => {
 
   // Função para lidar com mudanças no editor
   const handleChange = newValue => {
-    setEditorContent(newValue);
-    
     // Chamar o callback onChange com o HTML serializado
     if (onChange) {
       const html = serialize(newValue);
@@ -302,7 +293,7 @@ const RichTextEditor = ({ value, onChange }) => {
     <div className="border border-gray-300 rounded-md">
       <Slate 
         editor={editor} 
-        value={editorContent}
+        initialValue={initialValue}
         onChange={handleChange}
       >
         <Toolbar>
