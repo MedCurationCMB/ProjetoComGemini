@@ -1,11 +1,11 @@
-// Arquivo: src/pages/med-curation-mobile.js
+// Arquivo atualizado: src/pages/med-curation-mobile.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import Navbar from '../components/Navbar';
-import { FiSearch, FiUser, FiStar, FiChevronLeft, FiPlusCircle } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { FiSearch, FiChevronLeft, FiPlusCircle, FiDownload, FiEdit, FiX, FiExternalLink } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -16,6 +16,10 @@ export default function MedCurationMobile({ user }) {
   const [projetos, setProjetos] = useState({});
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  
+  // Estados para o diálogo de detalhes do documento
+  const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
+  const [carregandoDocumento, setCarregandoDocumento] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -114,6 +118,33 @@ export default function MedCurationMobile({ user }) {
     }
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado]);
 
+  // Função para abrir o diálogo de detalhes do documento
+  const abrirDetalheDocumento = async (documentoId) => {
+    try {
+      setCarregandoDocumento(true);
+      
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .select('*')
+        .eq('id', documentoId)
+        .single();
+      
+      if (error) throw error;
+      
+      setDocumentoSelecionado(data);
+    } catch (error) {
+      console.error('Erro ao buscar detalhes do documento:', error);
+      toast.error('Erro ao carregar detalhes do documento');
+    } finally {
+      setCarregandoDocumento(false);
+    }
+  };
+
+  // Função para fechar o diálogo de detalhes
+  const fecharDetalheDocumento = () => {
+    setDocumentoSelecionado(null);
+  };
+
   // Gerar iniciais da categoria para o avatar
   const getCategoryInitials = (categoryId) => {
     const categoryName = categorias[categoryId] || '';
@@ -133,6 +164,29 @@ export default function MedCurationMobile({ user }) {
     return textContent.length > maxLength 
       ? textContent.substring(0, maxLength) + '...'
       : textContent;
+  };
+
+  // Nova função para download do PDF
+  const baixarDocumentoPDF = async (documento) => {
+    try {
+      toast.loading('Preparando download...');
+      
+      // Aqui você implementaria a lógica para obter a URL de download
+      // Simulando um delay para representar o processamento
+      setTimeout(() => {
+        toast.dismiss();
+        toast.success('Download iniciado');
+      }, 1000);
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Erro ao preparar o download');
+      console.error('Erro ao baixar documento:', error);
+    }
+  };
+
+  // Nova função para editar a análise
+  const editarAnalise = (documento) => {
+    router.push(`/tabela?editarAnalise=${documento.id}`);
   };
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
@@ -216,8 +270,8 @@ export default function MedCurationMobile({ user }) {
           documentos.map((documento) => (
             <div 
               key={documento.id} 
-              className="flex px-4 py-3 hover:bg-gray-50"
-              onClick={() => router.push(`/documento/${documento.id}`)}
+              className="flex px-4 py-3 hover:bg-gray-50 cursor-pointer"
+              onClick={() => abrirDetalheDocumento(documento.id)}
             >
               {/* Category Avatar */}
               <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
@@ -249,6 +303,102 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
+      {/* Add Button - Fixed at bottom right */}
+      <div className="fixed right-4 bottom-4">
+        <Link
+          href="/upload"
+          className="bg-green-500 text-white rounded-full p-3 shadow-lg hover:bg-green-600 transition-colors"
+        >
+          <FiPlusCircle className="h-6 w-6" />
+        </Link>
+      </div>
+
+      {/* Diálogo de Detalhes do Documento */}
+      {documentoSelecionado && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-end md:items-center justify-center">
+          <div className="relative bg-white w-full max-w-md md:rounded-t-lg rounded-t-xl max-h-[85vh] overflow-y-auto">
+            {/* Barra superior com botão de fechar */}
+            <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
+              <button 
+                onClick={fecharDetalheDocumento}
+                className="text-gray-500 hover:text-gray-700 mr-3"
+              >
+                <FiX className="h-6 w-6" />
+              </button>
+              <h2 className="text-lg font-bold flex-1 truncate">
+                {documentoSelecionado.descricao || 'Sem descrição'}
+              </h2>
+            </div>
+
+            {carregandoDocumento ? (
+              <div className="flex justify-center items-center p-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : (
+              <div className="p-4">
+                {/* Category Avatar + Info */}
+                <div className="flex items-center mb-6">
+                  <div className="h-16 w-16 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-4 font-bold text-lg">
+                    {getCategoryInitials(documentoSelecionado.categoria_id)}
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Data: {new Date(documentoSelecionado.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Arquivo: {documentoSelecionado.nome_arquivo || 'N/A'}
+                    </p>
+                    <div className="flex text-xs text-gray-500 mt-1">
+                      <span className="mr-2">{categorias[documentoSelecionado.categoria_id] || 'Categoria N/A'}</span>
+                      <span>•</span>
+                      <span className="ml-2">{projetos[documentoSelecionado.projeto_id] || 'Projeto N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-2 mb-6">
+                  <button 
+                    onClick={() => baixarDocumentoPDF(documentoSelecionado)}
+                    className="flex-1 bg-blue-100 text-blue-700 py-2 rounded-md flex items-center justify-center"
+                  >
+                    <FiDownload className="mr-2" />
+                    Baixar PDF
+                  </button>
+                  <button 
+                    onClick={() => editarAnalise(documentoSelecionado)}
+                    className="flex-1 bg-green-100 text-green-700 py-2 rounded-md flex items-center justify-center"
+                  >
+                    <FiEdit className="mr-2" />
+                    Editar Análise
+                  </button>
+                </div>
+
+                {/* Texto Análise */}
+                <div className="mb-4">
+                  <h2 className="text-lg font-bold mb-3">Texto Análise</h2>
+                  <div 
+                    className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
+                    dangerouslySetInnerHTML={{ __html: documentoSelecionado.texto_analise || '<p>Sem texto análise</p>' }}
+                  />
+                </div>
+
+                {/* Ver na página completa */}
+                <div className="mt-6 mb-2 text-center">
+                  <Link
+                    href={`/tabela?documento=${documentoSelecionado.id}`}
+                    className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                  >
+                    <FiExternalLink className="mr-1" />
+                    Ver na versão completa
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
