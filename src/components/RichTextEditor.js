@@ -1,7 +1,7 @@
 // src/components/RichTextEditor.js
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import isHotkey from 'is-hotkey';
-import { Editor, Element as SlateElement, Transforms, createEditor } from 'slate';
+import { Editor, Element as SlateElement, Transforms, createEditor, Node, Text } from 'slate';
 import { withHistory } from 'slate-history';
 import { Editable, Slate, useSlate, withReact } from 'slate-react';
 import { 
@@ -31,7 +31,7 @@ const HOTKEYS = {
 const LIST_TYPES = ['numbered-list', 'bulleted-list'];
 const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'];
 
-// Valor inicial padrão (em conformidade com o seu sistema)
+// Valor inicial padrão
 const DEFAULT_VALUE = [
   {
     type: 'paragraph',
@@ -39,28 +39,271 @@ const DEFAULT_VALUE = [
   },
 ];
 
+// Funções para serializar de Slate para HTML
+const serialize = nodes => {
+  return nodes.map(node => serializeNode(node)).join('');
+};
+
+const serializeNode = node => {
+  // Verificar se é um nó de texto
+  if (Text.isText(node)) {
+    let string = node.text;
+    
+    // Aplicar formatações no texto
+    if (node.bold) {
+      string = `<strong>${string}</strong>`;
+    }
+    if (node.italic) {
+      string = `<em>${string}</em>`;
+    }
+    if (node.underline) {
+      string = `<u>${string}</u>`;
+    }
+    if (node.code) {
+      string = `<code>${string}</code>`;
+    }
+    
+    return string;
+  }
+
+  // Serializar os filhos do nó
+  const children = node.children ? node.children.map(n => serializeNode(n)).join('') : '';
+
+  // Aplicar tags baseadas no tipo do nó
+  switch (node.type) {
+    case 'block-quote':
+      return `<blockquote>${children}</blockquote>`;
+    case 'paragraph':
+      if (node.align) {
+        return `<p style="text-align: ${node.align}">${children}</p>`;
+      }
+      return `<p>${children}</p>`;
+    case 'heading-one':
+      if (node.align) {
+        return `<h1 style="text-align: ${node.align}">${children}</h1>`;
+      }
+      return `<h1>${children}</h1>`;
+    case 'heading-two':
+      if (node.align) {
+        return `<h2 style="text-align: ${node.align}">${children}</h2>`;
+      }
+      return `<h2>${children}</h2>`;
+    case 'list-item':
+      return `<li>${children}</li>`;
+    case 'numbered-list':
+      return `<ol>${children}</ol>`;
+    case 'bulleted-list':
+      return `<ul>${children}</ul>`;
+    default:
+      return children;
+  }
+};
+
+// Funções para deserializar de HTML para Slate
+const deserialize = html => {
+  if (!html || html.trim() === '') {
+    return DEFAULT_VALUE;
+  }
+
+  // Criar um elemento temporário para analisar o HTML
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const body = doc.body;
+
+  // Função recursiva para converter elementos DOM para objetos Slate
+  const deserializeNodes = el => {
+    // Texto simples
+    if (el.nodeType === 3) {
+      return { text: el.textContent };
+    }
+    
+    // Elemento ignorado
+    if (el.nodeType !== 1) {
+      return null;
+    }
+
+    // Processar elementos de formatação inline
+    if (el.nodeName === 'STRONG' || el.nodeName === 'B') {
+      return el.childNodes.length === 0
+        ? { text: '', bold: true }
+        : Array.from(el.childNodes).map(child => {
+            const node = deserializeNodes(child);
+            if (Text.isText(node)) {
+              return { ...node, bold: true };
+            }
+            // Para elementos aninhados, preservamos a estrutura
+            return node;
+          });
+    }
+
+    if (el.nodeName === 'EM' || el.nodeName === 'I') {
+      return el.childNodes.length === 0
+        ? { text: '', italic: true }
+        : Array.from(el.childNodes).map(child => {
+            const node = deserializeNodes(child);
+            if (Text.isText(node)) {
+              return { ...node, italic: true };
+            }
+            return node;
+          });
+    }
+
+    if (el.nodeName === 'U') {
+      return el.childNodes.length === 0
+        ? { text: '', underline: true }
+        : Array.from(el.childNodes).map(child => {
+            const node = deserializeNodes(child);
+            if (Text.isText(node)) {
+              return { ...node, underline: true };
+            }
+            return node;
+          });
+    }
+
+    if (el.nodeName === 'CODE') {
+      return el.childNodes.length === 0
+        ? { text: '', code: true }
+        : Array.from(el.childNodes).map(child => {
+            const node = deserializeNodes(child);
+            if (Text.isText(node)) {
+              return { ...node, code: true };
+            }
+            return node;
+          });
+    }
+
+    // Obter alinhamento do elemento
+    let align;
+    const style = el.getAttribute('style') || '';
+    const alignMatch = style.match(/text-align:\s*([a-z]+)/i);
+    if (alignMatch && alignMatch[1]) {
+      align = alignMatch[1].toLowerCase();
+    }
+
+    // Processar elementos de bloco
+    const children = Array.from(el.childNodes)
+      .map(deserializeNodes)
+      .flat()
+      .filter(node => node !== null);
+
+    switch (el.nodeName) {
+      case 'BLOCKQUOTE':
+        return {
+          type: 'block-quote',
+          align,
+          children: children.length > 0 ? children : [{ text: '' }],
+        };
+      case 'P':
+        return {
+          type: 'paragraph',
+          align,
+          children: children.length > 0 ? children : [{ text: '' }],
+        };
+      case 'H1':
+        return {
+          type: 'heading-one',
+          align,
+          children: children.length > 0 ? children : [{ text: '' }],
+        };
+      case 'H2':
+        return {
+          type: 'heading-two',
+          align,
+          children: children.length > 0 ? children : [{ text: '' }],
+        };
+      case 'LI':
+        return {
+          type: 'list-item',
+          align,
+          children: children.length > 0 ? children : [{ text: '' }],
+        };
+      case 'OL':
+        return {
+          type: 'numbered-list',
+          align,
+          children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
+        };
+      case 'UL':
+        return {
+          type: 'bulleted-list',
+          align,
+          children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
+        };
+      case 'DIV':
+      case 'BODY':
+        // Processar divs e o corpo como containers transparentes
+        return children;
+      default:
+        // Para outros elementos, tentar processar como texto
+        return children.length === 0 ? { text: el.textContent } : children;
+    }
+  };
+
+  // Iniciar o processamento do corpo
+  const nodes = deserializeNodes(body);
+  
+  // Garantir que temos um array de nós
+  const result = Array.isArray(nodes) ? nodes : [nodes];
+  
+  // Se não tiver nenhum nó, retornar valor padrão
+  if (result.length === 0) {
+    return DEFAULT_VALUE;
+  }
+  
+  // Verificar se os nós estão no formato correto
+  const validNodes = result.filter(node => node && (node.type || Text.isText(node)));
+  
+  return validNodes.length > 0 ? validNodes : DEFAULT_VALUE;
+};
+
+// Componente principal
 const RichTextEditor = ({ value, onChange }) => {
   // Criar um editor Slate
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   
-  // Usar o valor fornecido como prop ou o valor padrão
-  const initialValue = useMemo(() => {
+  // Estado para controlar o conteúdo do editor
+  const [editorContent, setEditorContent] = useState(() => {
+    // Se o valor for HTML, converter para formato Slate
+    if (typeof value === 'string') {
+      return deserialize(value);
+    }
+    
+    // Se for array válido de nós Slate, usar diretamente
     if (Array.isArray(value) && value.length > 0) {
       return value;
     }
+    
+    // Caso contrário, usar valor padrão
     return DEFAULT_VALUE;
+  });
+  
+  // Atualizar o conteúdo quando a prop value mudar
+  useEffect(() => {
+    if (typeof value === 'string' && value !== serialize(editorContent)) {
+      setEditorContent(deserialize(value));
+    }
   }, [value]);
 
   // Callbacks para renderização
   const renderElement = useCallback(props => <Element {...props} />, []);
   const renderLeaf = useCallback(props => <Leaf {...props} />, []);
 
+  // Função para lidar com mudanças no editor
+  const handleChange = newValue => {
+    setEditorContent(newValue);
+    
+    // Chamar o callback onChange com o HTML serializado
+    if (onChange) {
+      const html = serialize(newValue);
+      onChange(html);
+    }
+  };
+
   return (
     <div className="border border-gray-300 rounded-md">
       <Slate 
         editor={editor} 
-        initialValue={initialValue}
-        onChange={onChange}
+        value={editorContent}
+        onChange={handleChange}
       >
         <Toolbar>
           <MarkButton format="bold" icon={<FiBold />} />
