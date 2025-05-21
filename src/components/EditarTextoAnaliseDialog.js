@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiSave } from 'react-icons/fi';
@@ -85,6 +85,7 @@ const EditarTextoAnaliseDialog = ({ documento, onClose, onSuccess }) => {
           <TipTapEditor 
             initialValue={htmlContent}
             onChange={setHtmlContent}
+            onSave={salvarTextoAnalise}
           />
         </div>
         

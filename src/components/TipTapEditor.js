@@ -1,27 +1,31 @@
+import React, { useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { 
-  FiBold, 
-  FiItalic, 
-  FiUnderline, 
-  FiList, 
-  FiCode, 
-  FiType, 
-  FiHash 
-} from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 
-const TipTapEditor = ({ initialValue, onChange }) => {
+const TipTapEditor = ({ initialValue, onChange, onSave }) => {
+  // Estado para armazenar o HTML atual
+  const [html, setHtml] = useState(initialValue || '<p></p>');
+
+  // Inicializa o editor com StarterKit e conteúdo inicial
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-    ],
+    extensions: [StarterKit],
     content: initialValue || '<p></p>',
     onUpdate: ({ editor }) => {
+      const newHtml = editor.getHTML();
+      setHtml(newHtml);
       if (onChange) {
-        onChange(editor.getHTML());
+        onChange(newHtml);
       }
     },
   });
+
+  // Função para salvar o conteúdo
+  const handleSave = useCallback(() => {
+    if (editor && onSave) {
+      onSave(editor.getHTML());
+    }
+  }, [editor, onSave]);
 
   if (!editor) {
     return <div>Carregando editor...</div>;
@@ -29,123 +33,84 @@ const TipTapEditor = ({ initialValue, onChange }) => {
 
   return (
     <div className="border border-gray-300 rounded-md">
+      {/* Toolbar */}
       <div className="flex flex-wrap border-b p-2 bg-gray-50">
-        {/* Formatação de texto básica */}
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('bold') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('bold') ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Negrito"
         >
-          <FiBold />
+          Bold
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('italic') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('italic') ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Itálico"
         >
-          <FiItalic />
+          Italic
         </button>
         <button
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('code') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('code') ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Código"
         >
-          <FiCode />
+          Code
         </button>
-        
-        <div className="border-l mx-2 border-gray-300"></div>
-
-        {/* Cabeçalhos */}
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('heading', { level: 1 }) ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('heading', { level: 1 }) ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Título 1"
         >
-          <FiType />
+          H1
         </button>
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('heading', { level: 2 }) ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('heading', { level: 2 }) ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Título 2"
         >
-          <FiHash />
+          H2
         </button>
-        
-        <div className="border-l mx-2 border-gray-300"></div>
-
-        {/* Listas */}
         <button
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('bulletList') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('bulletList') ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Lista com marcadores"
         >
-          <FiList />
+          • List
         </button>
         <button
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`p-2 flex items-center justify-center rounded hover:bg-gray-200 ${
-            editor.isActive('orderedList') ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
+          className={`px-3 py-1 mr-1 rounded ${
+            editor.isActive('orderedList') ? 'bg-gray-200 text-blue-600' : 'bg-gray-100 text-gray-700'
           }`}
-          title="Lista numerada"
         >
-          <span className="font-bold text-sm">1.</span>
-        </button>
-        
-        <div className="border-l mx-2 border-gray-300"></div>
-
-        {/* Parágrafo */}
-        <button
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('paragraph') && !editor.isActive('bulletList') && !editor.isActive('orderedList') 
-              ? 'bg-gray-200 text-blue-600' : 'text-gray-600'
-          }`}
-          title="Parágrafo"
-        >
-          <span className="font-bold">¶</span>
-        </button>
-        
-        {/* Desfazer/Refazer */}
-        <div className="border-l mx-2 border-gray-300"></div>
-        <button
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            !editor.can().undo() ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600'
-          }`}
-          title="Desfazer"
-        >
-          <span className="font-bold">↩</span>
-        </button>
-        <button
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            !editor.can().redo() ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600'
-          }`}
-          title="Refazer"
-        >
-          <span className="font-bold">↪</span>
+          1. List
         </button>
       </div>
-      
-      <EditorContent 
-        editor={editor} 
+
+      {/* Editor Content */}
+      <EditorContent
+        editor={editor}
         className="p-3 min-h-[250px] focus:outline-none prose prose-sm max-w-none"
-        style={{ height: '300px', overflowY: 'auto' }}
       />
+
+      {/* Save Button (if applicable) */}
+      {onSave && (
+        <div className="border-t border-gray-200 p-2 flex justify-end">
+          <button
+            onClick={handleSave}
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          >
+            <FiSave className="mr-2" />
+            Salvar
+          </button>
+        </div>
+      )}
     </div>
   );
 };
