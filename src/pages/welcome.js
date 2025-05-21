@@ -84,6 +84,13 @@ export default function Welcome({ user }) {
             >
               Controle de Conteúdo Geral
             </Link>
+
+            <Link 
+              href="/med-curation-mobile" 
+              className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Visualização MedCuration (Celular)
+            </Link>
           </div>
             
           {isAdmin && (
