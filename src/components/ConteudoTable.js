@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiX } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
+import RichTextEditor from './RichTextEditor';
 
 const ConteudoTable = () => {
   const [conteudos, setConteudos] = useState([]);
@@ -35,10 +36,18 @@ const ConteudoTable = () => {
   const [retornoIAEditado, setRetornoIAEditado] = useState('');
   const [atualizandoRetornoIA, setAtualizandoRetornoIA] = useState(false);
   
-  // Novos estados para texto análise
+  // Estados para texto análise
   const [editandoTextoAnalise, setEditandoTextoAnalise] = useState(null);
   const [textoAnaliseEditado, setTextoAnaliseEditado] = useState('');
   const [atualizandoTextoAnalise, setAtualizandoTextoAnalise] = useState(false);
+  
+  // Novo estado para o editor Slate
+  const [textoAnaliseEditadoSlate, setTextoAnaliseEditadoSlate] = useState([
+    {
+      type: 'paragraph',
+      children: [{ text: '' }],
+    },
+  ]);
 
   useEffect(() => {
     fetchCategorias();
@@ -214,6 +223,13 @@ const ConteudoTable = () => {
     else {
       setEditandoTextoAnalise(item);
       setTextoAnaliseEditado('');
+      // Inicializa o editor Slate com conteúdo vazio
+      setTextoAnaliseEditadoSlate([
+        {
+          type: 'paragraph',
+          children: [{ text: '' }],
+        },
+      ]);
     }
   };
 
@@ -328,7 +344,7 @@ const ConteudoTable = () => {
     }
   };
   
-  // Nova função para salvar o texto análise editado
+  // Função modificada para salvar o texto análise editado usando Slate.js
   const salvarTextoAnaliseEditado = async () => {
     if (!editandoTextoAnalise) return;
 
@@ -344,10 +360,25 @@ const ConteudoTable = () => {
         return;
       }
 
+      // Converter o conteúdo do Slate para HTML
+      let textoFinal = '';
+      textoAnaliseEditadoSlate.forEach(node => {
+        if (node.children) {
+          node.children.forEach(child => {
+            let text = child.text || '';
+            if (child.bold) text = `<strong>${text}</strong>`;
+            if (child.italic) text = `<em>${text}</em>`;
+            if (child.underline) text = `<u>${text}</u>`;
+            textoFinal += text;
+          });
+          textoFinal += '\n';
+        }
+      });
+
       // Atualizar o texto análise no Supabase
       const { data, error } = await supabase
         .from('base_dados_conteudo')
-        .update({ texto_analise: textoAnaliseEditado })
+        .update({ texto_analise: textoFinal })
         .eq('id', editandoTextoAnalise.id)
         .select();
       
@@ -356,7 +387,7 @@ const ConteudoTable = () => {
       // Atualizar a lista local
       setConteudos(conteudos.map(item => 
         item.id === editandoTextoAnalise.id 
-          ? { ...item, texto_analise: textoAnaliseEditado } 
+          ? { ...item, texto_analise: textoFinal } 
           : item
       ));
       
@@ -364,13 +395,12 @@ const ConteudoTable = () => {
       
       // Fechar o modal de edição
       setEditandoTextoAnalise(null);
-      setTextoAnaliseEditado('');
       
       // Se estamos editando um documento, atualizar o formulário de edição
       if (documentoEditando && documentoEditando === editandoTextoAnalise.id) {
         setFormEdicao(prev => ({
           ...prev,
-          texto_analise: textoAnaliseEditado
+          texto_analise: textoFinal
         }));
       }
       
@@ -638,12 +668,19 @@ const ConteudoTable = () => {
     }
   };
   
-  // Nova função para editar o texto análise a partir do modo de edição
+  // Função para editar o texto análise a partir do modo de edição
   const editarTextoAnalise = () => {
     const documento = conteudos.find(doc => doc.id === documentoEditando);
     if (documento) {
       setEditandoTextoAnalise(documento);
-      setTextoAnaliseEditado(formEdicao.texto_analise || '');
+      // Inicializa o editor com o conteúdo existente
+      // Uma abordagem simples para início
+      setTextoAnaliseEditadoSlate([
+        {
+          type: 'paragraph',
+          children: [{ text: documento.texto_analise || '' }],
+        },
+      ]);
     }
   };
 
@@ -874,10 +911,10 @@ const ConteudoTable = () => {
         </div>
       )}
       
-      {/* Novo modal para edição/adição de texto análise */}
+      {/* Modal para edição/adição de texto análise com Slate.js */}
       {editandoTextoAnalise && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
@@ -887,7 +924,6 @@ const ConteudoTable = () => {
               <button 
                 onClick={() => {
                   setEditandoTextoAnalise(null);
-                  setTextoAnaliseEditado('');
                   
                   // Se estamos editando um documento, atualizar o formulário de edição
                   if (documentoEditando && documentoEditando === editandoTextoAnalise.id) {
@@ -910,19 +946,17 @@ const ConteudoTable = () => {
             </div>
             
             <div className="mb-4">
-              <label htmlFor="textoAnalise" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
                   ? "Adicione uma análise manual:" 
                   : "Texto análise:"}
               </label>
-              <textarea
-                id="textoAnalise"
-                value={textoAnaliseEditado}
-                onChange={(e) => setTextoAnaliseEditado(e.target.value)}
-                rows={15}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
-                placeholder="Digite aqui sua análise manual do documento..."
-              ></textarea>
+              
+              {/* Usando o componente RichTextEditor no lugar do textarea */}
+              <RichTextEditor 
+                value={textoAnaliseEditadoSlate} 
+                onChange={value => setTextoAnaliseEditadoSlate(value)} 
+              />
             </div>
             
             <div className="flex justify-end">
@@ -1101,7 +1135,6 @@ const ConteudoTable = () => {
                             <FiEdit className="mr-1 h-3 w-3" />
                             IA
                           </button>
-                          {/* Novo botão para editar texto análise */}
                           <button
                             onClick={editarTextoAnalise}
                             className="text-teal-600 hover:text-teal-900 px-2 py-1 border border-teal-200 rounded text-xs flex items-center"
@@ -1199,7 +1232,7 @@ const ConteudoTable = () => {
                             }
                           </button>
                           
-                          {/* Na visualização normal */}
+                          {/* Na visualização normal - Modificado para remover botão de olho e manter apenas o "T" */}
                           {!item.texto_analise || item.texto_analise.trim() === '' ? (
                             // Se não tiver texto análise, exibe o ícone de edição para adicionar
                             <button
@@ -1238,6 +1271,7 @@ const ConteudoTable = () => {
                             </button>
                           )}
                           
+                          {/* Removido o botão de olho para texto análise aqui para evitar redundância */}
                         </div>
                         <div>
                           <button
