@@ -1238,15 +1238,6 @@ const ConteudoTable = () => {
                             </button>
                           )}
                           
-                          {item.texto_analise && (
-                            <button
-                              onClick={() => visualizarTexto(item, 'texto_analise')}
-                              className="text-teal-600 hover:text-teal-900"
-                              title="Ver Texto Análise"
-                            >
-                              <FiEye className="h-5 w-5" />
-                            </button>
-                          )}
                         </div>
                         <div>
                           <button
