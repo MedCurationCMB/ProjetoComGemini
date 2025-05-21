@@ -87,7 +87,7 @@ const TipTapEditor = ({ initialValue, onChange, onSave }) => {
         </button>
       </div>
 
-      {/* Editor Content */}
+      {/* Editor Content - MODIFICADO: adicionando classes prose */}
       <EditorContent
         editor={editor}
         className="p-3 min-h-[250px] focus:outline-none prose prose-sm max-w-none"

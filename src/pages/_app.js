@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { isUserActive } from '../utils/userUtils';
 import '../styles/globals.css';
+import '../styles/tiptap.css';
 
 function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);

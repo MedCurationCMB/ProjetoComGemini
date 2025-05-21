@@ -15,7 +15,7 @@ const VisualizarTextoAnalise = ({ htmlContent, onClose }) => {
         </div>
         
         <div 
-          className="prose max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
+          className="prose prose-sm md:prose-base lg:prose-lg max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
       </div>
