@@ -1,7 +1,7 @@
 // src/components/RichTextEditor.js
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import isHotkey from 'is-hotkey';
-import { Editor, Element as SlateElement, Transforms, createEditor, Node, Text } from 'slate';
+import { Editor, Element as SlateElement, Transforms, createEditor, Text } from 'slate';
 import { withHistory } from 'slate-history';
 import { Editable, Slate, useSlate, withReact } from 'slate-react';
 import { 
@@ -41,13 +41,19 @@ const DEFAULT_VALUE = [
 
 // Funções para serializar de Slate para HTML
 const serialize = nodes => {
+  if (!Array.isArray(nodes)) {
+    console.error('Serialização recebeu um não-array:', nodes);
+    nodes = DEFAULT_VALUE;
+  }
   return nodes.map(node => serializeNode(node)).join('');
 };
 
 const serializeNode = node => {
+  if (!node) return '';
+  
   // Verificar se é um nó de texto
   if (Text.isText(node)) {
-    let string = node.text;
+    let string = node.text || '';
     
     // Aplicar formatações no texto
     if (node.bold) {
@@ -66,8 +72,12 @@ const serializeNode = node => {
     return string;
   }
 
-  // Serializar os filhos do nó
-  const children = node.children ? node.children.map(n => serializeNode(n)).join('') : '';
+  // Garantir que children seja um array
+  const children = node.children 
+    ? Array.isArray(node.children)
+      ? node.children.map(n => serializeNode(n)).join('')
+      : serializeNode(node.children)
+    : '';
 
   // Aplicar tags baseadas no tipo do nó
   switch (node.type) {
@@ -101,158 +111,249 @@ const serializeNode = node => {
 
 // Funções para deserializar de HTML para Slate
 const deserialize = html => {
-  if (!html || html.trim() === '') {
-    return DEFAULT_VALUE;
-  }
+  try {
+    if (!html || typeof html !== 'string' || html.trim() === '') {
+      return DEFAULT_VALUE;
+    }
 
-  // Criar um elemento temporário para analisar o HTML
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const body = doc.body;
+    // Criar um elemento temporário para analisar o HTML
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const body = doc.body;
 
-  // Função recursiva para converter elementos DOM para objetos Slate
-  const deserializeNodes = el => {
-    // Texto simples
-    if (el.nodeType === 3) {
-      return { text: el.textContent };
+    // Função recursiva para converter elementos DOM para objetos Slate
+    const deserializeNodes = el => {
+      // Texto simples
+      if (el.nodeType === 3) {
+        return { text: el.textContent || '' };
+      }
+      
+      // Elemento ignorado
+      if (el.nodeType !== 1) {
+        return { text: '' };
+      }
+
+      // Processar elementos de formatação inline
+      if (el.nodeName === 'STRONG' || el.nodeName === 'B') {
+        if (el.childNodes.length === 0) {
+          return { text: '', bold: true };
+        }
+        
+        const children = Array.from(el.childNodes)
+          .map(child => deserializeNodes(child))
+          .flat()
+          .filter(node => node !== null);
+        
+        if (children.length === 0) {
+          return { text: '', bold: true };
+        }
+        
+        // Se houver apenas um nó de texto filho, aplicar bold nele
+        if (children.length === 1 && children[0].text !== undefined) {
+          return { ...children[0], bold: true };
+        }
+        
+        // Caso especial: converter todos os filhos para texto bold
+        return children.map(child => {
+          if (child.text !== undefined) {
+            return { ...child, bold: true };
+          }
+          return child;
+        });
+      }
+
+      if (el.nodeName === 'EM' || el.nodeName === 'I') {
+        if (el.childNodes.length === 0) {
+          return { text: '', italic: true };
+        }
+        
+        const children = Array.from(el.childNodes)
+          .map(child => deserializeNodes(child))
+          .flat()
+          .filter(node => node !== null);
+        
+        if (children.length === 0) {
+          return { text: '', italic: true };
+        }
+        
+        if (children.length === 1 && children[0].text !== undefined) {
+          return { ...children[0], italic: true };
+        }
+        
+        return children.map(child => {
+          if (child.text !== undefined) {
+            return { ...child, italic: true };
+          }
+          return child;
+        });
+      }
+
+      if (el.nodeName === 'U') {
+        if (el.childNodes.length === 0) {
+          return { text: '', underline: true };
+        }
+        
+        const children = Array.from(el.childNodes)
+          .map(child => deserializeNodes(child))
+          .flat()
+          .filter(node => node !== null);
+        
+        if (children.length === 0) {
+          return { text: '', underline: true };
+        }
+        
+        if (children.length === 1 && children[0].text !== undefined) {
+          return { ...children[0], underline: true };
+        }
+        
+        return children.map(child => {
+          if (child.text !== undefined) {
+            return { ...child, underline: true };
+          }
+          return child;
+        });
+      }
+
+      if (el.nodeName === 'CODE') {
+        if (el.childNodes.length === 0) {
+          return { text: '', code: true };
+        }
+        
+        const children = Array.from(el.childNodes)
+          .map(child => deserializeNodes(child))
+          .flat()
+          .filter(node => node !== null);
+        
+        if (children.length === 0) {
+          return { text: '', code: true };
+        }
+        
+        if (children.length === 1 && children[0].text !== undefined) {
+          return { ...children[0], code: true };
+        }
+        
+        return children.map(child => {
+          if (child.text !== undefined) {
+            return { ...child, code: true };
+          }
+          return child;
+        });
+      }
+
+      // Obter alinhamento do elemento
+      let align;
+      const style = el.getAttribute('style') || '';
+      const alignMatch = style.match(/text-align:\s*([a-z]+)/i);
+      if (alignMatch && alignMatch[1]) {
+        align = alignMatch[1].toLowerCase();
+      }
+
+      // Processar elementos de bloco
+      let children = [];
+      try {
+        children = Array.from(el.childNodes)
+          .map(child => deserializeNodes(child))
+          .flat()
+          .filter(node => node !== null && node !== undefined);
+      } catch (e) {
+        console.error('Erro ao processar filhos:', e);
+        children = [];
+      }
+
+      // Se não houver filhos, adicionar um nó de texto vazio
+      if (children.length === 0) {
+        children = [{ text: '' }];
+      }
+
+      switch (el.nodeName) {
+        case 'BLOCKQUOTE':
+          return {
+            type: 'block-quote',
+            align,
+            children,
+          };
+        case 'P':
+          return {
+            type: 'paragraph',
+            align,
+            children,
+          };
+        case 'H1':
+          return {
+            type: 'heading-one',
+            align,
+            children,
+          };
+        case 'H2':
+          return {
+            type: 'heading-two',
+            align,
+            children,
+          };
+        case 'LI':
+          return {
+            type: 'list-item',
+            align,
+            children,
+          };
+        case 'OL':
+          return {
+            type: 'numbered-list',
+            align,
+            children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
+          };
+        case 'UL':
+          return {
+            type: 'bulleted-list',
+            align,
+            children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
+          };
+        case 'DIV':
+        case 'BODY':
+          // Para divs e body, retornar apenas seus filhos
+          return children;
+        default:
+          // Para outros elementos, tentar processar como texto
+          if (children.length === 0) {
+            return { text: el.textContent || '' };
+          }
+          return children;
+      }
+    };
+
+    // Iniciar o processamento do corpo
+    let nodes = [];
+    try {
+      nodes = deserializeNodes(body);
+    } catch (e) {
+      console.error('Erro ao deserializar nós:', e);
+      return DEFAULT_VALUE;
     }
     
-    // Elemento ignorado
-    if (el.nodeType !== 1) {
-      return null;
+    // Garantir que temos um array de nós
+    const result = Array.isArray(nodes) ? nodes : [nodes];
+    
+    // Se não tiver nenhum nó, retornar valor padrão
+    if (result.length === 0) {
+      return DEFAULT_VALUE;
     }
-
-    // Processar elementos de formatação inline
-    if (el.nodeName === 'STRONG' || el.nodeName === 'B') {
-      return el.childNodes.length === 0
-        ? { text: '', bold: true }
-        : Array.from(el.childNodes).map(child => {
-            const node = deserializeNodes(child);
-            if (Text.isText(node)) {
-              return { ...node, bold: true };
-            }
-            // Para elementos aninhados, preservamos a estrutura
-            return node;
-          });
-    }
-
-    if (el.nodeName === 'EM' || el.nodeName === 'I') {
-      return el.childNodes.length === 0
-        ? { text: '', italic: true }
-        : Array.from(el.childNodes).map(child => {
-            const node = deserializeNodes(child);
-            if (Text.isText(node)) {
-              return { ...node, italic: true };
-            }
-            return node;
-          });
-    }
-
-    if (el.nodeName === 'U') {
-      return el.childNodes.length === 0
-        ? { text: '', underline: true }
-        : Array.from(el.childNodes).map(child => {
-            const node = deserializeNodes(child);
-            if (Text.isText(node)) {
-              return { ...node, underline: true };
-            }
-            return node;
-          });
-    }
-
-    if (el.nodeName === 'CODE') {
-      return el.childNodes.length === 0
-        ? { text: '', code: true }
-        : Array.from(el.childNodes).map(child => {
-            const node = deserializeNodes(child);
-            if (Text.isText(node)) {
-              return { ...node, code: true };
-            }
-            return node;
-          });
-    }
-
-    // Obter alinhamento do elemento
-    let align;
-    const style = el.getAttribute('style') || '';
-    const alignMatch = style.match(/text-align:\s*([a-z]+)/i);
-    if (alignMatch && alignMatch[1]) {
-      align = alignMatch[1].toLowerCase();
-    }
-
-    // Processar elementos de bloco
-    const children = Array.from(el.childNodes)
-      .map(deserializeNodes)
-      .flat()
-      .filter(node => node !== null);
-
-    switch (el.nodeName) {
-      case 'BLOCKQUOTE':
-        return {
-          type: 'block-quote',
-          align,
-          children: children.length > 0 ? children : [{ text: '' }],
-        };
-      case 'P':
-        return {
-          type: 'paragraph',
-          align,
-          children: children.length > 0 ? children : [{ text: '' }],
-        };
-      case 'H1':
-        return {
-          type: 'heading-one',
-          align,
-          children: children.length > 0 ? children : [{ text: '' }],
-        };
-      case 'H2':
-        return {
-          type: 'heading-two',
-          align,
-          children: children.length > 0 ? children : [{ text: '' }],
-        };
-      case 'LI':
-        return {
-          type: 'list-item',
-          align,
-          children: children.length > 0 ? children : [{ text: '' }],
-        };
-      case 'OL':
-        return {
-          type: 'numbered-list',
-          align,
-          children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
-        };
-      case 'UL':
-        return {
-          type: 'bulleted-list',
-          align,
-          children: children.length > 0 ? children : [{ type: 'list-item', children: [{ text: '' }] }],
-        };
-      case 'DIV':
-      case 'BODY':
-        // Processar divs e o corpo como containers transparentes
-        return children;
-      default:
-        // Para outros elementos, tentar processar como texto
-        return children.length === 0 ? { text: el.textContent } : children;
-    }
-  };
-
-  // Iniciar o processamento do corpo
-  const nodes = deserializeNodes(body);
-  
-  // Garantir que temos um array de nós
-  const result = Array.isArray(nodes) ? nodes : [nodes];
-  
-  // Se não tiver nenhum nó, retornar valor padrão
-  if (result.length === 0) {
+    
+    // Verificar e corrigir a estrutura dos nós
+    const validNodes = result.filter(node => node && (node.type || Text.isText(node)));
+    
+    // Garantir que cada nó tenha children se não for um nó de texto
+    const fixedNodes = validNodes.map(node => {
+      if (Text.isText(node) || node.children) {
+        return node;
+      }
+      // Se for um nó sem children, adicionar um children vazio
+      return { ...node, children: [{ text: '' }] };
+    });
+    
+    return fixedNodes.length > 0 ? fixedNodes : DEFAULT_VALUE;
+  } catch (error) {
+    console.error('Erro ao deserializar HTML:', error);
     return DEFAULT_VALUE;
   }
-  
-  // Verificar se os nós estão no formato correto
-  const validNodes = result.filter(node => node && (node.type || Text.isText(node)));
-  
-  return validNodes.length > 0 ? validNodes : DEFAULT_VALUE;
 };
 
 // Componente principal
@@ -262,18 +363,23 @@ const RichTextEditor = ({ value, onChange }) => {
   
   // Determinar o valor inicial para o editor
   const initialValue = useMemo(() => {
-    // Se o valor for uma string (HTML), deserializar para formato Slate
-    if (typeof value === 'string') {
-      return deserialize(value);
+    try {
+      // Se o valor for uma string (HTML), deserializar para formato Slate
+      if (typeof value === 'string') {
+        return deserialize(value);
+      }
+      
+      // Se for array válido de nós Slate, usar diretamente
+      if (Array.isArray(value) && value.length > 0) {
+        return value;
+      }
+      
+      // Caso contrário, usar valor padrão
+      return DEFAULT_VALUE;
+    } catch (error) {
+      console.error('Erro ao inicializar editor:', error);
+      return DEFAULT_VALUE;
     }
-    
-    // Se for array válido de nós Slate, usar diretamente
-    if (Array.isArray(value) && value.length > 0) {
-      return value;
-    }
-    
-    // Caso contrário, usar valor padrão
-    return DEFAULT_VALUE;
   }, [value]);
 
   // Callbacks para renderização
@@ -282,10 +388,20 @@ const RichTextEditor = ({ value, onChange }) => {
 
   // Função para lidar com mudanças no editor
   const handleChange = newValue => {
-    // Chamar o callback onChange com o HTML serializado
-    if (onChange) {
-      const html = serialize(newValue);
-      onChange(html);
+    try {
+      // Verificar se newValue é um array válido
+      if (!Array.isArray(newValue)) {
+        console.error('handleChange recebeu um não-array:', newValue);
+        return;
+      }
+      
+      // Chamar o callback onChange com o HTML serializado
+      if (onChange && typeof onChange === 'function') {
+        const html = serialize(newValue);
+        onChange(html);
+      }
+    } catch (error) {
+      console.error('Erro no handleChange:', error);
     }
   };
 
@@ -321,12 +437,16 @@ const RichTextEditor = ({ value, onChange }) => {
           className="p-3 min-h-[250px] focus:outline-none"
           spellCheck={false}
           onKeyDown={event => {
-            // Adicionar suporte para teclas de atalho
-            for (const hotkey in HOTKEYS) {
-              if (isHotkey(hotkey, event)) {
-                event.preventDefault();
-                toggleMark(editor, HOTKEYS[hotkey]);
+            try {
+              // Adicionar suporte para teclas de atalho
+              for (const hotkey in HOTKEYS) {
+                if (isHotkey(hotkey, event)) {
+                  event.preventDefault();
+                  toggleMark(editor, HOTKEYS[hotkey]);
+                }
               }
+            } catch (error) {
+              console.error('Erro no manipulador de teclado:', error);
             }
           }}
         />
@@ -346,62 +466,80 @@ const Toolbar = ({ children }) => {
 
 // Utilitários de formatação
 const toggleBlock = (editor, format) => {
-  const isActive = isBlockActive(
-    editor,
-    format,
-    TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type'
-  );
-  const isList = LIST_TYPES.includes(format);
+  try {
+    const isActive = isBlockActive(
+      editor,
+      format,
+      TEXT_ALIGN_TYPES.includes(format) ? 'align' : 'type'
+    );
+    const isList = LIST_TYPES.includes(format);
 
-  Transforms.unwrapNodes(editor, {
-    match: n =>
-      !Editor.isEditor(n) &&
-      SlateElement.isElement(n) &&
-      LIST_TYPES.includes(n.type) &&
-      !TEXT_ALIGN_TYPES.includes(format),
-    split: true,
-  });
+    Transforms.unwrapNodes(editor, {
+      match: n =>
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        LIST_TYPES.includes(n.type) &&
+        !TEXT_ALIGN_TYPES.includes(format),
+      split: true,
+    });
 
-  let newProps = TEXT_ALIGN_TYPES.includes(format)
-    ? { align: isActive ? undefined : format }
-    : { type: isActive ? 'paragraph' : isList ? 'list-item' : format };
+    let newProps = TEXT_ALIGN_TYPES.includes(format)
+      ? { align: isActive ? undefined : format }
+      : { type: isActive ? 'paragraph' : isList ? 'list-item' : format };
 
-  Transforms.setNodes(editor, newProps);
+    Transforms.setNodes(editor, newProps);
 
-  if (!isActive && isList) {
-    Transforms.wrapNodes(editor, { type: format, children: [] });
+    if (!isActive && isList) {
+      Transforms.wrapNodes(editor, { type: format, children: [] });
+    }
+  } catch (error) {
+    console.error('Erro ao alternar bloco:', error);
   }
 };
 
 const toggleMark = (editor, format) => {
-  const isActive = isMarkActive(editor, format);
-  isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true);
+  try {
+    const isActive = isMarkActive(editor, format);
+    isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true);
+  } catch (error) {
+    console.error('Erro ao alternar marca:', error);
+  }
 };
 
 const isBlockActive = (editor, format, blockType = 'type') => {
-  const { selection } = editor;
-  if (!selection) return false;
-  
-  const [match] = Array.from(
-    Editor.nodes(editor, {
-      at: Editor.unhangRange(editor, selection),
-      match: n => {
-        if (!Editor.isEditor(n) && SlateElement.isElement(n)) {
-          return blockType === 'align'
-            ? n.align === format
-            : n.type === format;
-        }
-        return false;
-      },
-    })
-  );
-  
-  return !!match;
+  try {
+    const { selection } = editor;
+    if (!selection) return false;
+    
+    const [match] = Array.from(
+      Editor.nodes(editor, {
+        at: Editor.unhangRange(editor, selection),
+        match: n => {
+          if (!Editor.isEditor(n) && SlateElement.isElement(n)) {
+            return blockType === 'align'
+              ? n.align === format
+              : n.type === format;
+          }
+          return false;
+        },
+      })
+    );
+    
+    return !!match;
+  } catch (error) {
+    console.error('Erro ao verificar bloco ativo:', error);
+    return false;
+  }
 };
 
 const isMarkActive = (editor, format) => {
-  const marks = Editor.marks(editor);
-  return marks ? marks[format] === true : false;
+  try {
+    const marks = Editor.marks(editor);
+    return marks ? marks[format] === true : false;
+  } catch (error) {
+    console.error('Erro ao verificar marca ativa:', error);
+    return false;
+  }
 };
 
 // Componentes de renderização
