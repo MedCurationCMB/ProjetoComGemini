@@ -249,15 +249,6 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
-      {/* Add Button - Fixed at bottom right */}
-      <div className="fixed right-4 bottom-4">
-        <Link
-          href="/upload"
-          className="bg-green-500 text-white rounded-full p-3 shadow-lg hover:bg-green-600 transition-colors"
-        >
-          <FiPlusCircle className="h-6 w-6" />
-        </Link>
-      </div>
     </div>
   );
 }
