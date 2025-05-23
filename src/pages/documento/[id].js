@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft } from 'react-icons/fi';
+import { FiChevronLeft, FiCheck } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function DocumentoDetalhe({ user }) {
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
+  const [marcandoComoLido, setMarcandoComoLido] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -101,6 +102,42 @@ export default function DocumentoDetalhe({ user }) {
     return categoryName.substring(0, 2).toUpperCase();
   };
 
+  // Função para marcar documento como lido
+  const marcarComoLido = async () => {
+    if (!documento || documento.lido) return; // Se já estiver lido, não faz nada
+    
+    try {
+      setMarcandoComoLido(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      // Atualizar o documento no Supabase
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ lido: true })
+        .eq('id', documento.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setDocumento(prev => ({ ...prev, lido: true }));
+      
+      toast.success('Documento marcado como lido!');
+    } catch (error) {
+      console.error('Erro ao marcar como lido:', error);
+      toast.error('Erro ao marcar documento como lido');
+    } finally {
+      setMarcandoComoLido(false);
+    }
+  };
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -151,9 +188,39 @@ export default function DocumentoDetalhe({ user }) {
       <div className="max-w-md mx-auto px-4 py-4">
         {/* Texto Análise - sem título e sem botões */}
         <div 
-          className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
+          className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200 mb-6"
           dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
         />
+        
+        {/* Botão Marcar como Lido */}
+        {!documento.lido ? (
+          <button
+            onClick={marcarComoLido}
+            disabled={marcandoComoLido}
+            className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+              marcandoComoLido
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
+            {marcandoComoLido ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700 mr-2"></div>
+                Marcando...
+              </>
+            ) : (
+              <>
+                <FiCheck className="mr-2" />
+                Marcar como Lido
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-200 text-green-800">
+            <FiCheck className="mr-2" />
+            Documento Lido
+          </div>
+        )}
       </div>
     </div>
   );
