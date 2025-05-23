@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiCheck } from 'react-icons/fi';
+import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function DocumentoDetalhe({ user }) {
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [marcandoComoLido, setMarcandoComoLido] = useState(false);
+  const [atualizandoStatus, setAtualizandoStatus] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -138,6 +139,51 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
+  // Função para alternar status (importante, ler_depois, arquivado)
+  const alternarStatus = async (campo, valorAtual) => {
+    if (!documento || atualizandoStatus) return;
+    
+    try {
+      setAtualizandoStatus(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      const novoValor = !valorAtual;
+      
+      // Atualizar o documento no Supabase
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ [campo]: novoValor })
+        .eq('id', documento.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setDocumento(prev => ({ ...prev, [campo]: novoValor }));
+      
+      // Mensagens específicas para cada ação
+      const mensagens = {
+        importante: novoValor ? 'Marcado como importante!' : 'Removido dos importantes',
+        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois',
+        arquivado: novoValor ? 'Documento arquivado!' : 'Documento desarquivado'
+      };
+      
+      toast.success(mensagens[campo]);
+    } catch (error) {
+      console.error(`Erro ao alterar ${campo}:`, error);
+      toast.error('Erro ao atualizar documento');
+    } finally {
+      setAtualizandoStatus(false);
+    }
+  };
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -160,7 +206,7 @@ export default function DocumentoDetalhe({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20">
       <Head>
         <title>Documento - {documento.descricao || 'Sem descrição'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -221,6 +267,77 @@ export default function DocumentoDetalhe({ user }) {
             Documento Lido
           </div>
         )}
+      </div>
+
+      {/* Barra fixa inferior com botões de ação */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20">
+        <div className="max-w-md mx-auto flex justify-center space-x-8">
+          {/* Botão Importante */}
+          <button
+            onClick={() => alternarStatus('importante', documento.importante)}
+            disabled={atualizandoStatus}
+            className={`flex flex-col items-center space-y-1 transition-colors ${
+              atualizandoStatus ? 'opacity-50' : ''
+            }`}
+          >
+            <FiStar 
+              className={`h-6 w-6 ${
+                documento.importante 
+                  ? 'text-yellow-500 fill-current' 
+                  : 'text-gray-400 hover:text-yellow-400'
+              }`} 
+            />
+            <span className={`text-xs ${
+              documento.importante ? 'text-yellow-600' : 'text-gray-500'
+            }`}>
+              Importante
+            </span>
+          </button>
+
+          {/* Botão Ler Depois */}
+          <button
+            onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+            disabled={atualizandoStatus}
+            className={`flex flex-col items-center space-y-1 transition-colors ${
+              atualizandoStatus ? 'opacity-50' : ''
+            }`}
+          >
+            <FiClock 
+              className={`h-6 w-6 ${
+                documento.ler_depois 
+                  ? 'text-blue-500' 
+                  : 'text-gray-400 hover:text-blue-400'
+              }`} 
+            />
+            <span className={`text-xs ${
+              documento.ler_depois ? 'text-blue-500' : 'text-gray-500'
+            }`}>
+              Ler Depois
+            </span>
+          </button>
+
+          {/* Botão Arquivar */}
+          <button
+            onClick={() => alternarStatus('arquivado', documento.arquivado)}
+            disabled={atualizandoStatus}
+            className={`flex flex-col items-center space-y-1 transition-colors ${
+              atualizandoStatus ? 'opacity-50' : ''
+            }`}
+          >
+            <FiArchive 
+              className={`h-6 w-6 ${
+                documento.arquivado 
+                  ? 'text-green-500' 
+                  : 'text-gray-400 hover:text-green-400'
+              }`} 
+            />
+            <span className={`text-xs ${
+              documento.arquivado ? 'text-green-500' : 'text-gray-500'
+            }`}>
+              Arquivar
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );
