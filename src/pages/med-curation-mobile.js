@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiChevronLeft, FiPlusCircle, FiEdit, FiX, FiExternalLink, FiEye } from 'react-icons/fi';
+import { FiSearch, FiChevronLeft, FiX, FiEdit } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -166,53 +166,6 @@ export default function MedCurationMobile({ user }) {
       : textContent;
   };
 
-  // Função para visualizar o PDF
-  const abrirPdf = async (documento) => {
-    try {
-      // Mostrar loading
-      toast.loading('Preparando arquivo para visualização...');
-      
-      // Obter o token de acesso do usuário atual
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.dismiss();
-        toast.error('Você precisa estar logado para esta ação');
-        return;
-      }
-      
-      // Obter URL temporária
-      const response = await fetch(`/api/get_download_url?id=${documento.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao gerar o link de acesso');
-      }
-      
-      const result = await response.json();
-      
-      if (!result || !result.url) {
-        throw new Error('Não foi possível gerar o link de acesso');
-      }
-      
-      // Remover toast de loading
-      toast.dismiss();
-      
-      // Abrir em nova aba
-      window.open(result.url, '_blank');
-    } catch (error) {
-      toast.dismiss();
-      console.error('Erro ao abrir PDF:', error);
-      toast.error('Erro ao processar o arquivo');
-    }
-  };
-
   // Nova função para editar a análise
   const editarAnalise = (documento) => {
     router.push(`/tabela?editarAnalise=${documento.id}`);
@@ -332,62 +285,43 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
-      {/* Diálogo de Detalhes do Documento */}
+      {/* Diálogo de Detalhes do Documento - TELA CHEIA */}
       {documentoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-end md:items-center justify-center">
-          <div className="relative bg-white w-full max-w-md md:rounded-t-lg rounded-t-xl max-h-[85vh] overflow-y-auto">
-            {/* Barra superior com botão de fechar */}
-            <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
-              <button 
-                onClick={fecharDetalheDocumento}
-                className="text-gray-500 hover:text-gray-700 mr-3"
-              >
-                <FiX className="h-6 w-6" />
-              </button>
-              <h2 className="text-lg font-bold flex-1 truncate">
-                {documentoSelecionado.descricao || 'Sem descrição'}
-              </h2>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Header fixo com ícone da categoria e descrição */}
+          <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
+            {/* Ícone da categoria à esquerda */}
+            <div className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold text-sm">
+              {getCategoryInitials(documentoSelecionado.categoria_id)}
             </div>
+            
+            {/* Descrição do documento */}
+            <h2 className="text-lg font-bold flex-1 truncate">
+              {documentoSelecionado.descricao || 'Sem descrição'}
+            </h2>
+            
+            {/* Botão de fechar à direita */}
+            <button 
+              onClick={fecharDetalheDocumento}
+              className="text-gray-500 hover:text-gray-700 ml-3"
+            >
+              <FiX className="h-6 w-6" />
+            </button>
+          </div>
 
+          {/* Conteúdo do diálogo */}
+          <div className="flex-1 overflow-y-auto">
             {carregandoDocumento ? (
-              <div className="flex justify-center items-center p-12">
+              <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               </div>
             ) : (
               <div className="p-4">
-                {/* Category Avatar + Info */}
-                <div className="flex items-center mb-6">
-                  <div className="h-16 w-16 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-4 font-bold text-lg">
-                    {getCategoryInitials(documentoSelecionado.categoria_id)}
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      Data: {new Date(documentoSelecionado.created_at).toLocaleDateString()}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Arquivo: {documentoSelecionado.nome_arquivo || 'N/A'}
-                    </p>
-                    <div className="flex text-xs text-gray-500 mt-1">
-                      <span className="mr-2">{categorias[documentoSelecionado.categoria_id] || 'Categoria N/A'}</span>
-                      <span>•</span>
-                      <span className="ml-2">{projetos[documentoSelecionado.projeto_id] || 'Projeto N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex space-x-2 mb-6">
-                  <button 
-                    onClick={() => abrirPdf(documentoSelecionado)}
-                    className="flex-1 bg-blue-100 text-blue-700 py-2 rounded-md flex items-center justify-center"
-                  >
-                    <FiEye className="mr-2" />
-                    Visualizar PDF
-                  </button>
+                {/* Botão de Editar Análise */}
+                <div className="mb-6">
                   <button 
                     onClick={() => editarAnalise(documentoSelecionado)}
-                    className="flex-1 bg-green-100 text-green-700 py-2 rounded-md flex items-center justify-center"
+                    className="w-full bg-green-100 text-green-700 py-3 rounded-md flex items-center justify-center font-medium"
                   >
                     <FiEdit className="mr-2" />
                     Editar Análise
@@ -401,17 +335,6 @@ export default function MedCurationMobile({ user }) {
                     className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
                     dangerouslySetInnerHTML={{ __html: documentoSelecionado.texto_analise || '<p>Sem texto análise</p>' }}
                   />
-                </div>
-
-                {/* Ver na página completa */}
-                <div className="mt-6 mb-2 text-center">
-                  <Link
-                    href={`/tabela?documento=${documentoSelecionado.id}`}
-                    className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                  >
-                    <FiExternalLink className="mr-1" />
-                    Ver na versão completa
-                  </Link>
                 </div>
               </div>
             )}
