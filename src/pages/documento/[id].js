@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiEye, FiEdit } from 'react-icons/fi';
+import { FiChevronLeft } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -101,58 +101,6 @@ export default function DocumentoDetalhe({ user }) {
     return categoryName.substring(0, 2).toUpperCase();
   };
 
-  // Função para visualizar o PDF
-  const abrirPdf = async (documento) => {
-    try {
-      // Mostrar loading
-      toast.loading('Preparando arquivo para visualização...');
-      
-      // Obter o token de acesso do usuário atual
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.dismiss();
-        toast.error('Você precisa estar logado para esta ação');
-        return;
-      }
-      
-      // Obter URL temporária
-      const response = await fetch(`/api/get_download_url?id=${documento.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao gerar o link de acesso');
-      }
-      
-      const result = await response.json();
-      
-      if (!result || !result.url) {
-        throw new Error('Não foi possível gerar o link de acesso');
-      }
-      
-      // Remover toast de loading
-      toast.dismiss();
-      
-      // Abrir em nova aba
-      window.open(result.url, '_blank');
-    } catch (error) {
-      toast.dismiss();
-      console.error('Erro ao abrir PDF:', error);
-      toast.error('Erro ao processar o arquivo');
-    }
-  };
-
-  // Função para editar a análise
-  const editarAnalise = (documento) => {
-    router.push(`/tabela?editarAnalise=${documento.id}`);
-  };
-
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -201,51 +149,11 @@ export default function DocumentoDetalhe({ user }) {
 
       {/* Conteúdo da página */}
       <div className="max-w-md mx-auto px-4 py-4">
-        {/* Action Buttons */}
-        <div className="flex space-x-2 mb-6">
-          <button 
-            onClick={() => abrirPdf(documento)}
-            className="flex-1 bg-blue-100 text-blue-700 py-3 rounded-md flex items-center justify-center font-medium"
-          >
-            <FiEye className="mr-2" />
-            Visualizar PDF
-          </button>
-          <button 
-            onClick={() => editarAnalise(documento)}
-            className="flex-1 bg-green-100 text-green-700 py-3 rounded-md flex items-center justify-center font-medium"
-          >
-            <FiEdit className="mr-2" />
-            Editar Análise
-          </button>
-        </div>
-
-        {/* Texto Análise - sem título */}
+        {/* Texto Análise - sem título e sem botões */}
         <div 
           className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
           dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
         />
-
-        {/* Informações adicionais no final (opcional) */}
-        <div className="mt-6 pt-4 border-t border-gray-200 text-xs text-gray-500">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="font-medium">Categoria:</span><br />
-              {categorias[documento.categoria_id] || 'N/A'}
-            </div>
-            <div>
-              <span className="font-medium">Projeto:</span><br />
-              {projetos[documento.projeto_id] || 'N/A'}
-            </div>
-            <div>
-              <span className="font-medium">Data:</span><br />
-              {new Date(documento.created_at).toLocaleDateString('pt-BR')}
-            </div>
-            <div>
-              <span className="font-medium">Arquivo:</span><br />
-              {documento.nome_arquivo || 'N/A'}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

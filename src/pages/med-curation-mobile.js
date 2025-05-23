@@ -216,28 +216,30 @@ export default function MedCurationMobile({ user }) {
             <Link 
               key={documento.id} 
               href={`/documento/${documento.id}`}
-              className="block px-4 py-3 hover:bg-gray-50 cursor-pointer"
+              className="block px-4 py-3 hover:bg-gray-50"
             >
-              {/* Category Avatar */}
-              <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
-                {getCategoryInitials(documento.categoria_id)}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                {/* Document Description */}
-                <div className="flex justify-between">
-                  <h2 className="text-base font-bold text-gray-900 truncate">
-                    {documento.descricao || 'Sem descrição'}
-                  </h2>
-                  <span className="text-xs text-gray-500">
-                    {new Date(documento.created_at).toLocaleDateString()}
-                  </span>
+              <div className="flex">
+                {/* Category Avatar */}
+                <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
+                  {getCategoryInitials(documento.categoria_id)}
                 </div>
                 
-                {/* Text Preview */}
-                <p className="text-sm text-gray-600 truncate">
-                  {getTextPreview(documento.texto_analise)}
-                </p>
+                <div className="flex-1 min-w-0">
+                  {/* Document Description */}
+                  <div className="flex justify-between">
+                    <h2 className="text-base font-bold text-gray-900 truncate">
+                      {documento.descricao || 'Sem descrição'}
+                    </h2>
+                    <span className="text-xs text-gray-500">
+                      {new Date(documento.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  {/* Text Preview */}
+                  <p className="text-sm text-gray-600 truncate">
+                    {getTextPreview(documento.texto_analise)}
+                  </p>
+                </div>
               </div>
             </Link>
           ))
