@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiChevronLeft, FiX, FiEdit } from 'react-icons/fi';
+import { FiSearch, FiChevronLeft } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -166,10 +166,7 @@ export default function MedCurationMobile({ user }) {
       : textContent;
   };
 
-  // Nova função para editar a análise
-  const editarAnalise = (documento) => {
-    router.push(`/tabela?editarAnalise=${documento.id}`);
-  };
+  // Nova função para editar a análise - REMOVIDA (não é mais necessária)
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -300,12 +297,12 @@ export default function MedCurationMobile({ user }) {
               {documentoSelecionado.descricao || 'Sem descrição'}
             </h2>
             
-            {/* Botão de fechar à direita */}
+            {/* Botão de voltar à direita */}
             <button 
               onClick={fecharDetalheDocumento}
               className="text-gray-500 hover:text-gray-700 ml-3"
             >
-              <FiX className="h-6 w-6" />
+              <FiChevronLeft className="h-6 w-6" />
             </button>
           </div>
 
@@ -317,25 +314,11 @@ export default function MedCurationMobile({ user }) {
               </div>
             ) : (
               <div className="p-4">
-                {/* Botão de Editar Análise */}
-                <div className="mb-6">
-                  <button 
-                    onClick={() => editarAnalise(documentoSelecionado)}
-                    className="w-full bg-green-100 text-green-700 py-3 rounded-md flex items-center justify-center font-medium"
-                  >
-                    <FiEdit className="mr-2" />
-                    Editar Análise
-                  </button>
-                </div>
-
-                {/* Texto Análise */}
-                <div className="mb-4">
-                  <h2 className="text-lg font-bold mb-3">Texto Análise</h2>
-                  <div 
-                    className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
-                    dangerouslySetInnerHTML={{ __html: documentoSelecionado.texto_analise || '<p>Sem texto análise</p>' }}
-                  />
-                </div>
+                {/* Texto Análise - sem título */}
+                <div 
+                  className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
+                  dangerouslySetInnerHTML={{ __html: documentoSelecionado.texto_analise || '<p>Sem texto análise</p>' }}
+                />
               </div>
             )}
           </div>
