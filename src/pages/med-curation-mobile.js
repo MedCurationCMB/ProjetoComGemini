@@ -192,13 +192,13 @@ export default function MedCurationMobile({ user }) {
             />
           </div>
           
-          {/* Avatar/Logout à direita */}
+          {/* Logout à direita */}
           <button
             onClick={handleLogout}
-            className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 hover:bg-blue-600 transition-colors"
+            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
             title="Logout"
           >
-            <FiLogOut className="w-5 h-5" />
+            <FiLogOut className="w-6 h-6" />
           </button>
         </div>
         
