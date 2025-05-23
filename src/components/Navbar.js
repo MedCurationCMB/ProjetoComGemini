@@ -1,15 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
+import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
-
-// Lista de emails de administradores
-const ADMIN_EMAILS = ['rhuanmateuscmb@gmail.com']; // Substitua pelo seu email de admin
 
 const Navbar = ({ user }) => {
   const router = useRouter();
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(false);
+
+  // Verificar se o usuário é admin quando o componente carrega
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user?.id) {
+        setCheckingAdmin(true);
+        try {
+          const adminStatus = await isUserAdmin(user.id);
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error('Erro ao verificar status de admin:', error);
+          setIsAdmin(false);
+        } finally {
+          setCheckingAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -33,7 +54,7 @@ const Navbar = ({ user }) => {
             <>
               <span className="py-2">Olá, {user.email}</span>
               
-              {isAdmin && (
+              {isAdmin && !checkingAdmin && (
                 <Link 
                   href="/admin" 
                   className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded"

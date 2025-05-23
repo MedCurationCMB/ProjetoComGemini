@@ -1,15 +1,14 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
-
-// Lista de emails de administradores
-const ADMIN_EMAILS = ['rhuanmateuscmb@gmail.com']; // Substitua pelo seu email de admin
+import { isUserAdmin } from '../utils/userUtils';
 
 export default function Welcome({ user }) {
   const router = useRouter();
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -17,6 +16,28 @@ export default function Welcome({ user }) {
       router.replace('/login');
     }
   }, [user, router]);
+
+  // Verificar se o usuário é admin quando o componente carrega
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user?.id) {
+        setCheckingAdmin(true);
+        try {
+          const adminStatus = await isUserAdmin(user.id);
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error('Erro ao verificar status de admin:', error);
+          setIsAdmin(false);
+        } finally {
+          setCheckingAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -93,7 +114,7 @@ export default function Welcome({ user }) {
             </Link>
           </div>
             
-          {isAdmin && (
+          {isAdmin && !checkingAdmin && (
             <div className="mt-8 pt-8 border-t border-gray-200">
               <p className="text-gray-600 mb-4">Opções de administrador:</p>
               <Link 

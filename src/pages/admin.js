@@ -4,39 +4,55 @@ import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabaseClient";
-import { activateUser, deactivateUser } from "../utils/userUtils";
+import { activateUser, deactivateUser, isUserAdmin } from "../utils/userUtils";
 import GeminiApiKeyManager from "../components/GeminiApiKeyManager";
-
-// Lista de emails de administradores
-const ADMIN_EMAILS = ["rhuanmateuscmb@gmail.com"]; // Substitua pelo seu email de admin
 
 export default function Admin({ user }) {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios' ou 'gemini'
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   // Verificar se o usuário é administrador
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
-
   useEffect(() => {
-    // Redirecionar se não estiver logado ou não for admin
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
+    const checkAdminStatus = async () => {
+      // Redirecionar se não estiver logado
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
 
-    if (!isAdmin) {
-      router.replace("/welcome");
-      toast.error("Você não tem permissão para acessar esta página");
-      return;
-    }
+      try {
+        setCheckingAdmin(true);
+        const adminStatus = await isUserAdmin(user.id);
+        setIsAdmin(adminStatus);
+        
+        if (!adminStatus) {
+          router.replace("/welcome");
+          toast.error("Você não tem permissão para acessar esta página");
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status de admin:', error);
+        router.replace("/welcome");
+        toast.error("Erro ao verificar permissões");
+        return;
+      } finally {
+        setCheckingAdmin(false);
+      }
+    };
 
-    // Carregar lista de usuários se estiver na tab de usuários
-    if (activeTab === 'usuarios') {
+    checkAdminStatus();
+  }, [user, router]);
+
+  // Carregar lista de usuários se estiver na tab de usuários
+  useEffect(() => {
+    if (isAdmin && activeTab === 'usuarios') {
       fetchUsers();
     }
-  }, [user, isAdmin, router, activeTab]);
+  }, [isAdmin, activeTab]);
 
   // Carregar lista de usuários
   const fetchUsers = async () => {
@@ -109,6 +125,15 @@ export default function Admin({ user }) {
     }
   };
 
+  // Mostrar loading enquanto verifica permissões
+  if (checkingAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   // Não renderizar nada se não for admin
   if (!user || !isAdmin) {
     return null;
@@ -179,6 +204,9 @@ export default function Admin({ user }) {
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Admin
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ações
                       </th>
                     </tr>
@@ -215,6 +243,17 @@ export default function Admin({ user }) {
                               {item.ativo ? "Ativo" : "Inativo"}
                             </span>
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                item.admin
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {item.admin ? "Admin" : "Usuário"}
+                            </span>
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => toggleUserStatus(item.id, item.ativo)}
@@ -232,7 +271,7 @@ export default function Admin({ user }) {
                     ) : (
                       <tr>
                         <td
-                          colSpan="4"
+                          colSpan="5"
                           className="px-6 py-4 text-center text-sm text-gray-500"
                         >
                           Nenhum usuário encontrado
