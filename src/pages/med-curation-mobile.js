@@ -216,7 +216,7 @@ export default function MedCurationMobile({ user }) {
             <Link 
               key={documento.id} 
               href={`/documento/${documento.id}`}
-              className="flex px-4 py-3 hover:bg-gray-50 cursor-pointer"
+              className="block px-4 py-3 hover:bg-gray-50 cursor-pointer"
             >
               {/* Category Avatar */}
               <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
