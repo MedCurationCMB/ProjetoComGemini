@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { toast } from 'react-hot-toast';
 import { FiSearch, FiChevronLeft } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
@@ -16,10 +15,6 @@ export default function MedCurationMobile({ user }) {
   const [projetos, setProjetos] = useState({});
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
-  
-  // Estados para o diálogo de detalhes do documento
-  const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
-  const [carregandoDocumento, setCarregandoDocumento] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -118,33 +113,6 @@ export default function MedCurationMobile({ user }) {
     }
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado]);
 
-  // Função para abrir o diálogo de detalhes do documento
-  const abrirDetalheDocumento = async (documentoId) => {
-    try {
-      setCarregandoDocumento(true);
-      
-      const { data, error } = await supabase
-        .from('base_dados_conteudo')
-        .select('*')
-        .eq('id', documentoId)
-        .single();
-      
-      if (error) throw error;
-      
-      setDocumentoSelecionado(data);
-    } catch (error) {
-      console.error('Erro ao buscar detalhes do documento:', error);
-      toast.error('Erro ao carregar detalhes do documento');
-    } finally {
-      setCarregandoDocumento(false);
-    }
-  };
-
-  // Função para fechar o diálogo de detalhes
-  const fecharDetalheDocumento = () => {
-    setDocumentoSelecionado(null);
-  };
-
   // Gerar iniciais da categoria para o avatar
   const getCategoryInitials = (categoryId) => {
     const categoryName = categorias[categoryId] || '';
@@ -165,8 +133,6 @@ export default function MedCurationMobile({ user }) {
       ? textContent.substring(0, maxLength) + '...'
       : textContent;
   };
-
-  // Nova função para editar a análise - REMOVIDA (não é mais necessária)
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -239,7 +205,7 @@ export default function MedCurationMobile({ user }) {
         </div>
       </div>
 
-      {/* Document List */}
+      {/* Document List - Agora com Links */}
       <div className="divide-y max-w-md mx-auto">
         {loading ? (
           <div className="flex justify-center py-8">
@@ -247,10 +213,10 @@ export default function MedCurationMobile({ user }) {
           </div>
         ) : documentos.length > 0 ? (
           documentos.map((documento) => (
-            <div 
+            <Link 
               key={documento.id} 
+              href={`/documento/${documento.id}`}
               className="flex px-4 py-3 hover:bg-gray-50 cursor-pointer"
-              onClick={() => abrirDetalheDocumento(documento.id)}
             >
               {/* Category Avatar */}
               <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
@@ -273,7 +239,7 @@ export default function MedCurationMobile({ user }) {
                   {getTextPreview(documento.texto_analise)}
                 </p>
               </div>
-            </div>
+            </Link>
           ))
         ) : (
           <div className="py-8 text-center text-gray-500">
@@ -281,49 +247,6 @@ export default function MedCurationMobile({ user }) {
           </div>
         )}
       </div>
-
-      {/* Diálogo de Detalhes do Documento - TELA CHEIA */}
-      {documentoSelecionado && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          {/* Header fixo com ícone da categoria e descrição */}
-          <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
-            {/* Ícone da categoria à esquerda */}
-            <div className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold text-sm">
-              {getCategoryInitials(documentoSelecionado.categoria_id)}
-            </div>
-            
-            {/* Descrição do documento */}
-            <h2 className="text-lg font-bold flex-1 truncate">
-              {documentoSelecionado.descricao || 'Sem descrição'}
-            </h2>
-            
-            {/* Botão de voltar à direita */}
-            <button 
-              onClick={fecharDetalheDocumento}
-              className="text-gray-500 hover:text-gray-700 ml-3"
-            >
-              <FiChevronLeft className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* Conteúdo do diálogo */}
-          <div className="flex-1 overflow-y-auto">
-            {carregandoDocumento ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
-            ) : (
-              <div className="p-4">
-                {/* Texto Análise - sem título */}
-                <div 
-                  className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200"
-                  dangerouslySetInnerHTML={{ __html: documentoSelecionado.texto_analise || '<p>Sem texto análise</p>' }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
