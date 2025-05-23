@@ -246,12 +246,12 @@ export default function DocumentoDetalhe({ user }) {
             className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
               marcandoComoLido
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
             {marcandoComoLido ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700 mr-2"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
                 Marcando...
               </>
             ) : (
@@ -262,7 +262,7 @@ export default function DocumentoDetalhe({ user }) {
             )}
           </button>
         ) : (
-          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-200 text-green-800">
+          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
             <FiCheck className="mr-2" />
             Documento Lido
           </div>
