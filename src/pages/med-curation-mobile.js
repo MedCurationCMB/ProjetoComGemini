@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiLogOut } from 'react-icons/fi';
+import { FiSearch, FiLogOut, FiFilter, FiX } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -16,6 +16,7 @@ export default function MedCurationMobile({ user }) {
   const [projetos, setProjetos] = useState({});
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -147,6 +148,16 @@ export default function MedCurationMobile({ user }) {
       : textContent;
   };
 
+  // Limpar filtros
+  const clearFilters = () => {
+    setCategoriaSelecionada('');
+    setProjetoSelecionado('');
+    setShowFilters(false);
+  };
+
+  // Verificar se há filtros ativos
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -159,70 +170,135 @@ export default function MedCurationMobile({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header */}
-      <div className="bg-white shadow-sm z-10">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold flex-grow">Visualização MedCuration</h1>
+      {/* Header fixo com novo design */}
+      <div className="sticky top-0 bg-white shadow-sm z-20 px-4 py-3">
+        <div className="max-w-md mx-auto flex items-center space-x-3">
+          {/* Logo MC à esquerda */}
+          <div className="h-10 w-10 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            MC
+          </div>
+          
+          {/* Barra de pesquisa no centro */}
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <FiSearch className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="w-full pl-12 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          {/* Avatar/Logout à direita */}
           <button
             onClick={handleLogout}
-            className="ml-4 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+            className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 hover:bg-blue-600 transition-colors"
             title="Logout"
           >
-            <FiLogOut className="w-6 h-6" />
+            <FiLogOut className="w-5 h-5" />
           </button>
         </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="bg-white px-4 py-2 sticky top-0 z-10">
-        <div className="relative max-w-md mx-auto">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FiSearch className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-            placeholder="Pesquisar em texto análise..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        
+        {/* Botão de filtros abaixo da barra principal */}
+        <div className="max-w-md mx-auto mt-3 flex items-center justify-between">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm transition-colors ${
+              hasActiveFilters 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <FiFilter className="w-4 h-4" />
+            <span>Filtros</span>
+            {hasActiveFilters && (
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            )}
+          </button>
+          
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white px-4 py-2 border-b">
-        <div className="flex space-x-2 max-w-md mx-auto">
-          {/* Projeto Filter */}
-          <div className="flex-1">
-            <select
-              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm"
-              value={projetoSelecionado}
-              onChange={(e) => setProjetoSelecionado(e.target.value)}
-            >
-              <option value="">Todos os Projetos</option>
-              {Object.entries(projetos).map(([id, nome]) => (
-                <option key={id} value={id}>{nome}</option>
-              ))}
-            </select>
-          </div>
+      {/* Painel de filtros colapsável */}
+      {showFilters && (
+        <div className="bg-white border-b border-gray-200 px-4 py-4 z-10">
+          <div className="max-w-md mx-auto space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Projeto Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Projeto
+                </label>
+                <select
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={projetoSelecionado}
+                  onChange={(e) => setProjetoSelecionado(e.target.value)}
+                >
+                  <option value="">Todos os Projetos</option>
+                  {Object.entries(projetos).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
 
-          {/* Categoria Filter */}
-          <div className="flex-1">
-            <select
-              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm"
-              value={categoriaSelecionada}
-              onChange={(e) => setCategoriaSelecionada(e.target.value)}
-            >
-              <option value="">Todas as Categorias</option>
-              {Object.entries(categorias).map(([id, nome]) => (
-                <option key={id} value={id}>{nome}</option>
-              ))}
-            </select>
+              {/* Categoria Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoria
+                </label>
+                <select
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={categoriaSelecionada}
+                  onChange={(e) => setCategoriaSelecionada(e.target.value)}
+                >
+                  <option value="">Todas as Categorias</option>
+                  {Object.entries(categorias).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex space-x-2 pt-2">
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Aplicar
+                </button>
+                <button
+                  onClick={clearFilters}
+                  className="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Document List - Agora com Links */}
+      {/* Document List */}
       <div className="divide-y max-w-md mx-auto">
         {loading ? (
           <div className="flex justify-center py-8">
@@ -233,7 +309,7 @@ export default function MedCurationMobile({ user }) {
             <Link 
               key={documento.id} 
               href={`/documento/${documento.id}`}
-              className="block px-4 py-3 hover:bg-gray-50"
+              className="block px-4 py-3 hover:bg-gray-50 transition-colors"
             >
               <div className="flex">
                 {/* Category Avatar */}
