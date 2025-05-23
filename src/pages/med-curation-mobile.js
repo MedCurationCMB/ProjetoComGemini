@@ -4,7 +4,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { FiSearch, FiChevronLeft } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { FiSearch, FiLogOut } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -22,6 +23,18 @@ export default function MedCurationMobile({ user }) {
       router.replace('/login');
     }
   }, [user, router]);
+
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success('Logout realizado com sucesso!');
+      router.push('/login');
+    } catch (error) {
+      toast.error(error.message || 'Erro ao fazer logout');
+    }
+  };
 
   // Carregar categorias e projetos
   useEffect(() => {
@@ -142,17 +155,21 @@ export default function MedCurationMobile({ user }) {
   return (
     <div className="min-h-screen bg-white">
       <Head>
-        <title>Visualização MedCuration (Celular)</title>
+        <title>Visualização MedCuration</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
       {/* Header */}
       <div className="bg-white shadow-sm z-10">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center">
-          <Link href="/welcome" className="mr-4">
-            <FiChevronLeft className="w-6 h-6 text-blue-600" />
-          </Link>
-          <h1 className="text-xl font-bold flex-grow">Visualização MedCuration (Celular)</h1>
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-xl font-bold flex-grow">Visualização MedCuration</h1>
+          <button
+            onClick={handleLogout}
+            className="ml-4 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+            title="Logout"
+          >
+            <FiLogOut className="w-6 h-6" />
+          </button>
         </div>
       </div>
 

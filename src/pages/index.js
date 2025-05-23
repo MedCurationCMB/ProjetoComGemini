@@ -1,27 +1,54 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { isUserAdmin } from '../utils/userUtils';
 import Navbar from '../components/Navbar';
 import ConteudoTable from '../components/ConteudoTable';
 
 export default function Home({ user }) {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
-  // Redirecionar para a página de login se o usuário não estiver autenticado
-  // Ou para a página de boas-vindas se estiver autenticado
+  // Redirecionar baseado no status do usuário
   useEffect(() => {
-    if (!user) {
-      router.replace('/login');
-    } else {
-      router.replace('/welcome');
-    }
+    const handleRedirect = async () => {
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+
+      try {
+        // Verificar se o usuário é admin
+        const adminStatus = await isUserAdmin(user.id);
+        
+        // Redirecionar baseado no status de admin
+        if (adminStatus) {
+          router.replace('/welcome');
+        } else {
+          router.replace('/med-curation-mobile');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status de admin:', error);
+        // Em caso de erro, redirecionar para welcome por padrão
+        router.replace('/welcome');
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    handleRedirect();
   }, [user, router]);
 
-  // Não renderizar nada até que a verificação de autenticação seja concluída
-  if (!user) {
-    return null;
+  // Mostrar loading enquanto verifica e redireciona
+  if (checking || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
+  // Este código nunca deve ser alcançado devido ao redirecionamento
   return (
     <div>
       <Head>

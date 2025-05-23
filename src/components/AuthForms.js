@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
+import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
 export const LoginForm = () => {
@@ -23,8 +24,17 @@ export const LoginForm = () => {
       
       if (error) throw error;
       
+      // Verificar se o usuário é admin
+      const adminStatus = await isUserAdmin(data.user.id);
+      
       toast.success('Login realizado com sucesso!');
-      router.push('/welcome');
+      
+      // Redirecionar baseado no status de admin
+      if (adminStatus) {
+        router.push('/welcome');
+      } else {
+        router.push('/med-curation-mobile');
+      }
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
