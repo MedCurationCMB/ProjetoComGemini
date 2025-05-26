@@ -35,8 +35,8 @@ export default function MedCuraView({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-blue-600">MedCura</h1>
@@ -62,8 +62,8 @@ export default function MedCuraView({ user }) {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-md mx-auto px-4 py-6">
+      {/* Content - with padding top for fixed header */}
+      <div className="max-w-md mx-auto px-4 py-6 pt-32">
         {/* Section Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
