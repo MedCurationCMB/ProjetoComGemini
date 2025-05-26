@@ -307,27 +307,28 @@ export default function DocumentoDetalhe({ user }) {
         </div>
       )}
 
-      {/* Header fixo com título, tags e data */}
+      {/* Header fixo com título, tags e data - MODIFICADO */}
       <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
         <div className="max-w-md mx-auto">
-          {/* Primeira linha: Botão voltar e data */}
+          {/* Linha principal: Seta + Título à esquerda, Data à direita */}
           <div className="flex items-center justify-between mb-3">
-            <Link href="/med-curation-mobile">
-              <FiChevronLeft className="w-6 h-6 text-blue-600" />
-            </Link>
+            <div className="flex items-center flex-1 min-w-0">
+              <Link href="/med-curation-mobile" className="mr-3 flex-shrink-0">
+                <FiChevronLeft className="w-6 h-6 text-blue-600" />
+              </Link>
+              
+              <h1 className="text-lg font-bold text-gray-900 truncate">
+                {documento.descricao || 'Sem descrição'}
+              </h1>
+            </div>
             
-            <div className="flex items-center text-gray-500 text-sm">
+            <div className="flex items-center text-gray-500 text-sm ml-4 flex-shrink-0">
               <FiCalendar className="w-4 h-4 mr-1" />
               {formatDate(documento.created_at)}
             </div>
           </div>
           
-          {/* Segunda linha: Título */}
-          <h1 className="text-lg font-bold text-gray-900 mb-3">
-            {documento.descricao || 'Sem descrição'}
-          </h1>
-          
-          {/* Terceira linha: Tags */}
+          {/* Linha das tags */}
           <div className="flex space-x-2">
             {documento.projeto_id && (
               <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
