@@ -392,25 +392,25 @@ export default function DocumentoDetalhe({ user }) {
         </button>
       </div>
 
-      {/* Barra fixa inferior com botões de ação - COM NOMES */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-20">
+      {/* Barra fixa inferior com botões de ação - AJUSTADA PARA MESMO TAMANHO */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
         <div className="max-w-md mx-auto flex justify-center space-x-8">
           {/* Botão Importante */}
           <button
             onClick={() => alternarStatus('importante', documento.importante)}
             disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-1 transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
             <FiStar 
-              className={`h-6 w-6 ${
+              className={`h-5 w-5 ${
                 documento.importante 
                   ? 'text-yellow-500 fill-current' 
                   : 'text-gray-400 hover:text-yellow-400'
               }`} 
             />
-            <span className={`text-xs ${
+            <span className={`text-xs font-medium ${
               documento.importante ? 'text-yellow-600' : 'text-gray-500'
             }`}>
               Importante
@@ -421,40 +421,40 @@ export default function DocumentoDetalhe({ user }) {
           <button
             onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
             disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-1 transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
             <FiClock 
-              className={`h-6 w-6 ${
+              className={`h-5 w-5 ${
                 documento.ler_depois 
-                  ? 'text-blue-500' 
+                  ? 'text-blue-500 fill-current' 
                   : 'text-gray-400 hover:text-blue-400'
               }`} 
             />
-            <span className={`text-xs ${
+            <span className={`text-xs font-medium ${
               documento.ler_depois ? 'text-blue-500' : 'text-gray-500'
             }`}>
               Ler Depois
             </span>
           </button>
 
-          {/* Botão Arquivar - com confirmação */}
+          {/* Botão Arquivar */}
           <button
             onClick={() => alternarStatus('arquivado', documento.arquivado)}
             disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-1 transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
             <FiArchive 
-              className={`h-6 w-6 ${
+              className={`h-5 w-5 ${
                 documento.arquivado 
-                  ? 'text-green-500' 
+                  ? 'text-green-500 fill-current' 
                   : 'text-gray-400 hover:text-green-400'
               }`} 
             />
-            <span className={`text-xs ${
+            <span className={`text-xs font-medium ${
               documento.arquivado ? 'text-green-500' : 'text-gray-500'
             }`}>
               Arquivar
