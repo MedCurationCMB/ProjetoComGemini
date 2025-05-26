@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive, FiHome } from 'react-icons/fi';
+import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive, FiHome, FiCalendar } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -99,12 +99,6 @@ export default function DocumentoDetalhe({ user }) {
       fetchDocumento();
     }
   }, [user, id, router]);
-
-  // Gerar iniciais da categoria para o avatar
-  const getCategoryInitials = (categoryId) => {
-    const categoryName = categorias[categoryId] || '';
-    return categoryName.substring(0, 2).toUpperCase();
-  };
 
   // Função para marcar documento como lido
   const marcarComoLido = async () => {
@@ -234,6 +228,22 @@ export default function DocumentoDetalhe({ user }) {
     router.push('/med-curation-mobile');
   };
 
+  // Função para formatar data
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return '';
+    }
+  };
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -297,22 +307,40 @@ export default function DocumentoDetalhe({ user }) {
         </div>
       )}
 
-      {/* Header fixo com ícone da categoria e descrição */}
-      <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
-        {/* Botão de voltar à esquerda */}
-        <Link href="/med-curation-mobile" className="mr-3">
-          <FiChevronLeft className="w-6 h-6 text-blue-600" />
-        </Link>
-        
-        {/* Ícone da categoria */}
-        <div className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold text-sm">
-          {getCategoryInitials(documento.categoria_id)}
+      {/* Header fixo com título, tags e data */}
+      <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
+        <div className="max-w-md mx-auto">
+          {/* Primeira linha: Botão voltar e data */}
+          <div className="flex items-center justify-between mb-3">
+            <Link href="/med-curation-mobile">
+              <FiChevronLeft className="w-6 h-6 text-blue-600" />
+            </Link>
+            
+            <div className="flex items-center text-gray-500 text-sm">
+              <FiCalendar className="w-4 h-4 mr-1" />
+              {formatDate(documento.created_at)}
+            </div>
+          </div>
+          
+          {/* Segunda linha: Título */}
+          <h1 className="text-lg font-bold text-gray-900 mb-3">
+            {documento.descricao || 'Sem descrição'}
+          </h1>
+          
+          {/* Terceira linha: Tags */}
+          <div className="flex space-x-2">
+            {documento.projeto_id && (
+              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                {projetos[documento.projeto_id] || 'Projeto N/A'}
+              </span>
+            )}
+            {documento.categoria_id && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                {categorias[documento.categoria_id] || 'Categoria N/A'}
+              </span>
+            )}
+          </div>
         </div>
-        
-        {/* Descrição do documento */}
-        <h1 className="text-lg font-bold flex-1 truncate">
-          {documento.descricao || 'Sem descrição'}
-        </h1>
       </div>
 
       {/* Conteúdo da página */}
