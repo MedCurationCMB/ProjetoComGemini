@@ -577,7 +577,7 @@ export default function MedCurationMobile({ user }) {
             {/* Cards regulares */}
             {regularDocs.length > 0 ? (
               regularDocs.map((documento, index) => (
-                <div key={documento.id} className={index > 0 ? "mt-6" : ""}>
+                <div key={documento.id} className={index > 0 ? "mt-4" : ""}>
                   <Link href={`/documento/${documento.id}`}>
                     <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
