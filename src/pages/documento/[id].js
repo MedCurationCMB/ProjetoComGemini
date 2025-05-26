@@ -392,7 +392,7 @@ export default function DocumentoDetalhe({ user }) {
         </button>
       </div>
 
-      {/* Barra fixa inferior com botões de ação - AJUSTADA PARA MESMO TAMANHO */}
+      {/* Barra fixa inferior com botões de ação - ÍCONES AZUIS CONTORNO */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
         <div className="max-w-md mx-auto flex justify-center space-x-8">
           {/* Botão Importante */}
@@ -403,16 +403,8 @@ export default function DocumentoDetalhe({ user }) {
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
-            <FiStar 
-              className={`h-5 w-5 ${
-                documento.importante 
-                  ? 'text-yellow-500 fill-current' 
-                  : 'text-gray-400 hover:text-yellow-400'
-              }`} 
-            />
-            <span className={`text-xs font-medium ${
-              documento.importante ? 'text-yellow-600' : 'text-gray-500'
-            }`}>
+            <FiStar className="h-5 w-5 text-blue-600" />
+            <span className="text-xs font-medium text-blue-600">
               Importante
             </span>
           </button>
@@ -425,16 +417,8 @@ export default function DocumentoDetalhe({ user }) {
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
-            <FiClock 
-              className={`h-5 w-5 ${
-                documento.ler_depois 
-                  ? 'text-blue-500 fill-current' 
-                  : 'text-gray-400 hover:text-blue-400'
-              }`} 
-            />
-            <span className={`text-xs font-medium ${
-              documento.ler_depois ? 'text-blue-500' : 'text-gray-500'
-            }`}>
+            <FiClock className="h-5 w-5 text-blue-600" />
+            <span className="text-xs font-medium text-blue-600">
               Ler Depois
             </span>
           </button>
@@ -447,16 +431,8 @@ export default function DocumentoDetalhe({ user }) {
               atualizandoStatus ? 'opacity-50' : ''
             }`}
           >
-            <FiArchive 
-              className={`h-5 w-5 ${
-                documento.arquivado 
-                  ? 'text-green-500 fill-current' 
-                  : 'text-gray-400 hover:text-green-400'
-              }`} 
-            />
-            <span className={`text-xs font-medium ${
-              documento.arquivado ? 'text-green-500' : 'text-gray-500'
-            }`}>
+            <FiArchive className="h-5 w-5 text-blue-600" />
+            <span className="text-xs font-medium text-blue-600">
               Arquivar
             </span>
           </button>
