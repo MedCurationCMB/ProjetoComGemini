@@ -462,7 +462,7 @@ export default function MedCurationMobile({ user }) {
             {destaqueDoc && (
               <div className="mb-8">
                 <Link href={`/documento/${destaqueDoc.id}`}>
-                  <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm">
+                  <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
                         {destaqueDoc.descricao || 'Sem descrição'}
