@@ -522,7 +522,7 @@ export default function MedCurationMobile({ user }) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div>
             {/* Card de destaque - apenas na seção Início */}
             {destaqueDoc && (
               <div className="mb-8">
