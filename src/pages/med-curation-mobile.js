@@ -368,79 +368,54 @@ export default function MedCurationMobile({ user }) {
             
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-3 rounded-lg ${hasActiveFilters ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+              className={`p-3 rounded-lg transition-colors ${
+                showFilters || hasActiveFilters 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
             >
               <FiFilter className="w-5 h-5" />
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Painel de filtros */}
-      {showFilters && (
-        <div className="bg-white border-b border-gray-200 px-4 py-4 z-10">
-          <div className="max-w-md mx-auto space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="text-gray-400 hover:text-gray-600"
+          
+          {/* Terceira linha: Filtros (aparecem quando showFilters é true) */}
+          {showFilters && (
+            <div className="mt-4 flex items-center space-x-3">
+              <select
+                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={projetoSelecionado}
+                onChange={(e) => setProjetoSelecionado(e.target.value)}
               >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Projeto
-                </label>
-                <select
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
-                  value={projetoSelecionado}
-                  onChange={(e) => setProjetoSelecionado(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {Object.entries(projetos).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Categoria
-                </label>
-                <select
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
-                  value={categoriaSelecionada}
-                  onChange={(e) => setCategoriaSelecionada(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {Object.entries(categorias).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
+                <option value="">Todos</option>
+                {Object.entries(projetos).map(([id, nome]) => (
+                  <option key={id} value={id}>{nome}</option>
+                ))}
+              </select>
               
-              <div className="flex space-x-2 pt-2">
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg"
-                >
-                  Aplicar
-                </button>
+              <select
+                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={categoriaSelecionada}
+                onChange={(e) => setCategoriaSelecionada(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {Object.entries(categorias).map(([id, nome]) => (
+                  <option key={id} value={id}>{nome}</option>
+                ))}
+              </select>
+              
+              {/* Botão limpar - aparece só se houver filtros ativos */}
+              {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg"
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
                 >
                   Limpar
                 </button>
-              </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Cabeçalho da seção */}
       <div className="max-w-md mx-auto px-4 py-4">
@@ -626,12 +601,11 @@ export default function MedCurationMobile({ user }) {
       </div>
 
       {/* Overlay para fechar menus quando clicar fora */}
-      {(showMenu || showFilters) && (
+      {showMenu && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
           onClick={() => {
             setShowMenu(false);
-            setShowFilters(false);
           }}
         />
       )}
