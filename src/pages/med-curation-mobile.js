@@ -665,7 +665,7 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
-      {/* Barra de navegação inferior - MODIFICADA */}
+      {/* Barra de navegação inferior - PADRONIZADA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="max-w-md mx-auto flex justify-around">
           <button
@@ -679,7 +679,13 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <HomeFilledIcon filled={activeTab === 'inicio'} />
+            <FiHome 
+              className={`w-5 h-5 ${
+                activeTab === 'inicio' 
+                  ? 'fill-current' 
+                  : ''
+              }`} 
+            />
             <span className="text-xs font-medium">Início</span>
           </button>
 
@@ -691,7 +697,13 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <StarFilledIcon filled={activeTab === 'importantes'} />
+            <FiStar 
+              className={`w-5 h-5 ${
+                activeTab === 'importantes' 
+                  ? 'fill-current' 
+                  : ''
+              }`} 
+            />
             <span className="text-xs font-medium">Importantes</span>
           </button>
 
@@ -703,7 +715,13 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <ClockFilledIcon filled={activeTab === 'ler_depois'} />
+            <FiClock 
+              className={`w-5 h-5 ${
+                activeTab === 'ler_depois' 
+                  ? 'fill-current' 
+                  : ''
+              }`} 
+            />
             <span className="text-xs font-medium">Ler Depois</span>
           </button>
 
