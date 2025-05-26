@@ -511,9 +511,9 @@ export default function MedCurationMobile({ user }) {
 
             {/* Cards regulares */}
             {regularDocs.length > 0 ? (
-              <div className="space-y-6">
-                {regularDocs.map((documento) => (
-                  <Link key={documento.id} href={`/documento/${documento.id}`}>
+              regularDocs.map((documento, index) => (
+                <div key={documento.id} className={index > 0 ? "mt-6" : ""}>
+                  <Link href={`/documento/${documento.id}`}>
                     <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
@@ -548,8 +548,8 @@ export default function MedCurationMobile({ user }) {
                       </div>
                     </div>
                   </Link>
-                ))}
-              </div>
+                </div>
+              ))
             ) : (
               !destaqueDoc && (
                 <div className="py-8 text-center text-gray-500">
