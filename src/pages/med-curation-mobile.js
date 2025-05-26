@@ -35,6 +35,11 @@ export default function MedCurationMobile({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
+  // Estados para filtros avançados
+  const [filtroImportantes, setFiltroImportantes] = useState(false);
+  const [filtroLerDepois, setFiltroLerDepois] = useState(false);
+  const [filtroArquivados, setFiltroArquivados] = useState(false);
+  
   // Estados para controlar a navegação
   const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
@@ -139,7 +144,16 @@ export default function MedCurationMobile({ user }) {
             query = query.eq('ler_depois', true);
             break;
           case 'ver_todos':
-            // Sem filtro adicional, mostra todos
+            // Aplicar filtros avançados se estiverem ativos
+            if (filtroImportantes) {
+              query = query.eq('importante', true);
+            }
+            if (filtroLerDepois) {
+              query = query.eq('ler_depois', true);
+            }
+            if (filtroArquivados) {
+              query = query.eq('arquivado', true);
+            }
             break;
         }
         
@@ -166,17 +180,20 @@ export default function MedCurationMobile({ user }) {
     if (user) {
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados]);
 
   // Limpar filtros
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
+    setFiltroImportantes(false);
+    setFiltroLerDepois(false);
+    setFiltroArquivados(false);
     setShowFilters(false);
   };
 
   // Verificar se há filtros ativos
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados;
 
   // Obter título da seção
   const getSectionTitle = () => {
@@ -381,7 +398,7 @@ export default function MedCurationMobile({ user }) {
           {/* Terceira linha: Filtros (aparecem quando showFilters é true) */}
           {showFilters && (
             <div className="mt-4 space-y-3">
-              {/* Linha com os selects */}
+              {/* Linha com os selects básicos */}
               <div className="flex items-end space-x-3">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -425,6 +442,54 @@ export default function MedCurationMobile({ user }) {
                   </button>
                 )}
               </div>
+              
+              {/* Filtros Avançados - apenas na aba "Ver Todos" */}
+              {activeTab === 'ver_todos' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Filtros Avançados
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setFiltroImportantes(!filtroImportantes)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroImportantes 
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiStar className="w-4 h-4 mr-1" />
+                      Importantes
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroLerDepois 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiBookmark className="w-4 h-4 mr-1" />
+                      Ler Depois
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroArquivados(!filtroArquivados)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroArquivados 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <div className="w-4 h-4 mr-1 flex items-center justify-center">
+                        📁
+                      </div>
+                      Arquivados
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
