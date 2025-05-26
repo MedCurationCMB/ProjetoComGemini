@@ -49,11 +49,13 @@ export default function MedCurationMobile({ user }) {
   // Função para fazer logout
   const handleLogout = async () => {
     try {
+      setShowMenu(false); // Fechar menu antes do logout
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
+      console.error('Erro no logout:', error);
       toast.error(error.message || 'Erro ao fazer logout');
     }
   };
@@ -61,19 +63,26 @@ export default function MedCurationMobile({ user }) {
   // Carregar categorias e projetos
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
+      if (!user) return;
+      
       try {
         // Buscar categorias
         const { data: categoriasData, error: categoriasError } = await supabase
           .from('categorias')
           .select('id, nome');
         
-        if (categoriasError) throw categoriasError;
+        if (categoriasError) {
+          console.error('Erro ao carregar categorias:', categoriasError);
+          return;
+        }
         
         // Converter array em objeto para fácil acesso por ID
         const categoriasObj = {};
-        categoriasData.forEach(cat => {
-          categoriasObj[cat.id] = cat.nome;
-        });
+        if (Array.isArray(categoriasData)) {
+          categoriasData.forEach(cat => {
+            categoriasObj[cat.id] = cat.nome;
+          });
+        }
         
         setCategorias(categoriasObj);
         
@@ -82,28 +91,34 @@ export default function MedCurationMobile({ user }) {
           .from('projetos')
           .select('id, nome');
         
-        if (projetosError) throw projetosError;
+        if (projetosError) {
+          console.error('Erro ao carregar projetos:', projetosError);
+          return;
+        }
         
         // Converter array em objeto para fácil acesso por ID
         const projetosObj = {};
-        projetosData.forEach(proj => {
-          projetosObj[proj.id] = proj.nome;
-        });
+        if (Array.isArray(projetosData)) {
+          projetosData.forEach(proj => {
+            projetosObj[proj.id] = proj.nome;
+          });
+        }
         
         setProjetos(projetosObj);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar categorias e projetos');
       }
     };
 
-    if (user) {
-      fetchCategoriasProjetos();
-    }
+    fetchCategoriasProjetos();
   }, [user]);
 
   // Buscar documentos com base nos filtros e navegação
   useEffect(() => {
     const fetchDocumentos = async () => {
+      if (!user) return;
+      
       try {
         setLoading(true);
         
@@ -141,10 +156,12 @@ export default function MedCurationMobile({ user }) {
           case 'ver_todos':
             // Sem filtro adicional, mostra todos
             break;
+          default:
+            break;
         }
         
         // Aplicar termo de pesquisa se existir
-        if (searchTerm.trim()) {
+        if (searchTerm && searchTerm.trim()) {
           query = query.ilike('texto_analise', `%${searchTerm.trim()}%`);
         }
         
@@ -153,19 +170,22 @@ export default function MedCurationMobile({ user }) {
         
         const { data, error } = await query;
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro na query:', error);
+          throw error;
+        }
         
-        setDocumentos(data || []);
+        setDocumentos(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Erro ao buscar documentos:', error);
+        toast.error('Erro ao carregar documentos');
+        setDocumentos([]);
       } finally {
         setLoading(false);
       }
     };
 
-    if (user) {
-      fetchDocumentos();
-    }
+    fetchDocumentos();
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent]);
 
   // Limpar filtros
@@ -199,7 +219,8 @@ export default function MedCurationMobile({ user }) {
     if (activeTab === 'inicio') {
       return showAllContent ? 'Todos os Conteúdos' : 'Conteúdos não lidos';
     }
-    return `${documentos.length} conteúdos encontrados`;
+    const count = Array.isArray(documentos) ? documentos.length : 0;
+    return `${count} conteúdos encontrados`;
   };
 
   // Obter indicador de status do documento
@@ -224,7 +245,7 @@ export default function MedCurationMobile({ user }) {
 
   // Obter documento de destaque (mais recente)
   const getDestaqueDocument = () => {
-    if (activeTab === 'inicio' && documentos.length > 0) {
+    if (activeTab === 'inicio' && Array.isArray(documentos) && documentos.length > 0) {
       return documentos[0]; // O primeiro já é o mais recente devido à ordenação
     }
     return null;
@@ -232,10 +253,10 @@ export default function MedCurationMobile({ user }) {
 
   // Obter documentos sem o destaque
   const getRegularDocuments = () => {
-    if (activeTab === 'inicio' && documentos.length > 0) {
+    if (activeTab === 'inicio' && Array.isArray(documentos) && documentos.length > 0) {
       return documentos.slice(1); // Remove o primeiro (destaque)
     }
-    return documentos;
+    return Array.isArray(documentos) ? documentos : [];
   };
 
   // Formatar data
