@@ -5,7 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiLogOut, FiFilter, FiX, FiList, FiStar, FiClock, FiArchive } from 'react-icons/fi';
+import { 
+  FiSearch, 
+  FiFilter, 
+  FiMenu, 
+  FiHome, 
+  FiStar, 
+  FiClock, 
+  FiGrid3X3, 
+  FiEye, 
+  FiEyeOff, 
+  FiUser, 
+  FiSettings, 
+  FiLogOut,
+  FiX,
+  FiBookmark,
+  FiCalendar
+} from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -17,9 +33,11 @@ export default function MedCurationMobile({ user }) {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   
-  // Novo estado para controlar o filtro de status
-  const [statusFilter, setStatusFilter] = useState('todos'); // 'todos', 'importantes', 'ler_depois', 'arquivados'
+  // Estados para controlar a navegação
+  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
+  const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -83,7 +101,7 @@ export default function MedCurationMobile({ user }) {
     }
   }, [user]);
 
-  // Buscar documentos com base nos filtros e termo de pesquisa
+  // Buscar documentos com base nos filtros e navegação
   useEffect(() => {
     const fetchDocumentos = async () => {
       try {
@@ -96,7 +114,7 @@ export default function MedCurationMobile({ user }) {
           .not('texto_analise', 'is', null)
           .not('texto_analise', 'eq', '');
           
-        // Aplicar filtros se selecionados
+        // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
           query = query.eq('projeto_id', projetoSelecionado);
         }
@@ -105,20 +123,23 @@ export default function MedCurationMobile({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // Aplicar filtro de status
-        switch (statusFilter) {
+        // Aplicar filtros baseados na aba ativa
+        switch (activeTab) {
+          case 'inicio':
+            if (!showAllContent) {
+              // Mostrar apenas não lidos
+              query = query.eq('lido', false);
+            }
+            // Se showAllContent for true, mostra todos (sem filtro adicional)
+            break;
           case 'importantes':
             query = query.eq('importante', true);
             break;
           case 'ler_depois':
             query = query.eq('ler_depois', true);
             break;
-          case 'arquivados':
-            query = query.eq('arquivado', true);
-            break;
-          case 'todos':
-          default:
-            // Não aplicar filtro adicional para 'todos'
+          case 'ver_todos':
+            // Sem filtro adicional, mostra todos
             break;
         }
         
@@ -145,28 +166,7 @@ export default function MedCurationMobile({ user }) {
     if (user) {
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, statusFilter]); // Adicionado statusFilter como dependência
-
-  // Gerar iniciais da categoria para o avatar
-  const getCategoryInitials = (categoryId) => {
-    const categoryName = categorias[categoryId] || '';
-    return categoryName.substring(0, 2).toUpperCase();
-  };
-
-  // Extrair um trecho do texto para mostrar como prévia
-  const getTextPreview = (htmlContent, maxLength = 60) => {
-    if (!htmlContent) return '';
-    
-    // Remover tags HTML para obter apenas o texto
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const textContent = tempDiv.textContent || tempDiv.innerText || '';
-    
-    // Limitar o tamanho e adicionar reticências se necessário
-    return textContent.length > maxLength 
-      ? textContent.substring(0, maxLength) + '...'
-      : textContent;
-  };
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent]);
 
   // Limpar filtros
   const clearFilters = () => {
@@ -178,19 +178,93 @@ export default function MedCurationMobile({ user }) {
   // Verificar se há filtros ativos
   const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
 
-  // Função para obter o título da seção baseado no filtro de status
+  // Obter título da seção
   const getSectionTitle = () => {
-    switch (statusFilter) {
+    switch (activeTab) {
+      case 'inicio':
+        return 'Início';
       case 'importantes':
-        return 'Documentos Importantes';
+        return 'Importantes';
       case 'ler_depois':
-        return 'Para Ler Depois';
-      case 'arquivados':
-        return 'Documentos Arquivados';
-      case 'todos':
+        return 'Ler Depois';
+      case 'ver_todos':
+        return 'Ver Todos';
       default:
-        return 'Todos os Documentos';
+        return 'Início';
     }
+  };
+
+  // Obter subtítulo da seção
+  const getSectionSubtitle = () => {
+    if (activeTab === 'inicio') {
+      return showAllContent ? 'Todos os Conteúdos' : 'Conteúdos não lidos';
+    }
+    return `${documentos.length} conteúdos encontrados`;
+  };
+
+  // Obter indicador de status do documento
+  const getStatusIndicator = (documento) => {
+    if (documento.arquivado) {
+      return <div className="w-3 h-3 bg-green-500 rounded-full"></div>;
+    }
+    if (documento.importante) {
+      return <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>;
+    }
+    if (!documento.lido) {
+      return <div className="w-3 h-3 bg-blue-500 rounded-full"></div>;
+    }
+    // Se lido e não tem outros status, não mostra bolinha
+    return null;
+  };
+
+  // Verificar se deve mostrar ícone de "Ler Depois"
+  const shouldShowReadLaterIcon = (documento) => {
+    return documento.ler_depois;
+  };
+
+  // Obter documento de destaque (mais recente)
+  const getDestaqueDocument = () => {
+    if (activeTab === 'inicio' && documentos.length > 0) {
+      return documentos[0]; // O primeiro já é o mais recente devido à ordenação
+    }
+    return null;
+  };
+
+  // Obter documentos sem o destaque
+  const getRegularDocuments = () => {
+    if (activeTab === 'inicio' && documentos.length > 0) {
+      return documentos.slice(1); // Remove o primeiro (destaque)
+    }
+    return documentos;
+  };
+
+  // Formatar data
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Extrair prévia do texto
+  const getTextPreview = (htmlContent, maxLength = 100) => {
+    if (!htmlContent) return '';
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    return textContent.length > maxLength 
+      ? textContent.substring(0, maxLength) + '...'
+      : textContent;
   };
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
@@ -198,74 +272,96 @@ export default function MedCurationMobile({ user }) {
     return null;
   }
 
+  const destaqueDoc = getDestaqueDocument();
+  const regularDocs = getRegularDocuments();
+
   return (
-    <div className="min-h-screen bg-white pb-20"> {/* Adicionado pb-20 para dar espaço para a barra inferior */}
+    <div className="min-h-screen bg-gray-50 pb-20">
       <Head>
-        <title>Visualização MedCuration</title>
+        <title>MedCura</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header fixo com novo design */}
-      <div className="sticky top-0 bg-white shadow-sm z-20 px-4 py-3">
-        <div className="max-w-md mx-auto flex items-center space-x-3">
-          {/* Logo MC à esquerda */}
-          <div className="h-10 w-10 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 font-bold text-sm">
-            MC
-          </div>
-          
-          {/* Barra de pesquisa no centro */}
-          <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400" />
+      {/* Header fixo */}
+      <div className="sticky top-0 bg-white shadow-sm z-20 px-4 py-4">
+        <div className="max-w-md mx-auto">
+          {/* Primeira linha: Logo e Menu */}
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-blue-600">MedCura</h1>
+            
+            {/* Menu hambúrguer */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 hover:bg-gray-100 rounded-md"
+              >
+                <FiMenu className="w-6 h-6 text-gray-600" />
+              </button>
+              
+              {/* Dropdown do menu */}
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      // TODO: Implementar perfil
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                  >
+                    <FiUser className="mr-3 h-4 w-4" />
+                    Perfil
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      // TODO: Implementar configurações
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                  >
+                    <FiSettings className="mr-3 h-4 w-4" />
+                    Configurações
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      handleLogout();
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                  >
+                    <FiLogOut className="mr-3 h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
-            <input
-              type="text"
-              className="w-full pl-12 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
           </div>
           
-          {/* Logout à direita */}
-          <button
-            onClick={handleLogout}
-            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
-            title="Logout"
-          >
-            <FiLogOut className="w-6 h-6" />
-          </button>
-        </div>
-        
-        {/* Botão de filtros abaixo da barra principal */}
-        <div className="max-w-md mx-auto mt-3 flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm transition-colors ${
-              hasActiveFilters 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <FiFilter className="w-4 h-4" />
-            <span>Filtros</span>
-            {hasActiveFilters && (
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            )}
-          </button>
-          
-          {hasActiveFilters && (
+          {/* Segunda linha: Busca e Filtro */}
+          <div className="flex items-center space-x-3">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                placeholder="Buscar conteúdo médico..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
             <button
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-3 rounded-lg ${hasActiveFilters ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
             >
-              Limpar filtros
+              <FiFilter className="w-5 h-5" />
             </button>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Painel de filtros colapsável */}
+      {/* Painel de filtros */}
       {showFilters && (
         <div className="bg-white border-b border-gray-200 px-4 py-4 z-10">
           <div className="max-w-md mx-auto space-y-3">
@@ -280,34 +376,32 @@ export default function MedCurationMobile({ user }) {
             </div>
             
             <div className="space-y-3">
-              {/* Projeto Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Projeto
                 </label>
                 <select
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
                   value={projetoSelecionado}
                   onChange={(e) => setProjetoSelecionado(e.target.value)}
                 >
-                  <option value="">Todos os Projetos</option>
+                  <option value="">Todos</option>
                   {Object.entries(projetos).map(([id, nome]) => (
                     <option key={id} value={id}>{nome}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Categoria Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Categoria
                 </label>
                 <select
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
                   value={categoriaSelecionada}
                   onChange={(e) => setCategoriaSelecionada(e.target.value)}
                 >
-                  <option value="">Todas as Categorias</option>
+                  <option value="">Todos</option>
                   {Object.entries(categorias).map(([id, nome]) => (
                     <option key={id} value={id}>{nome}</option>
                   ))}
@@ -317,13 +411,13 @@ export default function MedCurationMobile({ user }) {
               <div className="flex space-x-2 pt-2">
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg"
                 >
                   Aplicar
                 </button>
                 <button
                   onClick={clearFilters}
-                  className="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg"
                 >
                   Limpar
                 </button>
@@ -333,141 +427,199 @@ export default function MedCurationMobile({ user }) {
         </div>
       )}
 
-      {/* Título da seção baseado no filtro de status */}
-      <div className="max-w-md mx-auto px-4 py-3">
-        <h2 className="text-lg font-semibold text-gray-800">{getSectionTitle()}</h2>
+      {/* Cabeçalho da seção */}
+      <div className="max-w-md mx-auto px-4 py-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
+          
+          {/* Botão Ver todos - apenas na seção Início */}
+          {activeTab === 'inicio' && (
+            <button
+              onClick={() => setShowAllContent(!showAllContent)}
+              className="flex items-center text-gray-600 hover:text-gray-800"
+            >
+              {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
+              <span className="text-sm">Ver todos</span>
+            </button>
+          )}
+        </div>
+        
+        <p className="text-gray-600 text-sm">{getSectionSubtitle()}</p>
       </div>
 
-      {/* Document List */}
-      <div className="divide-y max-w-md mx-auto">
+      {/* Conteúdo principal */}
+      <div className="max-w-md mx-auto px-4">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
-        ) : documentos.length > 0 ? (
-          documentos.map((documento) => (
-            <Link 
-              key={documento.id} 
-              href={`/documento/${documento.id}`}
-              className="block px-4 py-3 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex">
-                {/* Category Avatar */}
-                <div className="h-12 w-12 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 mr-3 font-bold">
-                  {getCategoryInitials(documento.categoria_id)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  {/* Document Description */}
-                  <div className="flex justify-between">
-                    <h2 className="text-base font-bold text-gray-900 truncate">
-                      {documento.descricao || 'Sem descrição'}
-                    </h2>
-                    <span className="text-xs text-gray-500">
-                      {new Date(documento.created_at).toLocaleDateString()}
+        ) : (
+          <div className="space-y-4">
+            {/* Card de destaque - apenas na seção Início */}
+            {destaqueDoc && (
+              <Link href={`/documento/${destaqueDoc.id}`}>
+                <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                      {destaqueDoc.descricao || 'Sem descrição'}
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIndicator(destaqueDoc)}
+                      {shouldShowReadLaterIcon(destaqueDoc) && (
+                        <FiBookmark className="w-4 h-4 text-blue-500" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-600 text-sm mb-3">
+                    {getTextPreview(destaqueDoc.texto_analise)}
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex space-x-2">
+                      {destaqueDoc.projeto_id && (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                          {projetos[destaqueDoc.projeto_id]}
+                        </span>
+                      )}
+                      {destaqueDoc.categoria_id && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {categorias[destaqueDoc.categoria_id]}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center text-gray-500 text-xs">
+                      <FiCalendar className="w-3 h-3 mr-1" />
+                      {formatDate(destaqueDoc.created_at)}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 flex justify-end">
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium flex items-center">
+                      ⭐ Destaque
                     </span>
                   </div>
-                  
-                  {/* Status indicators */}
-                  <div className="flex space-x-2 mb-1">
-                    {documento.importante && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">
-                        <FiStar className="w-3 h-3 mr-1" />
-                        Importante
-                      </span>
-                    )}
-                    {documento.ler_depois && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-                        <FiClock className="w-3 h-3 mr-1" />
-                        Ler depois
-                      </span>
-                    )}
-                    {documento.arquivado && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
-                        <FiArchive className="w-3 h-3 mr-1" />
-                        Arquivado
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Text Preview */}
-                  <p className="text-sm text-gray-600 truncate">
-                    {getTextPreview(documento.texto_analise)}
-                  </p>
                 </div>
-              </div>
-            </Link>
-          ))
-        ) : (
-          <div className="py-8 text-center text-gray-500">
-            {statusFilter === 'todos' 
-              ? 'Nenhum documento encontrado'
-              : `Nenhum documento ${
-                  statusFilter === 'importantes' ? 'importante' :
-                  statusFilter === 'ler_depois' ? 'para ler depois' :
-                  statusFilter === 'arquivados' ? 'arquivado' : ''
-                } encontrado`
-            }
+              </Link>
+            )}
+
+            {/* Cards regulares */}
+            {regularDocs.length > 0 ? (
+              regularDocs.map((documento) => (
+                <Link key={documento.id} href={`/documento/${documento.id}`}>
+                  <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
+                        {documento.descricao || 'Sem descrição'}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {getStatusIndicator(documento)}
+                        {shouldShowReadLaterIcon(documento) && (
+                          <FiBookmark className="w-4 h-4 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex space-x-2">
+                        {documento.projeto_id && (
+                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                            {projetos[documento.projeto_id]}
+                          </span>
+                        )}
+                        {documento.categoria_id && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {categorias[documento.categoria_id]}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center text-gray-500 text-xs">
+                        <FiCalendar className="w-3 h-3 mr-1" />
+                        {formatDate(documento.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              !destaqueDoc && (
+                <div className="py-8 text-center text-gray-500">
+                  Nenhum conteúdo encontrado
+                </div>
+              )
+            )}
           </div>
         )}
       </div>
 
-      {/* Barra de navegação fixa na parte inferior */}
+      {/* Barra de navegação inferior */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-30">
         <div className="max-w-md mx-auto flex justify-around">
-          {/* Todos */}
           <button
-            onClick={() => setStatusFilter('todos')}
+            onClick={() => {
+              setActiveTab('inicio');
+              setShowAllContent(false); // Reset ao voltar para início
+            }}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
-              statusFilter === 'todos'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === 'inicio'
+                ? 'text-blue-600'
+                : 'text-gray-500'
             }`}
           >
-            <FiList className="w-6 h-6" />
-            <span className="text-xs font-medium">Todos</span>
+            <FiHome className="w-6 h-6" />
+            <span className="text-xs font-medium">Início</span>
           </button>
 
-          {/* Importantes */}
           <button
-            onClick={() => setStatusFilter('importantes')}
+            onClick={() => setActiveTab('importantes')}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
-              statusFilter === 'importantes'
-                ? 'bg-yellow-100 text-yellow-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === 'importantes'
+                ? 'text-blue-600'
+                : 'text-gray-500'
             }`}
           >
             <FiStar className="w-6 h-6" />
             <span className="text-xs font-medium">Importantes</span>
           </button>
 
-          {/* Ler Depois */}
           <button
-            onClick={() => setStatusFilter('ler_depois')}
+            onClick={() => setActiveTab('ler_depois')}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
-              statusFilter === 'ler_depois'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === 'ler_depois'
+                ? 'text-blue-600'
+                : 'text-gray-500'
             }`}
           >
             <FiClock className="w-6 h-6" />
             <span className="text-xs font-medium">Ler Depois</span>
           </button>
 
-          {/* Arquivados */}
           <button
-            onClick={() => setStatusFilter('arquivados')}
+            onClick={() => setActiveTab('ver_todos')}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
-              statusFilter === 'arquivados'
-                ? 'bg-green-100 text-green-600'
-                : 'text-gray-500 hover:text-gray-700'
+              activeTab === 'ver_todos'
+                ? 'text-blue-600'
+                : 'text-gray-500'
             }`}
           >
-            <FiArchive className="w-6 h-6" />
-            <span className="text-xs font-medium">Arquivados</span>
+            <FiGrid3X3 className="w-6 h-6" />
+            <span className="text-xs font-medium">Ver Todos</span>
           </button>
         </div>
       </div>
+
+      {/* Overlay para fechar menus quando clicar fora */}
+      {(showMenu || showFilters) && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-25 z-10"
+          onClick={() => {
+            setShowMenu(false);
+            setShowFilters(false);
+          }}
+        />
+      )}
     </div>
   );
 }
