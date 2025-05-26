@@ -219,18 +219,18 @@ export default function MedCurationMobile({ user }) {
     return `${documentos.length} conteúdos encontrados`;
   };
 
-  // Obter indicador de status do documento - USANDO ÍCONES
+  // Obter indicador de status do documento
   const getStatusIndicator = (documento) => {
     if (documento.arquivado) {
-      return <FiArchive className="w-4 h-4 text-blue-500" />;
+      return <div className="w-3 h-3 bg-green-500 rounded-full"></div>;
     }
     if (documento.importante) {
-      return <FiStar className="w-4 h-4 text-blue-500" />;
+      return <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>;
     }
     if (!documento.lido) {
-      return <FiEye className="w-4 h-4 text-blue-500" />;
+      return <div className="w-3 h-3 bg-blue-500 rounded-full"></div>;
     }
-    // Se lido e não tem outros status, não mostra ícone
+    // Se lido e não tem outros status, não mostra bolinha
     return null;
   };
 
@@ -535,7 +535,7 @@ export default function MedCurationMobile({ user }) {
                       <div className="flex items-center space-x-2">
                         {getStatusIndicator(destaqueDoc)}
                         {shouldShowReadLaterIcon(destaqueDoc) && (
-                          <FiClock className="w-4 h-4 text-blue-500" />
+                          <FiBookmark className="w-4 h-4 text-blue-500" />
                         )}
                       </div>
                     </div>
@@ -587,7 +587,7 @@ export default function MedCurationMobile({ user }) {
                         <div className="flex items-center space-x-2">
                           {getStatusIndicator(documento)}
                           {shouldShowReadLaterIcon(documento) && (
-                            <FiClock className="w-4 h-4 text-blue-500" />
+                            <FiBookmark className="w-4 h-4 text-blue-500" />
                           )}
                         </div>
                       </div>
