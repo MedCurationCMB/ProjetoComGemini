@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiSearch, FiLogOut, FiFilter, FiX } from 'react-icons/fi';
+import { FiSearch, FiLogOut, FiFilter, FiX, FiList, FiStar, FiClock, FiArchive } from 'react-icons/fi';
 
 export default function MedCurationMobile({ user }) {
   const router = useRouter();
@@ -17,6 +17,9 @@ export default function MedCurationMobile({ user }) {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Novo estado para controlar o filtro de status
+  const [statusFilter, setStatusFilter] = useState('todos'); // 'todos', 'importantes', 'ler_depois', 'arquivados'
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -102,6 +105,23 @@ export default function MedCurationMobile({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
+        // Aplicar filtro de status
+        switch (statusFilter) {
+          case 'importantes':
+            query = query.eq('importante', true);
+            break;
+          case 'ler_depois':
+            query = query.eq('ler_depois', true);
+            break;
+          case 'arquivados':
+            query = query.eq('arquivado', true);
+            break;
+          case 'todos':
+          default:
+            // Não aplicar filtro adicional para 'todos'
+            break;
+        }
+        
         // Aplicar termo de pesquisa se existir
         if (searchTerm.trim()) {
           query = query.ilike('texto_analise', `%${searchTerm.trim()}%`);
@@ -125,7 +145,7 @@ export default function MedCurationMobile({ user }) {
     if (user) {
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, statusFilter]); // Adicionado statusFilter como dependência
 
   // Gerar iniciais da categoria para o avatar
   const getCategoryInitials = (categoryId) => {
@@ -158,13 +178,28 @@ export default function MedCurationMobile({ user }) {
   // Verificar se há filtros ativos
   const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
 
+  // Função para obter o título da seção baseado no filtro de status
+  const getSectionTitle = () => {
+    switch (statusFilter) {
+      case 'importantes':
+        return 'Documentos Importantes';
+      case 'ler_depois':
+        return 'Para Ler Depois';
+      case 'arquivados':
+        return 'Documentos Arquivados';
+      case 'todos':
+      default:
+        return 'Todos os Documentos';
+    }
+  };
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20"> {/* Adicionado pb-20 para dar espaço para a barra inferior */}
       <Head>
         <title>Visualização MedCuration</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -298,6 +333,11 @@ export default function MedCurationMobile({ user }) {
         </div>
       )}
 
+      {/* Título da seção baseado no filtro de status */}
+      <div className="max-w-md mx-auto px-4 py-3">
+        <h2 className="text-lg font-semibold text-gray-800">{getSectionTitle()}</h2>
+      </div>
+
       {/* Document List */}
       <div className="divide-y max-w-md mx-auto">
         {loading ? (
@@ -328,6 +368,28 @@ export default function MedCurationMobile({ user }) {
                     </span>
                   </div>
                   
+                  {/* Status indicators */}
+                  <div className="flex space-x-2 mb-1">
+                    {documento.importante && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">
+                        <FiStar className="w-3 h-3 mr-1" />
+                        Importante
+                      </span>
+                    )}
+                    {documento.ler_depois && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                        <FiClock className="w-3 h-3 mr-1" />
+                        Ler depois
+                      </span>
+                    )}
+                    {documento.arquivado && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
+                        <FiArchive className="w-3 h-3 mr-1" />
+                        Arquivado
+                      </span>
+                    )}
+                  </div>
+                  
                   {/* Text Preview */}
                   <p className="text-sm text-gray-600 truncate">
                     {getTextPreview(documento.texto_analise)}
@@ -338,9 +400,73 @@ export default function MedCurationMobile({ user }) {
           ))
         ) : (
           <div className="py-8 text-center text-gray-500">
-            Nenhum documento encontrado
+            {statusFilter === 'todos' 
+              ? 'Nenhum documento encontrado'
+              : `Nenhum documento ${
+                  statusFilter === 'importantes' ? 'importante' :
+                  statusFilter === 'ler_depois' ? 'para ler depois' :
+                  statusFilter === 'arquivados' ? 'arquivado' : ''
+                } encontrado`
+            }
           </div>
         )}
+      </div>
+
+      {/* Barra de navegação fixa na parte inferior */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-30">
+        <div className="max-w-md mx-auto flex justify-around">
+          {/* Todos */}
+          <button
+            onClick={() => setStatusFilter('todos')}
+            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+              statusFilter === 'todos'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FiList className="w-6 h-6" />
+            <span className="text-xs font-medium">Todos</span>
+          </button>
+
+          {/* Importantes */}
+          <button
+            onClick={() => setStatusFilter('importantes')}
+            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+              statusFilter === 'importantes'
+                ? 'bg-yellow-100 text-yellow-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FiStar className="w-6 h-6" />
+            <span className="text-xs font-medium">Importantes</span>
+          </button>
+
+          {/* Ler Depois */}
+          <button
+            onClick={() => setStatusFilter('ler_depois')}
+            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+              statusFilter === 'ler_depois'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FiClock className="w-6 h-6" />
+            <span className="text-xs font-medium">Ler Depois</span>
+          </button>
+
+          {/* Arquivados */}
+          <button
+            onClick={() => setStatusFilter('arquivados')}
+            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+              statusFilter === 'arquivados'
+                ? 'bg-green-100 text-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FiArchive className="w-6 h-6" />
+            <span className="text-xs font-medium">Arquivados</span>
+          </button>
+        </div>
       </div>
     </div>
   );
