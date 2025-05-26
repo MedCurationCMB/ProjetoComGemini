@@ -380,38 +380,51 @@ export default function MedCurationMobile({ user }) {
           
           {/* Terceira linha: Filtros (aparecem quando showFilters é true) */}
           {showFilters && (
-            <div className="mt-4 flex items-center space-x-3">
-              <select
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={projetoSelecionado}
-                onChange={(e) => setProjetoSelecionado(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {Object.entries(projetos).map(([id, nome]) => (
-                  <option key={id} value={id}>{nome}</option>
-                ))}
-              </select>
-              
-              <select
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={categoriaSelecionada}
-                onChange={(e) => setCategoriaSelecionada(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {Object.entries(categorias).map(([id, nome]) => (
-                  <option key={id} value={id}>{nome}</option>
-                ))}
-              </select>
-              
-              {/* Botão limpar - aparece só se houver filtros ativos */}
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Limpar
-                </button>
-              )}
+            <div className="mt-4 space-y-3">
+              {/* Linha com os selects */}
+              <div className="flex items-end space-x-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Projeto
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={projetoSelecionado}
+                    onChange={(e) => setProjetoSelecionado(e.target.value)}
+                  >
+                    <option value="">Todos</option>
+                    {Object.entries(projetos).map(([id, nome]) => (
+                      <option key={id} value={id}>{nome}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Categoria
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={categoriaSelecionada}
+                    onChange={(e) => setCategoriaSelecionada(e.target.value)}
+                  >
+                    <option value="">Todos</option>
+                    {Object.entries(categorias).map(([id, nome]) => (
+                      <option key={id} value={id}>{nome}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Botão limpar - aparece só se houver filtros ativos */}
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -444,7 +457,7 @@ export default function MedCurationMobile({ user }) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Card de destaque - apenas na seção Início */}
             {destaqueDoc && (
               <Link href={`/documento/${destaqueDoc.id}`}>
