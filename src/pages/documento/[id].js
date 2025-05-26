@@ -196,7 +196,37 @@ export default function DocumentoDetalhe({ user }) {
   // Função para confirmar o arquivamento
   const confirmarArquivamento = async () => {
     setShowArchiveConfirm(false);
-    await alternarStatus('arquivado', documento.arquivado);
+    
+    try {
+      setAtualizandoStatus(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      // Atualizar o documento no Supabase - definir arquivado como TRUE
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ arquivado: true })
+        .eq('id', documento.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setDocumento(prev => ({ ...prev, arquivado: true }));
+      
+      toast.success('Documento arquivado!');
+    } catch (error) {
+      console.error('Erro ao arquivar documento:', error);
+      toast.error('Erro ao arquivar documento');
+    } finally {
+      setAtualizandoStatus(false);
+    }
   };
 
   // Função para navegar de volta para a página inicial
