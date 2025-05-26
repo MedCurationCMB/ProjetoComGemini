@@ -269,7 +269,7 @@ export default function MedCurationMobile({ user }) {
 
   // Componente customizado para ícone de grade (substituindo FiGrid3X3)
   const GridIcon = () => (
-    <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
+    <div className="w-5 h-5 grid grid-cols-3 gap-0.5">
       <div className="bg-current rounded-sm"></div>
       <div className="bg-current rounded-sm"></div>
       <div className="bg-current rounded-sm"></div>
@@ -291,7 +291,7 @@ export default function MedCurationMobile({ user }) {
   const regularDocs = getRegularDocuments();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-16">
       <Head>
         <title>MedCura</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -444,7 +444,7 @@ export default function MedCurationMobile({ user }) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Card de destaque - apenas na seção Início */}
             {destaqueDoc && (
               <Link href={`/documento/${destaqueDoc.id}`}>
@@ -545,50 +545,50 @@ export default function MedCurationMobile({ user }) {
       </div>
 
       {/* Barra de navegação inferior */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-30">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="max-w-md mx-auto flex justify-around">
           <button
             onClick={() => {
               setActiveTab('inicio');
               setShowAllContent(false); // Reset ao voltar para início
             }}
-            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'inicio'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
-            <FiHome className="w-6 h-6" />
+            <FiHome className="w-5 h-5" />
             <span className="text-xs font-medium">Início</span>
           </button>
 
           <button
             onClick={() => setActiveTab('importantes')}
-            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'importantes'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
-            <FiStar className="w-6 h-6" />
+            <FiStar className="w-5 h-5" />
             <span className="text-xs font-medium">Importantes</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ler_depois')}
-            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'ler_depois'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
-            <FiClock className="w-6 h-6" />
+            <FiClock className="w-5 h-5" />
             <span className="text-xs font-medium">Ler Depois</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ver_todos')}
-            className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'ver_todos'
                 ? 'text-blue-600'
                 : 'text-gray-500'
