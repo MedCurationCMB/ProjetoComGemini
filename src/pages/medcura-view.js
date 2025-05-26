@@ -2,7 +2,16 @@
 import { useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { FiSearch, FiFilter, FiMenu, FiEyeOff, FiCalendar, FiStar, FiHome, FiBookmark, FiGrid3X3 } from 'react-icons/fi';
+import { 
+  FiSearch, 
+  FiFilter, 
+  FiMenu, 
+  FiEyeOff, 
+  FiCalendar, 
+  FiStar, 
+  FiHome, 
+  FiBookmark 
+} from 'react-icons/fi';
 
 export default function MedCuraView({ user }) {
   const router = useRouter();
@@ -157,7 +166,17 @@ export default function MedCuraView({ user }) {
           </button>
 
           <button className="flex flex-col items-center space-y-1 py-2 px-3 rounded-lg text-gray-500 hover:text-gray-700">
-            <FiGrid3X3 className="w-6 h-6" />
+            <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+              <div className="bg-current rounded-sm"></div>
+            </div>
             <span className="text-xs font-medium">Ver Todos</span>
           </button>
         </div>
