@@ -299,45 +299,6 @@ export default function MedCurationMobile({ user }) {
     </div>
   );
 
-  // Componente para ícone de Home preenchido - NOVO
-  const HomeFilledIcon = ({ filled }) => (
-    filled ? (
-      <div className="w-5 h-5 relative">
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-        </svg>
-      </div>
-    ) : (
-      <FiHome className="w-5 h-5" />
-    )
-  );
-
-  // Componente para ícone de Star preenchido - NOVO
-  const StarFilledIcon = ({ filled }) => (
-    filled ? (
-      <div className="w-5 h-5 relative">
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      </div>
-    ) : (
-      <FiStar className="w-5 h-5" />
-    )
-  );
-
-  // Componente para ícone de Clock preenchido - NOVO
-  const ClockFilledIcon = ({ filled }) => (
-    filled ? (
-      <div className="w-5 h-5 relative">
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
-        </svg>
-      </div>
-    ) : (
-      <FiClock className="w-5 h-5" />
-    )
-  );
-
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -604,8 +565,8 @@ export default function MedCurationMobile({ user }) {
                     </div>
                     
                     <div className="mt-3 flex justify-end">
-                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium flex items-center">
-                        ⭐ Destaque
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                        Destaque
                       </span>
                     </div>
                   </div>
@@ -665,7 +626,7 @@ export default function MedCurationMobile({ user }) {
         )}
       </div>
 
-      {/* Barra de navegação inferior - PADRONIZADA */}
+      {/* Barra de navegação inferior */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="max-w-md mx-auto flex justify-around">
           <button
@@ -679,13 +640,7 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <FiHome 
-              className={`w-5 h-5 ${
-                activeTab === 'inicio' 
-                  ? 'fill-current' 
-                  : ''
-              }`} 
-            />
+            <FiHome className="w-5 h-5" />
             <span className="text-xs font-medium">Início</span>
           </button>
 
@@ -697,13 +652,7 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <FiStar 
-              className={`w-5 h-5 ${
-                activeTab === 'importantes' 
-                  ? 'fill-current' 
-                  : ''
-              }`} 
-            />
+            <FiStar className="w-5 h-5" />
             <span className="text-xs font-medium">Importantes</span>
           </button>
 
@@ -715,13 +664,7 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <FiClock 
-              className={`w-5 h-5 ${
-                activeTab === 'ler_depois' 
-                  ? 'fill-current' 
-                  : ''
-              }`} 
-            />
+            <FiClock className="w-5 h-5" />
             <span className="text-xs font-medium">Ler Depois</span>
           </button>
 
