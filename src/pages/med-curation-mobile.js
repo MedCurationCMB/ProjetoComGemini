@@ -12,7 +12,7 @@ import {
   FiHome, 
   FiStar, 
   FiClock, 
-  FiGrid3X3, 
+  FiGrid, // Mudança: FiGrid3X3 não existe, usar FiGrid
   FiEye, 
   FiEyeOff, 
   FiUser, 
@@ -266,6 +266,21 @@ export default function MedCurationMobile({ user }) {
       ? textContent.substring(0, maxLength) + '...'
       : textContent;
   };
+
+  // Componente customizado para ícone de grade (substituindo FiGrid3X3)
+  const GridIcon = () => (
+    <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+      <div className="bg-current rounded-sm"></div>
+    </div>
+  );
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -604,7 +619,7 @@ export default function MedCurationMobile({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <FiGrid3X3 className="w-6 h-6" />
+            <GridIcon />
             <span className="text-xs font-medium">Ver Todos</span>
           </button>
         </div>
