@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive } from 'react-icons/fi';
+import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive, FiHome } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -16,6 +16,9 @@ export default function DocumentoDetalhe({ user }) {
   const [projetos, setProjetos] = useState({});
   const [marcandoComoLido, setMarcandoComoLido] = useState(false);
   const [atualizandoStatus, setAtualizandoStatus] = useState(false);
+  
+  // Novo estado para controlar o modal de confirmação de arquivar
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -143,6 +146,12 @@ export default function DocumentoDetalhe({ user }) {
   const alternarStatus = async (campo, valorAtual) => {
     if (!documento || atualizandoStatus) return;
     
+    // Se for arquivar e o documento não está arquivado, mostrar confirmação
+    if (campo === 'arquivado' && !valorAtual) {
+      setShowArchiveConfirm(true);
+      return;
+    }
+    
     try {
       setAtualizandoStatus(true);
       
@@ -184,6 +193,17 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
+  // Função para confirmar o arquivamento
+  const confirmarArquivamento = async () => {
+    setShowArchiveConfirm(false);
+    await alternarStatus('arquivado', documento.arquivado);
+  };
+
+  // Função para navegar de volta para a página inicial
+  const voltarParaInicio = () => {
+    router.push('/med-curation-mobile');
+  };
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -211,6 +231,41 @@ export default function DocumentoDetalhe({ user }) {
         <title>Documento - {documento.descricao || 'Sem descrição'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
+
+      {/* Modal de confirmação para arquivar */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                <FiArchive className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Arquivar Documento
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Tem certeza que deseja arquivar este documento? Você poderá encontrá-lo na seção "Arquivados".
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarArquivamento}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Arquivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header fixo com ícone da categoria e descrição */}
       <div className="sticky top-0 bg-white shadow-sm z-10 flex items-center p-4 border-b">
@@ -243,7 +298,7 @@ export default function DocumentoDetalhe({ user }) {
           <button
             onClick={marcarComoLido}
             disabled={marcandoComoLido}
-            className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+            className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors mb-3 ${
               marcandoComoLido
                 ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -262,11 +317,20 @@ export default function DocumentoDetalhe({ user }) {
             )}
           </button>
         ) : (
-          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
+          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white mb-3">
             <FiCheck className="mr-2" />
             Documento Lido
           </div>
         )}
+
+        {/* Novo botão Voltar para Início */}
+        <button
+          onClick={voltarParaInicio}
+          className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          <FiHome className="mr-2" />
+          Voltar para Início
+        </button>
       </div>
 
       {/* Barra fixa inferior com botões de ação - COM NOMES */}
@@ -316,7 +380,7 @@ export default function DocumentoDetalhe({ user }) {
             </span>
           </button>
 
-          {/* Botão Arquivar */}
+          {/* Botão Arquivar - com confirmação */}
           <button
             onClick={() => alternarStatus('arquivado', documento.arquivado)}
             disabled={atualizandoStatus}
