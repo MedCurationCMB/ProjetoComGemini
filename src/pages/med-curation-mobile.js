@@ -460,92 +460,96 @@ export default function MedCurationMobile({ user }) {
           <div className="space-y-8">
             {/* Card de destaque - apenas na seção Início */}
             {destaqueDoc && (
-              <Link href={`/documento/${destaqueDoc.id}`}>
-                <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                      {destaqueDoc.descricao || 'Sem descrição'}
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIndicator(destaqueDoc)}
-                      {shouldShowReadLaterIcon(destaqueDoc) && (
-                        <FiBookmark className="w-4 h-4 text-blue-500" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-600 text-sm mb-3">
-                    {getTextPreview(destaqueDoc.texto_analise)}
-                  </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex space-x-2">
-                      {destaqueDoc.projeto_id && (
-                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                          {projetos[destaqueDoc.projeto_id]}
-                        </span>
-                      )}
-                      {destaqueDoc.categoria_id && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          {categorias[destaqueDoc.categoria_id]}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center text-gray-500 text-xs">
-                      <FiCalendar className="w-3 h-3 mr-1" />
-                      {formatDate(destaqueDoc.created_at)}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3 flex justify-end">
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium flex items-center">
-                      ⭐ Destaque
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* Cards regulares */}
-            {regularDocs.length > 0 ? (
-              regularDocs.map((documento) => (
-                <Link key={documento.id} href={`/documento/${documento.id}`}>
-                  <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
-                        {documento.descricao || 'Sem descrição'}
+              <div className="mb-8">
+                <Link href={`/documento/${destaqueDoc.id}`}>
+                  <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                        {destaqueDoc.descricao || 'Sem descrição'}
                       </h3>
                       <div className="flex items-center space-x-2">
-                        {getStatusIndicator(documento)}
-                        {shouldShowReadLaterIcon(documento) && (
+                        {getStatusIndicator(destaqueDoc)}
+                        {shouldShowReadLaterIcon(destaqueDoc) && (
                           <FiBookmark className="w-4 h-4 text-blue-500" />
                         )}
                       </div>
                     </div>
                     
+                    <p className="text-gray-600 text-sm mb-3">
+                      {getTextPreview(destaqueDoc.texto_analise)}
+                    </p>
+                    
                     <div className="flex items-center justify-between">
                       <div className="flex space-x-2">
-                        {documento.projeto_id && (
+                        {destaqueDoc.projeto_id && (
                           <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                            {projetos[documento.projeto_id]}
+                            {projetos[destaqueDoc.projeto_id]}
                           </span>
                         )}
-                        {documento.categoria_id && (
+                        {destaqueDoc.categoria_id && (
                           <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                            {categorias[documento.categoria_id]}
+                            {categorias[destaqueDoc.categoria_id]}
                           </span>
                         )}
                       </div>
                       
                       <div className="flex items-center text-gray-500 text-xs">
                         <FiCalendar className="w-3 h-3 mr-1" />
-                        {formatDate(documento.created_at)}
+                        {formatDate(destaqueDoc.created_at)}
                       </div>
+                    </div>
+                    
+                    <div className="mt-3 flex justify-end">
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium flex items-center">
+                        ⭐ Destaque
+                      </span>
                     </div>
                   </div>
                 </Link>
-              ))
+              </div>
+            )}
+
+            {/* Cards regulares */}
+            {regularDocs.length > 0 ? (
+              <div className="space-y-6">
+                {regularDocs.map((documento) => (
+                  <Link key={documento.id} href={`/documento/${documento.id}`}>
+                    <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
+                          {documento.descricao || 'Sem descrição'}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          {getStatusIndicator(documento)}
+                          {shouldShowReadLaterIcon(documento) && (
+                            <FiBookmark className="w-4 h-4 text-blue-500" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex space-x-2">
+                          {documento.projeto_id && (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                              {projetos[documento.projeto_id]}
+                            </span>
+                          )}
+                          {documento.categoria_id && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {categorias[documento.categoria_id]}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center text-gray-500 text-xs">
+                          <FiCalendar className="w-3 h-3 mr-1" />
+                          {formatDate(documento.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             ) : (
               !destaqueDoc && (
                 <div className="py-8 text-center text-gray-500">
