@@ -18,6 +18,9 @@ const ControleConteudoGeralTable = () => {
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' }); // Estado para ordenação
   const [editarItemId, setEditarItemId] = useState(null); // Novo estado para o ID do item sendo editado
+  
+  // ✅ NOVO: Estado para controlar atualizações de visibilidade
+  const [atualizandoVisibilidade, setAtualizandoVisibilidade] = useState({});
 
   useEffect(() => {
     fetchCategorias();
@@ -139,6 +142,40 @@ const ControleConteudoGeralTable = () => {
       fetchControles();
     }
   }, [ordenacao]);
+
+  // ✅ NOVA: Função para alternar visibilidade
+  const toggleVisibilidade = async (itemId, currentVisibility) => {
+    try {
+      setAtualizandoVisibilidade(prev => ({ ...prev, [itemId]: true }));
+      
+      const novaVisibilidade = !currentVisibility;
+      
+      // Atualizar no Supabase
+      const { error } = await supabase
+        .from('controle_conteudo_geral')
+        .update({ visivel: novaVisibilidade })
+        .eq('id', itemId);
+      
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setControles(prevControles => 
+        prevControles.map(item => 
+          item.id === itemId 
+            ? { ...item, visivel: novaVisibilidade }
+            : item
+        )
+      );
+      
+      toast.success(`Item ${novaVisibilidade ? 'tornado visível' : 'ocultado'} com sucesso!`);
+      
+    } catch (error) {
+      console.error('Erro ao alterar visibilidade:', error);
+      toast.error('Erro ao alterar visibilidade do item');
+    } finally {
+      setAtualizandoVisibilidade(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   // Formata a data para exibição
   const formatDate = (dateString) => {
@@ -375,6 +412,10 @@ const ControleConteudoGeralTable = () => {
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Status
               </th>
+              {/* ✅ NOVA COLUNA: Visível */}
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Visível
+              </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Ações
               </th>
@@ -445,6 +486,22 @@ const ControleConteudoGeralTable = () => {
                       </span>
                     )}
                   </td>
+                  {/* ✅ NOVA CÉLULA: Checkbox de Visibilidade */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-center">
+                      {atualizandoVisibilidade[item.id] ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={item.visivel || false}
+                          onChange={() => toggleVisibilidade(item.id, item.visivel)}
+                          className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                          title={item.visivel ? 'Clique para ocultar' : 'Clique para tornar visível'}
+                        />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       {/* Botão para editar linha */}
@@ -474,7 +531,7 @@ const ControleConteudoGeralTable = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="11" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="12" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado
                 </td>
               </tr>
