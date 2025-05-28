@@ -113,13 +113,14 @@ export default function MedCurationMobile({ user }) {
       try {
         setLoading(true);
         
-        // Iniciar a consulta
+        // Iniciar a consulta com filtros básicos obrigatórios
         let query = supabase
-          .from('controle_conteudo_geral')
+          .from('controle_conteudo_geral')  // ← Mudança da tabela
           .select('*')
-          .not('texto_analise', 'is', null)
-          .not('texto_analise', 'eq', '')
-          .not('texto_analise', 'eq', '<p></p>')
+          .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
+          .not('texto_analise', 'is', null)  // ← SEGUNDO: não pode ser null
+          .not('texto_analise', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
+          .not('texto_analise', 'eq', '<p></p>');  // ← QUARTO: não pode ser parágrafo vazio
           
         // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
