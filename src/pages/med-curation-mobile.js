@@ -220,19 +220,32 @@ export default function MedCurationMobile({ user }) {
     return `${documentos.length} conteúdos encontrados`;
   };
 
-  // Obter indicador de status do documento - VERSÃO ATUALIZADA
-  const getStatusIndicator = (documento) => {
-    if (documento.arquivado) {
-      return <FiArchive className="w-4 h-4 text-blue-600" />;
-    }
-    if (documento.importante) {
-      return <FiStar className="w-4 h-4 text-blue-600" />;
-    }
+  // Obter indicadores de status do documento - VERSÃO ATUALIZADA para múltiplos indicadores
+  const getStatusIndicators = (documento) => {
+    const indicators = [];
+    
+    // Adicionar bolinha azul se não foi lido
     if (!documento.lido) {
-      return <div className="w-3 h-3 bg-blue-500 rounded-full"></div>;
+      indicators.push(
+        <div key="nao-lido" className="w-3 h-3 bg-blue-500 rounded-full"></div>
+      );
     }
-    // Se lido e não tem outros status, não mostra indicador
-    return null;
+    
+    // Adicionar estrela se é importante
+    if (documento.importante) {
+      indicators.push(
+        <FiStar key="importante" className="w-4 h-4 text-blue-600" />
+      );
+    }
+    
+    // Adicionar ícone de arquivo se está arquivado
+    if (documento.arquivado) {
+      indicators.push(
+        <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
+      );
+    }
+    
+    return indicators;
   };
 
   // ALTERAÇÃO: Função modificada para usar FiClock com contorno azul
@@ -534,7 +547,7 @@ export default function MedCurationMobile({ user }) {
                         {destaqueDoc.descricao || 'Sem descrição'}
                       </h3>
                       <div className="flex items-center space-x-2">
-                        {getStatusIndicator(destaqueDoc)}
+                        {getStatusIndicators(destaqueDoc)}
                         {/* ALTERAÇÃO: Usar FiClock azul simples para ler_depois */}
                         {shouldShowReadLaterIcon(destaqueDoc) && (
                           <FiClock className="w-4 h-4 text-blue-600" />
@@ -587,7 +600,7 @@ export default function MedCurationMobile({ user }) {
                           {documento.descricao || 'Sem descrição'}
                         </h3>
                         <div className="flex items-center space-x-2">
-                          {getStatusIndicator(documento)}
+                          {getStatusIndicators(documento)}
                           {/* ALTERAÇÃO: Usar FiClock azul simples para ler_depois */}
                           {shouldShowReadLaterIcon(documento) && (
                             <FiClock className="w-4 h-4 text-blue-600" />
