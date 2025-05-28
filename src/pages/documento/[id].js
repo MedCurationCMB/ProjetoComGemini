@@ -79,7 +79,7 @@ export default function DocumentoDetalhe({ user }) {
         setLoading(true);
         
         const { data, error } = await supabase
-          .from('base_dados_conteudo')
+          .from('controle_conteudo_geral')
           .select('*')
           .eq('id', id)
           .single();
@@ -117,7 +117,7 @@ export default function DocumentoDetalhe({ user }) {
       
       // Atualizar o documento no Supabase
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ lido: true })
         .eq('id', documento.id)
         .select();
@@ -161,7 +161,7 @@ export default function DocumentoDetalhe({ user }) {
       
       // Atualizar o documento no Supabase
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ [campo]: novoValor })
         .eq('id', documento.id)
         .select();
@@ -204,7 +204,7 @@ export default function DocumentoDetalhe({ user }) {
       
       // Atualizar o documento no Supabase - definir arquivado como TRUE
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ arquivado: true })
         .eq('id', documento.id)
         .select();
