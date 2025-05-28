@@ -219,18 +219,18 @@ export default function MedCurationMobile({ user }) {
     return `${documentos.length} conteúdos encontrados`;
   };
 
-  // Obter indicador de status do documento
+  // Obter indicador de status do documento - VERSÃO ATUALIZADA
   const getStatusIndicator = (documento) => {
     if (documento.arquivado) {
-      return <div className="w-3 h-3 bg-green-500 rounded-full"></div>;
+      return <FiArchive className="w-4 h-4 text-blue-600" />;
     }
     if (documento.importante) {
-      return <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>;
+      return <FiStar className="w-4 h-4 text-blue-600" />;
     }
     if (!documento.lido) {
       return <div className="w-3 h-3 bg-blue-500 rounded-full"></div>;
     }
-    // Se lido e não tem outros status, não mostra bolinha
+    // Se lido e não tem outros status, não mostra indicador
     return null;
   };
 
