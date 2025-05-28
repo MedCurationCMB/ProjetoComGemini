@@ -78,8 +78,9 @@ export default function DocumentoDetalhe({ user }) {
       try {
         setLoading(true);
         
+        // ALTERAÇÃO: Buscar da tabela controle_conteudo_geral
         const { data, error } = await supabase
-          .from('base_dados_conteudo')
+          .from('controle_conteudo_geral')
           .select('*')
           .eq('id', id)
           .single();
@@ -115,9 +116,9 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
-      // Atualizar o documento no Supabase
+      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ lido: true })
         .eq('id', documento.id)
         .select();
@@ -159,9 +160,9 @@ export default function DocumentoDetalhe({ user }) {
       
       const novoValor = !valorAtual;
       
-      // Atualizar o documento no Supabase
+      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ [campo]: novoValor })
         .eq('id', documento.id)
         .select();
@@ -202,9 +203,9 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
-      // Atualizar o documento no Supabase - definir arquivado como TRUE
+      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
       const { data, error } = await supabase
-        .from('base_dados_conteudo')
+        .from('controle_conteudo_geral')
         .update({ arquivado: true })
         .eq('id', documento.id)
         .select();
@@ -307,7 +308,7 @@ export default function DocumentoDetalhe({ user }) {
         </div>
       )}
 
-      {/* Header fixo com título, tags e data - MODIFICADO */}
+      {/* Header fixo com título, tags e data */}
       <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
         <div className="max-w-md mx-auto">
           {/* Linha principal: Seta + Título à esquerda, Data à direita */}
