@@ -155,7 +155,7 @@ const GeminiAnalysisDialog = ({ documentId, onClose, onAnalysisComplete }) => {
             )}
             
             <div>
-              <label htmlFor="promptSelect" className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <label htmlFor="promptSelect" className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                 <FiAward className="mr-2" /> Selecione o Prompt
               </label>
               
