@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { 
+  FiArchive,
   FiSearch, 
   FiFilter, 
   FiMenu, 
