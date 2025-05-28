@@ -118,7 +118,8 @@ export default function MedCurationMobile({ user }) {
           .from('controle_conteudo_geral')
           .select('*')
           .not('texto_analise', 'is', null)
-          .not('texto_analise', 'eq', '');
+          .not('texto_analise', 'eq', '')
+          .not('texto_analise', 'eq', '<p></p>')
           
         // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
