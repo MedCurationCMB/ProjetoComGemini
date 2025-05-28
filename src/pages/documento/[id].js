@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive, FiHome, FiCalendar } from 'react-icons/fi';
+import { FiChevronLeft, FiCheck, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft } from 'react-icons/fi';
 
 export default function DocumentoDetalhe({ user }) {
   const router = useRouter();
@@ -228,6 +228,11 @@ export default function DocumentoDetalhe({ user }) {
     router.push('/med-curation-mobile');
   };
 
+  // Função para navegar de volta (desktop)
+  const voltarParaInicioDesktop = () => {
+    router.push('/med-curation-desktop');
+  };
+
   // Função para formatar data
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -266,7 +271,7 @@ export default function DocumentoDetalhe({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="min-h-screen bg-white lg:bg-gray-50">
       <Head>
         <title>Documento - {documento.descricao || 'Sem descrição'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -307,135 +312,278 @@ export default function DocumentoDetalhe({ user }) {
         </div>
       )}
 
-      {/* Header fixo com título, tags e data - MODIFICADO */}
-      <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
-        <div className="max-w-md mx-auto">
-          {/* Linha principal: Seta + Título à esquerda, Data à direita */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center flex-1 min-w-0">
-              <Link href="/med-curation-mobile" className="mr-3 flex-shrink-0">
-                <FiChevronLeft className="w-6 h-6 text-blue-600" />
-              </Link>
+      {/* MOBILE: Layout original */}
+      <div className="lg:hidden pb-20">
+        {/* Header fixo com título, tags e data - Mobile */}
+        <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
+          <div className="max-w-md mx-auto">
+            {/* Linha principal: Seta + Título à esquerda, Data à direita */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center flex-1 min-w-0">
+                <Link href="/med-curation-mobile" className="mr-3 flex-shrink-0">
+                  <FiChevronLeft className="w-6 h-6 text-blue-600" />
+                </Link>
+                
+                <h1 className="text-lg font-bold text-gray-900 truncate">
+                  {documento.descricao || 'Sem descrição'}
+                </h1>
+              </div>
               
-              <h1 className="text-lg font-bold text-gray-900 truncate">
-                {documento.descricao || 'Sem descrição'}
-              </h1>
+              <div className="flex items-center text-gray-500 text-sm ml-4 flex-shrink-0">
+                <FiCalendar className="w-4 h-4 mr-1" />
+                {formatDate(documento.created_at)}
+              </div>
             </div>
             
-            <div className="flex items-center text-gray-500 text-sm ml-4 flex-shrink-0">
-              <FiCalendar className="w-4 h-4 mr-1" />
-              {formatDate(documento.created_at)}
+            {/* Linha das tags */}
+            <div className="flex space-x-2">
+              {documento.projeto_id && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                  {projetos[documento.projeto_id] || 'Projeto N/A'}
+                </span>
+              )}
+              {documento.categoria_id && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {categorias[documento.categoria_id] || 'Categoria N/A'}
+                </span>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Conteúdo da página - Mobile */}
+        <div className="max-w-md mx-auto px-4 py-4">
+          {/* Texto Análise - sem título e sem botões */}
+          <div 
+            className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200 mb-6"
+            dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
+          />
           
-          {/* Linha das tags */}
-          <div className="flex space-x-2">
-            {documento.projeto_id && (
-              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                {projetos[documento.projeto_id] || 'Projeto N/A'}
+          {/* Botão Marcar como Lido */}
+          {!documento.lido ? (
+            <button
+              onClick={marcarComoLido}
+              disabled={marcandoComoLido}
+              className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors mb-3 ${
+                marcandoComoLido
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {marcandoComoLido ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
+                  Marcando...
+                </>
+              ) : (
+                <>
+                  <FiCheck className="mr-2" />
+                  Marcar como Lido
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white mb-3">
+              <FiCheck className="mr-2" />
+              Documento Lido
+            </div>
+          )}
+
+          {/* Novo botão Voltar para Início */}
+          <button
+            onClick={voltarParaInicio}
+            className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <FiHome className="mr-2" />
+            Voltar para Início
+          </button>
+        </div>
+
+        {/* Barra fixa inferior com botões de ação - Mobile */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
+          <div className="max-w-md mx-auto flex justify-center space-x-8">
+            {/* Botão Importante */}
+            <button
+              onClick={() => alternarStatus('importante', documento.importante)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiStar className={`h-5 w-5 ${documento.importante ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${documento.importante ? 'text-blue-600' : 'text-gray-400'}`}>
+                Importante
               </span>
-            )}
-            {documento.categoria_id && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                {categorias[documento.categoria_id] || 'Categoria N/A'}
+            </button>
+
+            {/* Botão Ler Depois */}
+            <button
+              onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiClock className={`h-5 w-5 ${documento.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${documento.ler_depois ? 'text-blue-600' : 'text-gray-400'}`}>
+                Ler Depois
               </span>
-            )}
+            </button>
+
+            {/* Botão Arquivar */}
+            <button
+              onClick={() => alternarStatus('arquivado', documento.arquivado)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiArchive className={`h-5 w-5 ${documento.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${documento.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
+                Arquivar
+              </span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo da página */}
-      <div className="max-w-md mx-auto px-4 py-4">
-        {/* Texto Análise - sem título e sem botões */}
-        <div 
-          className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border border-gray-200 mb-6"
-          dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
-        />
-        
-        {/* Botão Marcar como Lido */}
-        {!documento.lido ? (
-          <button
-            onClick={marcarComoLido}
-            disabled={marcandoComoLido}
-            className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors mb-3 ${
-              marcandoComoLido
-                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {marcandoComoLido ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
-                Marcando...
-              </>
-            ) : (
-              <>
-                <FiCheck className="mr-2" />
-                Marcar como Lido
-              </>
-            )}
-          </button>
-        ) : (
-          <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white mb-3">
-            <FiCheck className="mr-2" />
-            Documento Lido
+      {/* DESKTOP: Novo layout otimizado */}
+      <div className="hidden lg:block">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          {/* Header Desktop */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={voltarParaInicioDesktop}
+                className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <FiArrowLeft className="w-5 h-5 mr-2" />
+                <span className="text-sm font-medium">Voltar para MedCura</span>
+              </button>
+              
+              <div className="flex items-center text-gray-500 text-sm">
+                <FiCalendar className="w-4 h-4 mr-2" />
+                {formatDate(documento.created_at)}
+              </div>
+            </div>
+            
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              {documento.descricao || 'Sem descrição'}
+            </h1>
+            
+            {/* Tags Desktop */}
+            <div className="flex space-x-3">
+              {documento.projeto_id && (
+                <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full font-medium">
+                  {projetos[documento.projeto_id] || 'Projeto N/A'}
+                </span>
+              )}
+              {documento.categoria_id && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                  {categorias[documento.categoria_id] || 'Categoria N/A'}
+                </span>
+              )}
+            </div>
           </div>
-        )}
 
-        {/* Novo botão Voltar para Início */}
-        <button
-          onClick={voltarParaInicio}
-          className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          <FiHome className="mr-2" />
-          Voltar para Início
-        </button>
-      </div>
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Coluna principal - Conteúdo */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+                <div 
+                  className="prose prose-lg max-w-none"
+                  dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
+                />
+              </div>
+            </div>
 
-      {/* Barra fixa inferior com botões de ação - ÍCONES COM CORES CONDICIONAIS */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
-        <div className="max-w-md mx-auto flex justify-center space-x-8">
-          {/* Botão Importante */}
-          <button
-            onClick={() => alternarStatus('importante', documento.importante)}
-            disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
-              atualizandoStatus ? 'opacity-50' : ''
-            }`}
-          >
-            <FiStar className={`h-5 w-5 ${documento.importante ? 'text-blue-600' : 'text-gray-400'}`} />
-            <span className={`text-xs font-medium ${documento.importante ? 'text-blue-600' : 'text-gray-400'}`}>
-              Importante
-            </span>
-          </button>
+            {/* Sidebar - Ações e Status */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Ações do Documento</h3>
+                
+                {/* Status de Leitura */}
+                <div className="mb-6">
+                  {!documento.lido ? (
+                    <button
+                      onClick={marcarComoLido}
+                      disabled={marcandoComoLido}
+                      className={`w-full py-3 px-4 rounded-lg flex items-center justify-center font-medium transition-colors ${
+                        marcandoComoLido
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {marcandoComoLido ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Marcando...
+                        </>
+                      ) : (
+                        <>
+                          <FiCheck className="mr-2" />
+                          Marcar como Lido
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="w-full py-3 px-4 rounded-lg flex items-center justify-center font-medium bg-green-100 text-green-800 border border-green-200">
+                      <FiCheck className="mr-2" />
+                      Documento Lido
+                    </div>
+                  )}
+                </div>
 
-          {/* Botão Ler Depois */}
-          <button
-            onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
-            disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
-              atualizandoStatus ? 'opacity-50' : ''
-            }`}
-          >
-            <FiClock className={`h-5 w-5 ${documento.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
-            <span className={`text-xs font-medium ${documento.ler_depois ? 'text-blue-600' : 'text-gray-400'}`}>
-              Ler Depois
-            </span>
-          </button>
+                {/* Botões de Ação */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => alternarStatus('importante', documento.importante)}
+                    disabled={atualizandoStatus}
+                    className={`w-full py-3 px-4 rounded-lg flex items-center justify-center font-medium transition-colors ${
+                      atualizandoStatus ? 'opacity-50' : ''
+                    } ${
+                      documento.importante
+                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <FiStar className="mr-2 h-5 w-5" />
+                    {documento.importante ? 'Remover de Importantes' : 'Marcar como Importante'}
+                  </button>
 
-          {/* Botão Arquivar */}
-          <button
-            onClick={() => alternarStatus('arquivado', documento.arquivado)}
-            disabled={atualizandoStatus}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
-              atualizandoStatus ? 'opacity-50' : ''
-            }`}
-          >
-            <FiArchive className={`h-5 w-5 ${documento.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
-            <span className={`text-xs font-medium ${documento.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
-              Arquivar
-            </span>
-          </button>
+                  <button
+                    onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+                    disabled={atualizandoStatus}
+                    className={`w-full py-3 px-4 rounded-lg flex items-center justify-center font-medium transition-colors ${
+                      atualizandoStatus ? 'opacity-50' : ''
+                    } ${
+                      documento.ler_depois
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <FiClock className="mr-2 h-5 w-5" />
+                    {documento.ler_depois ? 'Remover de Ler Depois' : 'Adicionar a Ler Depois'}
+                  </button>
+
+                  <button
+                    onClick={() => alternarStatus('arquivado', documento.arquivado)}
+                    disabled={atualizandoStatus}
+                    className={`w-full py-3 px-4 rounded-lg flex items-center justify-center font-medium transition-colors ${
+                      atualizandoStatus ? 'opacity-50' : ''
+                    } ${
+                      documento.arquivado
+                        ? 'bg-green-100 text-green-800 border border-green-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <FiArchive className="mr-2 h-5 w-5" />
+                    {documento.arquivado ? 'Desarquivar' : 'Arquivar Documento'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
