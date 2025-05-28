@@ -235,7 +235,7 @@ export default function MedCurationMobile({ user }) {
     return null;
   };
 
-  // Verificar se deve mostrar ícone de "Ler Depois"
+  // ALTERAÇÃO: Função modificada para usar FiClock com contorno azul
   const shouldShowReadLaterIcon = (documento) => {
     return documento.ler_depois;
   };
@@ -471,7 +471,7 @@ export default function MedCurationMobile({ user }) {
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      <FiBookmark className="w-4 h-4 mr-1" />
+                      <FiClock className="w-4 h-4 mr-1" />
                       Ler Depois
                     </button>
                     
@@ -535,8 +535,9 @@ export default function MedCurationMobile({ user }) {
                       </h3>
                       <div className="flex items-center space-x-2">
                         {getStatusIndicator(destaqueDoc)}
+                        {/* ALTERAÇÃO: Usar FiClock com contorno azul para ler_depois */}
                         {shouldShowReadLaterIcon(destaqueDoc) && (
-                          <FiBookmark className="w-4 h-4 text-blue-500" />
+                          <FiClock className="w-4 h-4 text-blue-600 border border-blue-600 rounded p-0.5" />
                         )}
                       </div>
                     </div>
@@ -587,8 +588,9 @@ export default function MedCurationMobile({ user }) {
                         </h3>
                         <div className="flex items-center space-x-2">
                           {getStatusIndicator(documento)}
+                          {/* ALTERAÇÃO: Usar FiClock com contorno azul para ler_depois */}
                           {shouldShowReadLaterIcon(documento) && (
-                            <FiBookmark className="w-4 h-4 text-blue-500" />
+                            <FiClock className="w-4 h-4 text-blue-600 border border-blue-600 rounded p-0.5" />
                           )}
                         </div>
                       </div>
