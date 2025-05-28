@@ -336,7 +336,10 @@ export default function MedCurationDesktop({ user }) {
           <div className="lg:hidden">
             {/* Primeira linha: Logo e Menu */}
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-blue-600">MedCura</h1>
+              <h1 className="text-2xl font-bold">
+                <span className="text-blue-800">Med</span>
+                <span className="text-green-800">Curation</span>
+              </h1>
               
               {/* Menu hambúrguer */}
               <div className="relative">
@@ -513,7 +516,10 @@ export default function MedCurationDesktop({ user }) {
           <div className="hidden lg:block">
             {/* Primeira linha: Logo, Busca e Menu */}
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl lg:text-3xl font-bold text-blue-600">MedCura</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold">
+                <span className="text-blue-800">Med</span>
+                <span className="text-green-800">Curation</span>
+              </h1>
               
               {/* Barra de busca - Desktop */}
               <div className="flex-1 max-w-md lg:max-w-lg mx-4">
