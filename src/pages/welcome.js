@@ -107,10 +107,10 @@ export default function Welcome({ user }) {
             </Link>
 
             <Link 
-              href="/med-curation-mobile" 
+              href="/med-curation-desktop" 
               className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
-              Visualização MedCuration (Celular)
+              Visualização MedCuration
             </Link>
           </div>
             
