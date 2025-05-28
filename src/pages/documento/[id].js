@@ -452,7 +452,7 @@ export default function DocumentoDetalhe({ user }) {
         {/* Header fixo com título, tags, data e botões de ação - Desktop */}
         <div className="sticky top-0 bg-white shadow-sm z-10 px-8 py-6 border-b">
           <div className="max-w-4xl mx-auto">
-            {/* Linha principal: Botão Voltar + Título */}
+            {/* Primeira linha: Botão Voltar + Título + Data */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center flex-1 min-w-0">
                 <button 
@@ -467,10 +467,16 @@ export default function DocumentoDetalhe({ user }) {
                   {documento.descricao || 'Sem descrição'}
                 </h1>
               </div>
+              
+              {/* Data no lado direito */}
+              <div className="flex items-center text-gray-500 text-base ml-6 flex-shrink-0">
+                <FiCalendar className="w-5 h-5 mr-2" />
+                {formatDate(documento.created_at)}
+              </div>
             </div>
             
-            {/* Linha das tags, data e botões de ação */}
-            <div className="flex items-start justify-between">
+            {/* Segunda linha: Tags + Botões de ação */}
+            <div className="flex items-center justify-between">
               {/* Lado esquerdo: Tags */}
               <div className="flex space-x-3">
                 {documento.projeto_id && (
@@ -485,64 +491,55 @@ export default function DocumentoDetalhe({ user }) {
                 )}
               </div>
               
-              {/* Lado direito: Data e botões de ação */}
-              <div className="flex flex-col items-end space-y-3">
-                {/* Data */}
-                <div className="flex items-center text-gray-500 text-base">
-                  <FiCalendar className="w-5 h-5 mr-2" />
-                  {formatDate(documento.created_at)}
-                </div>
-                
-                {/* Botões de ação */}
-                <div className="flex space-x-3">
-                  {/* Botão Importante */}
-                  <button
-                    onClick={() => alternarStatus('importante', documento.importante)}
-                    disabled={atualizandoStatus}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                      atualizandoStatus ? 'opacity-50' : ''
-                    } ${
-                      documento.importante 
-                        ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <FiStar className="w-4 h-4" />
-                    <span className="font-medium">Importante</span>
-                  </button>
+              {/* Lado direito: Botões de ação */}
+              <div className="flex space-x-3">
+                {/* Botão Importante */}
+                <button
+                  onClick={() => alternarStatus('importante', documento.importante)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    documento.importante 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiStar className="w-4 h-4" />
+                  <span className="font-medium">Importante</span>
+                </button>
 
-                  {/* Botão Ler Depois */}
-                  <button
-                    onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
-                    disabled={atualizandoStatus}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                      atualizandoStatus ? 'opacity-50' : ''
-                    } ${
-                      documento.ler_depois 
-                        ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <FiClock className="w-4 h-4" />
-                    <span className="font-medium">Ler Depois</span>
-                  </button>
+                {/* Botão Ler Depois */}
+                <button
+                  onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    documento.ler_depois 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiClock className="w-4 h-4" />
+                  <span className="font-medium">Ler Depois</span>
+                </button>
 
-                  {/* Botão Arquivar */}
-                  <button
-                    onClick={() => alternarStatus('arquivado', documento.arquivado)}
-                    disabled={atualizandoStatus}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                      atualizandoStatus ? 'opacity-50' : ''
-                    } ${
-                      documento.arquivado 
-                        ? 'bg-green-100 text-green-700 border border-green-300' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <FiArchive className="w-4 h-4" />
-                    <span className="font-medium">Arquivar</span>
-                  </button>
-                </div>
+                {/* Botão Arquivar */}
+                <button
+                  onClick={() => alternarStatus('arquivado', documento.arquivado)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    documento.arquivado 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiArchive className="w-4 h-4" />
+                  <span className="font-medium">Arquivar</span>
+                </button>
               </div>
             </div>
           </div>
@@ -557,7 +554,7 @@ export default function DocumentoDetalhe({ user }) {
           />
           
           {/* Container com botão Marcar como Lido no lado direito */}
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end">
             {!documento.lido ? (
               <button
                 onClick={marcarComoLido}
@@ -587,15 +584,6 @@ export default function DocumentoDetalhe({ user }) {
               </div>
             )}
           </div>
-
-          {/* Botão Voltar para Início */}
-          <button
-            onClick={voltarParaInicioDesktop}
-            className="w-full py-4 rounded-lg flex items-center justify-center font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors text-lg"
-          >
-            <FiHome className="mr-3 h-6 w-6" />
-            Voltar para Início
-          </button>
         </div>
       </div>
     </div>
