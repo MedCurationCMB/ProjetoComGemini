@@ -225,7 +225,7 @@ export default function DocumentoDetalhe({ user }) {
 
   // Função para navegar de volta para a página inicial
   const voltarParaInicio = () => {
-    router.push('/med-curation-mobile');
+    router.push('/med-curation-desktop');
   };
 
   // Função para navegar de volta (desktop)
@@ -320,7 +320,7 @@ export default function DocumentoDetalhe({ user }) {
             {/* Linha principal: Seta + Título à esquerda, Data à direita */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center flex-1 min-w-0">
-                <Link href="/med-curation-mobile" className="mr-3 flex-shrink-0">
+                <Link href="/med-curation-desktop" className="mr-3 flex-shrink-0">
                   <FiChevronLeft className="w-6 h-6 text-blue-600" />
                 </Link>
                 
