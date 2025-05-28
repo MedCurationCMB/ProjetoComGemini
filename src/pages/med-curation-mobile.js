@@ -535,9 +535,9 @@ export default function MedCurationMobile({ user }) {
                       </h3>
                       <div className="flex items-center space-x-2">
                         {getStatusIndicator(destaqueDoc)}
-                        {/* ALTERAÇÃO: Usar FiClock com contorno azul para ler_depois */}
+                        {/* ALTERAÇÃO: Usar FiClock azul simples para ler_depois */}
                         {shouldShowReadLaterIcon(destaqueDoc) && (
-                          <FiClock className="w-4 h-4 text-blue-600 border border-blue-600 rounded p-0.5" />
+                          <FiClock className="w-4 h-4 text-blue-600" />
                         )}
                       </div>
                     </div>
@@ -588,9 +588,9 @@ export default function MedCurationMobile({ user }) {
                         </h3>
                         <div className="flex items-center space-x-2">
                           {getStatusIndicator(documento)}
-                          {/* ALTERAÇÃO: Usar FiClock com contorno azul para ler_depois */}
+                          {/* ALTERAÇÃO: Usar FiClock azul simples para ler_depois */}
                           {shouldShowReadLaterIcon(documento) && (
-                            <FiClock className="w-4 h-4 text-blue-600 border border-blue-600 rounded p-0.5" />
+                            <FiClock className="w-4 h-4 text-blue-600" />
                           )}
                         </div>
                       </div>
