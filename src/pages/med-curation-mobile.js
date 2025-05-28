@@ -113,7 +113,7 @@ export default function MedCurationMobile({ user }) {
       try {
         setLoading(true);
         
-        // Iniciar a consulta na tabela controle_conteudo_geral
+        // Iniciar a consulta
         let query = supabase
           .from('controle_conteudo_geral')
           .select('*')

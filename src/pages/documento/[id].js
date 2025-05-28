@@ -78,7 +78,6 @@ export default function DocumentoDetalhe({ user }) {
       try {
         setLoading(true);
         
-        // ALTERAÇÃO: Buscar da tabela controle_conteudo_geral
         const { data, error } = await supabase
           .from('controle_conteudo_geral')
           .select('*')
@@ -116,7 +115,7 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
-      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
+      // Atualizar o documento no Supabase
       const { data, error } = await supabase
         .from('controle_conteudo_geral')
         .update({ lido: true })
@@ -160,7 +159,7 @@ export default function DocumentoDetalhe({ user }) {
       
       const novoValor = !valorAtual;
       
-      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
+      // Atualizar o documento no Supabase
       const { data, error } = await supabase
         .from('controle_conteudo_geral')
         .update({ [campo]: novoValor })
@@ -203,7 +202,7 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
-      // ALTERAÇÃO: Atualizar na tabela controle_conteudo_geral
+      // Atualizar o documento no Supabase - definir arquivado como TRUE
       const { data, error } = await supabase
         .from('controle_conteudo_geral')
         .update({ arquivado: true })
@@ -308,7 +307,7 @@ export default function DocumentoDetalhe({ user }) {
         </div>
       )}
 
-      {/* Header fixo com título, tags e data */}
+      {/* Header fixo com título, tags e data - MODIFICADO */}
       <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
         <div className="max-w-md mx-auto">
           {/* Linha principal: Seta + Título à esquerda, Data à direita */}
