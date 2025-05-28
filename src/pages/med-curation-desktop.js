@@ -980,21 +980,21 @@ export default function MedCurationDesktop({ user }) {
                                 {getTextPreview(documento.texto_analise)}
                               </p>
                               
-                              <div className="flex items-center justify-between">
-                                <div className="flex space-x-2">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2">
                                   {documento.projeto_id && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
                                       {projetos[documento.projeto_id]}
                                     </span>
                                   )}
                                   {documento.categoria_id && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
                                       {categorias[documento.categoria_id]}
                                     </span>
                                   )}
                                 </div>
                                 
-                                <div className="flex items-center text-gray-500 text-xs">
+                                <div className="flex items-center justify-end text-gray-500 text-xs">
                                   <FiCalendar className="w-3 h-3 mr-1" />
                                   {formatDate(documento.created_at)}
                                 </div>
