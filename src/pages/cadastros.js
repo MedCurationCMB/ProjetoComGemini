@@ -313,10 +313,10 @@ export default function Cadastros({ user }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {apresentacaoVariaveis[activeTab] ? (
+                  {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'] ? (
                     <tr>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {editandoApresentacao === apresentacaoVariaveis[activeTab].id ? (
+                        {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
                           <input
                             type="text"
                             value={nomeApresentacaoEditado}
@@ -326,12 +326,12 @@ export default function Cadastros({ user }) {
                           />
                         ) : (
                           <div className="text-sm font-medium text-gray-900">
-                            {apresentacaoVariaveis[activeTab].nome_apresentacao}
+                            {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].nome_apresentacao}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {editandoApresentacao === apresentacaoVariaveis[activeTab].id ? (
+                        {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
                           <div className="flex justify-end space-x-2">
                             <button
                               onClick={salvarEdicaoApresentacao}
@@ -356,7 +356,7 @@ export default function Cadastros({ user }) {
                           </div>
                         ) : (
                           <button
-                            onClick={() => iniciarEdicaoApresentacao(apresentacaoVariaveis[activeTab])}
+                            onClick={() => iniciarEdicaoApresentacao(apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'])}
                             className="text-blue-600 hover:text-blue-900"
                             title="Editar"
                           >
