@@ -42,7 +42,7 @@ export default function LogoDisplay({ className = "", fallbackText = "MedCuratio
     return (
       <div className={`flex items-center ${className}`}>
         <div className="animate-pulse">
-          <div className="h-8 w-32 bg-gray-200 rounded"></div>
+          <div className="h-12 lg:h-14 w-40 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -55,7 +55,7 @@ export default function LogoDisplay({ className = "", fallbackText = "MedCuratio
         <img 
           src={logo} 
           alt="Logo" 
-          className="h-8 lg:h-10 max-w-full object-contain"
+          className="h-12 lg:h-14 max-w-full object-contain"
           onError={() => setError(true)}
         />
       </div>
