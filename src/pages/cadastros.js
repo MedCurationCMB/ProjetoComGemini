@@ -258,9 +258,6 @@ export default function Cadastros({ user }) {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nome
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -272,9 +269,6 @@ export default function Cadastros({ user }) {
                   {dadosAtivos.length > 0 ? (
                     dadosAtivos.map((item) => (
                       <tr key={item.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.id}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {editandoItem === item.id ? (
                             <input
@@ -329,7 +323,7 @@ export default function Cadastros({ user }) {
                   ) : (
                     <tr>
                       <td
-                        colSpan="3"
+                        colSpan="2"
                         className="px-6 py-4 text-center text-sm text-gray-500"
                       >
                         Nenhum {activeTab === 'projetos' ? 'projeto' : 'categoria'} encontrado
