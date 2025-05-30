@@ -112,6 +112,13 @@ export default function Welcome({ user }) {
             >
               Visualização MedCuration
             </Link>
+
+            <Link 
+              href="/cadastros" 
+              className="bg-lime-600 hover:bg-lime-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Cadastros
+            </Link>
           </div>
             
           {isAdmin && !checkingAdmin && (
