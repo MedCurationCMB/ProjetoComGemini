@@ -100,9 +100,9 @@ export default function DocumentoDetalhe({ user }) {
     }
   }, [user, id, router]);
 
-  // Função para marcar documento como lido
-  const marcarComoLido = async () => {
-    if (!documento || documento.lido) return; // Se já estiver lido, não faz nada
+  // Função para alternar o status de lido (toggle)
+  const toggleLido = async () => {
+    if (!documento || marcandoComoLido) return;
     
     try {
       setMarcandoComoLido(true);
@@ -115,22 +115,24 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
+      const novoStatus = !documento.lido; // Inverte o status atual
+      
       // Atualizar o documento no Supabase
       const { data, error } = await supabase
         .from('controle_conteudo_geral')
-        .update({ lido: true })
+        .update({ lido: novoStatus })
         .eq('id', documento.id)
         .select();
       
       if (error) throw error;
       
       // Atualizar o estado local
-      setDocumento(prev => ({ ...prev, lido: true }));
+      setDocumento(prev => ({ ...prev, lido: novoStatus }));
       
-      toast.success('Documento marcado como lido!');
+      toast.success(novoStatus ? 'Documento marcado como lido!' : 'Documento marcado como não lido!');
     } catch (error) {
-      console.error('Erro ao marcar como lido:', error);
-      toast.error('Erro ao marcar documento como lido');
+      console.error('Erro ao alterar status de lido:', error);
+      toast.error('Erro ao alterar status do documento');
     } finally {
       setMarcandoComoLido(false);
     }
@@ -359,10 +361,10 @@ export default function DocumentoDetalhe({ user }) {
             dangerouslySetInnerHTML={{ __html: documento.texto_analise || '<p>Sem texto análise</p>' }}
           />
           
-          {/* Botão Marcar como Lido */}
+          {/* Botão Marcar como Lido / Documento Lido */}
           {!documento.lido ? (
             <button
-              onClick={marcarComoLido}
+              onClick={toggleLido}
               disabled={marcandoComoLido}
               className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors mb-3 ${
                 marcandoComoLido
@@ -383,10 +385,27 @@ export default function DocumentoDetalhe({ user }) {
               )}
             </button>
           ) : (
-            <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white mb-3">
-              <FiCheck className="mr-2" />
-              Documento Lido
-            </div>
+            <button
+              onClick={toggleLido}
+              disabled={marcandoComoLido}
+              className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors mb-3 ${
+                marcandoComoLido
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
+            >
+              {marcandoComoLido ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <FiCheck className="mr-2" />
+                  Documento Lido
+                </>
+              )}
+            </button>
           )}
 
           {/* Novo botão Voltar para Início */}
@@ -557,7 +576,7 @@ export default function DocumentoDetalhe({ user }) {
           <div className="flex justify-end">
             {!documento.lido ? (
               <button
-                onClick={marcarComoLido}
+                onClick={toggleLido}
                 disabled={marcandoComoLido}
                 className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
                   marcandoComoLido
@@ -578,10 +597,27 @@ export default function DocumentoDetalhe({ user }) {
                 )}
               </button>
             ) : (
-              <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
-                <FiCheck className="mr-2 h-4 w-4" />
-                Documento Lido
-              </div>
+              <button
+                onClick={toggleLido}
+                disabled={marcandoComoLido}
+                className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
+                  marcandoComoLido
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }`}
+              >
+                {marcandoComoLido ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <FiCheck className="mr-2 h-4 w-4" />
+                    Documento Lido
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>
