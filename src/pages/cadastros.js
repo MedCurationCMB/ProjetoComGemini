@@ -23,6 +23,12 @@ export default function Cadastros({ user }) {
   const [novoNome, setNovoNome] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
 
+  // Novos estados para apresentação de variáveis
+  const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
+  const [editandoApresentacao, setEditandoApresentacao] = useState(null);
+  const [nomeApresentacaoEditado, setNomeApresentacaoEditado] = useState('');
+  const [salvandoApresentacao, setSalvandoApresentacao] = useState(false);
+
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
@@ -34,8 +40,30 @@ export default function Cadastros({ user }) {
   useEffect(() => {
     if (user) {
       fetchData();
+      fetchApresentacaoVariaveis();
     }
   }, [user, activeTab]);
+
+  // Função para buscar dados de apresentação
+  const fetchApresentacaoVariaveis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apresentacao_variaveis')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Converter array em objeto para fácil acesso por nome_variavel
+      const apresentacaoObj = {};
+      data.forEach(item => {
+        apresentacaoObj[item.nome_variavel] = item;
+      });
+      
+      setApresentacaoVariaveis(apresentacaoObj);
+    } catch (error) {
+      console.error('Erro ao carregar apresentação das variáveis:', error);
+    }
+  };
 
   // Função para carregar dados baseado na aba ativa
   const fetchData = async () => {
@@ -64,6 +92,47 @@ export default function Cadastros({ user }) {
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Funções para editar apresentação
+  const iniciarEdicaoApresentacao = (item) => {
+    setEditandoApresentacao(item.id);
+    setNomeApresentacaoEditado(item.nome_apresentacao);
+  };
+
+  const cancelarEdicaoApresentacao = () => {
+    setEditandoApresentacao(null);
+    setNomeApresentacaoEditado('');
+  };
+
+  const salvarEdicaoApresentacao = async () => {
+    if (!nomeApresentacaoEditado.trim()) {
+      toast.error('O nome de apresentação não pode estar vazio');
+      return;
+    }
+
+    try {
+      setSalvandoApresentacao(true);
+      
+      const { error } = await supabase
+        .from('apresentacao_variaveis')
+        .update({ nome_apresentacao: nomeApresentacaoEditado.trim() })
+        .eq('id', editandoApresentacao);
+
+      if (error) throw error;
+
+      toast.success('Nome de apresentação atualizado com sucesso!');
+      setEditandoApresentacao(null);
+      setNomeApresentacaoEditado('');
+      
+      // Recarregar dados
+      await fetchApresentacaoVariaveis();
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast.error('Erro ao salvar alterações');
+    } finally {
+      setSalvandoApresentacao(false);
     }
   };
 
@@ -227,38 +296,16 @@ export default function Cadastros({ user }) {
 
         {/* Conteúdo da tab atual */}
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Gerenciamento de {getTituloAba()}</h2>
+          {/* Tabela de Apresentação da Variável */}
+          <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4">Configuração de Apresentação</h2>
             
-            {/* Botão para cadastrar novo item */}
-            <button
-              onClick={() => setShowCadastroDialog(true)}
-              className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              <FiPlus className="mr-2" />
-              Cadastrar {activeTab === 'projetos' ? 'Projeto' : 'Categoria'}
-            </button>
-          </div>
-
-          {/* Aviso sobre não poder apagar */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-            <p className="text-yellow-800 text-sm">
-              <strong>Atenção:</strong> Uma vez cadastrados, os {activeTab} não podem ser apagados do sistema. 
-              Certifique-se de que o nome está correto antes de cadastrar.
-            </p>
-          </div>
-          
-          {loading ? (
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : (
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome
+                      Nome para Apresentação
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
@@ -266,74 +313,180 @@ export default function Cadastros({ user }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {dadosAtivos.length > 0 ? (
-                    dadosAtivos.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {editandoItem === item.id ? (
-                            <input
-                              type="text"
-                              value={nomeEditado}
-                              onChange={(e) => setNomeEditado(e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              disabled={salvandoEdicao}
-                            />
-                          ) : (
-                            <div className="text-sm font-medium text-gray-900">
-                              {item.nome}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {editandoItem === item.id ? (
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={salvarEdicao}
-                                disabled={salvandoEdicao}
-                                className={`text-green-600 hover:text-green-900 ${
-                                  salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                                title="Salvar"
-                              >
-                                <FiSave className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={cancelarEdicao}
-                                disabled={salvandoEdicao}
-                                className={`text-red-600 hover:text-red-900 ${
-                                  salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                                title="Cancelar"
-                              >
-                                <FiX className="h-5 w-5" />
-                              </button>
-                            </div>
-                          ) : (
+                  {apresentacaoVariaveis[activeTab] ? (
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editandoApresentacao === apresentacaoVariaveis[activeTab].id ? (
+                          <input
+                            type="text"
+                            value={nomeApresentacaoEditado}
+                            onChange={(e) => setNomeApresentacaoEditado(e.target.value)}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            disabled={salvandoApresentacao}
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">
+                            {apresentacaoVariaveis[activeTab].nome_apresentacao}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {editandoApresentacao === apresentacaoVariaveis[activeTab].id ? (
+                          <div className="flex justify-end space-x-2">
                             <button
-                              onClick={() => iniciarEdicao(item)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Editar"
+                              onClick={salvarEdicaoApresentacao}
+                              disabled={salvandoApresentacao}
+                              className={`text-green-600 hover:text-green-900 ${
+                                salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                              title="Salvar"
                             >
-                              <FiEdit className="h-5 w-5" />
+                              <FiSave className="h-5 w-5" />
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                            <button
+                              onClick={cancelarEdicaoApresentacao}
+                              disabled={salvandoApresentacao}
+                              className={`text-red-600 hover:text-red-900 ${
+                                salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                              title="Cancelar"
+                            >
+                              <FiX className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => iniciarEdicaoApresentacao(apresentacaoVariaveis[activeTab])}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Editar"
+                          >
+                            <FiEdit className="h-5 w-5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
                   ) : (
                     <tr>
-                      <td
-                        colSpan="2"
-                        className="px-6 py-4 text-center text-sm text-gray-500"
-                      >
-                        Nenhum {activeTab === 'projetos' ? 'projeto' : 'categoria'} encontrado
+                      <td colSpan="2" className="px-6 py-4 text-center text-sm text-gray-500">
+                        Configuração não encontrada
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
+
+          {/* Seção original do Gerenciamento */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Gerenciamento de {getTituloAba()}</h2>
+              
+              {/* Botão para cadastrar novo item */}
+              <button
+                onClick={() => setShowCadastroDialog(true)}
+                className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                <FiPlus className="mr-2" />
+                Cadastrar {activeTab === 'projetos' ? 'Projeto' : 'Categoria'}
+              </button>
+            </div>
+
+            {/* Aviso sobre não poder apagar */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+              <p className="text-yellow-800 text-sm">
+                <strong>Atenção:</strong> Uma vez cadastrados, os {activeTab} não podem ser apagados do sistema. 
+                Certifique-se de que o nome está correto antes de cadastrar.
+              </p>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nome
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {dadosAtivos.length > 0 ? (
+                      dadosAtivos.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editandoItem === item.id ? (
+                              <input
+                                type="text"
+                                value={nomeEditado}
+                                onChange={(e) => setNomeEditado(e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                disabled={salvandoEdicao}
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900">
+                                {item.nome}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {editandoItem === item.id ? (
+                              <div className="flex justify-end space-x-2">
+                                <button
+                                  onClick={salvarEdicao}
+                                  disabled={salvandoEdicao}
+                                  className={`text-green-600 hover:text-green-900 ${
+                                    salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
+                                  }`}
+                                  title="Salvar"
+                                >
+                                  <FiSave className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={cancelarEdicao}
+                                  disabled={salvandoEdicao}
+                                  className={`text-red-600 hover:text-red-900 ${
+                                    salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
+                                  }`}
+                                  title="Cancelar"
+                                >
+                                  <FiX className="h-5 w-5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => iniciarEdicao(item)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Editar"
+                              >
+                                <FiEdit className="h-5 w-5" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="2"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          Nenhum {activeTab === 'projetos' ? 'projeto' : 'categoria'} encontrado
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
