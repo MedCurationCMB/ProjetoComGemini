@@ -1,3 +1,4 @@
+// src/pages/admin.js (versão atualizada)
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -6,12 +7,13 @@ import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabaseClient";
 import { activateUser, deactivateUser, isUserAdmin } from "../utils/userUtils";
 import GeminiApiKeyManager from "../components/GeminiApiKeyManager";
+import LogoManager from "../components/LogoManager";
 
 export default function Admin({ user }) {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios' ou 'gemini'
+  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios', 'gemini' ou 'logo'
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
 
@@ -177,6 +179,18 @@ export default function Admin({ user }) {
                 Configurações da IA
               </button>
             </li>
+            <li className="mr-2">
+              <button
+                onClick={() => setActiveTab('logo')}
+                className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'logo'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Logo
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -288,6 +302,12 @@ export default function Admin({ user }) {
         {activeTab === 'gemini' && (
           <div>
             <GeminiApiKeyManager />
+          </div>
+        )}
+
+        {activeTab === 'logo' && (
+          <div>
+            <LogoManager />
           </div>
         )}
       </main>
