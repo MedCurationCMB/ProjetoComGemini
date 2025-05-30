@@ -34,6 +34,7 @@ export default function MedCurationDesktop({ user }) {
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
   // Estados para filtros avançados
   const [filtroImportantes, setFiltroImportantes] = useState(false);
@@ -43,6 +44,27 @@ export default function MedCurationDesktop({ user }) {
   // Estados para controlar a navegação
   const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
+
+  // Função para buscar dados de apresentação
+  const fetchApresentacaoVariaveis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apresentacao_variaveis')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Converter array em objeto para fácil acesso por nome_variavel
+      const apresentacaoObj = {};
+      data.forEach(item => {
+        apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
+      });
+      
+      setApresentacaoVariaveis(apresentacaoObj);
+    } catch (error) {
+      console.error('Erro ao carregar apresentação das variáveis:', error);
+    }
+  };
 
   // Função para determinar a cor da borda baseada no status de leitura
   const getBorderColor = (documento) => {
@@ -101,6 +123,7 @@ export default function MedCurationDesktop({ user }) {
         });
         
         setProjetos(projetosObj);
+        await fetchApresentacaoVariaveis();
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       }
@@ -427,7 +450,7 @@ export default function MedCurationDesktop({ user }) {
                 <div className="flex items-end space-x-3">
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Projeto
+                      {apresentacaoVariaveis.projeto || 'Projeto'}
                     </label>
                     <select
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -443,7 +466,7 @@ export default function MedCurationDesktop({ user }) {
                   
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Categoria
+                      {apresentacaoVariaveis.categoria || 'Categoria'}
                     </label>
                     <select
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -611,7 +634,7 @@ export default function MedCurationDesktop({ user }) {
                 <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
                   <div className="w-full sm:flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Projeto
+                      {apresentacaoVariaveis.projeto || 'Projeto'}
                     </label>
                     <select
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -627,7 +650,7 @@ export default function MedCurationDesktop({ user }) {
                   
                   <div className="w-full sm:flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Categoria
+                      {apresentacaoVariaveis.categoria || 'Categoria'}
                     </label>
                     <select
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
