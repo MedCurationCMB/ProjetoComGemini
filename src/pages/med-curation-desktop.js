@@ -44,6 +44,11 @@ export default function MedCurationDesktop({ user }) {
   const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
 
+  // Função para determinar a cor da borda baseada no status de leitura
+  const getBorderColor = (documento) => {
+    return documento.lido ? 'border-gray-300' : 'border-blue-500';
+  };
+
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
@@ -813,7 +818,7 @@ export default function MedCurationDesktop({ user }) {
                   {destaqueDoc && (
                     <div className="mb-8">
                       <Link href={`/documento/${destaqueDoc.id}`}>
-                        <div className="bg-white rounded-lg border-l-4 border-blue-500 p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(destaqueDoc)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
                           <div className="flex justify-between items-start mb-3">
                             <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
                               {destaqueDoc.descricao || 'Sem descrição'}
@@ -865,7 +870,7 @@ export default function MedCurationDesktop({ user }) {
                     regularDocs.map((documento, index) => (
                       <div key={documento.id} className={index > 0 ? "mt-4" : ""}>
                         <Link href={`/documento/${documento.id}`}>
-                          <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(documento)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
                             <div className="flex justify-between items-start mb-2">
                               <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
                                 {documento.descricao || 'Sem descrição'}
@@ -917,7 +922,7 @@ export default function MedCurationDesktop({ user }) {
                     {destaqueDoc && (
                       <div className="lg:col-span-2 xl:col-span-3">
                         <Link href={`/documento/${destaqueDoc.id}`}>
-                          <div className="bg-white rounded-lg border-l-4 border-blue-500 p-6 shadow-sm hover:shadow-md transition-shadow">
+                          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(destaqueDoc)} p-6 shadow-sm hover:shadow-md transition-shadow`}>
                             <div className="flex justify-between items-start mb-4">
                               <h3 className="text-xl font-bold text-gray-900 flex-1 pr-4">
                                 {destaqueDoc.descricao || 'Sem descrição'}
@@ -969,7 +974,7 @@ export default function MedCurationDesktop({ user }) {
                       regularDocs.map((documento) => (
                         <div key={documento.id}>
                           <Link href={`/documento/${documento.id}`}>
-                            <div className="bg-white rounded-lg border-l-4 border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow h-full">
+                            <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(documento)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                               <div className="flex justify-between items-start mb-3">
                                 <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
                                   {documento.descricao || 'Sem descrição'}
