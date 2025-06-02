@@ -1,4 +1,4 @@
-// Arquivo: src/pages/med-curation-desktop.js
+// Arquivo: src/pages/med-curation-desktop.js - Versão com filtro por projetos vinculados
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -31,6 +31,7 @@ export default function MedCurationDesktop({ user }) {
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -67,6 +68,27 @@ export default function MedCurationDesktop({ user }) {
     }
   };
 
+  // Função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', userId);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      return projetoIds;
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      return [];
+    }
+  };
+
   // Função para determinar a cor da borda baseada no status de leitura
   const getBorderColor = (documento) => {
     return documento.lido ? 'border-gray-300' : 'border-blue-500';
@@ -91,10 +113,13 @@ export default function MedCurationDesktop({ user }) {
     }
   };
 
-  // Carregar categorias e projetos
+  // Carregar categorias, projetos e projetos vinculados
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
+        // Buscar projetos vinculados primeiro
+        const projetoIds = await fetchProjetosVinculados(user.id);
+        
         // Buscar categorias
         const { data: categoriasData, error: categoriasError } = await supabase
           .from('categorias')
@@ -110,20 +135,27 @@ export default function MedCurationDesktop({ user }) {
         
         setCategorias(categoriasObj);
         
-        // Buscar projetos
-        const { data: projetosData, error: projetosError } = await supabase
-          .from('projetos')
-          .select('id, nome');
+        // Buscar APENAS os projetos vinculados ao usuário
+        if (projetoIds.length > 0) {
+          const { data: projetosData, error: projetosError } = await supabase
+            .from('projetos')
+            .select('id, nome')
+            .in('id', projetoIds); // Filtrar apenas projetos vinculados
+          
+          if (projetosError) throw projetosError;
+          
+          // Converter array em objeto para fácil acesso por ID
+          const projetosObj = {};
+          projetosData.forEach(proj => {
+            projetosObj[proj.id] = proj.nome;
+          });
+          
+          setProjetos(projetosObj);
+        } else {
+          // Se não há projetos vinculados, definir como objeto vazio
+          setProjetos({});
+        }
         
-        if (projetosError) throw projetosError;
-        
-        // Converter array em objeto para fácil acesso por ID
-        const projetosObj = {};
-        projetosData.forEach(proj => {
-          projetosObj[proj.id] = proj.nome;
-        });
-        
-        setProjetos(projetosObj);
         await fetchApresentacaoVariaveis();
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -141,6 +173,13 @@ export default function MedCurationDesktop({ user }) {
       try {
         setLoading(true);
         
+        // Se o usuário não tem projetos vinculados, não mostrar nenhum documento
+        if (projetosVinculados.length === 0) {
+          setDocumentos([]);
+          setLoading(false);
+          return;
+        }
+        
         // Iniciar a consulta com filtros básicos obrigatórios
         let query = supabase
           .from('controle_conteudo_geral')
@@ -148,7 +187,8 @@ export default function MedCurationDesktop({ user }) {
           .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
           .not('texto_analise', 'is', null)  // ← SEGUNDO: não pode ser null
           .not('texto_analise', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
-          .not('texto_analise', 'eq', '<p></p>');  // ← QUARTO: não pode ser parágrafo vazio
+          .not('texto_analise', 'eq', '<p></p>')  // ← QUARTO: não pode ser parágrafo vazio
+          .in('projeto_id', projetosVinculados); // ← NOVO: Filtrar apenas projetos vinculados
           
         // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
@@ -208,10 +248,10 @@ export default function MedCurationDesktop({ user }) {
       }
     };
 
-    if (user) {
+    if (user && projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]);
 
   // Limpar filtros
   const clearFilters = () => {
@@ -244,6 +284,10 @@ export default function MedCurationDesktop({ user }) {
 
   // Obter subtítulo da seção
   const getSectionSubtitle = () => {
+    if (projetosVinculados.length === 0) {
+      return 'Nenhum projeto vinculado encontrado';
+    }
+    
     if (activeTab === 'inicio') {
       return showAllContent ? 'Todos os Conteúdos' : 'Conteúdos não lidos';
     }
@@ -835,6 +879,16 @@ export default function MedCurationDesktop({ user }) {
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : projetosVinculados.length === 0 ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <FiFolder className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+                </p>
               </div>
             ) : (
               <div>
