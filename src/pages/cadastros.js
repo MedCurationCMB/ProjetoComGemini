@@ -193,7 +193,7 @@ export default function Cadastros({ user }) {
     }
   };
 
-  // Função para cadastrar novo item
+  // ✅ FUNÇÃO MODIFICADA: Cadastrar novo item com vinculação automática
   const cadastrarItem = async () => {
     if (!novoNome.trim()) {
       toast.error('O nome não pode estar vazio');
@@ -216,11 +216,37 @@ export default function Cadastros({ user }) {
         return;
       }
 
-      const { error } = await supabase
+      // Inserir o novo item
+      const { data: itemData, error } = await supabase
         .from(tabela)
-        .insert([{ nome: novoNome.trim() }]);
+        .insert([{ nome: novoNome.trim() }])
+        .select(); // ← IMPORTANTE: adicionar select() para obter o ID do item criado
 
       if (error) throw error;
+
+      // ✅ NOVA FUNCIONALIDADE: Se for um projeto, criar vinculação com o usuário
+      if (activeTab === 'projetos' && itemData && itemData.length > 0) {
+        const novoProjetoId = itemData[0].id;
+        const userId = user.id;
+        
+        console.log('Vinculando usuário ao projeto:', { userId, novoProjetoId });
+        
+        // Inserir na tabela de relacionamento
+        const { error: relacaoError } = await supabase
+          .from('relacao_usuarios_projetos')
+          .insert([{
+            usuario_id: userId,
+            projeto_id: novoProjetoId
+          }]);
+        
+        if (relacaoError) {
+          console.error('Erro ao criar vinculação usuário-projeto:', relacaoError);
+          // Não interromper o processo, apenas logar o erro
+          toast.warning('Projeto criado, mas houve um problema na vinculação com o usuário');
+        } else {
+          console.log('Vinculação usuário-projeto criada com sucesso');
+        }
+      }
 
       toast.success(`${activeTab === 'projetos' ? 'Projeto' : 'Categoria'} cadastrado com sucesso!`);
       setShowCadastroDialog(false);
@@ -397,6 +423,11 @@ export default function Cadastros({ user }) {
               <p className="text-yellow-800 text-sm">
                 <strong>Atenção:</strong> Uma vez cadastrados, os {activeTab} não podem ser apagados do sistema. 
                 Certifique-se de que o nome está correto antes de cadastrar.
+                {activeTab === 'projetos' && (
+                  <span className="block mt-1">
+                    <strong>Novo:</strong> Ao criar um projeto, você será automaticamente vinculado a ele.
+                  </span>
+                )}
               </p>
             </div>
             
@@ -521,6 +552,11 @@ export default function Cadastros({ user }) {
                 placeholder={`Digite o nome do ${activeTab === 'projetos' ? 'projeto' : 'categoria'}`}
                 disabled={cadastrando}
               />
+              {activeTab === 'projetos' && (
+                <p className="mt-2 text-sm text-gray-600">
+                  Você será automaticamente vinculado a este projeto.
+                </p>
+              )}
             </div>
             
             <div className="flex justify-end space-x-3">
