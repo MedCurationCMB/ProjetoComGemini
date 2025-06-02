@@ -10,6 +10,7 @@ import {
   FiArchive,
   FiSearch, 
   FiFilter, 
+  FiFolder,
   FiMenu, 
   FiHome, 
   FiStar, 
