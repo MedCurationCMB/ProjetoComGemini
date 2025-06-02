@@ -1,32 +1,60 @@
-// Componente ControleConteudoGeralTable.js modificado
+// Componente ControleConteudoGeralTable.js modificado com filtro por projetos vinculados
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus, FiChevronUp, FiChevronDown, FiEdit } from 'react-icons/fi';
+import { FiFile, FiUpload, FiCalendar, FiCheck, FiX, FiInfo, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
-import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog'; // Importar o novo componente
+import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog';
 
-const ControleConteudoGeralTable = () => {
+const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
   const [loading, setLoading] = useState(true);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
-  const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' }); // Estado para ordenação
-  const [editarItemId, setEditarItemId] = useState(null); // Novo estado para o ID do item sendo editado
-  
-  // ✅ NOVO: Estado para controlar atualizações de visibilidade
+  const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
+  const [editarItemId, setEditarItemId] = useState(null);
   const [atualizandoVisibilidade, setAtualizandoVisibilidade] = useState({});
 
   useEffect(() => {
-    fetchCategorias();
-    fetchProjetos();
-    fetchControles();
-  }, []);
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+      fetchCategorias();
+      fetchProjetos();
+      fetchControles();
+    }
+  }, [projetosVinculados]);
+
+  // Nova função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
 
   // Buscar todas as categorias
   const fetchCategorias = async () => {
@@ -49,12 +77,18 @@ const ControleConteudoGeralTable = () => {
     }
   };
 
-  // Buscar todos os projetos
+  // Buscar APENAS os projetos vinculados ao usuário
   const fetchProjetos = async () => {
     try {
+      if (projetosVinculados.length === 0) {
+        setProjetos({});
+        return;
+      }
+
       const { data, error } = await supabase
         .from('projetos')
-        .select('*');
+        .select('*')
+        .in('id', projetosVinculados); // Filtrar apenas projetos vinculados
       
       if (error) throw error;
       
@@ -65,19 +99,28 @@ const ControleConteudoGeralTable = () => {
       });
       
       setProjetos(projetosObj);
+      console.log('Projetos carregados:', projetosObj);
     } catch (error) {
       console.error('Erro ao carregar projetos:', error);
     }
   };
 
-  // Buscar os dados de controle_conteudo_geral
+  // Buscar os dados de controle_conteudo_geral APENAS dos projetos vinculados
   const fetchControles = async () => {
     try {
       setLoading(true);
       
+      // Se o usuário não tem projetos vinculados, não mostrar nenhum controle
+      if (projetosVinculados.length === 0) {
+        setControles([]);
+        setLoading(false);
+        return;
+      }
+      
       let query = supabase
         .from('controle_conteudo_geral')
-        .select('*');
+        .select('*')
+        .in('projeto_id', projetosVinculados); // Filtrar apenas projetos vinculados
       
       // Aplicar filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -111,6 +154,7 @@ const ControleConteudoGeralTable = () => {
       if (error) throw error;
       
       setControles(Array.isArray(data) ? data : []);
+      console.log('Controles carregados:', data?.length || 0);
     } catch (error) {
       toast.error('Erro ao carregar dados de controle');
       console.error(error);
@@ -138,12 +182,12 @@ const ControleConteudoGeralTable = () => {
 
   // Efeito para refazer a busca quando a ordenação mudar
   useEffect(() => {
-    if (!loading) {
+    if (!loading && projetosVinculados.length >= 0) {
       fetchControles();
     }
   }, [ordenacao]);
 
-  // ✅ NOVA: Função para alternar visibilidade
+  // Função para alternar visibilidade
   const toggleVisibilidade = async (itemId, currentVisibility) => {
     try {
       setAtualizandoVisibilidade(prev => ({ ...prev, [itemId]: true }));
@@ -260,6 +304,21 @@ const ControleConteudoGeralTable = () => {
     );
   }
 
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FiFolder className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+        <p className="text-gray-500 max-w-md mx-auto">
+          Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Filtros */}
@@ -280,14 +339,14 @@ const ControleConteudoGeralTable = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Projeto
+              Projeto (apenas projetos vinculados)
             </label>
             <select
               value={filtroProjetoId}
               onChange={(e) => setFiltroProjetoId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="">Todos os projetos</option>
+              <option value="">Todos os projetos vinculados</option>
               {Object.entries(projetos).map(([id, nome]) => (
                 <option key={id} value={id}>
                   {nome}
@@ -412,7 +471,6 @@ const ControleConteudoGeralTable = () => {
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Status
               </th>
-              {/* ✅ NOVA COLUNA: Visível */}
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Visível
               </th>
@@ -486,7 +544,6 @@ const ControleConteudoGeralTable = () => {
                       </span>
                     )}
                   </td>
-                  {/* ✅ NOVA CÉLULA: Checkbox de Visibilidade */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center justify-center">
                       {atualizandoVisibilidade[item.id] ? (
@@ -532,7 +589,7 @@ const ControleConteudoGeralTable = () => {
             ) : (
               <tr>
                 <td colSpan="12" className="px-6 py-4 text-center text-sm text-gray-500">
-                  Nenhum item de controle encontrado
+                  Nenhum item de controle encontrado para os projetos vinculados
                 </td>
               </tr>
             )}
