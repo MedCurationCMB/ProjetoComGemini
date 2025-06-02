@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2, FiCode } from 'react-icons/fi';
+import { FiFile, FiCpu, FiCalendar, FiEye, FiTrash2, FiCode, FiFolder } from 'react-icons/fi';
 
-const HistoricoAnalises = () => {
+const HistoricoAnalises = ({ user }) => { // Adicionado user como prop
   const [analises, setAnalises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [prompts, setPrompts] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
   const [textoVisualizando, setTextoVisualizando] = useState(null);
   const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('retorno'); // 'retorno' ou 'documentos'
   const [tituloVisualizando, setTituloVisualizando] = useState('');
@@ -15,9 +16,38 @@ const HistoricoAnalises = () => {
   const PROMPT_HTML_ID = "21992115-d737-48bd-90fa-d9f824dd4ceb";
 
   useEffect(() => {
-    fetchPrompts();
-    fetchAnalises();
-  }, []);
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+      fetchPrompts();
+      fetchAnalises();
+    }
+  }, [projetosVinculados]);
+
+  // Nova função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
 
   // Buscar todos os prompts
   const fetchPrompts = async () => {
@@ -40,10 +70,17 @@ const HistoricoAnalises = () => {
     }
   };
 
-  // Buscar histórico de análises
+  // Buscar histórico de análises (filtrado por projetos vinculados)
   const fetchAnalises = async () => {
     try {
       setLoading(true);
+      
+      // Se o usuário não tem projetos vinculados, não mostrar nenhuma análise
+      if (projetosVinculados.length === 0) {
+        setAnalises([]);
+        setLoading(false);
+        return;
+      }
       
       // Obter o token de acesso do usuário atual
       const { data: { session } } = await supabase.auth.getSession();
@@ -53,15 +90,48 @@ const HistoricoAnalises = () => {
         return;
       }
       
-      // Buscar diretamente do Supabase
-      const { data, error } = await supabase
+      // Primeiro, buscar todas as análises do usuário
+      const { data: todasAnalises, error: analiseError } = await supabase
         .from('analises')
         .select('*')
+        .eq('usuario_id', session.user.id) // Filtrar apenas análises do usuário
         .order('data_analise', { ascending: false });
       
-      if (error) throw error;
+      if (analiseError) throw analiseError;
       
-      setAnalises(Array.isArray(data) ? data : []);
+      if (!todasAnalises || todasAnalises.length === 0) {
+        setAnalises([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Agora, filtrar apenas análises que contenham documentos dos projetos vinculados
+      const analisesFiltradas = [];
+      
+      for (const analise of todasAnalises) {
+        if (!analise.documentos_selecionados || analise.documentos_selecionados.length === 0) {
+          continue; // Pular análises sem documentos
+        }
+        
+        // Verificar se algum dos documentos da análise pertence aos projetos vinculados
+        const { data: documentos, error: docError } = await supabase
+          .from('base_dados_conteudo')
+          .select('projeto_id')
+          .in('id', analise.documentos_selecionados)
+          .in('projeto_id', projetosVinculados);
+        
+        if (docError) {
+          console.error('Erro ao verificar documentos da análise:', docError);
+          continue;
+        }
+        
+        // Se encontrou pelo menos um documento do projeto vinculado, incluir a análise
+        if (documentos && documentos.length > 0) {
+          analisesFiltradas.push(analise);
+        }
+      }
+      
+      setAnalises(analisesFiltradas);
     } catch (error) {
       toast.error('Erro ao carregar histórico de análises');
       console.error(error);
@@ -170,6 +240,21 @@ const HistoricoAnalises = () => {
     );
   }
 
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FiFolder className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+        <p className="text-gray-500 max-w-md mx-auto">
+          Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       {/* Modal para visualização de texto */}
@@ -194,7 +279,13 @@ const HistoricoAnalises = () => {
 
       {analises.length === 0 ? (
         <div className="bg-gray-100 p-6 rounded-lg text-center">
-          <p className="text-gray-600">Nenhuma análise encontrada. Realize uma análise múltipla de documentos para ver o histórico aqui.</p>
+          <p className="text-gray-600">
+            Nenhuma análise encontrada. Realize uma análise múltipla de documentos para ver o histórico aqui.
+            <br />
+            <span className="text-sm text-gray-500 mt-2 block">
+              Apenas análises de documentos dos projetos aos quais você está vinculado são exibidas.
+            </span>
+          </p>
         </div>
       ) : (
         <table className="min-w-full bg-white border border-gray-300">

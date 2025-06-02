@@ -55,10 +55,12 @@ export default function HistoricoPage({ user }) {
             <p className="text-gray-600 text-sm mb-4">
               Aqui você encontra todas as análises múltiplas de documentos que você realizou.
               Você pode visualizar o resultado da análise, os textos dos documentos utilizados ou excluir análises.
+              <br />
+              <span className="font-medium text-blue-600">Observação:</span> Apenas análises de documentos dos projetos aos quais você está vinculado são exibidas.
             </p>
           </div>
           
-          <HistoricoAnalises />
+          <HistoricoAnalises user={user} />
         </div>
       </main>
     </div>
