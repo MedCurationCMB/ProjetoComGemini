@@ -73,10 +73,15 @@ export default function AnaliseMultipla({ user }) {
             <h2 className="text-lg font-semibold mb-2">Selecione os documentos para análise</h2>
             <p className="text-gray-600 text-sm mb-4">
               Selecione os documentos que deseja analisar em conjunto. A IA combinará o texto de todos os documentos selecionados para gerar uma análise única.
+              <br />
+              <span className="font-medium text-blue-600">Observação:</span> Apenas documentos dos projetos aos quais você está vinculado são exibidos.
             </p>
           </div>
           
-          <DocumentosSelectTable onSelectionChange={handleSelectionChange} />
+          <DocumentosSelectTable 
+            user={user} 
+            onSelectionChange={handleSelectionChange} 
+          />
         </div>
       </main>
 
