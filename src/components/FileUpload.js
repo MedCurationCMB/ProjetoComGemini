@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiUpload, FiFile, FiCheck, FiX } from 'react-icons/fi';
+import { FiUpload, FiFile, FiCheck, FiX, FiFolder } from 'react-icons/fi';
 
-const FileUpload = ({ categoria_id, projeto_id, onUploadComplete }) => {
+const FileUpload = ({ categoria_id, projeto_id, onUploadComplete, projetosVinculados = [] }) => { // Nova prop projetosVinculados
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -42,9 +42,6 @@ const FileUpload = ({ categoria_id, projeto_id, onUploadComplete }) => {
       return;
     }
     
-    // Descrição agora é opcional
-    // Removida a validação: if (!descricao.trim()) {...}
-    
     if (!categoria_id) {
       toast.error('Por favor, selecione uma categoria');
       return;
@@ -52,6 +49,12 @@ const FileUpload = ({ categoria_id, projeto_id, onUploadComplete }) => {
     
     if (!projeto_id) {
       toast.error('Por favor, selecione um projeto');
+      return;
+    }
+
+    // Verificar se o projeto selecionado está na lista de projetos vinculados
+    if (projetosVinculados.length > 0 && !projetosVinculados.includes(parseInt(projeto_id))) {
+      toast.error('Você não está vinculado ao projeto selecionado');
       return;
     }
     
@@ -130,6 +133,23 @@ const FileUpload = ({ categoria_id, projeto_id, onUploadComplete }) => {
       setProgress(0);
     }
   };
+
+  // Se não há projetos vinculados e o array foi fornecido, mostrar mensagem
+  if (projetosVinculados.length === 0 && Array.isArray(projetosVinculados)) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="py-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <FiFolder className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes antes de fazer upload de arquivos.
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">

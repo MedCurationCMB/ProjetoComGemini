@@ -6,14 +6,17 @@ import { toast } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import FileUpload from '../components/FileUpload';
 import { supabase } from '../utils/supabaseClient';
+import { FiFolder } from 'react-icons/fi';
 
 export default function Upload({ user }) {
   const router = useRouter();
   const [categorias, setCategorias] = useState([]);
   const [categoriaId, setCategoriaId] = useState('');
-  const [projetos, setProjetos] = useState([]); // Novo estado para projetos
-  const [projetoId, setProjetoId] = useState(''); // Novo estado para o ID do projeto selecionado
+  const [projetos, setProjetos] = useState([]); // Projetos vinculados
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // IDs dos projetos vinculados
+  const [projetoId, setProjetoId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -22,28 +25,86 @@ export default function Upload({ user }) {
     }
   }, [user, router]);
 
-  // Carregar categorias e projetos
+  // Carregar dados quando o usuário estiver disponível
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Buscar categorias
-        const { data: categoriasData, error: categoriasError } = await supabase
-          .from('categorias')
-          .select('*')
-          .order('nome');
-        
-        if (categoriasError) {
-          throw categoriasError;
-        }
-        
-        setCategorias(categoriasData || []);
-        
-        // Buscar projetos
+    if (user?.id) {
+      fetchProjetosVinculados();
+      fetchApresentacaoVariaveis();
+    }
+  }, [user]);
+
+  // Carregar categorias e projetos quando os projetos vinculados estiverem disponíveis
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+      fetchData();
+    }
+  }, [projetosVinculados]);
+
+  // Função para buscar dados de apresentação
+  const fetchApresentacaoVariaveis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apresentacao_variaveis')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Converter array em objeto para fácil acesso por nome_variavel
+      const apresentacaoObj = {};
+      data.forEach(item => {
+        apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
+      });
+      
+      setApresentacaoVariaveis(apresentacaoObj);
+    } catch (error) {
+      console.error('Erro ao carregar apresentação das variáveis:', error);
+    }
+  };
+
+  // Função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
+
+  // Carregar categorias e projetos
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Buscar categorias (todas)
+      const { data: categoriasData, error: categoriasError } = await supabase
+        .from('categorias')
+        .select('*')
+        .order('nome');
+      
+      if (categoriasError) {
+        throw categoriasError;
+      }
+      
+      setCategorias(categoriasData || []);
+      
+      // Buscar APENAS projetos vinculados ao usuário
+      if (projetosVinculados.length > 0) {
         const { data: projetosData, error: projetosError } = await supabase
           .from('projetos')
           .select('*')
+          .in('id', projetosVinculados) // Filtrar apenas projetos vinculados
           .order('nome');
         
         if (projetosError) {
@@ -51,18 +112,18 @@ export default function Upload({ user }) {
         }
         
         setProjetos(projetosData || []);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        toast.error('Não foi possível carregar as categorias ou projetos');
-      } finally {
-        setLoading(false);
+        console.log('Projetos carregados para upload:', projetosData?.length || 0);
+      } else {
+        // Se não há projetos vinculados, definir como array vazio
+        setProjetos([]);
       }
-    };
-    
-    if (user) {
-      fetchData();
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Não foi possível carregar as categorias ou projetos');
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  };
 
   // Função que é chamada quando o upload é concluído
   const handleUploadComplete = (data) => {
@@ -73,6 +134,42 @@ export default function Upload({ user }) {
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
+  }
+
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0 && !loading) {
+    return (
+      <div>
+        <Head>
+          <title>Upload de Arquivo - Sistema de Conteúdo</title>
+        </Head>
+
+        <Navbar user={user} />
+
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Upload de Arquivo PDF</h1>
+            
+            <Link 
+              href="/welcome" 
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Voltar
+            </Link>
+          </div>
+          
+          <div className="py-8 text-center">
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FiFolder className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes antes de fazer upload de arquivos.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -102,12 +199,12 @@ export default function Upload({ user }) {
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Selecione Categoria e Projeto</h2>
+              <h2 className="text-xl font-semibold mb-4">Selecione {apresentacaoVariaveis.categoria || 'Categoria'} e {apresentacaoVariaveis.projeto || 'Projeto'}</h2>
               
               {/* Campo de Categoria */}
               <div className="mb-4">
                 <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoria do Documento
+                  {apresentacaoVariaveis.categoria || 'Categoria'} do Documento
                 </label>
                 <select
                   id="categoria"
@@ -115,7 +212,7 @@ export default function Upload({ user }) {
                   onChange={(e) => setCategoriaId(e.target.value)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Selecione uma categoria</option>
+                  <option value="">Selecione uma {apresentacaoVariaveis.categoria?.toLowerCase() || 'categoria'}</option>
                   {categorias.map((categoria) => (
                     <option key={categoria.id} value={categoria.id}>
                       {categoria.nome}
@@ -125,15 +222,15 @@ export default function Upload({ user }) {
                 
                 {!categoriaId && (
                   <p className="mt-2 text-sm text-gray-500">
-                    Você precisa selecionar uma categoria antes de fazer upload
+                    Você precisa selecionar uma {apresentacaoVariaveis.categoria?.toLowerCase() || 'categoria'} antes de fazer upload
                   </p>
                 )}
               </div>
               
-              {/* Novo Campo de Projeto */}
+              {/* Campo de Projeto */}
               <div className="mb-4">
                 <label htmlFor="projeto" className="block text-sm font-medium text-gray-700 mb-2">
-                  Projeto
+                  {apresentacaoVariaveis.projeto || 'Projeto'} (apenas projetos vinculados)
                 </label>
                 <select
                   id="projeto"
@@ -141,7 +238,7 @@ export default function Upload({ user }) {
                   onChange={(e) => setProjetoId(e.target.value)}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Selecione um projeto</option>
+                  <option value="">Selecione um {apresentacaoVariaveis.projeto?.toLowerCase() || 'projeto'}</option>
                   {projetos.map((projeto) => (
                     <option key={projeto.id} value={projeto.id}>
                       {projeto.nome}
@@ -151,21 +248,25 @@ export default function Upload({ user }) {
                 
                 {!projetoId && (
                   <p className="mt-2 text-sm text-gray-500">
-                    Você precisa selecionar um projeto antes de fazer upload
+                    Você precisa selecionar um {apresentacaoVariaveis.projeto?.toLowerCase() || 'projeto'} antes de fazer upload
                   </p>
                 )}
               </div>
               
               <div className="mt-4">
                 <p className="text-sm text-gray-600">
-                  As categorias e projetos ajudam a organizar seus documentos para facilitar a busca posteriormente.
+                  As {apresentacaoVariaveis.categoria?.toLowerCase() || 'categorias'} e {apresentacaoVariaveis.projeto?.toLowerCase() || 'projetos'} ajudam a organizar seus documentos para facilitar a busca posteriormente.
+                </p>
+                <p className="text-sm text-blue-600 mt-2">
+                  <strong>Nota:</strong> Apenas {apresentacaoVariaveis.projeto?.toLowerCase() || 'projetos'} aos quais você está vinculado são exibidos.
                 </p>
               </div>
             </div>
             
             <FileUpload 
               categoria_id={categoriaId}
-              projeto_id={projetoId} // Passando o projeto_id para o componente FileUpload
+              projeto_id={projetoId}
+              projetosVinculados={projetosVinculados} // Passar projetos vinculados para validação
               onUploadComplete={handleUploadComplete} 
             />
           </div>
