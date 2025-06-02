@@ -1,21 +1,51 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
 import { toast } from "react-hot-toast";
-import { FiUpload, FiDownload, FiFile, FiX } from "react-icons/fi";
+import { FiUpload, FiDownload, FiFile, FiX, FiFolder } from "react-icons/fi";
 import ExcelJS from "exceljs";
 
-const UploadExcelTemplate = () => {
+const UploadExcelTemplate = ({ user }) => { // Adicionado user como prop
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [projetos, setProjetos] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
   const [categorias, setCategorias] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Buscar projetos e categorias ao carregar o componente
+  // Buscar projetos vinculados e categorias ao carregar o componente
   useEffect(() => {
-    fetchProjetosECategorias();
-  }, []);
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+      fetchProjetosECategorias();
+    }
+  }, [projetosVinculados]);
+
+  // Nova função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
 
   // Função para normalizar texto (remover acentos, converter para minúsculas, remover espaços extras)
   const normalizeText = (text) => {
@@ -31,15 +61,49 @@ const UploadExcelTemplate = () => {
     return withoutAccents.toLowerCase().trim().replace(/\s+/g, " ");
   };
 
-  // Função para buscar projetos e categorias
+  // Função para buscar APENAS projetos vinculados e todas as categorias
   const fetchProjetosECategorias = async () => {
     try {
       setLoading(true);
 
-      // Buscar projetos
+      // Se não há projetos vinculados, definir projetos como vazio
+      if (projetosVinculados.length === 0) {
+        setProjetos({
+          nomeParaId: {},
+          idParaNome: {},
+          lista: [],
+        });
+        
+        // Ainda buscar categorias
+        const { data: categoriasData, error: categoriasError } = await supabase
+          .from("categorias")
+          .select("id, nome");
+
+        if (categoriasError) throw categoriasError;
+
+        // Criar mapeamento de nome para ID e ID para nome
+        const categoriasNomeParaId = {};
+        const categoriasIdParaNome = {};
+        categoriasData.forEach((cat) => {
+          categoriasNomeParaId[cat.nome.toLowerCase()] = cat.id;
+          categoriasIdParaNome[cat.id] = cat.nome;
+        });
+
+        setCategorias({
+          nomeParaId: categoriasNomeParaId,
+          idParaNome: categoriasIdParaNome,
+          lista: categoriasData,
+        });
+        
+        setLoading(false);
+        return;
+      }
+
+      // Buscar APENAS projetos vinculados
       const { data: projetosData, error: projetosError } = await supabase
         .from("projetos")
-        .select("id, nome");
+        .select("id, nome")
+        .in('id', projetosVinculados); // Filtrar apenas projetos vinculados
 
       if (projetosError) throw projetosError;
 
@@ -77,6 +141,8 @@ const UploadExcelTemplate = () => {
         idParaNome: categoriasIdParaNome,
         lista: categoriasData,
       });
+      
+      console.log('Projetos carregados para template:', projetosData.length);
     } catch (error) {
       console.error("Erro ao carregar projetos e categorias:", error);
       toast.error("Não foi possível carregar os dados necessários");
@@ -88,6 +154,12 @@ const UploadExcelTemplate = () => {
   // Função para gerar e baixar o template Excel
   const downloadTemplate = async () => {
     try {
+      // Verificar se há projetos vinculados
+      if (projetosVinculados.length === 0) {
+        toast.error("Você não está vinculado a nenhum projeto. Entre em contato com o administrador.");
+        return;
+      }
+
       // Verificar se os dados de projetos e categorias estão carregados
       if (
         Object.keys(projetos).length === 0 ||
@@ -121,7 +193,7 @@ const UploadExcelTemplate = () => {
 
       // Adicionar uma linha de informação sobre como preencher
       const infoRow = worksheet.addRow({
-        projeto_id: "Nome do Projeto",
+        projeto_id: "Nome do Projeto (apenas projetos vinculados)",
         categoria_id: "Nome da Categoria",
         descricao: "Descrição do item",
         prazo_entrega_inicial: "Formato: AAAA-MM-DD",
@@ -149,18 +221,20 @@ const UploadExcelTemplate = () => {
         obrigatorio: "SIM",
       });
 
-      // Adicionar um segundo exemplo
-      worksheet.addRow({
-        projeto_id: Object.values(projetos.idParaNome)[1] || "Nome do Projeto",
-        categoria_id:
-          Object.values(categorias.idParaNome)[1] || "Nome da Categoria",
-        descricao: "Outro exemplo de item",
-        prazo_entrega_inicial: "2024-06-30",
-        recorrencia: "ano",
-        tempo_recorrencia: 1,
-        repeticoes: 2,
-        obrigatorio: "NÃO",
-      });
+      // Adicionar um segundo exemplo se houver mais projetos
+      if (Object.values(projetos.idParaNome).length > 1) {
+        worksheet.addRow({
+          projeto_id: Object.values(projetos.idParaNome)[1] || "Nome do Projeto",
+          categoria_id:
+            Object.values(categorias.idParaNome)[1] || "Nome da Categoria",
+          descricao: "Outro exemplo de item",
+          prazo_entrega_inicial: "2024-06-30",
+          recorrencia: "ano",
+          tempo_recorrencia: 1,
+          repeticoes: 2,
+          obrigatorio: "NÃO",
+        });
+      }
 
       // Formatar cabeçalhos
       worksheet.getRow(1).font = { bold: true };
@@ -179,7 +253,7 @@ const UploadExcelTemplate = () => {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = "template_controle_conteudo.xlsx";
+      a.download = "template_controle_conteudo_projetos_vinculados.xlsx";
       a.click();
       URL.revokeObjectURL(url);
 
@@ -220,6 +294,12 @@ const UploadExcelTemplate = () => {
 
     if (!file) {
       toast.error("Por favor, selecione um arquivo para upload");
+      return;
+    }
+
+    // Verificar se há projetos vinculados
+    if (projetosVinculados.length === 0) {
+      toast.error("Você não está vinculado a nenhum projeto. Entre em contato com o administrador.");
       return;
     }
 
@@ -340,7 +420,14 @@ const UploadExcelTemplate = () => {
 
               if (!projetoId) {
                 throw new Error(
-                  `Projeto "${projetoNome}" não encontrado (linha ${rowNumber})`
+                  `Projeto "${projetoNome}" não encontrado ou não está vinculado a você (linha ${rowNumber})`
+                );
+              }
+
+              // Verificar se o projeto está realmente vinculado (segurança adicional)
+              if (!projetosVinculados.includes(projetoId)) {
+                throw new Error(
+                  `Projeto "${projetoNome}" não está vinculado ao seu usuário (linha ${rowNumber})`
                 );
               }
 
@@ -501,6 +588,21 @@ const UploadExcelTemplate = () => {
     }
   };
 
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0 && !loading) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FiFolder className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+        <p className="text-gray-500 max-w-md mx-auto">
+          Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes antes de fazer upload de planilhas.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -509,14 +611,17 @@ const UploadExcelTemplate = () => {
         </h3>
         <p className="text-blue-600 mb-4">
           Você pode importar vários itens de controle de conteúdo de uma vez
-          usando uma planilha Excel. Baixe o template, preencha com seus dados e
+          usando uma planilha Excel. Baixe o template, preencha com seus dados dos projetos vinculados e
           faça o upload.
+        </p>
+        <p className="text-blue-600 mb-4 text-sm">
+          <strong>Importante:</strong> O template mostrará apenas os projetos aos quais você está vinculado.
         </p>
         <button
           onClick={downloadTemplate}
-          disabled={loading}
+          disabled={loading || projetosVinculados.length === 0}
           className={`flex items-center px-4 py-2 ${
-            loading
+            loading || projetosVinculados.length === 0
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700"
           } text-white rounded`}
@@ -529,7 +634,7 @@ const UploadExcelTemplate = () => {
           ) : (
             <>
               <FiDownload className="mr-2" />
-              Baixar Template Excel
+              Baixar Template Excel (Projetos Vinculados)
             </>
           )}
         </button>
@@ -623,9 +728,9 @@ const UploadExcelTemplate = () => {
           <div>
             <button
               type="submit"
-              disabled={!file || uploading || loading}
+              disabled={!file || uploading || loading || projetosVinculados.length === 0}
               className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                !file || uploading || loading
+                !file || uploading || loading || projetosVinculados.length === 0
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               }`}

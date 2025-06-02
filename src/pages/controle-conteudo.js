@@ -72,9 +72,9 @@ export default function ControleConteudo({ user }) {
           
           {/* Conteúdo da tab ativa */}
           {activeTab === 'tabela' ? (
-            <ControleConteudoTable />
+            <ControleConteudoTable user={user} />
           ) : (
-            <UploadExcelTemplate />
+            <UploadExcelTemplate user={user} />
           )}
         </div>
       </main>
