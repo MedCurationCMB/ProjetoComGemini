@@ -1,4 +1,4 @@
-// src/components/GerenciarVinculacoes.js
+// src/components/GerenciarVinculacoes.js - Versão Corrigida
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -24,22 +24,10 @@ const GerenciarVinculacoes = () => {
     try {
       setLoading(true);
       
-      // Carregar vinculações com dados de usuários e projetos
+      // Carregar vinculações
       const { data: vinculacoesData, error: vinculacoesError } = await supabase
         .from('relacao_usuarios_projetos')
-        .select(`
-          id,
-          created_at,
-          usuarios:usuario_id (
-            id,
-            email,
-            raw_user_meta_data
-          ),
-          projetos:projeto_id (
-            id,
-            nome
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (vinculacoesError) throw vinculacoesError;
@@ -47,7 +35,7 @@ const GerenciarVinculacoes = () => {
       // Carregar todos os usuários
       const { data: usuariosData, error: usuariosError } = await supabase
         .from('usuarios')
-        .select('id, email, raw_user_meta_data')
+        .select('id, email, nome')
         .order('email');
       
       if (usuariosError) throw usuariosError;
@@ -60,7 +48,19 @@ const GerenciarVinculacoes = () => {
       
       if (projetosError) throw projetosError;
       
-      setVinculacoes(vinculacoesData || []);
+      // Processar vinculações com dados dos usuários e projetos
+      const vinculacoesComDados = vinculacoesData.map(vinculacao => {
+        const usuario = usuariosData.find(u => u.id === vinculacao.usuario_id);
+        const projeto = projetosData.find(p => p.id === vinculacao.projeto_id);
+        
+        return {
+          ...vinculacao,
+          usuario: usuario,
+          projeto: projeto
+        };
+      });
+      
+      setVinculacoes(vinculacoesComDados || []);
       setUsuarios(usuariosData || []);
       setProjetos(projetosData || []);
     } catch (error) {
@@ -82,8 +82,8 @@ const GerenciarVinculacoes = () => {
       
       // Verificar se a vinculação já existe
       const vinculacaoExistente = vinculacoes.find(v => 
-        v.usuarios?.id === usuarioSelecionado && 
-        v.projetos?.id === projetoSelecionado
+        v.usuario_id === usuarioSelecionado && 
+        v.projeto_id === projetoSelecionado
       );
       
       if (vinculacaoExistente) {
@@ -98,24 +98,9 @@ const GerenciarVinculacoes = () => {
           usuario_id: usuarioSelecionado,
           projeto_id: projetoSelecionado
         }])
-        .select(`
-          id,
-          created_at,
-          usuarios:usuario_id (
-            id,
-            email,
-            raw_user_meta_data
-          ),
-          projetos:projeto_id (
-            id,
-            nome
-          )
-        `);
+        .select();
       
       if (error) throw error;
-      
-      // Atualizar lista local
-      setVinculacoes([...data, ...vinculacoes]);
       
       // Limpar formulário
       setUsuarioSelecionado('');
@@ -123,6 +108,9 @@ const GerenciarVinculacoes = () => {
       setShowAddDialog(false);
       
       toast.success('Vinculação criada com sucesso!');
+      
+      // Recarregar dados
+      await carregarDados();
     } catch (error) {
       console.error('Erro ao criar vinculação:', error);
       toast.error('Erro ao criar vinculação');
@@ -156,7 +144,7 @@ const GerenciarVinculacoes = () => {
 
   const getNomeUsuario = (usuario) => {
     if (!usuario) return 'Usuário não encontrado';
-    return usuario.raw_user_meta_data?.nome || usuario.email;
+    return usuario.nome || usuario.email;
   };
 
   const formatDate = (dateString) => {
@@ -311,10 +299,10 @@ const GerenciarVinculacoes = () => {
                       <FiUser className="mr-2 h-4 w-4 text-gray-400" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {getNomeUsuario(vinculacao.usuarios)}
+                          {getNomeUsuario(vinculacao.usuario)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {vinculacao.usuarios?.email}
+                          {vinculacao.usuario?.email || 'Email não disponível'}
                         </div>
                       </div>
                     </div>
@@ -323,7 +311,7 @@ const GerenciarVinculacoes = () => {
                     <div className="flex items-center">
                       <FiFolder className="mr-2 h-4 w-4 text-gray-400" />
                       <div className="text-sm font-medium text-gray-900">
-                        {vinculacao.projetos?.nome || 'Projeto não encontrado'}
+                        {vinculacao.projeto?.nome || 'Projeto não encontrado'}
                       </div>
                     </div>
                   </td>
