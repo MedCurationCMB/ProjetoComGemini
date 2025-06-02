@@ -61,7 +61,7 @@ export default function Home({ user }) {
         <h1 className="text-2xl font-bold mb-4">Base de Dados de Conteúdo</h1>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <ConteudoTable />
+          <ConteudoTable user={user} />
         </div>
       </main>
     </div>

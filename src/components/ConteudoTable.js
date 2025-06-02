@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiX } from 'react-icons/fi';
+import { FiFile, FiDownload, FiEye, FiType, FiEdit, FiSave, FiCpu, FiX, FiFolder } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
 import TipTapEditor from './TipTapEditor'; // Alterado de RichTextEditor para TipTapEditor
 import VisualizarTextoAnalise from './VisualizarTextoAnalise'; // Novo componente
 
-const ConteudoTable = () => {
+const ConteudoTable = ({ user }) => { // Adicionado user como prop
   const [conteudos, setConteudos] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
   const [loading, setLoading] = useState(true);
   const [textoVisualizando, setTextoVisualizando] = useState(null);
   const [editandoConteudo, setEditandoConteudo] = useState(null);
@@ -46,10 +47,39 @@ const ConteudoTable = () => {
   const [visualizandoTextoAnaliseHtml, setVisualizandoTextoAnaliseHtml] = useState(null);
 
   useEffect(() => {
-    fetchCategorias();
-    fetchProjetos();
-    fetchConteudos();
-  }, []);
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+      fetchCategorias();
+      fetchProjetos();
+      fetchConteudos();
+    }
+  }, [projetosVinculados]);
+
+  // Nova função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      // Extrair apenas os IDs dos projetos
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
 
   // Buscar todas as categorias
   const fetchCategorias = async () => {
@@ -72,12 +102,18 @@ const ConteudoTable = () => {
     }
   };
 
-  // Buscar todos os projetos
+  // Buscar APENAS os projetos vinculados ao usuário
   const fetchProjetos = async () => {
     try {
+      if (projetosVinculados.length === 0) {
+        setProjetos({});
+        return;
+      }
+
       const { data, error } = await supabase
         .from('projetos')
-        .select('*');
+        .select('*')
+        .in('id', projetosVinculados); // Filtrar apenas projetos vinculados
       
       if (error) throw error;
       
@@ -88,6 +124,7 @@ const ConteudoTable = () => {
       });
       
       setProjetos(projetosObj);
+      console.log('Projetos carregados:', projetosObj);
     } catch (error) {
       console.error('Erro ao carregar projetos:', error);
     }
@@ -126,6 +163,13 @@ const ConteudoTable = () => {
     try {
       setLoading(true);
       
+      // Se o usuário não tem projetos vinculados, não mostrar nenhum documento
+      if (projetosVinculados.length === 0) {
+        setConteudos([]);
+        setLoading(false);
+        return;
+      }
+      
       // Obter o token de acesso do usuário atual
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -134,10 +178,11 @@ const ConteudoTable = () => {
         return;
       }
       
-      // Buscar diretamente do Supabase
+      // Buscar diretamente do Supabase APENAS dos projetos vinculados
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
+        .in('projeto_id', projetosVinculados) // Filtrar apenas projetos vinculados
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -655,6 +700,21 @@ const ConteudoTable = () => {
     return (
       <div className="flex justify-center items-center h-32">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FiFolder className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+        <p className="text-gray-500 max-w-md mx-auto">
+          Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+        </p>
       </div>
     );
   }

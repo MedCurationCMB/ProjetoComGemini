@@ -50,7 +50,7 @@ export default function Tabela({ user }) {
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <ConteudoTable />
+          <ConteudoTable user={user} />
         </div>
       </main>
     </div>
