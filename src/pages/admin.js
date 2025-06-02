@@ -1,4 +1,4 @@
-// src/pages/admin.js (versão atualizada)
+// src/pages/admin.js (versão atualizada com vinculações)
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -8,12 +8,13 @@ import { supabase } from "../utils/supabaseClient";
 import { activateUser, deactivateUser, isUserAdmin } from "../utils/userUtils";
 import GeminiApiKeyManager from "../components/GeminiApiKeyManager";
 import LogoManager from "../components/LogoManager";
+import GerenciarVinculacoes from "../components/GerenciarVinculacoes";
 
 export default function Admin({ user }) {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios', 'gemini' ou 'logo'
+  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios', 'gemini', 'logo', 'vinculacoes'
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
 
@@ -169,6 +170,18 @@ export default function Admin({ user }) {
             </li>
             <li className="mr-2">
               <button
+                onClick={() => setActiveTab('vinculacoes')}
+                className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'vinculacoes'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Vinculações
+              </button>
+            </li>
+            <li className="mr-2">
+              <button
                 onClick={() => setActiveTab('gemini')}
                 className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
                   activeTab === 'gemini'
@@ -296,6 +309,12 @@ export default function Admin({ user }) {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'vinculacoes' && (
+          <div>
+            <GerenciarVinculacoes />
           </div>
         )}
 
