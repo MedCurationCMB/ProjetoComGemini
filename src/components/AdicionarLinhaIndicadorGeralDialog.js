@@ -21,7 +21,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
-  // Campos para formulário não recorrente
+  // Campos para formulário não recorrente (agora para controle_indicador)
   const [novaLinha, setNovaLinha] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -30,8 +30,9 @@ const AdicionarLinhaIndicadorGeralDialog = ({
     tipo_indicador: '',
     subcategoria_id: '',
     prazo_entrega_inicial: '',
-    valor_indicador_apresentado: '',
-    tipo_unidade_indicador: '',
+    recorrencia: 'sem recorrencia',
+    tempo_recorrencia: '',
+    repeticoes: '',
     obrigatorio: false
   });
 
@@ -184,7 +185,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
         toast.success(`${novasLinhasInseridas.length} novas linhas adicionadas com sucesso!`);
         
       } else {
-        // Adicionar uma nova linha não recorrente
+        // Adicionar uma nova linha na tabela controle_indicador (BASE)
         // Validar campos obrigatórios
         if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador || !novaLinha.subcategoria_id) {
           toast.error('Por favor, preencha todos os campos obrigatórios');
@@ -192,7 +193,27 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           return;
         }
         
-        // Preparar dados para inserção na tabela controle_indicador_geral
+        // Validar campos adicionais se a recorrência não for "sem recorrencia"
+        if (novaLinha.recorrencia !== 'sem recorrencia') {
+          if (!novaLinha.tempo_recorrencia || parseInt(novaLinha.tempo_recorrencia) < 1) {
+            toast.error('Por favor, informe um tempo de recorrência válido');
+            setLoading(false);
+            return;
+          }
+          
+          if (!novaLinha.repeticoes || parseInt(novaLinha.repeticoes) < 1) {
+            toast.error('Por favor, informe um número válido de repetições');
+            setLoading(false);
+            return;
+          }
+        }
+        if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador || !novaLinha.subcategoria_id) {
+          toast.error('Por favor, preencha todos os campos obrigatórios');
+          setLoading(false);
+          return;
+        }
+        
+        // Preparar dados para inserção na tabela controle_indicador (BASE)
         const dadosInsercao = {
           projeto_id: novaLinha.projeto_id,
           categoria_id: novaLinha.categoria_id,
@@ -201,25 +222,22 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           tipo_indicador: parseInt(novaLinha.tipo_indicador),
           subcategoria_id: parseInt(novaLinha.subcategoria_id),
           prazo_entrega_inicial: novaLinha.prazo_entrega_inicial || null,
-          prazo_entrega: novaLinha.prazo_entrega_inicial || null,
-          recorrencia: 'sem recorrencia',
-          tempo_recorrencia: null,
+          recorrencia: novaLinha.recorrencia,
+          tempo_recorrencia: novaLinha.recorrencia !== 'sem recorrencia' ? parseInt(novaLinha.tempo_recorrencia) || null : null,
+          repeticoes: novaLinha.recorrencia !== 'sem recorrencia' ? parseInt(novaLinha.repeticoes) || 0 : 0,
           obrigatorio: novaLinha.obrigatorio,
-          visivel: true,
-          valor_indicador_apresentado: novaLinha.valor_indicador_apresentado.trim() || null,
-          tipo_unidade_indicador: novaLinha.tipo_unidade_indicador ? parseInt(novaLinha.tipo_unidade_indicador) : null,
-          valor_indicador: null // Sempre null, será calculado automaticamente
+          tem_documento: false // sempre começa como false
         };
         
-        // Inserir na tabela controle_indicador_geral
+        // Inserir na tabela controle_indicador (BASE)
         const { data, error } = await supabase
-          .from('controle_indicador_geral')
+          .from('controle_indicador')
           .insert([dadosInsercao])
           .select();
           
         if (error) throw error;
         
-        toast.success('Nova linha de indicador geral adicionada com sucesso!');
+        toast.success('Nova linha de indicador base adicionada com sucesso!');
       }
       
       // Fechar diálogo e atualizar tabela
@@ -294,7 +312,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   <FiPlus className="mb-2 h-6 w-6" />
                   <h4 className="font-medium mb-1">Não, Nova Linha</h4>
                   <p className="text-sm">
-                    Criar uma nova linha única diretamente na tabela geral
+                    Criar uma nova linha na tabela base de indicadores
                   </p>
                 </div>
               </button>
@@ -325,7 +343,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     <div>
                       <h4 className="text-sm font-medium text-green-900">Linhas Recorrentes</h4>
                       <p className="text-sm text-green-700">
-                        Selecione um indicador base e o número de repetições para gerar automaticamente.
+                        Selecione um indicador base e o número de repetições para gerar automaticamente linhas na tabela geral.
                       </p>
                     </div>
                   </div>
@@ -391,9 +409,9 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   <div className="flex items-center">
                     <FiPlus className="h-5 w-5 text-orange-600 mr-2" />
                     <div>
-                      <h4 className="text-sm font-medium text-orange-900">Nova Linha Única</h4>
+                      <h4 className="text-sm font-medium text-orange-900">Nova Linha Base</h4>
                       <p className="text-sm text-orange-700">
-                        Preencha os dados para criar uma nova linha diretamente na tabela geral.
+                        Preencha os dados para criar uma nova linha na tabela base de indicadores (não na tabela geral).
                       </p>
                     </div>
                   </div>
@@ -520,48 +538,89 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Recorrência */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recorrência <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="recorrencia"
+                    value={novaLinha.recorrencia}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="sem recorrencia">Sem recorrência</option>
+                    <option value="dia">Dia</option>
+                    <option value="mês">Mês</option>
+                    <option value="ano">Ano</option>
+                  </select>
+                </div>
+                
+                {/* Tempo de Recorrência - apenas se a recorrência não for "sem recorrencia" */}
+                {novaLinha.recorrencia !== 'sem recorrencia' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Valor Apresentado
+                      Tempo de Recorrência <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      name="valor_indicador_apresentado"
-                      value={novaLinha.valor_indicador_apresentado}
-                      onChange={handleInputChange}
+                      inputMode="numeric"
+                      name="tempo_recorrencia"
+                      value={novaLinha.tempo_recorrencia}
+                      onChange={(e) => {
+                        // Permitir apenas números ou campo vazio
+                        const value = e.target.value;
+                        if (value === '' || /^\d+$/.test(value)) {
+                          handleInputChange(e);
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Digite o valor apresentado"
+                      placeholder="Ex: 1"
+                      required={novaLinha.recorrencia !== 'sem recorrencia'}
                     />
+                    <p className="text-sm text-gray-500 mt-1">
+                      {novaLinha.recorrencia === 'dia' && 'A cada quantos dias o item se repete'}
+                      {novaLinha.recorrencia === 'mês' && 'A cada quantos meses o item se repete'}
+                      {novaLinha.recorrencia === 'ano' && 'A cada quantos anos o item se repete'}
+                    </p>
                   </div>
-                  
+                )}
+                
+                {/* Número de Repetições - apenas se a recorrência não for "sem recorrencia" */}
+                {novaLinha.recorrencia !== 'sem recorrencia' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unidade do Indicador
+                      Número de Repetições <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      name="tipo_unidade_indicador"
-                      value={novaLinha.tipo_unidade_indicador}
-                      onChange={handleInputChange}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      name="repeticoes"
+                      value={novaLinha.repeticoes}
+                      onChange={(e) => {
+                        // Permitir apenas números ou campo vazio
+                        const value = e.target.value;
+                        if (value === '' || /^\d+$/.test(value)) {
+                          handleInputChange(e);
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Selecione uma unidade</option>
-                      {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
-                        <option key={id} value={id}>
-                          {tipo}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Ex: 3"
+                      required={novaLinha.recorrencia !== 'sem recorrencia'}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Quantas vezes este item deve se repetir
+                    </p>
                   </div>
-                </div>
+                )}
 
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                   <div className="flex items-center">
                     <FiCalendar className="h-5 w-5 text-blue-600 mr-2" />
                     <div>
-                      <h4 className="text-sm font-medium text-blue-900">Valor Calculado</h4>
+                      <h4 className="text-sm font-medium text-blue-900">Informação Importante</h4>
                       <p className="text-sm text-blue-700">
-                        O valor calculado será preenchido automaticamente pelo sistema após a criação da linha.
+                        Esta linha será criada na tabela base de indicadores. Os campos "Valor Apresentado" e "Unidade do Indicador" poderão ser preenchidos posteriormente na tabela geral.
                       </p>
                     </div>
                   </div>
