@@ -71,10 +71,12 @@ const EditarLinhaIndicadorGeralDialog = ({
       // Preparar dados para atualização
       const dadosAtualizacao = {
         prazo_entrega: formData.prazo_entrega,
-        indicador: formData.indicador.trim(),
-        observacao: formData.observacao ? formData.observacao.trim() : null,
-        valor_indicador_apresentado: formData.valor_indicador_apresentado ? formData.valor_indicador_apresentado.trim() : null,
-        periodo_referencia: formData.periodo_referencia || null, // ← NOVO CAMPO
+        indicador: formData.indicador?.trim() || null,
+        observacao: formData.observacao?.trim() || null,
+        valor_indicador_apresentado: formData.valor_indicador_apresentado 
+          ? parseFloat(formData.valor_indicador_apresentado) 
+          : null,
+        periodo_referencia: formData.periodo_referencia || null,
         obrigatorio: formData.obrigatorio
       };
 
@@ -223,16 +225,17 @@ const EditarLinhaIndicadorGeralDialog = ({
               Valor Apresentado
             </label>
             <input
-              type="text"
+              type="number"
+              step="0.01"
               id="valor_indicador_apresentado"
               name="valor_indicador_apresentado"
               value={formData.valor_indicador_apresentado}
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Digite o valor apresentado do indicador"
+              placeholder="Digite o valor do indicador (ex: 15.75)"
             />
             <p className="mt-1 text-sm text-gray-500">
-              Este é o valor que será apresentado para o indicador.
+              Este é o valor numérico que será apresentado para o indicador.
             </p>
           </div>
           
