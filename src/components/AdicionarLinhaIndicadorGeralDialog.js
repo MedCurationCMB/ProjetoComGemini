@@ -30,9 +30,6 @@ const AdicionarLinhaIndicadorGeralDialog = ({
     tipo_indicador: '',
     subcategoria_id: '',
     prazo_entrega_inicial: '',
-    recorrencia: 'sem recorrencia',
-    tempo_recorrencia: '',
-    repeticoes: '',
     obrigatorio: false
   });
 
@@ -538,89 +535,13 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   />
                 </div>
 
-                {/* Recorrência */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Recorrência <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="recorrencia"
-                    value={novaLinha.recorrencia}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="sem recorrencia">Sem recorrência</option>
-                    <option value="dia">Dia</option>
-                    <option value="mês">Mês</option>
-                    <option value="ano">Ano</option>
-                  </select>
-                </div>
-                
-                {/* Tempo de Recorrência - apenas se a recorrência não for "sem recorrencia" */}
-                {novaLinha.recorrencia !== 'sem recorrencia' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tempo de Recorrência <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      name="tempo_recorrencia"
-                      value={novaLinha.tempo_recorrencia}
-                      onChange={(e) => {
-                        // Permitir apenas números ou campo vazio
-                        const value = e.target.value;
-                        if (value === '' || /^\d+$/.test(value)) {
-                          handleInputChange(e);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ex: 1"
-                      required={novaLinha.recorrencia !== 'sem recorrencia'}
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      {novaLinha.recorrencia === 'dia' && 'A cada quantos dias o item se repete'}
-                      {novaLinha.recorrencia === 'mês' && 'A cada quantos meses o item se repete'}
-                      {novaLinha.recorrencia === 'ano' && 'A cada quantos anos o item se repete'}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Número de Repetições - apenas se a recorrência não for "sem recorrencia" */}
-                {novaLinha.recorrencia !== 'sem recorrencia' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Número de Repetições <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      name="repeticoes"
-                      value={novaLinha.repeticoes}
-                      onChange={(e) => {
-                        // Permitir apenas números ou campo vazio
-                        const value = e.target.value;
-                        if (value === '' || /^\d+$/.test(value)) {
-                          handleInputChange(e);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ex: 3"
-                      required={novaLinha.recorrencia !== 'sem recorrencia'}
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Quantas vezes este item deve se repetir
-                    </p>
-                  </div>
-                )}
-
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                   <div className="flex items-center">
                     <FiCalendar className="h-5 w-5 text-blue-600 mr-2" />
                     <div>
                       <h4 className="text-sm font-medium text-blue-900">Informação Importante</h4>
                       <p className="text-sm text-blue-700">
-                        Esta linha será criada na tabela base de indicadores. Os campos "Valor Apresentado" e "Unidade do Indicador" poderão ser preenchidos posteriormente na tabela geral.
+                        Esta linha será criada como <strong>sem recorrência</strong> na tabela base de indicadores. Para criar linhas recorrentes, use a opção "Sim, Recorrente" no início.
                       </p>
                     </div>
                   </div>
