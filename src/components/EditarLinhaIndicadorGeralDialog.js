@@ -1,4 +1,4 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js - Versão Completa e Corrigida
+// src/components/EditarLinhaIndicadorGeralDialog.js - Versão com Período de Referência
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -20,6 +20,7 @@ const EditarLinhaIndicadorGeralDialog = ({
     observacao: '',
     valor_indicador_apresentado: '',
     tipo_unidade_indicador: '',
+    periodo_referencia: '', // ← NOVO CAMPO
     obrigatorio: false
   });
   
@@ -34,6 +35,7 @@ const EditarLinhaIndicadorGeralDialog = ({
         observacao: controleItem.observacao || '',
         valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
         tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
+        periodo_referencia: controleItem.periodo_referencia || '', // ← NOVO CAMPO
         obrigatorio: controleItem.obrigatorio || false
       });
     }
@@ -72,6 +74,7 @@ const EditarLinhaIndicadorGeralDialog = ({
         indicador: formData.indicador.trim(),
         observacao: formData.observacao.trim() || null,
         valor_indicador_apresentado: formData.valor_indicador_apresentado.trim() || null,
+        periodo_referencia: formData.periodo_referencia || null, // ← NOVO CAMPO
         obrigatorio: formData.obrigatorio
       };
 
@@ -161,6 +164,24 @@ const EditarLinhaIndicadorGeralDialog = ({
               required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+          
+          {/* Período de Referência - NOVO CAMPO */}
+          <div>
+            <label htmlFor="periodo_referencia" className="block text-sm font-medium text-gray-700 mb-1">
+              Período de Referência
+            </label>
+            <input
+              type="date"
+              id="periodo_referencia"
+              name="periodo_referencia"
+              value={formData.periodo_referencia}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Data de referência para o cálculo ou avaliação deste indicador.
+            </p>
           </div>
           
           {/* Indicador */}

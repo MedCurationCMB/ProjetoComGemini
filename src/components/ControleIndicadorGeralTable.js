@@ -1,4 +1,4 @@
-// Componente ControleIndicadorGeralTable.js - Versão Completa e Corrigida
+// Componente ControleIndicadorGeralTable.js - Versão com Período de Referência
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -495,6 +495,9 @@ const ControleIndicadorGeralTable = ({ user }) => {
                 Prazo Atual
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Período de Referência
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Recorrência
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -552,6 +555,12 @@ const ControleIndicadorGeralTable = ({ user }) => {
                     <div className="flex items-center">
                       <FiCalendar className="mr-1 text-blue-500" />
                       {formatDate(item.prazo_entrega)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex items-center">
+                      <FiCalendar className="mr-1 text-green-500" />
+                      {formatDate(item.periodo_referencia)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -618,7 +627,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="16" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="17" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado para os projetos vinculados
                 </td>
               </tr>
