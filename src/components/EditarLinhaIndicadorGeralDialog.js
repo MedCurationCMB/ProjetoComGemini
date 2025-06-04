@@ -1,14 +1,25 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js
+// src/components/EditarLinhaIndicadorGeralDialog.js - Versão Completa e Corrigida
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiX, FiCheck, FiCalendar } from 'react-icons/fi';
 
-const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, categorias, projetos, tiposIndicador, subcategorias }) => {
+const EditarLinhaIndicadorGeralDialog = ({ 
+  controleItem, 
+  onClose, 
+  onSuccess, 
+  categorias, 
+  projetos, 
+  tiposIndicador, 
+  subcategorias, 
+  tiposUnidadeIndicador 
+}) => {
   const [formData, setFormData] = useState({
     prazo_entrega: '',
     indicador: '',
     observacao: '',
+    valor_indicador_apresentado: '',
+    tipo_unidade_indicador: '',
     obrigatorio: false
   });
   
@@ -21,6 +32,8 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
         prazo_entrega: controleItem.prazo_entrega || '',
         indicador: controleItem.indicador || '',
         observacao: controleItem.observacao || '',
+        valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
+        tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
         obrigatorio: controleItem.obrigatorio || false
       });
     }
@@ -53,15 +66,26 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
         return;
       }
       
+      // Preparar dados para atualização
+      const dadosAtualizacao = {
+        prazo_entrega: formData.prazo_entrega,
+        indicador: formData.indicador.trim(),
+        observacao: formData.observacao.trim() || null,
+        valor_indicador_apresentado: formData.valor_indicador_apresentado.trim() || null,
+        obrigatorio: formData.obrigatorio
+      };
+
+      // Incluir tipo_unidade_indicador apenas se foi selecionado
+      if (formData.tipo_unidade_indicador) {
+        dadosAtualizacao.tipo_unidade_indicador = parseInt(formData.tipo_unidade_indicador);
+      } else {
+        dadosAtualizacao.tipo_unidade_indicador = null;
+      }
+      
       // Atualizar o item de controle de indicador geral
       const { data, error } = await supabase
         .from('controle_indicador_geral')
-        .update({
-          prazo_entrega: formData.prazo_entrega,
-          indicador: formData.indicador.trim(),
-          observacao: formData.observacao.trim() || null,
-          obrigatorio: formData.obrigatorio
-        })
+        .update(dadosAtualizacao)
         .eq('id', controleItem.id)
         .select();
         
@@ -118,6 +142,7 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
             <p><strong>Subcategoria:</strong> {subcategorias[controleItem?.subcategoria_id] || 'N/A'}</p>
             <p><strong>ID Base:</strong> {controleItem?.id_controleindicador || 'N/A'}</p>
             <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
+            <p><strong>Valor Calculado Atual:</strong> {controleItem?.valor_indicador || '-'}</p>
           </div>
         </div>
         
@@ -171,6 +196,65 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
             />
           </div>
           
+          {/* Valor Apresentado */}
+          <div>
+            <label htmlFor="valor_indicador_apresentado" className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Apresentado
+            </label>
+            <input
+              type="text"
+              id="valor_indicador_apresentado"
+              name="valor_indicador_apresentado"
+              value={formData.valor_indicador_apresentado}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Digite o valor apresentado do indicador"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Este é o valor que será apresentado para o indicador.
+            </p>
+          </div>
+          
+          {/* Tipo de Unidade do Indicador */}
+          <div>
+            <label htmlFor="tipo_unidade_indicador" className="block text-sm font-medium text-gray-700 mb-1">
+              Unidade do Indicador
+            </label>
+            <select
+              id="tipo_unidade_indicador"
+              name="tipo_unidade_indicador"
+              value={formData.tipo_unidade_indicador}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Selecione uma unidade</option>
+              {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
+                <option key={id} value={id}>
+                  {tipo}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-sm text-gray-500">
+              Selecione a unidade de medida para este indicador.
+            </p>
+          </div>
+
+          {/* Informação sobre Valor Calculado */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="flex items-center">
+              <FiCalendar className="h-5 w-5 text-blue-600 mr-2" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-900">Valor Calculado</h4>
+                <p className="text-sm text-blue-700">
+                  O valor calculado é preenchido automaticamente pelo sistema e não pode ser editado manualmente.
+                </p>
+                <p className="text-sm text-blue-600 font-medium mt-1">
+                  Valor atual: {controleItem?.valor_indicador || 'Não calculado'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
           {/* Obrigatório */}
           <div className="flex items-center">
             <input
@@ -192,7 +276,7 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -207,7 +291,14 @@ const EditarLinhaIndicadorGeralDialog = ({ controleItem, onClose, onSuccess, cat
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              {loading ? 'Processando...' : 'Salvar Alterações'}
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Salvando...
+                </div>
+              ) : (
+                'Salvar Alterações'
+              )}
             </button>
           </div>
         </form>

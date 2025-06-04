@@ -1,4 +1,4 @@
-// Componente ControleIndicadorGeralTable.js
+// Componente ControleIndicadorGeralTable.js - Versão Completa e Corrigida
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -13,6 +13,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [tiposIndicador, setTiposIndicador] = useState({});
   const [subcategorias, setSubcategorias] = useState({});
+  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
   const [loading, setLoading] = useState(true);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
@@ -33,6 +34,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
       fetchProjetos();
       fetchTiposIndicador();
       fetchSubcategorias();
+      fetchTiposUnidadeIndicador();
       fetchControles();
     }
   }, [projetosVinculados]);
@@ -141,6 +143,26 @@ const ControleIndicadorGeralTable = ({ user }) => {
       setSubcategorias(subcategoriasObj);
     } catch (error) {
       console.error('Erro ao carregar subcategorias:', error);
+    }
+  };
+
+  // Buscar tipos de unidade de indicador
+  const fetchTiposUnidadeIndicador = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_unidade_indicador')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const tiposUnidadeObj = {};
+      data.forEach(tipo => {
+        tiposUnidadeObj[tipo.id] = tipo.tipo;
+      });
+      
+      setTiposUnidadeIndicador(tiposUnidadeObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de unidade de indicador:', error);
     }
   };
 
@@ -410,6 +432,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
           projetos={projetos}
           tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
@@ -423,6 +446,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
           projetos={projetos}
           tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
@@ -472,6 +496,15 @@ const ControleIndicadorGeralTable = ({ user }) => {
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Recorrência
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Valor Apresentado
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Unidade do Indicador
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Valor Calculado
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Obrigatório
@@ -532,6 +565,15 @@ const ControleIndicadorGeralTable = ({ user }) => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.valor_indicador_apresentado || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {tiposUnidadeIndicador[item.tipo_unidade_indicador] || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.valor_indicador || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.obrigatorio ? (
                       <span className="text-green-600 flex items-center">
                         <FiCheck className="mr-1" />
@@ -576,7 +618,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="13" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="16" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado para os projetos vinculados
                 </td>
               </tr>
