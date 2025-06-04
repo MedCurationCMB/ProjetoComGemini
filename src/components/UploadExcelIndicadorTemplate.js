@@ -188,7 +188,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Template Indicadores");
 
-      // Definir cabeçalhos
+      // Definir cabeçalhos (removidas as colunas solicitadas)
       worksheet.columns = [
         { header: "projeto_id", key: "projeto_id", width: 20 },
         { header: "categoria_id", key: "categoria_id", width: 20 },
@@ -196,9 +196,6 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         { header: "observacao", key: "observacao", width: 40 },
         { header: "tipo_indicador", key: "tipo_indicador", width: 20 },
         { header: "subcategoria_id", key: "subcategoria_id", width: 20 },
-        { header: "valor_indicador_apresentado", key: "valor_indicador_apresentado", width: 25 },
-        { header: "tipo_unidade_indicador", key: "tipo_unidade_indicador", width: 20 },
-        { header: "periodo_referencia", key: "periodo_referencia", width: 15 },
         { header: "prazo_entrega_inicial", key: "prazo_entrega_inicial", width: 15 },
         { header: "recorrencia", key: "recorrencia", width: 15 },
         { header: "tempo_recorrencia", key: "tempo_recorrencia", width: 15 },
@@ -214,9 +211,6 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         observacao: "Observações (opcional)",
         tipo_indicador: "Nome do tipo de indicador",
         subcategoria_id: "Nome da subcategoria",
-        valor_indicador_apresentado: "Valor numérico (opcional)",
-        tipo_unidade_indicador: "porcentagem, decimal, inteiro",
-        periodo_referencia: "Formato: AAAA-MM-DD",
         prazo_entrega_inicial: "Formato: AAAA-MM-DD",
         recorrencia: "dia, mês, ano, sem recorrencia",
         tempo_recorrencia: "Número inteiro",
@@ -237,9 +231,6 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         observacao: "Indicador mensal de performance",
         tipo_indicador: Object.values(tiposIndicador.idParaNome)[0] || "Nome do Tipo",
         subcategoria_id: Object.values(subcategorias.idParaNome)[0] || "Nome da Subcategoria",
-        valor_indicador_apresentado: 75.5,
-        tipo_unidade_indicador: "porcentagem",
-        periodo_referencia: "2024-01-01",
         prazo_entrega_inicial: "2024-01-31",
         recorrencia: "mês",
         tempo_recorrencia: 1,
@@ -499,22 +490,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
                 recorrencia = "sem recorrencia";
               }
 
-              // Processar tipo_unidade_indicador
-              let tipoUnidade = 1; // padrão: porcentagem
-              if (row.tipo_unidade_indicador) {
-                const tipoUnidadeText = normalizeText(String(row.tipo_unidade_indicador));
-                if (tipoUnidadeText === "porcentagem") {
-                  tipoUnidade = 1;
-                } else if (tipoUnidadeText === "decimal") {
-                  tipoUnidade = 2;
-                } else if (tipoUnidadeText === "inteiro") {
-                  tipoUnidade = 3;
-                } else {
-                  throw new Error(`Tipo de unidade inválido: "${row.tipo_unidade_indicador}". Use "porcentagem", "decimal" ou "inteiro" (linha ${rowNumber})`);
-                }
-              }
-
-              // Criar objeto validado
+              // Criar objeto validado (removidas as colunas desnecessárias)
               const item = {
                 projeto_id: projetoId,
                 categoria_id: categoriaId,
@@ -522,9 +498,6 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
                 observacao: String(row.observacao || "").trim() || null,
                 tipo_indicador: tipoId,
                 subcategoria_id: subcategoriaId,
-                valor_indicador_apresentado: row.valor_indicador_apresentado ? parseFloat(row.valor_indicador_apresentado) : null,
-                tipo_unidade_indicador: tipoUnidade,
-                periodo_referencia: row.periodo_referencia ? new Date(row.periodo_referencia) : null,
                 prazo_entrega_inicial: row.prazo_entrega_inicial ? new Date(row.prazo_entrega_inicial) : null,
                 recorrencia: recorrencia,
                 tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
