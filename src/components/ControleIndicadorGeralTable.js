@@ -1,10 +1,11 @@
-// Componente ControleIndicadorGeralTable.js - Versão com Período de Referência
+// Componente ControleIndicadorGeralTable.js - Versão atualizada com anexar documento
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload } from 'react-icons/fi';
 import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDialog';
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
+import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 
 const ControleIndicadorGeralTable = ({ user }) => {
   const [controles, setControles] = useState([]);
@@ -21,6 +22,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [atualizandoVisibilidade, setAtualizandoVisibilidade] = useState({});
+  const [anexarDocumentoId, setAnexarDocumentoId] = useState(null); // NOVO: Estado para anexar documento
 
   useEffect(() => {
     if (user?.id) {
@@ -278,6 +280,29 @@ const ControleIndicadorGeralTable = ({ user }) => {
     }
   };
 
+  // NOVO: Função para atualizar o status de um documento após upload ou vínculo
+  const handleDocumentoAnexado = async (controleId, documentoId = null) => {
+    try {
+      // Atualizar localmente
+      setControles(prevControles => 
+        prevControles.map(item => 
+          item.id === controleId 
+            ? { 
+                ...item, 
+                tem_documento: true
+              } 
+            : item
+        )
+      );
+      
+      toast.success('Documento anexado com sucesso!');
+      setAnexarDocumentoId(null);
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status do documento');
+    }
+  };
+
   // Formata a data para exibição
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -450,6 +475,21 @@ const ControleIndicadorGeralTable = ({ user }) => {
         />
       )}
 
+      {/* NOVO: Modal para anexar documento */}
+      {anexarDocumentoId && (
+        <AnexarDocumentoIndicadorDialog
+          controleId={anexarDocumentoId} 
+          onClose={() => setAnexarDocumentoId(null)}
+          onSuccess={(documentoId) => handleDocumentoAnexado(anexarDocumentoId, documentoId)}
+          controleItem={controles.find(item => item.id === anexarDocumentoId)}
+          categorias={categorias}
+          projetos={projetos}
+          tiposIndicador={tiposIndicador}
+          subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
       {/* Tabela de Controle Geral */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300">
@@ -511,6 +551,9 @@ const ControleIndicadorGeralTable = ({ user }) => {
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Obrigatório
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Status
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Visível
@@ -595,6 +638,18 @@ const ControleIndicadorGeralTable = ({ user }) => {
                       </span>
                     )}
                   </td>
+                  {/* NOVA COLUNA: Status do Documento */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {item.tem_documento ? (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Documento Anexado
+                      </span>
+                    ) : (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Sem Documento
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center justify-center">
                       {atualizandoVisibilidade[item.id] ? (
@@ -621,13 +676,25 @@ const ControleIndicadorGeralTable = ({ user }) => {
                         <FiEdit className="mr-1" />
                         Editar
                       </button>
+                      
+                      {/* NOVO: Botão para anexar documento (apenas se não tiver documento) */}
+                      {!item.tem_documento && (
+                        <button
+                          onClick={() => setAnexarDocumentoId(item.id)}
+                          className="text-blue-600 hover:text-blue-900 flex items-center"
+                          title="Anexar Documento"
+                        >
+                          <FiUpload className="mr-1" />
+                          Anexar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="17" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="18" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado para os projetos vinculados
                 </td>
               </tr>
