@@ -72,8 +72,8 @@ const EditarLinhaIndicadorGeralDialog = ({
       const dadosAtualizacao = {
         prazo_entrega: formData.prazo_entrega,
         indicador: formData.indicador.trim(),
-        observacao: formData.observacao.trim() || null,
-        valor_indicador_apresentado: formData.valor_indicador_apresentado.trim() || null,
+        observacao: formData.observacao ? formData.observacao.trim() : null,
+        valor_indicador_apresentado: formData.valor_indicador_apresentado ? formData.valor_indicador_apresentado.trim() : null,
         periodo_referencia: formData.periodo_referencia || null, // ← NOVO CAMPO
         obrigatorio: formData.obrigatorio
       };
