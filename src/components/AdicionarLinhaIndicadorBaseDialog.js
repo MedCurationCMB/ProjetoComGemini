@@ -20,9 +20,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     observacao: '',
     tipo_indicador: '',
     subcategoria_id: '',
-    valor_indicador_apresentado: '',
-    tipo_unidade_indicador: '1', // padrão: porcentagem
-    periodo_referencia: '',
     prazo_entrega_inicial: '',
     recorrencia: 'sem recorrencia',
     tempo_recorrencia: '',
@@ -90,9 +87,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         observacao: formData.observacao.trim() || null,
         tipo_indicador: parseInt(formData.tipo_indicador),
         subcategoria_id: parseInt(formData.subcategoria_id),
-        valor_indicador_apresentado: formData.valor_indicador_apresentado ? parseFloat(formData.valor_indicador_apresentado) : null,
-        tipo_unidade_indicador: parseInt(formData.tipo_unidade_indicador),
-        periodo_referencia: formData.periodo_referencia || null,
         prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
         recorrencia: formData.recorrencia,
         tempo_recorrencia: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.tempo_recorrencia) : null,
@@ -259,71 +253,18 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             </div>
           </div>
           
-          {/* Terceira linha: Valor apresentado e Tipo de unidade */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Valor Indicador Apresentado */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor Apresentado <span className="text-gray-400 text-xs">(opcional)</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                name="valor_indicador_apresentado"
-                value={formData.valor_indicador_apresentado}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="Ex: 75.5"
-              />
-            </div>
-            
-            {/* Tipo de Unidade do Indicador */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Unidade
-              </label>
-              <select
-                name="tipo_unidade_indicador"
-                value={formData.tipo_unidade_indicador}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="1">Porcentagem</option>
-                <option value="2">Decimal</option>
-                <option value="3">Inteiro</option>
-              </select>
-            </div>
-          </div>
-          
-          {/* Quarta linha: Período de referência e Prazo inicial */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Período de Referência */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Período de Referência <span className="text-gray-400 text-xs">(opcional)</span>
-              </label>
-              <input
-                type="date"
-                name="periodo_referencia"
-                value={formData.periodo_referencia}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            
-            {/* Prazo Inicial */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prazo Inicial <span className="text-gray-400 text-xs">(opcional)</span>
-              </label>
-              <input
-                type="date"
-                name="prazo_entrega_inicial"
-                value={formData.prazo_entrega_inicial}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
+          {/* Prazo inicial */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Prazo Inicial <span className="text-gray-400 text-xs">(opcional)</span>
+            </label>
+            <input
+              type="date"
+              name="prazo_entrega_inicial"
+              value={formData.prazo_entrega_inicial}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
           </div>
           
           {/* Recorrência */}

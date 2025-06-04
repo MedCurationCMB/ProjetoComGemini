@@ -344,13 +344,7 @@ const ControleIndicadorTable = ({ user }) => {
                 Subcategoria
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Valor Apresentado
-              </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Valor Calculado
-              </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Prazo de Referência
+                Prazo Inicial
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Recorrência
@@ -383,15 +377,9 @@ const ControleIndicadorTable = ({ user }) => {
                     {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.valor_indicador_apresentado || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.valor_indicador || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <FiCalendar className="mr-1 text-gray-400" />
-                      {formatDate(item.periodo_referencia)}
+                      {formatDate(item.prazo_entrega_inicial)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -421,7 +409,7 @@ const ControleIndicadorTable = ({ user }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="11" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
                   Nenhum item de controle encontrado para os projetos vinculados
                 </td>
               </tr>
