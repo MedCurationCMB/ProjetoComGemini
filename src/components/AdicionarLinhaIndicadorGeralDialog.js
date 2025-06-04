@@ -1,8 +1,8 @@
-// src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Completa e Corrigida
+// src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Corrigida seguindo o padrão do AdicionarLinhaConteudoDialog
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiPlus, FiX, FiCheck, FiCalendar, FiInfo } from 'react-icons/fi';
+import { FiPlus, FiX, FiCheck, FiCalendar } from 'react-icons/fi';
 
 const AdicionarLinhaIndicadorGeralDialog = ({ 
   onClose, 
@@ -10,8 +10,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   categorias, 
   projetos, 
   tiposIndicador, 
-  subcategorias, 
-  tiposUnidadeIndicador 
+  subcategorias 
 }) => {
   const [step, setStep] = useState(1); // 1: escolha recorrente, 2: formulário
   const [isRecorrente, setIsRecorrente] = useState(null);
@@ -21,7 +20,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
-  // Campos para formulário não recorrente (agora para controle_indicador)
+  // Campos para formulário não recorrente
   const [novaLinha, setNovaLinha] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -182,28 +181,8 @@ const AdicionarLinhaIndicadorGeralDialog = ({
         toast.success(`${novasLinhasInseridas.length} novas linhas adicionadas com sucesso!`);
         
       } else {
-        // Adicionar uma nova linha na tabela controle_indicador (BASE)
+        // Adicionar uma nova linha não recorrente na tabela controle_indicador (BASE)
         // Validar campos obrigatórios
-        if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador || !novaLinha.subcategoria_id) {
-          toast.error('Por favor, preencha todos os campos obrigatórios');
-          setLoading(false);
-          return;
-        }
-        
-        // Validar campos adicionais se a recorrência não for "sem recorrencia"
-        if (novaLinha.recorrencia !== 'sem recorrencia') {
-          if (!novaLinha.tempo_recorrencia || parseInt(novaLinha.tempo_recorrencia) < 1) {
-            toast.error('Por favor, informe um tempo de recorrência válido');
-            setLoading(false);
-            return;
-          }
-          
-          if (!novaLinha.repeticoes || parseInt(novaLinha.repeticoes) < 1) {
-            toast.error('Por favor, informe um número válido de repetições');
-            setLoading(false);
-            return;
-          }
-        }
         if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador || !novaLinha.subcategoria_id) {
           toast.error('Por favor, preencha todos os campos obrigatórios');
           setLoading(false);
@@ -219,11 +198,11 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           tipo_indicador: parseInt(novaLinha.tipo_indicador),
           subcategoria_id: parseInt(novaLinha.subcategoria_id),
           prazo_entrega_inicial: novaLinha.prazo_entrega_inicial || null,
-          recorrencia: novaLinha.recorrencia,
-          tempo_recorrencia: novaLinha.recorrencia !== 'sem recorrencia' ? parseInt(novaLinha.tempo_recorrencia) || null : null,
-          repeticoes: novaLinha.recorrencia !== 'sem recorrencia' ? parseInt(novaLinha.repeticoes) || 0 : 0,
+          recorrencia: 'sem recorrencia', // ← Sempre "sem recorrencia"
+          tempo_recorrencia: null,
+          repeticoes: 0,
           obrigatorio: novaLinha.obrigatorio,
-          tem_documento: false // sempre começa como false
+          tem_documento: false
         };
         
         // Inserir na tabela controle_indicador (BASE)
@@ -234,7 +213,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           
         if (error) throw error;
         
-        toast.success('Nova linha de indicador base adicionada com sucesso!');
+        toast.success('Nova linha de indicador adicionada com sucesso!');
       }
       
       // Fechar diálogo e atualizar tabela
@@ -252,9 +231,9 @@ const AdicionarLinhaIndicadorGeralDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white p-6 rounded-lg max-w-lg w-full">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Adicionar Linha de Indicador Geral</h2>
+          <h2 className="text-xl font-bold">Adicionar Linha de Indicador</h2>
           <button 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -265,93 +244,58 @@ const AdicionarLinhaIndicadorGeralDialog = ({
         
         {step === 1 ? (
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <div className="flex items-center">
-                <FiInfo className="h-5 w-5 text-blue-600 mr-2" />
-                <div>
-                  <h4 className="text-sm font-medium text-blue-900">Tipo de Linha</h4>
-                  <p className="text-sm text-blue-700">
-                    Escolha se deseja criar linhas baseadas em um indicador recorrente existente ou criar uma nova linha única.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <h3 className="text-lg font-medium">Esta será uma linha recorrente?</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex space-x-4">
               <button
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`flex-1 py-3 px-4 rounded-md ${
                   isRecorrente === true 
-                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 onClick={() => setIsRecorrente(true)}
               >
-                <div className="flex flex-col items-center text-center">
-                  <FiCheck className="mb-2 h-6 w-6" />
-                  <h4 className="font-medium mb-1">Sim, Recorrente</h4>
-                  <p className="text-sm">
-                    Criar múltiplas linhas baseadas em um indicador recorrente existente
-                  </p>
+                <div className="flex justify-center items-center">
+                  <FiCheck className="mr-2" />
+                  Sim
                 </div>
               </button>
               
               <button
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`flex-1 py-3 px-4 rounded-md ${
                   isRecorrente === false 
-                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 onClick={() => setIsRecorrente(false)}
               >
-                <div className="flex flex-col items-center text-center">
-                  <FiPlus className="mb-2 h-6 w-6" />
-                  <h4 className="font-medium mb-1">Não, Nova Linha</h4>
-                  <p className="text-sm">
-                    Criar uma nova linha na tabela base de indicadores
-                  </p>
+                <div className="flex justify-center items-center">
+                  <FiX className="mr-2" />
+                  Não
                 </div>
               </button>
             </div>
             
-            <div className="pt-4 border-t border-gray-200">
+            <div className="mt-6 pt-4 border-t border-gray-200">
               <button
                 onClick={handleConfirmChoice}
-                disabled={isRecorrente === null}
-                className={`w-full py-3 px-4 rounded-md font-medium ${
-                  isRecorrente === null
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
               >
                 Continuar
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {isRecorrente ? (
               // Formulário para linhas recorrentes
               <>
-                <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                  <div className="flex items-center">
-                    <FiCheck className="h-5 w-5 text-green-600 mr-2" />
-                    <div>
-                      <h4 className="text-sm font-medium text-green-900">Linhas Recorrentes</h4>
-                      <p className="text-sm text-green-700">
-                        Selecione um indicador base e o número de repetições para gerar automaticamente linhas na tabela geral.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Selecione a Linha Base <span className="text-red-500">*</span>
+                    Selecione a Linha Base
                   </label>
                   {loadingLinhasBase ? (
-                    <div className="flex items-center text-sm text-gray-500 p-3 border border-gray-300 rounded-md">
+                    <div className="flex items-center text-sm text-gray-500">
                       <div className="mr-2 h-4 w-4 border-t-2 border-b-2 border-gray-500 rounded-full animate-spin"></div>
                       Carregando linhas disponíveis...
                     </div>
@@ -359,7 +303,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     <select
                       value={linhaBaseId}
                       onChange={(e) => setLinhaBaseId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="">Selecione uma linha base</option>
                       {linhasBase.map((linha) => (
@@ -369,16 +313,11 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                       ))}
                     </select>
                   )}
-                  {linhasBase.length === 0 && !loadingLinhasBase && (
-                    <p className="mt-1 text-sm text-orange-600">
-                      Nenhuma linha base recorrente encontrada. Crie primeiro um indicador recorrente na tabela base.
-                    </p>
-                  )}
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de Repetições <span className="text-red-500">*</span>
+                    Número de Repetições
                   </label>
                   <input
                     type="text"
@@ -391,160 +330,128 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                         setNumRepeticoes(value);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: 3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
-                  <p className="mt-1 text-sm text-gray-500">
-                    Quantas linhas recorrentes devem ser criadas baseadas no indicador selecionado.
-                  </p>
                 </div>
               </>
             ) : (
               // Formulário para novas linhas não recorrentes
               <>
-                <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
-                  <div className="flex items-center">
-                    <FiPlus className="h-5 w-5 text-orange-600 mr-2" />
-                    <div>
-                      <h4 className="text-sm font-medium text-orange-900">Nova Linha Base</h4>
-                      <p className="text-sm text-orange-700">
-                        Preencha os dados para criar uma nova linha na tabela base de indicadores (não na tabela geral).
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Projeto <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="projeto_id"
-                      value={novaLinha.projeto_id}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Selecione um projeto</option>
-                      {Object.entries(projetos).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoria <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="categoria_id"
-                      value={novaLinha.categoria_id}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Selecione uma categoria</option>
-                      {Object.entries(categorias).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Projeto
+                  </label>
+                  <select
+                    name="projeto_id"
+                    value={novaLinha.projeto_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione um projeto</option>
+                    {Object.entries(projetos).map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Indicador <span className="text-red-500">*</span>
+                    Categoria
+                  </label>
+                  <select
+                    name="categoria_id"
+                    value={novaLinha.categoria_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    {Object.entries(categorias).map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Indicador
                   </label>
                   <input
                     type="text"
                     name="indicador"
                     value={novaLinha.indicador}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     placeholder="Digite o nome do indicador"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Observação
+                    Observação <span className="text-gray-400 text-xs">(opcional)</span>
                   </label>
                   <textarea
                     name="observacao"
                     value={novaLinha.observacao}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     rows="2"
                     placeholder="Digite observações sobre o indicador"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de Indicador <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="tipo_indicador"
-                      value={novaLinha.tipo_indicador}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Selecione um tipo</option>
-                      {Object.entries(tiposIndicador).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Subcategoria <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="subcategoria_id"
-                      value={novaLinha.subcategoria_id}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Selecione uma subcategoria</option>
-                      {Object.entries(subcategorias).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Indicador
+                  </label>
+                  <select
+                    name="tipo_indicador"
+                    value={novaLinha.tipo_indicador}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione um tipo</option>
+                    {Object.entries(tiposIndicador).map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prazo Inicial
+                    Subcategoria
+                  </label>
+                  <select
+                    name="subcategoria_id"
+                    value={novaLinha.subcategoria_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione uma subcategoria</option>
+                    {Object.entries(subcategorias).map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prazo Inicial <span className="text-gray-400 text-xs">(opcional)</span>
                   </label>
                   <input
                     type="date"
                     name="prazo_entrega_inicial"
                     value={novaLinha.prazo_entrega_inicial}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <div className="flex items-center">
-                    <FiCalendar className="h-5 w-5 text-blue-600 mr-2" />
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-900">Informação Importante</h4>
-                      <p className="text-sm text-blue-700">
-                        Esta linha será criada como <strong>sem recorrência</strong> na tabela base de indicadores. Para criar linhas recorrentes, use a opção "Sim, Recorrente" no início.
-                      </p>
-                    </div>
-                  </div>
                 </div>
                 
                 <div className="flex items-center">
@@ -563,11 +470,10 @@ const AdicionarLinhaIndicadorGeralDialog = ({
               </>
             )}
             
-            <div className="pt-4 border-t border-gray-200 flex justify-between">
+            <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between">
               <button
                 onClick={() => setStep(1)}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 Voltar
               </button>
@@ -575,20 +481,13 @@ const AdicionarLinhaIndicadorGeralDialog = ({
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className={`px-6 py-2 rounded-md font-medium ${
+                className={`px-4 py-2 rounded-md ${
                   loading
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
               >
-                {loading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Processando...
-                  </div>
-                ) : (
-                  'Adicionar'
-                )}
+                {loading ? 'Processando...' : 'Adicionar'}
               </button>
             </div>
           </div>
