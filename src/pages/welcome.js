@@ -107,6 +107,13 @@ export default function Welcome({ user }) {
             </Link>
 
             <Link 
+              href="/controle-indicador" 
+              className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Controle de Indicadores
+            </Link>
+
+            <Link 
               href="/med-curation-desktop" 
               className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
