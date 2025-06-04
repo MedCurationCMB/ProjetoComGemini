@@ -90,7 +90,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       // Buscar tipos de indicador
       const { data: tiposData, error: tiposError } = await supabase
         .from("tipos_indicador")
-        .select("id, nome");
+        .select("id, tipo");
 
       if (tiposError) throw tiposError;
 
@@ -120,9 +120,9 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       // Criar mapeamentos para tipos de indicador
       const tiposNomeParaId = {};
       const tiposIdParaNome = {};
-      tiposData.forEach((tipo) => {
-        tiposNomeParaId[tipo.nome.toLowerCase()] = tipo.id;
-        tiposIdParaNome[tipo.id] = tipo.nome;
+      tiposData.forEach((tipoItem) => {
+        tiposNomeParaId[tipoItem.tipo.toLowerCase()] = tipoItem.id;  // ← MUDANÇA
+        tiposIdParaNome[tipoItem.id] = tipoItem.tipo;  // ← MUDANÇA
       });
 
       // Criar mapeamentos para subcategorias

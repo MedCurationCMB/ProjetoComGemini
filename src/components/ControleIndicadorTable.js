@@ -109,8 +109,8 @@ const ControleIndicadorTable = ({ user }) => {
       if (error) throw error;
       
       const tiposObj = {};
-      data.forEach(tipo => {
-        tiposObj[tipo.id] = tipo.nome;
+      data.forEach(tipoItem => {
+        tiposObj[tipoItem.id] = tipoItem.tipo;  // ← MUDANÇA: 'tipo' em vez de 'nome'
       });
       
       setTiposIndicador(tiposObj);
