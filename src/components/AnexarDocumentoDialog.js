@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { FiUpload, FiFile, FiX, FiCloud, FiServer, FiArrowLeft } from 'react-icons/fi';
 
 const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, categorias, projetos, isGeralTable = false }) => {
-  // Adicionar um novo estado para controlar o fluxo
+  // Estados para controlar o fluxo
   const [step, setStep] = useState('escolha'); // 'escolha', 'computador', 'nuvem'
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -17,17 +17,17 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
   
-  // NOVO: Estado para projetos vinculados
+  // Estado para projetos vinculados
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   
-  // NOVO: Buscar projetos vinculados ao usuário quando o componente monta
+  // PASSO 1: Buscar projetos vinculados ao usuário quando o componente monta
   useEffect(() => {
     const fetchProjetosVinculados = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          console.error('Usuário não autenticado');
+          console.error('❌ Usuário não autenticado');
           setProjetosVinculados([]);
           return;
         }
@@ -70,7 +70,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
     }
   }, [step, projetosVinculados]);
   
-  // MODIFICADO: Função para buscar documentos existentes FILTRADOS por projetos vinculados
+  // PASSO 2: Função para buscar documentos existentes FILTRADOS por projetos vinculados
   const fetchDocumentosExistentes = async () => {
     try {
       setLoadingDocumentos(true);
@@ -529,7 +529,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         
         {step === 'nuvem' && (
           <div className="space-y-4">
-            {/* NOVO: Aviso sobre filtro por projetos vinculados */}
+            {/* Aviso sobre filtro por projetos vinculados */}
             <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
               <p className="text-blue-800 text-sm">
                 <strong>Observação:</strong> São exibidos apenas documentos dos projetos aos quais você está vinculado.
