@@ -1,310 +1,296 @@
-import { useState, useEffect } from 'react';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
-import { toast } from 'react-hot-toast';
-import Navbar from '../components/Navbar';
-import FileUpload from '../components/FileUpload';
+import React, { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { FiFolder } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { FiUpload, FiFile, FiCheck, FiX, FiFolder } from 'react-icons/fi';
 
-export default function Upload({ user }) {
-  const router = useRouter();
-  const [categorias, setCategorias] = useState([]);
-  const [categoriaId, setCategoriaId] = useState('');
-  const [projetos, setProjetos] = useState([]); // Projetos vinculados
-  const [projetosVinculados, setProjetosVinculados] = useState([]); // IDs dos projetos vinculados
-  const [projetoId, setProjetoId] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
-
-  // Redirecionar para a página de login se o usuário não estiver autenticado
-  useEffect(() => {
-    if (!user) {
-      router.replace('/login');
+const FileUpload = ({ categoria_id, projeto_id, onUploadComplete, projetosVinculados = [] }) => {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [descricao, setDescricao] = useState('');
+  
+  // Função para lidar com a seleção de arquivo
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    
+    // Verificar se um arquivo foi selecionado
+    if (!selectedFile) {
+      return;
     }
-  }, [user, router]);
-
-  // Carregar dados quando o usuário estiver disponível
-  useEffect(() => {
-    if (user?.id) {
-      fetchProjetosVinculados();
-      fetchApresentacaoVariaveis();
+    
+    // Verificar se o arquivo é um PDF
+    if (selectedFile.type !== 'application/pdf') {
+      toast.error('Por favor, selecione apenas arquivos PDF');
+      return;
     }
-  }, [user]);
-
-  // Carregar categorias e projetos quando os projetos vinculados estiverem disponíveis
-  useEffect(() => {
-    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
-      fetchData();
+    
+    // Verificar o tamanho do arquivo (limite de 10MB)
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      toast.error('O arquivo não pode ter mais de 10MB');
+      return;
     }
-  }, [projetosVinculados]);
+    
+    setFile(selectedFile);
+  };
+  
+  // Função para fazer upload do arquivo
+  const uploadFile = async (e) => {
+    e.preventDefault();
+    
+    if (!file) {
+      toast.error('Por favor, selecione um arquivo para upload');
+      return;
+    }
+    
+    if (!categoria_id) {
+      toast.error('Por favor, selecione uma categoria');
+      return;
+    }
+    
+    if (!projeto_id) {
+      toast.error('Por favor, selecione um projeto');
+      return;
+    }
 
-  // Função para buscar dados de apresentação
-  const fetchApresentacaoVariaveis = async () => {
+    // ✅ CORREÇÃO: Validação correta para UUIDs (sem parseInt)
+    console.log('Projeto selecionado (UUID):', projeto_id);
+    console.log('Projetos vinculados (UUIDs):', projetosVinculados);
+    
+    // Verificar se o projeto selecionado está na lista de projetos vinculados
+    if (projetosVinculados.length > 0) {
+      const isVinculado = projetosVinculados.includes(projeto_id);
+      console.log('Usuário está vinculado ao projeto?', isVinculado);
+      
+      if (!isVinculado) {
+        console.error('Projeto UUID não encontrado na lista de vinculados');
+        toast.error('Você não está vinculado ao projeto selecionado');
+        return;
+      }
+    }
+    
     try {
-      const { data, error } = await supabase
-        .from('apresentacao_variaveis')
-        .select('*');
+      setUploading(true);
+      setProgress(0);
       
-      if (error) throw error;
+      // Obter a sessão atual do usuário
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Converter array em objeto para fácil acesso por nome_variavel
-      const apresentacaoObj = {};
-      data.forEach(item => {
-        apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
+      if (!session) {
+        toast.error('Você precisa estar logado para fazer upload de arquivos');
+        setUploading(false);
+        return;
+      }
+      
+      // Criar um FormData para enviar o arquivo
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('descricao', descricao);
+      formData.append('categoria_id', categoria_id);
+      formData.append('projeto_id', projeto_id);
+      
+      // Fazer upload para a API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: formData
       });
       
-      setApresentacaoVariaveis(apresentacaoObj);
-    } catch (error) {
-      console.error('Erro ao carregar apresentação das variáveis:', error);
-    }
-  };
-
-  // Função para buscar projetos vinculados ao usuário
-  const fetchProjetosVinculados = async () => {
-    try {
-      console.log('Buscando projetos vinculados para o usuário:', user.id);
+      // Simulação de progresso (em um caso real, você poderia usar um evento de progresso)
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 200);
       
-      const { data, error } = await supabase
-        .from('relacao_usuarios_projetos')
-        .select('projeto_id')
-        .eq('usuario_id', user.id);
-      
-      if (error) throw error;
-      
-      // Extrair apenas os IDs dos projetos
-      const projetoIds = data.map(item => item.projeto_id);
-      setProjetosVinculados(projetoIds);
-      
-      console.log('Projetos vinculados ao usuário:', projetoIds);
-    } catch (error) {
-      console.error('Erro ao carregar projetos vinculados:', error);
-      setProjetosVinculados([]);
-    }
-  };
-
-  // Carregar categorias e projetos
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      
-      // Buscar categorias (todas)
-      const { data: categoriasData, error: categoriasError } = await supabase
-        .from('categorias')
-        .select('*')
-        .order('nome');
-      
-      if (categoriasError) {
-        throw categoriasError;
+      // Verificar resposta
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao fazer upload do arquivo');
       }
       
-      setCategorias(categoriasData || []);
+      // Processar resposta
+      const data = await response.json();
       
-      // Buscar APENAS projetos vinculados ao usuário
-      if (projetosVinculados.length > 0) {
-        console.log('Carregando projetos com IDs:', projetosVinculados);
+      // Upload completo
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      // Resetar estado
+      setTimeout(() => {
+        setFile(null);
+        setDescricao('');
+        setUploading(false);
+        setProgress(0);
         
-        const { data: projetosData, error: projetosError } = await supabase
-          .from('projetos')
-          .select('*')
-          .in('id', projetosVinculados) // Filtrar apenas projetos vinculados
-          .order('nome');
-        
-        if (projetosError) {
-          throw projetosError;
+        // Notificar componente pai
+        if (onUploadComplete && typeof onUploadComplete === 'function') {
+          onUploadComplete(data);
         }
         
-        console.log('Projetos carregados:', projetosData);
-        setProjetos(projetosData || []);
-        console.log('Projetos carregados para upload:', projetosData?.length || 0);
-      } else {
-        // Se não há projetos vinculados, definir como array vazio
-        console.log('Nenhum projeto vinculado encontrado');
-        setProjetos([]);
-      }
+        toast.success('Arquivo enviado com sucesso!');
+      }, 1000);
+      
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast.error('Não foi possível carregar as categorias ou projetos');
-    } finally {
-      setLoading(false);
+      console.error('Erro no upload:', error);
+      toast.error(error.message || 'Falha ao enviar o arquivo');
+      setUploading(false);
+      setProgress(0);
     }
   };
 
-  // Função que é chamada quando o upload é concluído
-  const handleUploadComplete = (data) => {
-    console.log('Upload concluído com sucesso:', data);
-    router.push('/tabela');
-  };
-
-  // Não renderizar nada até que a verificação de autenticação seja concluída
-  if (!user) {
-    return null;
-  }
-
-  // Se não há projetos vinculados, mostrar mensagem informativa
-  if (projetosVinculados.length === 0 && !loading) {
+  // Se não há projetos vinculados e o array foi fornecido, mostrar mensagem
+  if (projetosVinculados.length === 0 && Array.isArray(projetosVinculados)) {
     return (
-      <div>
-        <Head>
-          <title>Upload de Arquivo - Sistema de Conteúdo</title>
-        </Head>
-
-        <Navbar user={user} />
-
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Upload de Arquivo PDF</h1>
-            
-            <Link 
-              href="/welcome" 
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Voltar
-            </Link>
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="py-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <FiFolder className="w-8 h-8 text-gray-400" />
           </div>
-          
-          <div className="py-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <FiFolder className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes antes de fazer upload de arquivos.
-            </p>
-          </div>
-        </main>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes antes de fazer upload de arquivos.
+          </p>
+        </div>
       </div>
     );
   }
-
+  
   return (
-    <div>
-      <Head>
-        <title>Upload de Arquivo - Sistema de Conteúdo</title>
-      </Head>
-
-      <Navbar user={user} />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Upload de Arquivo PDF</h1>
-          
-          <Link 
-            href="/welcome" 
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Voltar
-          </Link>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-xl font-semibold mb-4">Upload de Arquivo PDF</h2>
+      
+      <form onSubmit={uploadFile} className="space-y-4">
+        {/* Campo de descrição (agora opcional) */}
+        <div>
+          <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">
+            Descrição do Arquivo <span className="text-gray-500 text-xs">(opcional)</span>
+          </label>
+          <input
+            type="text"
+            id="descricao"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            disabled={uploading}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Digite uma descrição para o arquivo (opcional)"
+          />
         </div>
         
-        {/* ✅ ADIÇÃO: Debug info - remover em produção */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-yellow-100 rounded-md">
-            <h3 className="font-bold mb-2">Debug Info (apenas em desenvolvimento):</h3>
-            <p><strong>Usuário ID:</strong> {user?.id}</p>
-            <p><strong>Projetos vinculados (IDs):</strong> {JSON.stringify(projetosVinculados)}</p>
-            <p><strong>Total de projetos carregados:</strong> {projetos.length}</p>
-            <p><strong>Projeto selecionado:</strong> {projetoId} (tipo: {typeof projetoId})</p>
-            <p><strong>Categoria selecionada:</strong> {categoriaId}</p>
-          </div>
-        )}
-        
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Selecione {apresentacaoVariaveis.categoria || 'Categoria'} e {apresentacaoVariaveis.projeto || 'Projeto'}</h2>
-              
-              {/* Campo de Categoria */}
-              <div className="mb-4">
-                <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-2">
-                  {apresentacaoVariaveis.categoria || 'Categoria'} do Documento
-                </label>
-                <select
-                  id="categoria"
-                  value={categoriaId}
-                  onChange={(e) => setCategoriaId(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Selecione uma {apresentacaoVariaveis.categoria?.toLowerCase() || 'categoria'}</option>
-                  {categorias.map((categoria) => (
-                    <option key={categoria.id} value={categoria.id}>
-                      {categoria.nome}
-                    </option>
-                  ))}
-                </select>
-                
-                {!categoriaId && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Você precisa selecionar uma {apresentacaoVariaveis.categoria?.toLowerCase() || 'categoria'} antes de fazer upload
-                  </p>
-                )}
-              </div>
-              
-              {/* Campo de Projeto */}
-              <div className="mb-4">
-                <label htmlFor="projeto" className="block text-sm font-medium text-gray-700 mb-2">
-                  {apresentacaoVariaveis.projeto || 'Projeto'} (apenas projetos vinculados)
-                </label>
-                <select
-                  id="projeto"
-                  value={projetoId}
-                  onChange={(e) => {
-                    console.log('Projeto selecionado:', e.target.value, 'Tipo:', typeof e.target.value);
-                    setProjetoId(e.target.value);
-                  }}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Selecione um {apresentacaoVariaveis.projeto?.toLowerCase() || 'projeto'}</option>
-                  {projetos.map((projeto) => (
-                    <option key={projeto.id} value={projeto.id}>
-                      {projeto.nome}
-                    </option>
-                  ))}
-                </select>
-                
-                {!projetoId && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Você precisa selecionar um {apresentacaoVariaveis.projeto?.toLowerCase() || 'projeto'} antes de fazer upload
-                  </p>
-                )}
-                
-                {/* Mostrar lista de projetos disponíveis para debug */}
-                {process.env.NODE_ENV === 'development' && projetos.length > 0 && (
-                  <div className="mt-2 text-xs text-gray-600">
-                    <strong>Projetos disponíveis:</strong>
-                    <ul className="ml-4">
-                      {projetos.map(projeto => (
-                        <li key={projeto.id}>ID: {projeto.id} - {projeto.nome}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-4">
-                <p className="text-sm text-gray-600">
-                  As {apresentacaoVariaveis.categoria?.toLowerCase() || 'categorias'} e {apresentacaoVariaveis.projeto?.toLowerCase() || 'projetos'} ajudam a organizar seus documentos para facilitar a busca posteriormente.
-                </p>
-                <p className="text-sm text-blue-600 mt-2">
-                  <strong>Nota:</strong> Apenas {apresentacaoVariaveis.projeto?.toLowerCase() || 'projetos'} aos quais você está vinculado são exibidos.
+        {/* Upload de arquivo */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Selecione um arquivo PDF
+          </label>
+          
+          {!file ? (
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+              <div className="space-y-1 text-center">
+                <FiUpload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="flex text-sm text-gray-600">
+                  <label
+                    htmlFor="file-upload"
+                    className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                  >
+                    <span>Selecionar arquivo</span>
+                    <input
+                      id="file-upload"
+                      name="file-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="application/pdf"
+                      onChange={handleFileChange}
+                      disabled={uploading}
+                    />
+                  </label>
+                  <p className="pl-1">ou arraste e solte</p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  PDF até 10MB
                 </p>
               </div>
             </div>
-            
-            <FileUpload 
-              categoria_id={categoriaId}
-              projeto_id={projetoId}
-              projetosVinculados={projetosVinculados} // Passar projetos vinculados para validação
-              onUploadComplete={handleUploadComplete} 
-            />
+          ) : (
+            <div className="mt-1 flex items-center p-4 border border-gray-300 rounded-md bg-gray-50">
+              <FiFile className="h-8 w-8 text-blue-500 mr-3" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {file.name}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                disabled={uploading}
+                className="ml-4 flex-shrink-0 p-1 rounded-full text-gray-400 hover:text-gray-500"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Barra de progresso */}
+        {uploading && (
+          <div className="mt-4">
+            <div className="relative pt-1">
+              <div className="flex mb-2 items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                    Upload em progresso
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-semibold inline-block text-blue-600">
+                    {progress}%
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                <div
+                  style={{ width: `${progress}%` }}
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-300"
+                ></div>
+              </div>
+            </div>
           </div>
         )}
-      </main>
+        
+        {/* Botão de envio */}
+        <div className="mt-6">
+          <button
+            type="submit"
+            disabled={!file || uploading}
+            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+              !file || uploading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+            }`}
+          >
+            {uploading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Enviando...
+              </span>
+            ) : (
+              'Enviar Arquivo'
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
-}
+};
+
+export default FileUpload;
