@@ -10,6 +10,7 @@ from supabase import create_client, Client
 from b2sdk.v2 import InMemoryAccountInfo, B2Api, UploadSourceBytes
 from PyPDF2 import PdfReader
 import tempfile
+import re  # ← Adicionado para limpeza de texto
 
 # Configuração do cliente Supabase
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
@@ -22,16 +23,48 @@ b2_application_key_id = os.environ.get("B2_APPLICATION_KEY_ID")
 b2_application_key = os.environ.get("B2_APPLICATION_KEY")
 b2_bucket_name = os.environ.get("B2_BUCKET_NAME")
 
+def limpar_texto_para_postgres(texto):
+    """
+    ✅ NOVA FUNÇÃO: Limpa texto para ser compatível com PostgreSQL
+    Remove null bytes e outros caracteres problemáticos
+    """
+    if not texto:
+        return ""
+    
+    # Remover null bytes (\u0000) e outros caracteres de controle problemáticos
+    texto_limpo = texto.replace('\u0000', '')  # Remove null bytes
+    
+    # Remover outros caracteres de controle Unicode problemáticos
+    # Manter apenas quebras de linha, tabs e caracteres imprimíveis
+    texto_limpo = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', texto_limpo)
+    
+    # Normalizar quebras de linha
+    texto_limpo = re.sub(r'\r\n|\r', '\n', texto_limpo)
+    
+    # Remover múltiplas quebras de linha consecutivas
+    texto_limpo = re.sub(r'\n{3,}', '\n\n', texto_limpo)
+    
+    # Remover espaços em excesso
+    texto_limpo = re.sub(r' {2,}', ' ', texto_limpo)
+    
+    return texto_limpo.strip()
+
 def extrair_texto_pdf(pdf_file):
-    """Extrai texto de um arquivo PDF usando PyPDF2"""
+    """✅ FUNÇÃO MODIFICADA: Extrai texto de um arquivo PDF usando PyPDF2 com limpeza"""
     try:
         pdf_file.seek(0)
         reader = PdfReader(pdf_file)
         texto = ""
         for page in reader.pages:
-            texto += page.extract_text() or ""
+            page_text = page.extract_text() or ""
+            texto += page_text
         
-        return texto.strip()
+        # ✅ ADICIONADO: Limpar o texto antes de retornar
+        texto_limpo = limpar_texto_para_postgres(texto)
+        
+        print(f"Texto extraído: {len(texto)} caracteres, após limpeza: {len(texto_limpo)} caracteres")
+        
+        return texto_limpo
     except Exception as e:
         print(f"Erro ao extrair texto do PDF: {str(e)}")
         return ""
@@ -105,15 +138,18 @@ def analisar_com_ia(file_id, texto_extraido, categoria_id, service_supabase):
         # Extrair o texto da resposta
         resultado = response.text
         
-        print(f"Resposta da IA recebida. Tamanho: {len(resultado)} caracteres")
+        # ✅ ADICIONADO: Limpar o resultado da IA também
+        resultado_limpo = limpar_texto_para_postgres(resultado)
+        
+        print(f"Resposta da IA recebida. Tamanho: {len(resultado)} caracteres, após limpeza: {len(resultado_limpo)} caracteres")
         
         # Atualizar o documento com o resultado da análise
         update_response = service_supabase.table('base_dados_conteudo').update({
-            'retorno_ia': resultado
+            'retorno_ia': resultado_limpo
         }).eq('id', file_id).execute()
         
         print(f"Análise de IA concluída e salva para o documento {file_id}")
-        return resultado
+        return resultado_limpo
         
     except Exception as e:
         print(f"Erro ao analisar com IA: {str(e)}")
@@ -336,9 +372,14 @@ class handler(BaseHTTPRequestHandler):
             # Salvar os metadados do arquivo no Supabase
             current_time = datetime.now().isoformat()
             
-            # Limitar o tamanho do texto extraído
+            # Limitar o tamanho do texto extraído E limpar caracteres problemáticos
             MAX_TEXTO_LENGTH = 100000
-            texto_extraido = texto_extraido[:MAX_TEXTO_LENGTH] if texto_extraido else ""
+            if texto_extraido:
+                # ✅ ADICIONADO: Dupla limpeza para garantir compatibilidade
+                texto_extraido = limpar_texto_para_postgres(texto_extraido)
+                texto_extraido = texto_extraido[:MAX_TEXTO_LENGTH]
+            else:
+                texto_extraido = ""
             
             # Não incluir ID no file_data para permitir que o PostgreSQL gere automaticamente
             file_data = {
@@ -353,9 +394,6 @@ class handler(BaseHTTPRequestHandler):
                 'conteudo': texto_extraido,
                 'backblaze_filename': unique_filename
             }
-            
-            # Remover a atualização direta do id_controleconteudogeral
-            # (essa é a principal mudança)
             
             # Adicionar id_controleconteudo se fornecido
             if id_controleconteudo is not None:
