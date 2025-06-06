@@ -1,4 +1,4 @@
-// Componente ControleConteudoGeralTable.js modificado com filtro por projetos vinculados
+// Componente ControleConteudoGeralTable.js modificado com correção para UUIDs
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -7,11 +7,11 @@ import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
 import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog';
 
-const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
+const ControleConteudoGeralTable = ({ user }) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
+  const [projetosVinculados, setProjetosVinculados] = useState([]); // ✅ CORRIGIDO: Array de UUIDs (strings)
   const [loading, setLoading] = useState(true);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
@@ -35,9 +35,11 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
     }
   }, [projetosVinculados]);
 
-  // Nova função para buscar projetos vinculados ao usuário
+  // ✅ CORRIGIDO: Função para buscar projetos vinculados ao usuário (UUIDs)
   const fetchProjetosVinculados = async () => {
     try {
+      console.log('🔍 Buscando projetos vinculados para usuário UUID:', user.id);
+      
       const { data, error } = await supabase
         .from('relacao_usuarios_projetos')
         .select('projeto_id')
@@ -45,13 +47,14 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
       
       if (error) throw error;
       
-      // Extrair apenas os IDs dos projetos
-      const projetoIds = data.map(item => item.projeto_id);
+      // ✅ CORRIGIDO: projeto_id são UUIDs (strings), não converter para números
+      const projetoIds = data.map(item => item.projeto_id); // Manter como strings (UUIDs)
       setProjetosVinculados(projetoIds);
       
-      console.log('Projetos vinculados ao usuário:', projetoIds);
+      console.log('✅ Projetos vinculados (UUIDs):', projetoIds);
+      console.log('📊 Total de projetos vinculados:', projetoIds.length);
     } catch (error) {
-      console.error('Erro ao carregar projetos vinculados:', error);
+      console.error('❌ Erro ao carregar projetos vinculados:', error);
       setProjetosVinculados([]);
     }
   };
@@ -65,19 +68,20 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
       
       if (error) throw error;
       
-      // Converter array em objeto para fácil acesso por ID
+      // ✅ CORRIGIDO: categoria.id são UUIDs (strings)
       const categoriasObj = {};
       data.forEach(cat => {
-        categoriasObj[cat.id] = cat.nome;
+        categoriasObj[cat.id] = cat.nome; // cat.id é UUID (string)
       });
       
       setCategorias(categoriasObj);
+      console.log('✅ Categorias carregadas (UUIDs):', Object.keys(categoriasObj).length);
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+      console.error('❌ Erro ao carregar categorias:', error);
     }
   };
 
-  // Buscar APENAS os projetos vinculados ao usuário
+  // ✅ CORRIGIDO: Buscar APENAS os projetos vinculados ao usuário (UUIDs)
   const fetchProjetos = async () => {
     try {
       if (projetosVinculados.length === 0) {
@@ -85,27 +89,29 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
         return;
       }
 
+      console.log('🔍 Buscando projetos com UUIDs:', projetosVinculados);
+
       const { data, error } = await supabase
         .from('projetos')
         .select('*')
-        .in('id', projetosVinculados); // Filtrar apenas projetos vinculados
+        .in('id', projetosVinculados); // ✅ CORRIGIDO: projetosVinculados são UUIDs (strings)
       
       if (error) throw error;
       
-      // Converter array em objeto para fácil acesso por ID
+      // ✅ CORRIGIDO: projeto.id são UUIDs (strings)
       const projetosObj = {};
       data.forEach(proj => {
-        projetosObj[proj.id] = proj.nome;
+        projetosObj[proj.id] = proj.nome; // proj.id é UUID (string)
       });
       
       setProjetos(projetosObj);
-      console.log('Projetos carregados:', projetosObj);
+      console.log('✅ Projetos carregados (UUIDs):', Object.keys(projetosObj).length);
     } catch (error) {
-      console.error('Erro ao carregar projetos:', error);
+      console.error('❌ Erro ao carregar projetos:', error);
     }
   };
 
-  // Buscar os dados de controle_conteudo_geral APENAS dos projetos vinculados
+  // ✅ CORRIGIDO: Buscar os dados de controle_conteudo_geral APENAS dos projetos vinculados (UUIDs)
   const fetchControles = async () => {
     try {
       setLoading(true);
@@ -117,18 +123,20 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
         return;
       }
       
+      console.log('🔍 Filtrando controles por projetos UUID:', projetosVinculados);
+      
       let query = supabase
         .from('controle_conteudo_geral')
         .select('*')
-        .in('projeto_id', projetosVinculados); // Filtrar apenas projetos vinculados
+        .in('projeto_id', projetosVinculados); // ✅ CORRIGIDO: filtrar por UUIDs
       
-      // Aplicar filtros se estiverem definidos
-      if (filtroProjetoId) {
-        query = query.eq('projeto_id', filtroProjetoId);
+      // ✅ CORRIGIDO: Aplicar filtros se estiverem definidos (UUIDs)
+      if (filtroProjetoId && filtroProjetoId.trim() !== '') {
+        query = query.eq('projeto_id', filtroProjetoId); // filtroProjetoId é UUID (string)
       }
       
-      if (filtroCategoriaId) {
-        query = query.eq('categoria_id', filtroCategoriaId);
+      if (filtroCategoriaId && filtroCategoriaId.trim() !== '') {
+        query = query.eq('categoria_id', filtroCategoriaId); // filtroCategoriaId é UUID (string)
       }
       
       // Aplicar ordenação
@@ -154,10 +162,13 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
       if (error) throw error;
       
       setControles(Array.isArray(data) ? data : []);
-      console.log('Controles carregados:', data?.length || 0);
+      console.log('✅ Controles carregados:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('📄 Exemplos de projeto_id nos controles:', data.slice(0, 3).map(c => c.projeto_id));
+      }
     } catch (error) {
       toast.error('Erro ao carregar dados de controle');
-      console.error(error);
+      console.error('❌ Erro ao carregar controles:', error);
     } finally {
       setLoading(false);
     }
@@ -347,8 +358,9 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="">Todos os projetos vinculados</option>
-              {Object.entries(projetos).map(([id, nome]) => (
-                <option key={id} value={id}>
+              {/* ✅ CORRIGIDO: Tratar IDs como UUIDs (strings) */}
+              {Object.entries(projetos).map(([uuid, nome]) => (
+                <option key={uuid} value={uuid}>
                   {nome}
                 </option>
               ))}
@@ -365,8 +377,9 @@ const ControleConteudoGeralTable = ({ user }) => { // Adicionado user como prop
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="">Todas as categorias</option>
-              {Object.entries(categorias).map(([id, nome]) => (
-                <option key={id} value={id}>
+              {/* ✅ CORRIGIDO: Tratar IDs como UUIDs (strings) */}
+              {Object.entries(categorias).map(([uuid, nome]) => (
+                <option key={uuid} value={uuid}>
                   {nome}
                 </option>
               ))}

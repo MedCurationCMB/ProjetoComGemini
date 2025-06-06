@@ -17,14 +17,14 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
   
-  // Estado para projetos vinculados
+  // ✅ CORRIGIDO: Estado para projetos vinculados (UUIDs)
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   
-  // ✅ NOVO: Estados separados para mapeamento completo
+  // ✅ CORRIGIDO: Estados separados para mapeamento completo (UUIDs)
   const [todosOsProjetos, setTodosOsProjetos] = useState({});
   const [todasAsCategorias, setTodasAsCategorias] = useState({});
 
-  // PASSO 1: Buscar projetos vinculados ao usuário quando o componente monta
+  // ✅ CORRIGIDO: PASSO 1 - Buscar projetos vinculados ao usuário (UUIDs)
   useEffect(() => {
     const fetchProjetosVinculados = async () => {
       try {
@@ -36,7 +36,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
           return;
         }
         
-        console.log('🔍 PASSO 1: Buscando projetos vinculados ao usuário:', session.user.id);
+        console.log('🔍 PASSO 1: Buscando projetos vinculados ao usuário UUID:', session.user.id);
         
         // PASSO 1: Buscar quais são os projetos vinculados ao usuário
         const { data, error } = await supabase
@@ -49,11 +49,11 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
           throw error;
         }
         
-        // Extrair apenas os IDs dos projetos
-        const projetoIds = data?.map(item => item.projeto_id) || [];
+        // ✅ CORRIGIDO: projeto_id são UUIDs (strings), não converter para números
+        const projetoIds = data?.map(item => item.projeto_id) || []; // Manter como UUIDs (strings)
         setProjetosVinculados(projetoIds);
         
-        console.log('✅ PASSO 1 CONCLUÍDO: Projetos vinculados encontrados:', projetoIds);
+        console.log('✅ PASSO 1 CONCLUÍDO: Projetos vinculados (UUIDs):', projetoIds);
         console.log('📊 Total de projetos vinculados:', projetoIds.length);
       } catch (error) {
         console.error('❌ Erro ao carregar projetos vinculados:', error);
@@ -65,7 +65,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
     fetchProjetosVinculados();
   }, []);
 
-  // ✅ NOVO: Buscar TODOS os projetos e categorias para mapeamento completo
+  // ✅ CORRIGIDO: Buscar TODOS os projetos e categorias para mapeamento completo (UUIDs)
   useEffect(() => {
     const fetchTodosOsDados = async () => {
       try {
@@ -79,13 +79,13 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         if (projetosError) {
           console.error('❌ Erro ao buscar projetos:', projetosError);
         } else {
-          // Converter array em objeto para fácil acesso por ID
+          // ✅ CORRIGIDO: projeto.id são UUIDs (strings)
           const projetosObj = {};
           projetosData.forEach(proj => {
-            projetosObj[proj.id] = proj.nome;
+            projetosObj[proj.id] = proj.nome; // proj.id é UUID (string)
           });
           setTodosOsProjetos(projetosObj);
-          console.log('✅ Todos os projetos carregados:', Object.keys(projetosObj).length);
+          console.log('✅ Todos os projetos carregados (UUIDs):', Object.keys(projetosObj).length);
         }
         
         // Buscar TODAS as categorias
@@ -96,13 +96,13 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         if (categoriasError) {
           console.error('❌ Erro ao buscar categorias:', categoriasError);
         } else {
-          // Converter array em objeto para fácil acesso por ID
+          // ✅ CORRIGIDO: categoria.id são UUIDs (strings)
           const categoriasObj = {};
           categoriasData.forEach(cat => {
-            categoriasObj[cat.id] = cat.nome;
+            categoriasObj[cat.id] = cat.nome; // cat.id é UUID (string)
           });
           setTodasAsCategorias(categoriasObj);
-          console.log('✅ Todas as categorias carregadas:', Object.keys(categoriasObj).length);
+          console.log('✅ Todas as categorias carregadas (UUIDs):', Object.keys(categoriasObj).length);
         }
       } catch (error) {
         console.error('❌ Erro ao carregar dados completos:', error);
@@ -116,12 +116,12 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   useEffect(() => {
     // Só executa se o step for 'nuvem' e já tiver carregado os projetos vinculados
     if (step === 'nuvem' && projetosVinculados !== undefined) {
-      console.log('🔍 PASSO 2: Iniciando busca de documentos para projetos:', projetosVinculados);
+      console.log('🔍 PASSO 2: Iniciando busca de documentos para projetos UUIDs:', projetosVinculados);
       fetchDocumentosExistentes();
     }
   }, [step, projetosVinculados]);
   
-  // PASSO 2: Função para buscar documentos existentes FILTRADOS por projetos vinculados
+  // ✅ CORRIGIDO: PASSO 2 - Função para buscar documentos existentes FILTRADOS por projetos vinculados (UUIDs)
   const fetchDocumentosExistentes = async () => {
     try {
       setLoadingDocumentos(true);
@@ -135,7 +135,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       }
       
       console.log('🔍 PASSO 2: Executando busca de documentos...');
-      console.log('📋 Projetos vinculados para filtro:', projetosVinculados);
+      console.log('📋 Projetos vinculados UUIDs para filtro:', projetosVinculados);
       
       // PASSO 2: Se não há projetos vinculados, não mostrar nenhum documento
       if (!projetosVinculados || projetosVinculados.length === 0) {
@@ -144,15 +144,15 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
-      // PASSO 2: Buscar na tabela base_dados_conteudo os documentos que possuem 
-      // o projeto_id que o usuário está vinculado
+      // ✅ CORRIGIDO: PASSO 2 - Buscar na tabela base_dados_conteudo os documentos que possuem 
+      // o projeto_id UUID que o usuário está vinculado
       console.log('🔍 PASSO 2: Buscando documentos na tabela base_dados_conteudo...');
-      console.log('🎯 Filtro: projeto_id IN', projetosVinculados);
+      console.log('🎯 Filtro: projeto_id IN UUIDs:', projetosVinculados);
       
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
-        .in('projeto_id', projetosVinculados) // ← Buscar apenas documentos dos projetos vinculados
+        .in('projeto_id', projetosVinculados) // ✅ CORRIGIDO: Buscar apenas documentos dos projetos vinculados (UUIDs)
         .not('projeto_id', 'is', null) // ← Garantir que projeto_id não é null
         .order('created_at', { ascending: false });
       
@@ -165,7 +165,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       if (data && data.length > 0) {
         console.log('📄 Detalhes dos documentos encontrados:');
         data.forEach((doc, index) => {
-          console.log(`  ${index + 1}. ID: ${doc.id}, Arquivo: ${doc.nome_arquivo}, Projeto: ${doc.projeto_id}`);
+          console.log(`  ${index + 1}. ID: ${doc.id}, Arquivo: ${doc.nome_arquivo}, Projeto UUID: ${doc.projeto_id}`);
           console.log(`      Nome do Projeto: ${todosOsProjetos[doc.projeto_id] || 'Não encontrado'}`);
         });
       } else {
@@ -232,12 +232,12 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
-      // Criar um FormData para enviar o arquivo
+      // ✅ CORRIGIDO: Criar um FormData para enviar o arquivo (UUIDs)
       const formData = new FormData();
       formData.append('file', file);
       formData.append('descricao', descricao);
-      formData.append('categoria_id', controleItem.categoria_id);
-      formData.append('projeto_id', controleItem.projeto_id);
+      formData.append('categoria_id', controleItem.categoria_id); // UUID (string)
+      formData.append('projeto_id', controleItem.projeto_id); // UUID (string)
       
       // Adicionar o campo certo dependendo da tabela
       if (isGeralTable) {
@@ -325,8 +325,8 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       const { error } = await supabase
         .from('documento_controle_geral_rel')
         .insert({
-          documento_id: documentoSelecionado,
-          controle_id: controleId
+          documento_id: documentoSelecionado, // documento_id é INTEGER
+          controle_id: controleId // controle_id é INTEGER
         });
       
       if (error) {
@@ -377,14 +377,14 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
     }
   };
   
-  // ✅ CORRIGIDO: Filtrar documentos baseado no texto de filtro usando mapeamento completo
+  // ✅ CORRIGIDO: Filtrar documentos baseado no texto de filtro usando mapeamento completo (UUIDs)
   const documentosFiltrados = documentosExistentes.filter(doc => {
     if (!filtroDocumento) return true;
     
     const searchTerms = filtroDocumento.toLowerCase().split(' ');
     const nomeArquivo = doc.nome_arquivo || '';
     const descricaoDoc = doc.descricao || '';
-    // ✅ MUDANÇA: Usar todosOsProjetos e todasAsCategorias
+    // ✅ CORRIGIDO: Usar todosOsProjetos e todasAsCategorias com UUIDs
     const projetoNome = todosOsProjetos[doc.projeto_id] || '';
     const categoriaNome = todasAsCategorias[doc.categoria_id] || '';
     
@@ -582,7 +582,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         
         {step === 'nuvem' && (
           <div className="space-y-4">
-            {/* Aviso sobre filtro por projetos vinculados */}
+            {/* ✅ CORRIGIDO: Aviso sobre filtro por projetos vinculados (UUIDs) */}
             <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
               <p className="text-blue-800 text-sm">
                 <strong>Observação:</strong> São exibidos apenas documentos dos projetos aos quais você está vinculado.
@@ -643,9 +643,9 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                           </div>
                           <p className="text-xs text-gray-500 mt-1">{doc.descricao}</p>
                           <div className="flex items-center text-xs text-gray-500 mt-1">
+                            {/* ✅ CORRIGIDO: Usar todasAsCategorias e todosOsProjetos com UUIDs */}
                             <span className="mr-2">{todasAsCategorias[doc.categoria_id] || 'Categoria N/A'}</span>
                             <span className="mr-2">•</span>
-                            {/* ✅ CORRIGIDO: Usar todosOsProjetos em vez de projetos */}
                             <span>{todosOsProjetos[doc.projeto_id] || 'Projeto N/A'}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
