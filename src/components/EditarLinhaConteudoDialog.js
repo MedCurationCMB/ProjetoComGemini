@@ -1,4 +1,4 @@
-// src/components/EditarLinhaConteudoDialog.js
+// src/components/EditarLinhaConteudoDialog.js - Corrigido com filtro por projetos vinculados
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -22,6 +22,11 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
 
+  // ✅ NOVO: Estados para projetos vinculados e mapeamento completo
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
+  const [todosOsProjetos, setTodosOsProjetos] = useState({});
+  const [todasAsCategorias, setTodasAsCategorias] = useState({});
+
   // Carrega os dados iniciais do item de controle
   useEffect(() => {
     if (controleItem) {
@@ -35,6 +40,91 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
       buscarDocumentoVinculado(controleItem.id);
     }
   }, [controleItem]);
+
+  // ✅ NOVO: Buscar projetos vinculados ao usuário quando o componente monta
+  useEffect(() => {
+    const fetchProjetosVinculados = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error('❌ Usuário não autenticado');
+          setProjetosVinculados([]);
+          return;
+        }
+        
+        console.log('🔍 EditarLinha: Buscando projetos vinculados ao usuário UUID:', session.user.id);
+        
+        const { data, error } = await supabase
+          .from('relacao_usuarios_projetos')
+          .select('projeto_id')
+          .eq('usuario_id', session.user.id);
+        
+        if (error) {
+          console.error('❌ Erro ao buscar projetos vinculados:', error);
+          throw error;
+        }
+        
+        // ✅ CORRIGIDO: projeto_id são UUIDs (strings), não converter para números
+        const projetoIds = data?.map(item => item.projeto_id) || [];
+        setProjetosVinculados(projetoIds);
+        
+        console.log('✅ EditarLinha: Projetos vinculados (UUIDs):', projetoIds);
+        console.log('📊 Total de projetos vinculados:', projetoIds.length);
+      } catch (error) {
+        console.error('❌ Erro ao carregar projetos vinculados:', error);
+        setProjetosVinculados([]);
+        toast.error('Erro ao carregar projetos vinculados');
+      }
+    };
+
+    fetchProjetosVinculados();
+  }, []);
+
+  // ✅ NOVO: Buscar TODOS os projetos e categorias para mapeamento completo
+  useEffect(() => {
+    const fetchTodosOsDados = async () => {
+      try {
+        console.log('🔍 EditarLinha: Carregando todos os projetos e categorias para mapeamento...');
+        
+        // Buscar TODOS os projetos (não apenas vinculados)
+        const { data: projetosData, error: projetosError } = await supabase
+          .from('projetos')
+          .select('id, nome');
+        
+        if (projetosError) {
+          console.error('❌ Erro ao buscar projetos:', projetosError);
+        } else {
+          const projetosObj = {};
+          projetosData.forEach(proj => {
+            projetosObj[proj.id] = proj.nome; // proj.id é UUID (string)
+          });
+          setTodosOsProjetos(projetosObj);
+          console.log('✅ EditarLinha: Todos os projetos carregados (UUIDs):', Object.keys(projetosObj).length);
+        }
+        
+        // Buscar TODAS as categorias
+        const { data: categoriasData, error: categoriasError } = await supabase
+          .from('categorias')
+          .select('id, nome');
+        
+        if (categoriasError) {
+          console.error('❌ Erro ao buscar categorias:', categoriasError);
+        } else {
+          const categoriasObj = {};
+          categoriasData.forEach(cat => {
+            categoriasObj[cat.id] = cat.nome; // cat.id é UUID (string)
+          });
+          setTodasAsCategorias(categoriasObj);
+          console.log('✅ EditarLinha: Todas as categorias carregadas (UUIDs):', Object.keys(categoriasObj).length);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados completos:', error);
+      }
+    };
+
+    fetchTodosOsDados();
+  }, []);
 
   // Buscar documento vinculado atualmente
   const buscarDocumentoVinculado = async (controleId) => {
@@ -64,14 +154,16 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
     }
   };
   
-  // Buscar documentos existentes quando o usuário escolher "anexar da nuvem"
+  // ✅ CORRIGIDO: Buscar documentos existentes FILTRADOS por projetos vinculados
   useEffect(() => {
-    if (step === 'anexar-nuvem') {
+    // Só executa se o step for 'anexar-nuvem' e já tiver carregado os projetos vinculados
+    if (step === 'anexar-nuvem' && projetosVinculados !== undefined) {
+      console.log('🔍 EditarLinha: Iniciando busca de documentos para projetos UUIDs:', projetosVinculados);
       fetchDocumentosExistentes();
     }
-  }, [step]);
+  }, [step, projetosVinculados]);
   
-  // Função para buscar documentos existentes
+  // ✅ CORRIGIDO: Função para buscar documentos existentes FILTRADOS por projetos vinculados
   const fetchDocumentosExistentes = async () => {
     try {
       setLoadingDocumentos(true);
@@ -84,17 +176,43 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
         return;
       }
       
-      // Buscar documentos existentes
+      console.log('🔍 EditarLinha: Executando busca de documentos...');
+      console.log('📋 Projetos vinculados UUIDs para filtro:', projetosVinculados);
+      
+      // ✅ CORRIGIDO: Se não há projetos vinculados, não mostrar nenhum documento
+      if (!projetosVinculados || projetosVinculados.length === 0) {
+        console.log('⚠️ EditarLinha: Usuário não tem projetos vinculados, retornando lista vazia');
+        setDocumentosExistentes([]);
+        return;
+      }
+      
+      // ✅ CORRIGIDO: Buscar na tabela base_dados_conteudo os documentos que possuem 
+      // o projeto_id UUID que o usuário está vinculado
+      console.log('🔍 EditarLinha: Buscando documentos na tabela base_dados_conteudo...');
+      console.log('🎯 Filtro: projeto_id IN UUIDs:', projetosVinculados);
+      
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
+        .in('projeto_id', projetosVinculados) // ✅ CORRIGIDO: Buscar apenas documentos dos projetos vinculados (UUIDs)
+        .not('projeto_id', 'is', null) // Garantir que projeto_id não é null
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ EditarLinha: Erro na consulta Supabase:', error);
+        throw error;
+      }
+      
+      console.log('✅ EditarLinha: Documentos encontrados:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('📄 Exemplos de projeto_id nos documentos:', data.slice(0, 3).map(d => d.projeto_id));
+      } else {
+        console.log('📄 Nenhum documento encontrado para os projetos vinculados');
+      }
       
       setDocumentosExistentes(data || []);
     } catch (error) {
-      console.error('Erro ao carregar documentos:', error);
+      console.error('❌ EditarLinha: Erro ao carregar documentos:', error);
       toast.error('Erro ao carregar documentos existentes');
     } finally {
       setLoadingDocumentos(false);
@@ -364,15 +482,16 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
     }
   };
   
-  // Filtrar documentos baseado no texto de filtro
+  // ✅ CORRIGIDO: Filtrar documentos baseado no texto de filtro usando mapeamento completo (UUIDs)
   const documentosFiltrados = documentosExistentes.filter(doc => {
     if (!filtroDocumento) return true;
     
     const searchTerms = filtroDocumento.toLowerCase().split(' ');
     const nomeArquivo = doc.nome_arquivo || '';
     const descricaoDoc = doc.descricao || '';
-    const projetoNome = projetos[doc.projeto_id] || '';
-    const categoriaNome = categorias[doc.categoria_id] || '';
+    // ✅ CORRIGIDO: Usar todosOsProjetos e todasAsCategorias com UUIDs
+    const projetoNome = todosOsProjetos[doc.projeto_id] || '';
+    const categoriaNome = todasAsCategorias[doc.categoria_id] || '';
     
     const textoCompleto = `${nomeArquivo} ${descricaoDoc} ${projetoNome} ${categoriaNome}`.toLowerCase();
     
@@ -638,6 +757,18 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
         
         {step === 'anexar-nuvem' && (
           <div className="space-y-4">
+            {/* ✅ NOVO: Aviso sobre filtro por projetos vinculados */}
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-blue-800 text-sm">
+                <strong>Observação:</strong> São exibidos apenas documentos dos projetos aos quais você está vinculado.
+                {projetosVinculados.length === 0 && (
+                  <span className="block mt-1 text-blue-700">
+                    Você não possui projetos vinculados. Entre em contato com o administrador.
+                  </span>
+                )}
+              </p>
+            </div>
+            
             {/* Filtro */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -687,9 +818,10 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
                           </div>
                           <p className="text-xs text-gray-500 mt-1">{doc.descricao}</p>
                           <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <span className="mr-2">{categorias[doc.categoria_id] || 'Categoria N/A'}</span>
+                            {/* ✅ CORRIGIDO: Usar todasAsCategorias e todosOsProjetos com UUIDs */}
+                            <span className="mr-2">{todasAsCategorias[doc.categoria_id] || 'Categoria N/A'}</span>
                             <span className="mr-2">•</span>
-                            <span>{projetos[doc.projeto_id] || 'Projeto N/A'}</span>
+                            <span>{todosOsProjetos[doc.projeto_id] || 'Projeto N/A'}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {formatDate(doc.data_upload || doc.created_at)}
@@ -702,7 +834,18 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <FiFile className="h-8 w-8 mb-2" />
-                  <p>Nenhum documento encontrado</p>
+                  <p>
+                    {projetosVinculados.length === 0 
+                      ? 'Nenhum projeto vinculado' 
+                      : 'Nenhum documento encontrado'
+                    }
+                  </p>
+                  {projetosVinculados.length === 0 && (
+                    <p className="text-xs mt-1 text-center">
+                      Entre em contato com o administrador<br />
+                      para vincular você a projetos
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -720,9 +863,9 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
               
               <button
                 onClick={vincularDocumento}
-                disabled={!documentoSelecionado || uploading}
+                disabled={!documentoSelecionado || uploading || projetosVinculados.length === 0}
                 className={`px-4 py-2 rounded ${
-                  !documentoSelecionado || uploading
+                  !documentoSelecionado || uploading || projetosVinculados.length === 0
                     ? 'bg-gray-400 cursor-not-allowed text-white'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
