@@ -28,24 +28,32 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         
         if (!session) {
           console.error('Usuário não autenticado');
+          setProjetosVinculados([]);
           return;
         }
+        
+        console.log('Buscando projetos vinculados para usuário:', session.user.id);
         
         const { data, error } = await supabase
           .from('relacao_usuarios_projetos')
           .select('projeto_id')
           .eq('usuario_id', session.user.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao buscar projetos vinculados:', error);
+          throw error;
+        }
         
         // Extrair apenas os IDs dos projetos
-        const projetoIds = data.map(item => item.projeto_id);
+        const projetoIds = data?.map(item => item.projeto_id) || [];
         setProjetosVinculados(projetoIds);
         
         console.log('Projetos vinculados ao usuário (AnexarDocumento):', projetoIds);
+        console.log('Total de projetos vinculados:', projetoIds.length);
       } catch (error) {
         console.error('Erro ao carregar projetos vinculados:', error);
         setProjetosVinculados([]);
+        toast.error('Erro ao carregar projetos vinculados');
       }
     };
 
@@ -54,7 +62,8 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   
   // Buscar documentos existentes quando o usuário escolher "anexar da nuvem"
   useEffect(() => {
-    if (step === 'nuvem') {
+    if (step === 'nuvem' && projetosVinculados !== undefined) {
+      console.log('Iniciando busca de documentos. Projetos vinculados:', projetosVinculados);
       fetchDocumentosExistentes();
     }
   }, [step, projetosVinculados]); // Adicionar projetosVinculados como dependência
@@ -73,22 +82,31 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
       }
       
       // Se não há projetos vinculados, não mostrar nenhum documento
-      if (projetosVinculados.length === 0) {
+      if (!projetosVinculados || projetosVinculados.length === 0) {
         console.log('Usuário não tem projetos vinculados, mostrando lista vazia');
         setDocumentosExistentes([]);
         return;
       }
       
+      console.log('Projetos vinculados para filtro:', projetosVinculados);
+      
       // MODIFICAÇÃO PRINCIPAL: Buscar documentos APENAS dos projetos vinculados
+      // Usar filtro NOT NULL também para garantir que projeto_id existe
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
         .in('projeto_id', projetosVinculados) // ← FILTRO POR PROJETOS VINCULADOS
+        .not('projeto_id', 'is', null) // ← GARANTIR QUE projeto_id não é null
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na consulta Supabase:', error);
+        throw error;
+      }
       
       console.log(`Documentos encontrados (filtrados): ${data?.length || 0}`);
+      console.log('IDs dos documentos encontrados:', data?.map(d => `${d.id} (projeto: ${d.projeto_id})`));
+      
       setDocumentosExistentes(data || []);
     } catch (error) {
       console.error('Erro ao carregar documentos:', error);
