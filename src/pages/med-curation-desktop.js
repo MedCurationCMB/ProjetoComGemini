@@ -1,4 +1,4 @@
-// Arquivo: src/pages/med-curation-desktop.js - Versão com filtro por projetos vinculados
+// Arquivo: src/pages/med-curation-desktop.js - Versão atualizada usando prazo_entrega
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -234,8 +234,10 @@ export default function MedCurationDesktop({ user }) {
           query = query.ilike('texto_analise', `%${searchTerm.trim()}%`);
         }
         
-        // Ordenar por data de criação, do mais recente ao mais antigo
-        query = query.order('created_at', { ascending: false });
+        // ALTERAÇÃO: Ordenar por prazo_entrega se existir, caso contrário por created_at
+        // Primeiro tentativa: ordenar por prazo_entrega (nulls last) e depois por created_at
+        query = query.order('prazo_entrega', { ascending: false, nullsLast: true })
+                     .order('created_at', { ascending: false });
         
         const { data, error } = await query;
         
@@ -344,8 +346,11 @@ export default function MedCurationDesktop({ user }) {
     return documentos;
   };
 
-  // Formatar data
-  const formatDate = (dateString) => {
+  // ALTERAÇÃO: Formatar data - priorizar prazo_entrega, fallback para created_at
+  const formatDate = (documento) => {
+    // Priorizar prazo_entrega se existir, caso contrário usar created_at
+    const dateString = documento.prazo_entrega || documento.created_at;
+    
     if (!dateString) return '';
     
     try {
@@ -932,7 +937,7 @@ export default function MedCurationDesktop({ user }) {
                             
                             <div className="flex items-center text-gray-500 text-xs">
                               <FiCalendar className="w-3 h-3 mr-1" />
-                              {formatDate(destaqueDoc.created_at)}
+                              {formatDate(destaqueDoc)}
                             </div>
                           </div>
                           
@@ -980,7 +985,7 @@ export default function MedCurationDesktop({ user }) {
                               
                               <div className="flex items-center text-gray-500 text-xs">
                                 <FiCalendar className="w-3 h-3 mr-1" />
-                                {formatDate(documento.created_at)}
+                                {formatDate(documento)}
                               </div>
                             </div>
                           </div>
@@ -1036,7 +1041,7 @@ export default function MedCurationDesktop({ user }) {
                               
                               <div className="flex items-center text-gray-500 text-sm">
                                 <FiCalendar className="w-4 h-4 mr-1" />
-                                {formatDate(destaqueDoc.created_at)}
+                                {formatDate(destaqueDoc)}
                               </div>
                             </div>
                             
@@ -1088,7 +1093,7 @@ export default function MedCurationDesktop({ user }) {
                                 
                                 <div className="flex items-center justify-end text-gray-500 text-xs">
                                   <FiCalendar className="w-3 h-3 mr-1" />
-                                  {formatDate(documento.created_at)}
+                                  {formatDate(documento)}
                                 </div>
                               </div>
                             </div>
