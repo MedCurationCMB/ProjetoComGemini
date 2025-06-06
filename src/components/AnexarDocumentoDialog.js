@@ -20,6 +20,10 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   // Estado para projetos vinculados
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   
+  // ✅ NOVO: Estados separados para mapeamento completo
+  const [todosOsProjetos, setTodosOsProjetos] = useState({});
+  const [todasAsCategorias, setTodasAsCategorias] = useState({});
+
   // PASSO 1: Buscar projetos vinculados ao usuário quando o componente monta
   useEffect(() => {
     const fetchProjetosVinculados = async () => {
@@ -59,6 +63,53 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
     };
 
     fetchProjetosVinculados();
+  }, []);
+
+  // ✅ NOVO: Buscar TODOS os projetos e categorias para mapeamento completo
+  useEffect(() => {
+    const fetchTodosOsDados = async () => {
+      try {
+        console.log('🔍 Carregando todos os projetos e categorias para mapeamento...');
+        
+        // Buscar TODOS os projetos (não apenas vinculados)
+        const { data: projetosData, error: projetosError } = await supabase
+          .from('projetos')
+          .select('id, nome');
+        
+        if (projetosError) {
+          console.error('❌ Erro ao buscar projetos:', projetosError);
+        } else {
+          // Converter array em objeto para fácil acesso por ID
+          const projetosObj = {};
+          projetosData.forEach(proj => {
+            projetosObj[proj.id] = proj.nome;
+          });
+          setTodosOsProjetos(projetosObj);
+          console.log('✅ Todos os projetos carregados:', Object.keys(projetosObj).length);
+        }
+        
+        // Buscar TODAS as categorias
+        const { data: categoriasData, error: categoriasError } = await supabase
+          .from('categorias')
+          .select('id, nome');
+        
+        if (categoriasError) {
+          console.error('❌ Erro ao buscar categorias:', categoriasError);
+        } else {
+          // Converter array em objeto para fácil acesso por ID
+          const categoriasObj = {};
+          categoriasData.forEach(cat => {
+            categoriasObj[cat.id] = cat.nome;
+          });
+          setTodasAsCategorias(categoriasObj);
+          console.log('✅ Todas as categorias carregadas:', Object.keys(categoriasObj).length);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados completos:', error);
+      }
+    };
+
+    fetchTodosOsDados();
   }, []);
   
   // Buscar documentos existentes quando o usuário escolher "anexar da nuvem"
@@ -115,6 +166,7 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         console.log('📄 Detalhes dos documentos encontrados:');
         data.forEach((doc, index) => {
           console.log(`  ${index + 1}. ID: ${doc.id}, Arquivo: ${doc.nome_arquivo}, Projeto: ${doc.projeto_id}`);
+          console.log(`      Nome do Projeto: ${todosOsProjetos[doc.projeto_id] || 'Não encontrado'}`);
         });
       } else {
         console.log('📄 Nenhum documento encontrado para os projetos vinculados');
@@ -325,15 +377,16 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
     }
   };
   
-  // Filtrar documentos baseado no texto de filtro
+  // ✅ CORRIGIDO: Filtrar documentos baseado no texto de filtro usando mapeamento completo
   const documentosFiltrados = documentosExistentes.filter(doc => {
     if (!filtroDocumento) return true;
     
     const searchTerms = filtroDocumento.toLowerCase().split(' ');
     const nomeArquivo = doc.nome_arquivo || '';
     const descricaoDoc = doc.descricao || '';
-    const projetoNome = projetos[doc.projeto_id] || '';
-    const categoriaNome = categorias[doc.categoria_id] || '';
+    // ✅ MUDANÇA: Usar todosOsProjetos e todasAsCategorias
+    const projetoNome = todosOsProjetos[doc.projeto_id] || '';
+    const categoriaNome = todasAsCategorias[doc.categoria_id] || '';
     
     const textoCompleto = `${nomeArquivo} ${descricaoDoc} ${projetoNome} ${categoriaNome}`.toLowerCase();
     
@@ -590,9 +643,10 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
                           </div>
                           <p className="text-xs text-gray-500 mt-1">{doc.descricao}</p>
                           <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <span className="mr-2">{categorias[doc.categoria_id] || 'Categoria N/A'}</span>
+                            <span className="mr-2">{todasAsCategorias[doc.categoria_id] || 'Categoria N/A'}</span>
                             <span className="mr-2">•</span>
-                            <span>{projetos[doc.projeto_id] || 'Projeto N/A'}</span>
+                            {/* ✅ CORRIGIDO: Usar todosOsProjetos em vez de projetos */}
+                            <span>{todosOsProjetos[doc.projeto_id] || 'Projeto N/A'}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {formatDate(doc.data_upload || doc.created_at)}
