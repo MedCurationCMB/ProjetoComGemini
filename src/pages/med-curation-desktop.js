@@ -136,22 +136,48 @@ export default function MedCurationDesktop({ user }) {
         
         setCategorias(categoriasObj);
         
-        // Buscar APENAS os projetos vinculados ao usuário
+        // ✅ NOVA LÓGICA: Buscar APENAS projetos vinculados QUE TÊM controles visíveis
         if (projetoIds.length > 0) {
-          const { data: projetosData, error: projetosError } = await supabase
-            .from('projetos')
-            .select('id, nome')
-            .in('id', projetoIds); // Filtrar apenas projetos vinculados
+          // Primeiro: buscar quais projetos têm controles visíveis
+          const { data: projetosComControles, error: controlesError } = await supabase
+            .from('controle_conteudo_geral')
+            .select('projeto_id')
+            .eq('visivel', true)
+            .in('projeto_id', projetoIds); // Apenas dos projetos vinculados
           
-          if (projetosError) throw projetosError;
+          if (controlesError) throw controlesError;
           
-          // Converter array em objeto para fácil acesso por ID
-          const projetosObj = {};
-          projetosData.forEach(proj => {
-            projetosObj[proj.id] = proj.nome;
-          });
+          // Extrair IDs únicos de projetos que têm controles visíveis
+          const projetosComControlesVisiveis = [...new Set(
+            projetosComControles.map(item => item.projeto_id)
+          )];
           
-          setProjetos(projetosObj);
+          console.log('Projetos vinculados:', projetoIds);
+          console.log('Projetos com controles visíveis:', projetosComControlesVisiveis);
+          
+          // Agora buscar apenas os projetos que estão nas duas listas
+          if (projetosComControlesVisiveis.length > 0) {
+            const { data: projetosData, error: projetosError } = await supabase
+              .from('projetos')
+              .select('id, nome')
+              .in('id', projetosComControlesVisiveis) // Apenas projetos com controles visíveis
+              .order('nome');
+            
+            if (projetosError) throw projetosError;
+            
+            // Converter array em objeto para fácil acesso por ID
+            const projetosObj = {};
+            projetosData.forEach(proj => {
+              projetosObj[proj.id] = proj.nome;
+            });
+            
+            setProjetos(projetosObj);
+            console.log('Projetos carregados para dropdown:', projetosData?.length || 0);
+          } else {
+            // Se não há projetos com controles visíveis, definir como objeto vazio
+            setProjetos({});
+            console.log('Nenhum projeto vinculado possui controles visíveis');
+          }
         } else {
           // Se não há projetos vinculados, definir como objeto vazio
           setProjetos({});
