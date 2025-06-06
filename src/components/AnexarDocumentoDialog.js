@@ -32,15 +32,16 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
           return;
         }
         
-        console.log('Buscando projetos vinculados para usuário:', session.user.id);
+        console.log('🔍 PASSO 1: Buscando projetos vinculados ao usuário:', session.user.id);
         
+        // PASSO 1: Buscar quais são os projetos vinculados ao usuário
         const { data, error } = await supabase
           .from('relacao_usuarios_projetos')
           .select('projeto_id')
           .eq('usuario_id', session.user.id);
         
         if (error) {
-          console.error('Erro ao buscar projetos vinculados:', error);
+          console.error('❌ Erro ao buscar projetos vinculados:', error);
           throw error;
         }
         
@@ -48,10 +49,10 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         const projetoIds = data?.map(item => item.projeto_id) || [];
         setProjetosVinculados(projetoIds);
         
-        console.log('Projetos vinculados ao usuário (AnexarDocumento):', projetoIds);
-        console.log('Total de projetos vinculados:', projetoIds.length);
+        console.log('✅ PASSO 1 CONCLUÍDO: Projetos vinculados encontrados:', projetoIds);
+        console.log('📊 Total de projetos vinculados:', projetoIds.length);
       } catch (error) {
-        console.error('Erro ao carregar projetos vinculados:', error);
+        console.error('❌ Erro ao carregar projetos vinculados:', error);
         setProjetosVinculados([]);
         toast.error('Erro ao carregar projetos vinculados');
       }
@@ -62,11 +63,12 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   
   // Buscar documentos existentes quando o usuário escolher "anexar da nuvem"
   useEffect(() => {
+    // Só executa se o step for 'nuvem' e já tiver carregado os projetos vinculados
     if (step === 'nuvem' && projetosVinculados !== undefined) {
-      console.log('Iniciando busca de documentos. Projetos vinculados:', projetosVinculados);
+      console.log('🔍 PASSO 2: Iniciando busca de documentos para projetos:', projetosVinculados);
       fetchDocumentosExistentes();
     }
-  }, [step, projetosVinculados]); // Adicionar projetosVinculados como dependência
+  }, [step, projetosVinculados]);
   
   // MODIFICADO: Função para buscar documentos existentes FILTRADOS por projetos vinculados
   const fetchDocumentosExistentes = async () => {
@@ -81,35 +83,46 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
-      // Se não há projetos vinculados, não mostrar nenhum documento
+      console.log('🔍 PASSO 2: Executando busca de documentos...');
+      console.log('📋 Projetos vinculados para filtro:', projetosVinculados);
+      
+      // PASSO 2: Se não há projetos vinculados, não mostrar nenhum documento
       if (!projetosVinculados || projetosVinculados.length === 0) {
-        console.log('Usuário não tem projetos vinculados, mostrando lista vazia');
+        console.log('⚠️ PASSO 2: Usuário não tem projetos vinculados, retornando lista vazia');
         setDocumentosExistentes([]);
         return;
       }
       
-      console.log('Projetos vinculados para filtro:', projetosVinculados);
+      // PASSO 2: Buscar na tabela base_dados_conteudo os documentos que possuem 
+      // o projeto_id que o usuário está vinculado
+      console.log('🔍 PASSO 2: Buscando documentos na tabela base_dados_conteudo...');
+      console.log('🎯 Filtro: projeto_id IN', projetosVinculados);
       
-      // MODIFICAÇÃO PRINCIPAL: Buscar documentos APENAS dos projetos vinculados
-      // Usar filtro NOT NULL também para garantir que projeto_id existe
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
-        .in('projeto_id', projetosVinculados) // ← FILTRO POR PROJETOS VINCULADOS
-        .not('projeto_id', 'is', null) // ← GARANTIR QUE projeto_id não é null
+        .in('projeto_id', projetosVinculados) // ← Buscar apenas documentos dos projetos vinculados
+        .not('projeto_id', 'is', null) // ← Garantir que projeto_id não é null
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Erro na consulta Supabase:', error);
+        console.error('❌ PASSO 2: Erro na consulta Supabase:', error);
         throw error;
       }
       
-      console.log(`Documentos encontrados (filtrados): ${data?.length || 0}`);
-      console.log('IDs dos documentos encontrados:', data?.map(d => `${d.id} (projeto: ${d.projeto_id})`));
+      console.log('✅ PASSO 2 CONCLUÍDO: Documentos encontrados:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('📄 Detalhes dos documentos encontrados:');
+        data.forEach((doc, index) => {
+          console.log(`  ${index + 1}. ID: ${doc.id}, Arquivo: ${doc.nome_arquivo}, Projeto: ${doc.projeto_id}`);
+        });
+      } else {
+        console.log('📄 Nenhum documento encontrado para os projetos vinculados');
+      }
       
       setDocumentosExistentes(data || []);
     } catch (error) {
-      console.error('Erro ao carregar documentos:', error);
+      console.error('❌ PASSO 2: Erro ao carregar documentos:', error);
       toast.error('Erro ao carregar documentos existentes');
     } finally {
       setLoadingDocumentos(false);
