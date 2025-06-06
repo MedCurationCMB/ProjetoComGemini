@@ -17,14 +17,49 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
   
+  // NOVO: Estado para projetos vinculados
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
+  
+  // NOVO: Buscar projetos vinculados ao usuário quando o componente monta
+  useEffect(() => {
+    const fetchProjetosVinculados = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error('Usuário não autenticado');
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('relacao_usuarios_projetos')
+          .select('projeto_id')
+          .eq('usuario_id', session.user.id);
+        
+        if (error) throw error;
+        
+        // Extrair apenas os IDs dos projetos
+        const projetoIds = data.map(item => item.projeto_id);
+        setProjetosVinculados(projetoIds);
+        
+        console.log('Projetos vinculados ao usuário (AnexarDocumento):', projetoIds);
+      } catch (error) {
+        console.error('Erro ao carregar projetos vinculados:', error);
+        setProjetosVinculados([]);
+      }
+    };
+
+    fetchProjetosVinculados();
+  }, []);
+  
   // Buscar documentos existentes quando o usuário escolher "anexar da nuvem"
   useEffect(() => {
     if (step === 'nuvem') {
       fetchDocumentosExistentes();
     }
-  }, [step]);
+  }, [step, projetosVinculados]); // Adicionar projetosVinculados como dependência
   
-  // Função para buscar documentos existentes
+  // MODIFICADO: Função para buscar documentos existentes FILTRADOS por projetos vinculados
   const fetchDocumentosExistentes = async () => {
     try {
       setLoadingDocumentos(true);
@@ -37,14 +72,23 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         return;
       }
       
-      // Buscar documentos existentes
+      // Se não há projetos vinculados, não mostrar nenhum documento
+      if (projetosVinculados.length === 0) {
+        console.log('Usuário não tem projetos vinculados, mostrando lista vazia');
+        setDocumentosExistentes([]);
+        return;
+      }
+      
+      // MODIFICAÇÃO PRINCIPAL: Buscar documentos APENAS dos projetos vinculados
       const { data, error } = await supabase
         .from('base_dados_conteudo')
         .select('*')
+        .in('projeto_id', projetosVinculados) // ← FILTRO POR PROJETOS VINCULADOS
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
+      console.log(`Documentos encontrados (filtrados): ${data?.length || 0}`);
       setDocumentosExistentes(data || []);
     } catch (error) {
       console.error('Erro ao carregar documentos:', error);
@@ -454,6 +498,18 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
         
         {step === 'nuvem' && (
           <div className="space-y-4">
+            {/* NOVO: Aviso sobre filtro por projetos vinculados */}
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-blue-800 text-sm">
+                <strong>Observação:</strong> São exibidos apenas documentos dos projetos aos quais você está vinculado.
+                {projetosVinculados.length === 0 && (
+                  <span className="block mt-1 text-blue-700">
+                    Você não possui projetos vinculados. Entre em contato com o administrador.
+                  </span>
+                )}
+              </p>
+            </div>
+            
             {/* Filtro */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -518,7 +574,18 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <FiServer className="h-8 w-8 mb-2" />
-                  <p>Nenhum documento encontrado</p>
+                  <p>
+                    {projetosVinculados.length === 0 
+                      ? 'Nenhum projeto vinculado' 
+                      : 'Nenhum documento encontrado'
+                    }
+                  </p>
+                  {projetosVinculados.length === 0 && (
+                    <p className="text-xs mt-1 text-center">
+                      Entre em contato com o administrador<br />
+                      para vincular você a projetos
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -536,9 +603,9 @@ const AnexarDocumentoDialog = ({ controleId, onClose, onSuccess, controleItem, c
               
               <button
                 onClick={vincularDocumento}
-                disabled={!documentoSelecionado || uploading}
+                disabled={!documentoSelecionado || uploading || projetosVinculados.length === 0}
                 className={`px-4 py-2 rounded ${
-                  !documentoSelecionado || uploading
+                  !documentoSelecionado || uploading || projetosVinculados.length === 0
                     ? 'bg-gray-400 cursor-not-allowed text-white'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
