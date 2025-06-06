@@ -121,51 +121,52 @@ export default function MedCurationDesktop({ user }) {
         // Buscar projetos vinculados primeiro
         const projetoIds = await fetchProjetosVinculados(user.id);
         
-        // ✅ NOVA LÓGICA: Buscar APENAS categorias que têm conteúdos visíveis
-        // Buscar quais categorias têm controles visíveis
-        const { data: categoriasComControles, error: categoriasControlesError } = await supabase
-          .from('controle_conteudo_geral')
-          .select('categoria_id')
-          .eq('visivel', true)
-          .not('categoria_id', 'is', null); // Excluir registros sem categoria
-        
-        if (categoriasControlesError) throw categoriasControlesError;
-        
-        // Extrair IDs únicos de categorias que têm controles visíveis
-        const categoriasComControlesVisiveis = [...new Set(
-          categoriasComControles.map(item => item.categoria_id)
-        )];
-        
-        console.log('Categorias com controles visíveis:', categoriasComControlesVisiveis);
-        
-        // Buscar apenas as categorias que têm conteúdos visíveis
-        if (categoriasComControlesVisiveis.length > 0) {
-          const { data: categoriasData, error: categoriasError } = await supabase
-            .from('categorias')
-            .select('id, nome')
-            .in('id', categoriasComControlesVisiveis) // Apenas categorias com controles visíveis
-            .order('nome');
-          
-          if (categoriasError) throw categoriasError;
-          
-          // Converter array em objeto para fácil acesso por ID
-          const categoriasObj = {};
-          categoriasData.forEach(cat => {
-            categoriasObj[cat.id] = cat.nome;
-          });
-          
-          setCategorias(categoriasObj);
-          console.log('Categorias carregadas para dropdown:', categoriasData?.length || 0);
-        } else {
-          // Se não há categorias com controles visíveis, definir como objeto vazio
-          setCategorias({});
-          console.log('Nenhuma categoria possui controles visíveis');
-        }
-        
-        // ✅ LÓGICA DOS PROJETOS (mantida igual ao anterior)
-        // Buscar APENAS projetos vinculados QUE TÊM controles visíveis
+        // ✅ LÓGICA CORRIGIDA: Buscar categorias de controles visíveis E de projetos vinculados
         if (projetoIds.length > 0) {
-          // Primeiro: buscar quais projetos têm controles visíveis
+          // Buscar quais categorias têm controles visíveis EM PROJETOS VINCULADOS
+          const { data: categoriasComControles, error: categoriasControlesError } = await supabase
+            .from('controle_conteudo_geral')
+            .select('categoria_id')
+            .eq('visivel', true)
+            .in('projeto_id', projetoIds) // ✅ NOVA RESTRIÇÃO: apenas projetos vinculados
+            .not('categoria_id', 'is', null); // Excluir registros sem categoria
+          
+          if (categoriasControlesError) throw categoriasControlesError;
+          
+          // Extrair IDs únicos de categorias que têm controles visíveis em projetos vinculados
+          const categoriasComControlesVisiveis = [...new Set(
+            categoriasComControles.map(item => item.categoria_id)
+          )];
+          
+          console.log('Projetos vinculados:', projetoIds);
+          console.log('Categorias com controles visíveis em projetos vinculados:', categoriasComControlesVisiveis);
+          
+          // Buscar apenas as categorias que atendem aos dois critérios
+          if (categoriasComControlesVisiveis.length > 0) {
+            const { data: categoriasData, error: categoriasError } = await supabase
+              .from('categorias')
+              .select('id, nome')
+              .in('id', categoriasComControlesVisiveis) // Apenas categorias com controles visíveis em projetos vinculados
+              .order('nome');
+            
+            if (categoriasError) throw categoriasError;
+            
+            // Converter array em objeto para fácil acesso por ID
+            const categoriasObj = {};
+            categoriasData.forEach(cat => {
+              categoriasObj[cat.id] = cat.nome;
+            });
+            
+            setCategorias(categoriasObj);
+            console.log('Categorias carregadas para dropdown:', categoriasData?.length || 0);
+          } else {
+            // Se não há categorias que atendem aos critérios, definir como objeto vazio
+            setCategorias({});
+            console.log('Nenhuma categoria possui controles visíveis em projetos vinculados');
+          }
+          
+          // ✅ LÓGICA DOS PROJETOS (mantida igual)
+          // Buscar quais projetos têm controles visíveis
           const { data: projetosComControles, error: controlesError } = await supabase
             .from('controle_conteudo_geral')
             .select('projeto_id')
@@ -179,10 +180,9 @@ export default function MedCurationDesktop({ user }) {
             projetosComControles.map(item => item.projeto_id)
           )];
           
-          console.log('Projetos vinculados:', projetoIds);
           console.log('Projetos com controles visíveis:', projetosComControlesVisiveis);
           
-          // Agora buscar apenas os projetos que estão nas duas listas
+          // Buscar apenas os projetos que estão nas duas listas
           if (projetosComControlesVisiveis.length > 0) {
             const { data: projetosData, error: projetosError } = await supabase
               .from('projetos')
@@ -206,8 +206,10 @@ export default function MedCurationDesktop({ user }) {
             console.log('Nenhum projeto vinculado possui controles visíveis');
           }
         } else {
-          // Se não há projetos vinculados, definir como objeto vazio
+          // Se não há projetos vinculados, não há categorias nem projetos para mostrar
+          setCategorias({});
           setProjetos({});
+          console.log('Usuário não possui projetos vinculados');
         }
         
         await fetchApresentacaoVariaveis();
