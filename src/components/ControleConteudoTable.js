@@ -139,12 +139,62 @@ const ControleConteudoTable = ({ user }) => { // Adicionado user como prop
     }
   };
 
-  // Formata a data para exibição
+  // Formata a data para exibição - VERSÃO CORRIGIDA
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     
     try {
+      // Método 1: Tratar como date-only (sem time) para evitar timezone issues
+      if (dateString.includes('T') || dateString.includes(' ')) {
+        // Se a string contém informação de tempo, usar o método tradicional com ajuste
+        const date = new Date(dateString);
+        
+        if (isNaN(date.getTime())) {
+          return 'Data inválida';
+        }
+        
+        // Ajustar para timezone local para evitar o problema do "um dia a menos"
+        const adjustedDate = new Date(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate()
+        );
+        
+        return adjustedDate.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } else {
+        // Método 2: Para datas no formato YYYY-MM-DD (date-only), 
+        // usar parsing manual para evitar timezone conversion
+        const dateParts = dateString.split('-');
+        if (dateParts.length === 3) {
+          const year = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1; // Month é 0-indexed
+          const day = parseInt(dateParts[2], 10);
+          
+          // Criar data no timezone local (sem UTC conversion)
+          const localDate = new Date(year, month, day);
+          
+          if (isNaN(localDate.getTime())) {
+            return 'Data inválida';
+          }
+          
+          return localDate.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+        }
+      }
+      
+      // Fallback para outros formatos
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Data inválida';
+      }
+      
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',

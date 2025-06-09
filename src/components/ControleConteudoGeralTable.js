@@ -237,7 +237,11 @@ const ControleConteudoGeralTable = ({ user }) => {
     if (!dateString) return '-';
     
     try {
-      const date = new Date(dateString);
+      // ✅ CORREÇÃO: Adiciona T00:00:00 se a string não incluir horário
+      // Isso força o JavaScript a interpretar como horário local, não UTC
+      const dateWithTime = dateString.includes('T') ? dateString : dateString + 'T00:00:00';
+      const date = new Date(dateWithTime);
+      
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
