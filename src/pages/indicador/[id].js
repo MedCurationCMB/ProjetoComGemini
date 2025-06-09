@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft } from 'react-icons/fi';
+import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
@@ -318,6 +319,22 @@ export default function IndicadorDetalhe({ user }) {
     return num.toLocaleString('pt-BR');
   };
 
+  // Função para preparar dados para os gráficos
+  const prepararDadosGrafico = () => {
+    if (!indicadores || indicadores.length === 0) return [];
+    
+    return indicadores
+      .map(indicador => ({
+        periodo: formatDate(indicador.periodo_referencia),
+        periodoCompleto: indicador.periodo_referencia,
+        valorApresentado: parseFloat(indicador.valor_indicador_apresentado) || 0,
+        valorIndicador: parseFloat(indicador.valor_indicador) || 0
+      }))
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto)); // Ordenar por data crescente para o gráfico
+  };
+
+  const dadosGrafico = prepararDadosGrafico();
+
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -423,6 +440,53 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
+          {/* Gráficos - Mobile */}
+          <div className="mb-6 space-y-6">
+            {/* Gráfico Valor Apresentado */}
+            <div className="bg-white rounded-lg shadow-md p-4 border">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado por Período</h3>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosGrafico}>
+                    <XAxis 
+                      dataKey="periodo" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: '#6B7280' }}
+                    />
+                    <Bar 
+                      dataKey="valorApresentado" 
+                      fill="#3B82F6"
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Gráfico Valor do Indicador */}
+            <div className="bg-white rounded-lg shadow-md p-4 border">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor do Indicador por Período</h3>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosGrafico}>
+                    <XAxis 
+                      dataKey="periodo" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: '#6B7280' }}
+                    />
+                    <Bar 
+                      dataKey="valorIndicador" 
+                      fill="#10B981"
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
           {/* Tabela - Mobile - Compacta e Responsiva */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
@@ -650,6 +714,55 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
+          {/* Gráficos - Desktop */}
+          <div className="mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Gráfico Valor Apresentado */}
+              <div className="bg-white rounded-lg shadow-md p-6 border">
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado por Período</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dadosGrafico}>
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <Bar 
+                        dataKey="valorApresentado" 
+                        fill="#3B82F6"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Gráfico Valor do Indicador */}
+              <div className="bg-white rounded-lg shadow-md p-6 border">
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor do Indicador por Período</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dadosGrafico}>
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <Bar 
+                        dataKey="valorIndicador" 
+                        fill="#10B981"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Tabela - Desktop */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
