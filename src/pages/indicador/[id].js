@@ -452,7 +452,7 @@ export default function IndicadorDetalhe({ user }) {
                       dataKey="periodo" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
+                      tick={{ fontSize: 8, fill: '#6B7280' }}
                     />
                     <Bar 
                       dataKey="valorApresentado" 
@@ -481,7 +481,7 @@ export default function IndicadorDetalhe({ user }) {
                       dataKey="periodo" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
+                      tick={{ fontSize: 8, fill: '#6B7280' }}
                     />
                     <Bar 
                       dataKey="valorIndicador" 
