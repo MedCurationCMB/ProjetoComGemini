@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft } from 'react-icons/fi';
-import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
@@ -458,7 +458,14 @@ export default function IndicadorDetalhe({ user }) {
                       dataKey="valorApresentado" 
                       fill="#3B82F6"
                       radius={[2, 2, 0, 0]}
-                    />
+                    >
+                      <LabelList 
+                        dataKey="valorApresentado" 
+                        position="top" 
+                        style={{ fontSize: '10px', fill: '#374151' }}
+                        formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -480,7 +487,14 @@ export default function IndicadorDetalhe({ user }) {
                       dataKey="valorIndicador" 
                       fill="#10B981"
                       radius={[2, 2, 0, 0]}
-                    />
+                    >
+                      <LabelList 
+                        dataKey="valorIndicador" 
+                        position="top" 
+                        style={{ fontSize: '10px', fill: '#374151' }}
+                        formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -733,7 +747,14 @@ export default function IndicadorDetalhe({ user }) {
                         dataKey="valorApresentado" 
                         fill="#3B82F6"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList 
+                          dataKey="valorApresentado" 
+                          position="top" 
+                          style={{ fontSize: '12px', fill: '#374151' }}
+                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -755,7 +776,14 @@ export default function IndicadorDetalhe({ user }) {
                         dataKey="valorIndicador" 
                         fill="#10B981"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList 
+                          dataKey="valorIndicador" 
+                          position="top" 
+                          style={{ fontSize: '12px', fill: '#374151' }}
+                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
