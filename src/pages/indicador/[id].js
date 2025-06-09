@@ -447,7 +447,7 @@ export default function IndicadorDetalhe({ user }) {
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado por Período</h3>
               <div className="h-32">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosGrafico}>
+                  <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
                     <XAxis 
                       dataKey="periodo" 
                       axisLine={false}
@@ -476,7 +476,7 @@ export default function IndicadorDetalhe({ user }) {
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor do Indicador por Período</h3>
               <div className="h-32">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosGrafico}>
+                  <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
                     <XAxis 
                       dataKey="periodo" 
                       axisLine={false}
@@ -736,7 +736,7 @@ export default function IndicadorDetalhe({ user }) {
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado por Período</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosGrafico}>
+                    <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
                       <XAxis 
                         dataKey="periodo" 
                         axisLine={false}
@@ -765,7 +765,7 @@ export default function IndicadorDetalhe({ user }) {
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor do Indicador por Período</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosGrafico}>
+                    <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
                       <XAxis 
                         dataKey="periodo" 
                         axisLine={false}
