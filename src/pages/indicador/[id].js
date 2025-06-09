@@ -309,6 +309,22 @@ export default function IndicadorDetalhe({ user }) {
     }
   };
 
+  // Função para formatar data para gráficos (formato DD-MM-AA)
+  const formatDateGrafico = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2); // Últimos 2 dígitos do ano
+      
+      return `${day}-${month}-${year}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
   // Função para formatar valor (número com separadores de milhares)
   const formatValue = (value) => {
     if (value === null || value === undefined || value === '') return '-';
@@ -325,7 +341,7 @@ export default function IndicadorDetalhe({ user }) {
     
     return indicadores
       .map(indicador => ({
-        periodo: formatDate(indicador.periodo_referencia),
+        periodo: formatDateGrafico(indicador.periodo_referencia), // Usando formato DD-MM-AA para gráficos
         periodoCompleto: indicador.periodo_referencia,
         valorApresentado: parseFloat(indicador.valor_indicador_apresentado) || 0,
         valorIndicador: parseFloat(indicador.valor_indicador) || 0
