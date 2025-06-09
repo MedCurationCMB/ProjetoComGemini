@@ -138,8 +138,8 @@ export default function IndicadorDetalhe({ user }) {
     }
   }, [user, id, router]);
 
-  // Função para marcar todos os indicadores como lidos
-  const marcarTodosComoLidos = async () => {
+  // Função para marcar todos os indicadores como lidos (toggle)
+  const toggleLidoTodos = async () => {
     if (marcandoComoLido) return;
     
     try {
@@ -153,10 +153,13 @@ export default function IndicadorDetalhe({ user }) {
         return;
       }
       
+      // Inverter o status atual
+      const novoStatus = !todosMarcadosComoLidos;
+      
       // Atualizar TODOS os registros com o mesmo id_controleindicador
       const { data, error } = await supabase
         .from('controle_indicador_geral')
-        .update({ lido: true })
+        .update({ lido: novoStatus })
         .eq('id_controleindicador', id)
         .select();
       
@@ -164,15 +167,19 @@ export default function IndicadorDetalhe({ user }) {
       
       // Atualizar o estado local
       setIndicadores(prev => 
-        prev.map(ind => ({ ...ind, lido: true }))
+        prev.map(ind => ({ ...ind, lido: novoStatus }))
       );
       
-      setTodosMarcadosComoLidos(true);
+      setTodosMarcadosComoLidos(novoStatus);
       
-      toast.success('Todos os indicadores marcados como lidos!');
+      const mensagem = novoStatus 
+        ? 'Todos os indicadores marcados como lidos!' 
+        : 'Indicadores marcados como não lidos!';
+      
+      toast.success(mensagem);
     } catch (error) {
-      console.error('Erro ao marcar como lidos:', error);
-      toast.error('Erro ao marcar indicadores como lidos');
+      console.error('Erro ao alterar status de lido:', error);
+      toast.error('Erro ao alterar status dos indicadores');
     } finally {
       setMarcandoComoLido(false);
     }
@@ -459,30 +466,28 @@ export default function IndicadorDetalhe({ user }) {
 
           {/* Botão Marcar como Lido - Mobile (abaixo da tabela) */}
           <div className="mt-4 mb-4">
-            {!todosMarcadosComoLidos ? (
-              <button
-                onClick={marcarTodosComoLidos}
-                disabled={marcandoComoLido}
-                className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
-                  marcandoComoLido
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+            <button
+              onClick={toggleLidoTodos}
+              disabled={marcandoComoLido}
+              className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+                marcandoComoLido
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : todosMarcadosComoLidos
+                    ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {marcandoComoLido ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
-                    Marcando...
-                  </>
-                ) : (
-                  'Marcar como Lido'
-                )}
-              </button>
-            ) : (
-              <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
-                ✓ Marcado como Lido
-              </div>
-            )}
+              }`}
+            >
+              {marcandoComoLido ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
+                  {todosMarcadosComoLidos ? 'Desmarcando...' : 'Marcando...'}
+                </>
+              ) : todosMarcadosComoLidos ? (
+                '✓ Marcado como Lido'
+              ) : (
+                'Marcar como Lido'
+              )}
+            </button>
           </div>
 
           {/* Botão Voltar para Início */}
@@ -687,30 +692,28 @@ export default function IndicadorDetalhe({ user }) {
           
           {/* Botão Marcar como Lido - Desktop (abaixo da tabela, canto direito) */}
           <div className="mt-6 flex justify-end">
-            {!todosMarcadosComoLidos ? (
-              <button
-                onClick={marcarTodosComoLidos}
-                disabled={marcandoComoLido}
-                className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
-                  marcandoComoLido
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+            <button
+              onClick={toggleLidoTodos}
+              disabled={marcandoComoLido}
+              className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
+                marcandoComoLido
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : todosMarcadosComoLidos
+                    ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {marcandoComoLido ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
-                    Marcando...
-                  </>
-                ) : (
-                  'Marcar como Lido'
-                )}
-              </button>
-            ) : (
-              <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
-                ✓ Marcado como Lido
-              </div>
-            )}
+              }`}
+            >
+              {marcandoComoLido ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {todosMarcadosComoLidos ? 'Desmarcando...' : 'Marcando...'}
+                </>
+              ) : todosMarcadosComoLidos ? (
+                '✓ Marcado como Lido'
+              ) : (
+                'Marcar como Lido'
+              )}
+            </button>
           </div>
           
           {/* Informações adicionais */}
