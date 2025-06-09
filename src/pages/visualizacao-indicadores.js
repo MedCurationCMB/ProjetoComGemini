@@ -243,6 +243,7 @@ export default function VisualizacaoIndicadores({ user }) {
           .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
           .not('indicador', 'is', null)  // ← SEGUNDO: não pode ser null
           .not('indicador', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
+          .not('periodo_referencia', 'is', null)  // ← QUARTO: periodo_referencia não pode ser null
           .in('projeto_id', projetosVinculados); // ← NOVO: Filtrar apenas projetos vinculados
           
         // Aplicar filtros de projeto e categoria se selecionados
