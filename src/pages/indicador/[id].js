@@ -16,6 +16,8 @@ export default function IndicadorDetalhe({ user }) {
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [infoGeral, setInfoGeral] = useState(null); // Para armazenar informações gerais do indicador
+  const [marcandoComoLido, setMarcandoComoLido] = useState(false);
+  const [todosMarcadosComoLidos, setTodosMarcadosComoLidos] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -93,6 +95,10 @@ export default function IndicadorDetalhe({ user }) {
         // O nome do indicador deve ser o mesmo em todos os registros
         setNomeIndicador(data[0].indicador || 'Indicador sem nome');
         
+        // Verificar se todos os registros estão marcados como lidos
+        const todosLidos = data.every(indicador => indicador.lido === true);
+        setTodosMarcadosComoLidos(todosLidos);
+        
         // Pegar as informações gerais do primeiro registro (projeto, categoria)
         setInfoGeral({
           projeto_id: data[0].projeto_id,
@@ -111,6 +117,46 @@ export default function IndicadorDetalhe({ user }) {
       fetchIndicadores();
     }
   }, [user, id, router]);
+
+  // Função para marcar todos os indicadores como lidos
+  const marcarTodosComoLidos = async () => {
+    if (marcandoComoLido) return;
+    
+    try {
+      setMarcandoComoLido(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      // Atualizar TODOS os registros com o mesmo id_controleindicador
+      const { data, error } = await supabase
+        .from('controle_indicador_geral')
+        .update({ lido: true })
+        .eq('id_controleindicador', id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setIndicadores(prev => 
+        prev.map(ind => ({ ...ind, lido: true }))
+      );
+      
+      setTodosMarcadosComoLidos(true);
+      
+      toast.success('Todos os indicadores marcados como lidos!');
+    } catch (error) {
+      console.error('Erro ao marcar como lidos:', error);
+      toast.error('Erro ao marcar indicadores como lidos');
+    } finally {
+      setMarcandoComoLido(false);
+    }
+  };
 
   // Função para navegar de volta para a página inicial
   const voltarParaInicio = () => {
@@ -218,6 +264,34 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
+          {/* Botão Marcar como Lido */}
+          <div className="mb-4">
+            {!todosMarcadosComoLidos ? (
+              <button
+                onClick={marcarTodosComoLidos}
+                disabled={marcandoComoLido}
+                className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+                  marcandoComoLido
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {marcandoComoLido ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
+                    Marcando...
+                  </>
+                ) : (
+                  'Marcar Todos como Lidos'
+                )}
+              </button>
+            ) : (
+              <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
+                ✓ Todos Marcados como Lidos
+              </div>
+            )}
+          </div>
+
           {/* Tabela - Mobile (stack cards) */}
           <div className="space-y-4">
             {indicadores.map((indicador, index) => (
@@ -314,6 +388,34 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
+          {/* Botão Marcar como Lido - Desktop */}
+          <div className="mb-6 flex justify-end">
+            {!todosMarcadosComoLidos ? (
+              <button
+                onClick={marcarTodosComoLidos}
+                disabled={marcandoComoLido}
+                className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
+                  marcandoComoLido
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {marcandoComoLido ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                    Marcando...
+                  </>
+                ) : (
+                  'Marcar Todos como Lidos'
+                )}
+              </button>
+            ) : (
+              <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
+                ✓ Todos Marcados como Lidos
+              </div>
+            )}
+          </div>
+
           {/* Tabela - Desktop */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
