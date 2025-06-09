@@ -264,34 +264,6 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* Botão Marcar como Lido */}
-          <div className="mb-4">
-            {!todosMarcadosComoLidos ? (
-              <button
-                onClick={marcarTodosComoLidos}
-                disabled={marcandoComoLido}
-                className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
-                  marcandoComoLido
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {marcandoComoLido ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
-                    Marcando...
-                  </>
-                ) : (
-                  'Marcar Todos como Lidos'
-                )}
-              </button>
-            ) : (
-              <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
-                ✓ Todos Marcados como Lidos
-              </div>
-            )}
-          </div>
-
           {/* Tabela - Mobile - Compacta e Responsiva */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
@@ -331,6 +303,34 @@ export default function IndicadorDetalhe({ user }) {
             <div className="px-4 py-3 bg-gray-50 text-center text-gray-500 text-xs border-t">
               Total de períodos: {indicadores.length}
             </div>
+          </div>
+
+          {/* Botão Marcar como Lido - Mobile (abaixo da tabela) */}
+          <div className="mt-4 mb-4">
+            {!todosMarcadosComoLidos ? (
+              <button
+                onClick={marcarTodosComoLidos}
+                disabled={marcandoComoLido}
+                className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+                  marcandoComoLido
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {marcandoComoLido ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
+                    Marcando...
+                  </>
+                ) : (
+                  'Marcar Todos como Lidos'
+                )}
+              </button>
+            ) : (
+              <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
+                ✓ Todos Marcados como Lidos
+              </div>
+            )}
           </div>
 
           {/* Botão Voltar para Início */}
@@ -392,34 +392,6 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* Botão Marcar como Lido - Desktop */}
-          <div className="mb-6 flex justify-end">
-            {!todosMarcadosComoLidos ? (
-              <button
-                onClick={marcarTodosComoLidos}
-                disabled={marcandoComoLido}
-                className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
-                  marcandoComoLido
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {marcandoComoLido ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
-                    Marcando...
-                  </>
-                ) : (
-                  'Marcar Todos como Lidos'
-                )}
-              </button>
-            ) : (
-              <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
-                ✓ Todos Marcados como Lidos
-              </div>
-            )}
-          </div>
-
           {/* Tabela - Desktop */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
@@ -460,8 +432,36 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
+          {/* Botão Marcar como Lido - Desktop (abaixo da tabela, canto direito) */}
+          <div className="mt-6 flex justify-end">
+            {!todosMarcadosComoLidos ? (
+              <button
+                onClick={marcarTodosComoLidos}
+                disabled={marcandoComoLido}
+                className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
+                  marcandoComoLido
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {marcandoComoLido ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2"></div>
+                    Marcando...
+                  </>
+                ) : (
+                  'Marcar Todos como Lidos'
+                )}
+              </button>
+            ) : (
+              <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
+                ✓ Todos Marcados como Lidos
+              </div>
+            )}
+          </div>
+          
           {/* Informações adicionais */}
-          <div className="mt-6 text-center text-gray-500 text-sm">
+          <div className="mt-4 text-center text-gray-500 text-sm">
             Total de períodos: {indicadores.length}
           </div>
         </div>
