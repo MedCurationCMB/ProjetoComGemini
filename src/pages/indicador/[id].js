@@ -18,6 +18,17 @@ export default function IndicadorDetalhe({ user }) {
   const [infoGeral, setInfoGeral] = useState(null); // Para armazenar informações gerais do indicador
   const [marcandoComoLido, setMarcandoComoLido] = useState(false);
   const [todosMarcadosComoLidos, setTodosMarcadosComoLidos] = useState(false);
+  const [atualizandoStatus, setAtualizandoStatus] = useState(false);
+  
+  // Estados para controlar status geral
+  const [statusGeral, setStatusGeral] = useState({
+    importante: false,
+    ler_depois: false,
+    arquivado: false
+  });
+
+  // Novo estado para controlar o modal de confirmação de arquivar
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -99,6 +110,15 @@ export default function IndicadorDetalhe({ user }) {
         const todosLidos = data.every(indicador => indicador.lido === true);
         setTodosMarcadosComoLidos(todosLidos);
         
+        // Verificar status geral (importante, ler_depois, arquivado)
+        // Considera que o status está ativo se PELO MENOS UM registro estiver marcado
+        const statusGeral = {
+          importante: data.some(indicador => indicador.importante === true),
+          ler_depois: data.some(indicador => indicador.ler_depois === true),
+          arquivado: data.some(indicador => indicador.arquivado === true)
+        };
+        setStatusGeral(statusGeral);
+        
         // Pegar as informações gerais do primeiro registro (projeto, categoria)
         setInfoGeral({
           projeto_id: data[0].projeto_id,
@@ -155,6 +175,103 @@ export default function IndicadorDetalhe({ user }) {
       toast.error('Erro ao marcar indicadores como lidos');
     } finally {
       setMarcandoComoLido(false);
+    }
+  };
+
+  // Função para alternar status (importante, ler_depois, arquivado) de todos os indicadores
+  const alternarStatusTodos = async (campo, valorAtual) => {
+    if (atualizandoStatus) return;
+    
+    // Se for arquivar e não está arquivado, mostrar confirmação
+    if (campo === 'arquivado' && !valorAtual) {
+      setShowArchiveConfirm(true);
+      return;
+    }
+    
+    try {
+      setAtualizandoStatus(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      const novoValor = !valorAtual;
+      
+      // Atualizar TODOS os registros com o mesmo id_controleindicador
+      const { data, error } = await supabase
+        .from('controle_indicador_geral')
+        .update({ [campo]: novoValor })
+        .eq('id_controleindicador', id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setIndicadores(prev => 
+        prev.map(ind => ({ ...ind, [campo]: novoValor }))
+      );
+      
+      // Atualizar status geral
+      setStatusGeral(prev => ({ ...prev, [campo]: novoValor }));
+      
+      // Mensagens específicas para cada ação
+      const mensagens = {
+        importante: novoValor ? 'Marcado como importante!' : 'Removido dos importantes',
+        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois',
+        arquivado: novoValor ? 'Indicadores arquivados!' : 'Indicadores desarquivados'
+      };
+      
+      toast.success(mensagens[campo]);
+    } catch (error) {
+      console.error(`Erro ao alterar ${campo}:`, error);
+      toast.error('Erro ao atualizar indicadores');
+    } finally {
+      setAtualizandoStatus(false);
+    }
+  };
+
+  // Função para confirmar o arquivamento
+  const confirmarArquivamento = async () => {
+    setShowArchiveConfirm(false);
+    
+    try {
+      setAtualizandoStatus(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      // Atualizar TODOS os registros com o mesmo id_controleindicador - definir arquivado como TRUE
+      const { data, error } = await supabase
+        .from('controle_indicador_geral')
+        .update({ arquivado: true })
+        .eq('id_controleindicador', id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setIndicadores(prev => 
+        prev.map(ind => ({ ...ind, arquivado: true }))
+      );
+      
+      // Atualizar status geral
+      setStatusGeral(prev => ({ ...prev, arquivado: true }));
+      
+      toast.success('Indicadores arquivados!');
+    } catch (error) {
+      console.error('Erro ao arquivar indicadores:', error);
+      toast.error('Erro ao arquivar indicadores');
+    } finally {
+      setAtualizandoStatus(false);
     }
   };
 
@@ -221,6 +338,41 @@ export default function IndicadorDetalhe({ user }) {
         <title>Indicador - {nomeIndicador}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
+
+      {/* Modal de confirmação para arquivar */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                <FiArchive className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Arquivar Indicadores
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Tem certeza que deseja arquivar todos os períodos deste indicador? Você poderá encontrá-los na seção "Arquivados".
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarArquivamento}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Arquivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MOBILE: Layout com tabela */}
       <div className="lg:hidden pb-20">
@@ -344,6 +496,53 @@ export default function IndicadorDetalhe({ user }) {
             </button>
           </div>
         </div>
+
+        {/* Barra fixa inferior com botões de ação - Mobile */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
+          <div className="max-w-md mx-auto flex justify-center space-x-8">
+            {/* Botão Importante */}
+            <button
+              onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiStar className={`h-5 w-5 ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`}>
+                Importante
+              </span>
+            </button>
+
+            {/* Botão Ler Depois */}
+            <button
+              onClick={() => alternarStatusTodos('ler_depois', statusGeral.ler_depois)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiClock className={`h-5 w-5 ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`}>
+                Ler Depois
+              </span>
+            </button>
+
+            {/* Botão Arquivar */}
+            <button
+              onClick={() => alternarStatusTodos('arquivado', statusGeral.arquivado)}
+              disabled={atualizandoStatus}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                atualizandoStatus ? 'opacity-50' : ''
+              }`}
+            >
+              <FiArchive className={`h-5 w-5 ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
+                Arquivar
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* DESKTOP: Layout com tabela */}
@@ -375,17 +574,71 @@ export default function IndicadorDetalhe({ user }) {
             </div>
             
             {/* Segunda linha: Tags */}
-            <div className="flex space-x-3">
-              {infoGeral?.projeto_id && (
-                <span className="px-3 py-1.5 bg-red-100 text-red-800 text-sm rounded-full font-medium">
-                  {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
-                </span>
-              )}
-              {infoGeral?.categoria_id && (
-                <span className="px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
-                  {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
-                </span>
-              )}
+            <div className="flex items-center justify-between">
+              {/* Lado esquerdo: Tags */}
+              <div className="flex space-x-3">
+                {infoGeral?.projeto_id && (
+                  <span className="px-3 py-1.5 bg-red-100 text-red-800 text-sm rounded-full font-medium">
+                    {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
+                  </span>
+                )}
+                {infoGeral?.categoria_id && (
+                  <span className="px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                    {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
+                  </span>
+                )}
+              </div>
+              
+              {/* Lado direito: Botões de ação */}
+              <div className="flex space-x-3">
+                {/* Botão Importante */}
+                <button
+                  onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    statusGeral.importante 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiStar className="w-4 h-4" />
+                  <span className="font-medium">Importante</span>
+                </button>
+
+                {/* Botão Ler Depois */}
+                <button
+                  onClick={() => alternarStatusTodos('ler_depois', statusGeral.ler_depois)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    statusGeral.ler_depois 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiClock className="w-4 h-4" />
+                  <span className="font-medium">Ler Depois</span>
+                </button>
+
+                {/* Botão Arquivar */}
+                <button
+                  onClick={() => alternarStatusTodos('arquivado', statusGeral.arquivado)}
+                  disabled={atualizandoStatus}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    atualizandoStatus ? 'opacity-50' : ''
+                  } ${
+                    statusGeral.arquivado 
+                      ? 'text-blue-600' 
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiArchive className="w-4 h-4" />
+                  <span className="font-medium">Arquivar</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
