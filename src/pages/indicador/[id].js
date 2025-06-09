@@ -222,7 +222,7 @@ export default function IndicadorDetalhe({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* MOBILE: Layout original */}
+      {/* MOBILE: Layout com tabela */}
       <div className="lg:hidden pb-20">
         {/* Header fixo com título - Mobile */}
         <div className="sticky top-0 bg-white shadow-sm z-10 px-4 py-4 border-b">
@@ -292,41 +292,45 @@ export default function IndicadorDetalhe({ user }) {
             )}
           </div>
 
-          {/* Tabela - Mobile (stack cards) */}
-          <div className="space-y-4">
-            {indicadores.map((indicador, index) => (
-              <div key={indicador.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Período de Referência
-                    </label>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {formatDate(indicador.periodo_referencia)}
-                    </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Valor Apresentado
-                      </label>
-                      <p className="text-base font-semibold text-gray-900">
+          {/* Tabela - Mobile - Compacta e Responsiva */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden border">
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                      Período
+                    </th>
+                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                      Valor Apresentado
+                    </th>
+                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Valor Indicador
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {indicadores.map((indicador, index) => (
+                    <tr key={indicador.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
+                      <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
+                        {formatDate(indicador.periodo_referencia)}
+                      </td>
+                      <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
                         {formatValue(indicador.valor_indicador_apresentado)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Valor do Indicador
-                      </label>
-                      <p className="text-base font-semibold text-gray-900">
+                      </td>
+                      <td className="px-2 py-3 text-xs font-medium text-gray-900">
                         {formatValue(indicador.valor_indicador)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Rodapé com total - Mobile */}
+            <div className="px-4 py-3 bg-gray-50 text-center text-gray-500 text-xs border-t">
+              Total de períodos: {indicadores.length}
+            </div>
           </div>
 
           {/* Botão Voltar para Início */}
@@ -342,7 +346,7 @@ export default function IndicadorDetalhe({ user }) {
         </div>
       </div>
 
-      {/* DESKTOP: Layout modificado */}
+      {/* DESKTOP: Layout com tabela */}
       <div className="hidden lg:block">
         {/* Header fixo com título e botão voltar - Desktop */}
         <div className="sticky top-0 bg-white shadow-sm z-10 px-8 py-6 border-b">
