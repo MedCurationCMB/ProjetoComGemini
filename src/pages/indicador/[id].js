@@ -350,19 +350,6 @@ export default function IndicadorDetalhe({ user }) {
   };
 
   const dadosGrafico = prepararDadosGrafico();
-  
-  // Calcular largura dinâmica para os gráficos
-  const calcularLarguraGrafico = () => {
-    const numPeriodos = dadosGrafico.length;
-    if (numPeriodos <= 7) {
-      return "100%"; // Largura normal se 7 ou menos períodos
-    }
-    // Largura fixa por período para manter barras com tamanho adequado
-    const larguraPorPeriodo = 80; // 80px por período
-    return numPeriodos * larguraPorPeriodo;
-  };
-
-  const larguraGrafico = calcularLarguraGrafico();
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -474,62 +461,58 @@ export default function IndicadorDetalhe({ user }) {
             {/* Gráfico Valor Apresentado */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado por Período</h3>
-              <div className="h-32 overflow-x-auto">
-                <div style={{ width: larguraGrafico, minWidth: "100%" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
-                      <XAxis 
-                        dataKey="periodo" 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 8, fill: '#6B7280' }}
-                      />
-                      <Bar 
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
+                    <XAxis 
+                      dataKey="periodo" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 8, fill: '#6B7280' }}
+                    />
+                    <Bar 
+                      dataKey="valorApresentado" 
+                      fill="#3B82F6"
+                      radius={[2, 2, 0, 0]}
+                    >
+                      <LabelList 
                         dataKey="valorApresentado" 
-                        fill="#3B82F6"
-                        radius={[2, 2, 0, 0]}
-                      >
-                        <LabelList 
-                          dataKey="valorApresentado" 
-                          position="top" 
-                          style={{ fontSize: '10px', fill: '#374151' }}
-                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                        position="top" 
+                        style={{ fontSize: '10px', fill: '#374151' }}
+                        formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
             {/* Gráfico Valor do Indicador */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor do Indicador por Período</h3>
-              <div className="h-32 overflow-x-auto">
-                <div style={{ width: larguraGrafico, minWidth: "100%" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
-                      <XAxis 
-                        dataKey="periodo" 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 8, fill: '#6B7280' }}
-                      />
-                      <Bar 
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosGrafico} margin={{ top: 20, right: 5, left: 5, bottom: 5 }}>
+                    <XAxis 
+                      dataKey="periodo" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 8, fill: '#6B7280' }}
+                    />
+                    <Bar 
+                      dataKey="valorIndicador" 
+                      fill="#10B981"
+                      radius={[2, 2, 0, 0]}
+                    >
+                      <LabelList 
                         dataKey="valorIndicador" 
-                        fill="#10B981"
-                        radius={[2, 2, 0, 0]}
-                      >
-                        <LabelList 
-                          dataKey="valorIndicador" 
-                          position="top" 
-                          style={{ fontSize: '10px', fill: '#374151' }}
-                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                        position="top" 
+                        style={{ fontSize: '10px', fill: '#374151' }}
+                        formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -767,62 +750,58 @@ export default function IndicadorDetalhe({ user }) {
               {/* Gráfico Valor Apresentado */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado por Período</h3>
-                <div className="h-64 overflow-x-auto">
-                  <div style={{ width: larguraGrafico, minWidth: "100%" }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fill: '#6B7280' }}
-                        />
-                        <Bar 
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <Bar 
+                        dataKey="valorApresentado" 
+                        fill="#3B82F6"
+                        radius={[4, 4, 0, 0]}
+                      >
+                        <LabelList 
                           dataKey="valorApresentado" 
-                          fill="#3B82F6"
-                          radius={[4, 4, 0, 0]}
-                        >
-                          <LabelList 
-                            dataKey="valorApresentado" 
-                            position="top" 
-                            style={{ fontSize: '12px', fill: '#374151' }}
-                            formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                          />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                          position="top" 
+                          style={{ fontSize: '12px', fill: '#374151' }}
+                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Gráfico Valor do Indicador */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor do Indicador por Período</h3>
-                <div className="h-64 overflow-x-auto">
-                  <div style={{ width: larguraGrafico, minWidth: "100%" }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fill: '#6B7280' }}
-                        />
-                        <Bar 
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dadosGrafico} margin={{ top: 30, right: 5, left: 5, bottom: 5 }}>
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <Bar 
+                        dataKey="valorIndicador" 
+                        fill="#10B981"
+                        radius={[4, 4, 0, 0]}
+                      >
+                        <LabelList 
                           dataKey="valorIndicador" 
-                          fill="#10B981"
-                          radius={[4, 4, 0, 0]}
-                        >
-                          <LabelList 
-                            dataKey="valorIndicador" 
-                            position="top" 
-                            style={{ fontSize: '12px', fill: '#374151' }}
-                            formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                          />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                          position="top" 
+                          style={{ fontSize: '12px', fill: '#374151' }}
+                          formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
