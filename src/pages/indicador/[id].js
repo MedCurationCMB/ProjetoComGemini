@@ -323,12 +323,12 @@ export default function IndicadorDetalhe({ user }) {
                     Marcando...
                   </>
                 ) : (
-                  'Marcar Todos como Lidos'
+                  'Marcar como Lido'
                 )}
               </button>
             ) : (
               <div className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-green-500 text-white">
-                ✓ Todos Marcados como Lidos
+                ✓ Marcado como Lido
               </div>
             )}
           </div>
@@ -450,12 +450,12 @@ export default function IndicadorDetalhe({ user }) {
                     Marcando...
                   </>
                 ) : (
-                  'Marcar Todos como Lidos'
+                  'Marcar como Lido'
                 )}
               </button>
             ) : (
               <div className="px-4 py-2 rounded-md flex items-center font-medium bg-green-500 text-white text-sm">
-                ✓ Todos Marcados como Lidos
+                ✓ Marcado como Lido
               </div>
             )}
           </div>
