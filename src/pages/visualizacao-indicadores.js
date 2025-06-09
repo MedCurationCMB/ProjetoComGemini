@@ -292,13 +292,29 @@ export default function VisualizacaoIndicadores({ user }) {
         // ALTERAÇÃO: Ordenar por periodo_referencia se existir, caso contrário por created_at
         // Primeiro tentativa: ordenar por periodo_referencia (nulls last) e depois por created_at
         query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
-                     .order('created_at', { ascending: false });
-        
+             .order('created_at', { ascending: false });
+
         const { data, error } = await query;
-        
+
         if (error) throw error;
+
+        // ✅ NOVA LÓGICA: Agrupar por id_controleindicador e manter apenas o mais recente
+        const indicadoresAgrupados = {};
+        (data || []).forEach(indicador => {
+        const controlId = indicador.id_controleindicador;
         
-        setIndicadores(data || []);
+        // Se não existe esse id_controleindicador ainda, ou se este tem data mais recente
+        if (!indicadoresAgrupados[controlId] || 
+            new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
+            indicadoresAgrupados[controlId] = indicador;
+        }
+        });
+
+        // Converter de volta para array e ordenar novamente
+        const indicadoresFinais = Object.values(indicadoresAgrupados)
+        .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+
+        setIndicadores(indicadoresFinais);
       } catch (error) {
         console.error('Erro ao buscar indicadores:', error);
       } finally {
