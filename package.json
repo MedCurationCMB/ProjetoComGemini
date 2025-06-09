@@ -16,11 +16,12 @@
     "@tiptap/starter-kit": "^2.0.0",
     "exceljs": "^4.4.0",
     "is-hotkey": "^0.2.0",
-    "next": "14.2.28",
+    "next": "^15.3.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^4.11.0",
+    "recharts": "^2.15.3",
     "slate": "^0.114.0",
     "slate-history": "^0.113.1",
     "slate-react": "^0.114.2"
