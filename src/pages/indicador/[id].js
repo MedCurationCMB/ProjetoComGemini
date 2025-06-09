@@ -84,6 +84,7 @@ export default function IndicadorDetalhe({ user }) {
           .from('controle_indicador_geral')
           .select('*')
           .eq('id_controleindicador', id)
+          .not('periodo_referencia', 'is', null)  // ← ADICIONADO: Filtrar apenas registros com periodo_referencia não nulo
           .order('periodo_referencia', { ascending: false });
         
         if (error) throw error;
