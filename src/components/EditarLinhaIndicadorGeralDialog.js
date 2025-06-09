@@ -1,4 +1,4 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js - Versão com funcionalidade de anexar documento
+// src/components/EditarLinhaIndicadorGeralDialog.js - Versão corrigida
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -25,7 +25,7 @@ const EditarLinhaIndicadorGeralDialog = ({
   });
   
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('principal'); // 'principal', 'anexar-computador', 'anexar-nuvem'
+  const [step, setStep] = useState('principal');
   const [documentoAtual, setDocumentoAtual] = useState(null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -35,16 +35,39 @@ const EditarLinhaIndicadorGeralDialog = ({
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
 
+  // ✅ FUNÇÃO CORRIGIDA: Converter data do banco para formato de input
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      // Se a data já está no formato correto YYYY-MM-DD, retornar como está
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return dateString;
+      }
+      
+      // Se for uma data completa com horário, extrair apenas a parte da data
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      console.error('Erro ao formatar data para input:', e);
+      return '';
+    }
+  };
+
   // Carrega os dados iniciais do item de controle
   useEffect(() => {
     if (controleItem) {
       setFormData({
-        prazo_entrega: controleItem.prazo_entrega || '',
+        prazo_entrega: formatDateForInput(controleItem.prazo_entrega),
         indicador: controleItem.indicador || '',
         observacao: controleItem.observacao || '',
         valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
         tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
-        periodo_referencia: controleItem.periodo_referencia || '',
+        periodo_referencia: formatDateForInput(controleItem.periodo_referencia),
         obrigatorio: controleItem.obrigatorio || false
       });
       
@@ -386,11 +409,23 @@ const EditarLinhaIndicadorGeralDialog = ({
     }
   };
 
-  // Função para formatar data
+  // ✅ FUNÇÃO CORRIGIDA: Formatar data para exibição
   const formatDate = (dateString) => {
     if (!dateString) return 'Data indisponível';
     
     try {
+      // Se for uma string no formato YYYY-MM-DD, criar a data sem conversão de fuso
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+      
+      // Para outros formatos, usar parsing normal
       const date = new Date(dateString);
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -685,8 +720,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                     <div className="flex text-sm text-gray-600">
                       <label
                         htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
-                      >
+                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
                         <span>Selecionar arquivo</span>
                         <input
                           id="file-upload"

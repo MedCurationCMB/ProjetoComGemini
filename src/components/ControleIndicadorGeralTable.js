@@ -1,4 +1,4 @@
-// Componente ControleIndicadorGeralTable.js - Versão atualizada com anexar documento
+// Componente ControleIndicadorGeralTable.js - Versão corrigida para formatação de datas
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -22,7 +22,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [atualizandoVisibilidade, setAtualizandoVisibilidade] = useState({});
-  const [anexarDocumentoId, setAnexarDocumentoId] = useState(null); // NOVO: Estado para anexar documento
+  const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -280,7 +280,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
     }
   };
 
-  // NOVO: Função para atualizar o status de um documento após upload ou vínculo
+  // Função para atualizar o status de um documento após upload ou vínculo
   const handleDocumentoAnexado = async (controleId, documentoId = null) => {
     try {
       // Atualizar localmente
@@ -303,11 +303,23 @@ const ControleIndicadorGeralTable = ({ user }) => {
     }
   };
 
-  // Formata a data para exibição
+  // ✅ FUNÇÃO CORRIGIDA: Formatar data sem problemas de fuso horário
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     
     try {
+      // Se for uma string no formato YYYY-MM-DD, criar a data sem conversão de fuso
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+      
+      // Para outros formatos (com horário), usar parsing normal
       const date = new Date(dateString);
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -475,7 +487,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
         />
       )}
 
-      {/* NOVO: Modal para anexar documento */}
+      {/* Modal para anexar documento */}
       {anexarDocumentoId && (
         <AnexarDocumentoIndicadorDialog
           controleId={anexarDocumentoId} 
@@ -638,7 +650,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
                       </span>
                     )}
                   </td>
-                  {/* NOVA COLUNA: Status do Documento */}
+                  {/* Coluna: Status do Documento */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {item.tem_documento ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -677,7 +689,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
                         Editar
                       </button>
                       
-                      {/* NOVO: Botão para anexar documento (apenas se não tiver documento) */}
+                      {/* Botão para anexar documento (apenas se não tiver documento) */}
                       {!item.tem_documento && (
                         <button
                           onClick={() => setAnexarDocumentoId(item.id)}
