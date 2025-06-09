@@ -1,8 +1,9 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js - Versão com funcionalidade de anexar documento
+// src/components/EditarLinhaIndicadorGeralDialog.js - Versão com funcionalidade de anexar documento usando dateUtils
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiX, FiCheck, FiCalendar, FiUpload, FiCloud, FiFile, FiArrowLeft } from 'react-icons/fi';
+import { formatDateForSupabase, formatDateForInput, formatDateForDisplay } from '../utils/dateUtils';
 
 const EditarLinhaIndicadorGeralDialog = ({ 
   controleItem, 
@@ -35,16 +36,16 @@ const EditarLinhaIndicadorGeralDialog = ({
   const [documentoSelecionado, setDocumentoSelecionado] = useState(null);
   const [filtroDocumento, setFiltroDocumento] = useState('');
 
-  // Carrega os dados iniciais do item de controle
+  // Carrega os dados iniciais do item de controle usando dateUtils
   useEffect(() => {
     if (controleItem) {
       setFormData({
-        prazo_entrega: controleItem.prazo_entrega || '',
+        prazo_entrega: formatDateForInput(controleItem.prazo_entrega),
         indicador: controleItem.indicador || '',
         observacao: controleItem.observacao || '',
         valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
         tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
-        periodo_referencia: controleItem.periodo_referencia || '',
+        periodo_referencia: formatDateForInput(controleItem.periodo_referencia),
         obrigatorio: controleItem.obrigatorio || false
       });
       
@@ -151,7 +152,7 @@ const EditarLinhaIndicadorGeralDialog = ({
     }));
   };
 
-  // Salvar as alterações
+  // Salvar as alterações usando dateUtils
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -169,15 +170,15 @@ const EditarLinhaIndicadorGeralDialog = ({
         return;
       }
       
-      // Preparar dados para atualização
+      // Preparar dados para atualização usando dateUtils
       const dadosAtualizacao = {
-        prazo_entrega: formData.prazo_entrega,
+        prazo_entrega: formatDateForSupabase(formData.prazo_entrega),
         indicador: formData.indicador?.trim() || null,
         observacao: formData.observacao?.trim() || null,
         valor_indicador_apresentado: formData.valor_indicador_apresentado 
           ? parseFloat(formData.valor_indicador_apresentado) 
           : null,
-        periodo_referencia: formData.periodo_referencia || null,
+        periodo_referencia: formatDateForSupabase(formData.periodo_referencia),
         obrigatorio: formData.obrigatorio
       };
 
@@ -188,6 +189,8 @@ const EditarLinhaIndicadorGeralDialog = ({
         dadosAtualizacao.tipo_unidade_indicador = null;
       }
       
+      console.log('Dados sendo enviados para o Supabase:', dadosAtualizacao);
+      
       // Atualizar o item de controle de indicador geral
       const { data, error } = await supabase
         .from('controle_indicador_geral')
@@ -196,6 +199,8 @@ const EditarLinhaIndicadorGeralDialog = ({
         .select();
         
       if (error) throw error;
+      
+      console.log('Dados salvos no Supabase:', data);
       
       toast.success('Item atualizado com sucesso!');
       
@@ -385,22 +390,6 @@ const EditarLinhaIndicadorGeralDialog = ({
       throw error;
     }
   };
-
-  // Função para formatar data
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Data indisponível';
-    
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (e) {
-      return 'Data inválida';
-    }
-  };
   
   // Filtrar documentos baseado no texto de filtro
   const documentosFiltrados = documentosExistentes.filter(doc => {
@@ -453,7 +442,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                 <p><strong>Tipo Indicador:</strong> {tiposIndicador[controleItem?.tipo_indicador] || 'N/A'}</p>
                 <p><strong>Subcategoria:</strong> {subcategorias[controleItem?.subcategoria_id] || 'N/A'}</p>
                 <p><strong>ID Base:</strong> {controleItem?.id_controleindicador || 'N/A'}</p>
-                <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
+                <p><strong>Prazo Inicial:</strong> {formatDateForDisplay(controleItem?.prazo_entrega_inicial)}</p>
                 <p><strong>Valor Calculado Atual:</strong> {controleItem?.valor_indicador || '-'}</p>
                 
                 {documentoAtual && (
@@ -461,7 +450,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                     <h4 className="font-medium text-blue-800 mb-1">Documento Atual</h4>
                     <p><strong>Nome:</strong> {documentoAtual.nome_arquivo}</p>
                     <p><strong>Descrição:</strong> {documentoAtual.descricao || 'Sem descrição'}</p>
-                    <p><strong>Data de Upload:</strong> {formatDate(documentoAtual.data_upload || documentoAtual.created_at)}</p>
+                    <p><strong>Data de Upload:</strong> {formatDateForDisplay(documentoAtual.data_upload || documentoAtual.created_at)}</p>
                   </div>
                 )}
               </div>
@@ -836,7 +825,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                             <span>{projetos[doc.projeto_id] || 'Projeto N/A'}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
-                            {formatDate(doc.data_upload || doc.created_at)}
+                            {formatDateForDisplay(doc.data_upload || doc.created_at)}
                           </p>
                         </div>
                       </div>
