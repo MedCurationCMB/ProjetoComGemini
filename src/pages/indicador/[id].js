@@ -88,31 +88,44 @@ export default function IndicadorDetalhe({ user }) {
     });
   };
 
-  // Função para filtrar por período
+  // Função corrigida para filtrar por período
   const filtrarPorPeriodo = (indicadoresOriginais) => {
     if (filtroPeriodo === 'todos') {
       return indicadoresOriginais;
     }
 
     const hoje = new Date();
+    // Zerar horas para comparação apenas de datas
+    hoje.setHours(23, 59, 59, 999);
+    
     let dataLimite;
 
     switch (filtroPeriodo) {
       case '7dias':
-        dataLimite = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+        dataLimite = new Date(hoje);
+        dataLimite.setDate(dataLimite.getDate() - 7);
+        dataLimite.setHours(0, 0, 0, 0);
         break;
       case '30dias':
-        dataLimite = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+        dataLimite = new Date(hoje);
+        dataLimite.setDate(dataLimite.getDate() - 30);
+        dataLimite.setHours(0, 0, 0, 0);
         break;
       case '90dias':
-        dataLimite = new Date(hoje.getTime() - 90 * 24 * 60 * 60 * 1000);
+        dataLimite = new Date(hoje);
+        dataLimite.setDate(dataLimite.getDate() - 90);
+        dataLimite.setHours(0, 0, 0, 0);
         break;
       case 'especifico':
         if (dataInicio && dataFim) {
           const inicio = new Date(dataInicio);
+          inicio.setHours(0, 0, 0, 0);
           const fim = new Date(dataFim);
+          fim.setHours(23, 59, 59, 999);
+          
           return indicadoresOriginais.filter(ind => {
             const periodoRef = new Date(ind.periodo_referencia);
+            periodoRef.setHours(0, 0, 0, 0);
             return periodoRef >= inicio && periodoRef <= fim;
           });
         }
@@ -123,6 +136,7 @@ export default function IndicadorDetalhe({ user }) {
 
     return indicadoresOriginais.filter(ind => {
       const periodoRef = new Date(ind.periodo_referencia);
+      periodoRef.setHours(0, 0, 0, 0);
       return periodoRef >= dataLimite;
     });
   };
