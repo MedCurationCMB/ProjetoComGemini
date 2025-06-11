@@ -7,6 +7,7 @@ import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
+import { toast } from 'react-hot-toast';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
@@ -327,6 +328,18 @@ export default function IndicadorDetalhe({ user }) {
     if (indicadoresOriginais.length > 0) {
       const indicadoresFiltrados = filtrarPorPeriodo(indicadoresOriginais);
       setIndicadores(indicadoresFiltrados);
+      
+      // ✅ NOVO: Toast quando não há dados no período específico
+      if (filtroPeriodo === 'especifico' && indicadoresFiltrados.length === 0 && indicadoresOriginais.length > 0) {
+        toast('📅 Nenhum indicador encontrado no período selecionado', {
+          duration: 4000,
+          style: {
+            background: '#FFF7ED',
+            border: '1px solid #FB923C',
+            borderLeft: '4px solid #EA580C',
+          },
+        });
+      }
       
       // Recalcular status baseado nos dados filtrados
       const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
