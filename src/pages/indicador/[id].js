@@ -691,176 +691,96 @@ export default function IndicadorDetalhe({ user }) {
               </button>
             </div>
             
-            {/* Filtro de período - Mobile MELHORADO */}
+            {/* Filtro de período - Mobile - APENAS campos de data melhorados */}
             {showFiltroPeriodo && (
-              <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
-                {/* Título do filtro */}
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-800">Filtrar por Período</h3>
-                  <button
-                    onClick={() => setShowFiltroPeriodo(false)}
-                    className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                  >
-                    <FiX className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-                
-                {/* Botões de filtro em grid responsivo */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Filtrar por Período
+                </label>
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setFiltroPeriodo('todos')}
-                    className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                       filtroPeriodo === 'todos'
-                        ? 'bg-blue-600 text-white shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs opacity-75 mb-0.5">📊</span>
-                      <span>Todos</span>
-                    </div>
+                    Todos
                   </button>
                   
                   <button
                     onClick={() => setFiltroPeriodo('7dias')}
-                    className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                       filtroPeriodo === '7dias'
-                        ? 'bg-blue-600 text-white shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs opacity-75 mb-0.5">🗓️</span>
-                      <span>7 dias</span>
-                    </div>
+                    Últimos 7 dias
                   </button>
                   
                   <button
                     onClick={() => setFiltroPeriodo('30dias')}
-                    className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                       filtroPeriodo === '30dias'
-                        ? 'bg-blue-600 text-white shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs opacity-75 mb-0.5">📅</span>
-                      <span>30 dias</span>
-                    </div>
+                    Últimos 30 dias
                   </button>
                   
                   <button
                     onClick={() => setFiltroPeriodo('90dias')}
-                    className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                       filtroPeriodo === '90dias'
-                        ? 'bg-blue-600 text-white shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-300 hover:bg-blue-50'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs opacity-75 mb-0.5">📆</span>
-                      <span>90 dias</span>
-                    </div>
+                    Últimos 90 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('especifico')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === 'especifico'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Período Específico
                   </button>
                 </div>
                 
-                {/* Botão período específico - destaque especial */}
-                <button
-                  onClick={() => setFiltroPeriodo('especifico')}
-                  className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    filtroPeriodo === 'especifico'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transform scale-105' 
-                      : 'bg-white text-gray-700 border-2 border-dashed border-gray-300 hover:border-purple-400 hover:bg-purple-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-center">
-                    <FiCalendar className="w-4 h-4 mr-2" />
-                    <span>Período Específico</span>
-                    {filtroPeriodo === 'especifico' && (
-                      <span className="ml-2 text-xs opacity-75">✨</span>
-                    )}
-                  </div>
-                </button>
-                
-                {/* Campos de data para período específico - MELHORADOS */}
+                {/* ✅ APENAS os campos de data melhorados - igual ao desktop */}
                 {filtroPeriodo === 'especifico' && (
-                  <div className="mt-4 p-4 bg-white rounded-xl border border-purple-200 shadow-sm">
-                    <div className="flex items-center mb-3">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                      <h4 className="text-sm font-semibold text-gray-800">Selecione o intervalo</h4>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Data Início
+                      </label>
+                      <input
+                        type="date"
+                        value={dataInicio}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
-                    
-                    <div className="space-y-3">
-                      {/* Data Início */}
-                      <div>
-                        <label className="flex items-center text-xs font-medium text-gray-600 mb-2">
-                          <FiCalendar className="w-3 h-3 mr-1" />
-                          Data de Início
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={dataInicio}
-                            onChange={(e) => setDataInicio(e.target.value)}
-                            className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
-                            placeholder="dd/mm/aaaa"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Separador visual */}
-                      <div className="flex items-center justify-center">
-                        <div className="flex-1 h-px bg-gray-300"></div>
-                        <span className="px-3 text-xs text-gray-500 bg-white">até</span>
-                        <div className="flex-1 h-px bg-gray-300"></div>
-                      </div>
-                      
-                      {/* Data Fim */}
-                      <div>
-                        <label className="flex items-center text-xs font-medium text-gray-600 mb-2">
-                          <FiCalendar className="w-3 h-3 mr-1" />
-                          Data de Fim
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={dataFim}
-                            onChange={(e) => setDataFim(e.target.value)}
-                            className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
-                            placeholder="dd/mm/aaaa"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Indicador de validação */}
-                      {dataInicio && dataFim && (
-                        <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center text-xs text-green-700">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                            <span>Período válido selecionado</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Aviso se datas inválidas */}
-                      {dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim) && (
-                        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-center text-xs text-red-700">
-                            <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                            <span>Data de início deve ser anterior à data de fim</span>
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Data Fim
+                      </label>
+                      <input
+                        type="date"
+                        value={dataFim}
+                        onChange={(e) => setDataFim(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
                   </div>
                 )}
-                
-                {/* Rodapé do filtro com dica */}
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center">
-                    💡 Os filtros são aplicados automaticamente
-                  </p>
-                </div>
               </div>
             )}
             
