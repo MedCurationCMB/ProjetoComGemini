@@ -686,6 +686,20 @@ export default function IndicadorDetalhe({ user }) {
                 <FiFilter className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Tags - Mobile */}
+            <div className="flex space-x-2">
+              {infoGeral?.projeto_id && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                  {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
+                </span>
+              )}
+              {infoGeral?.categoria_id && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
+                </span>
+              )}
+            </div>
             
             {/* Filtro de período - Mobile - APENAS campos de data melhorados */}
             {showFiltroPeriodo && (
@@ -780,19 +794,6 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             )}
             
-            {/* Tags - Mobile */}
-            <div className="flex space-x-2">
-              {infoGeral?.projeto_id && (
-                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                  {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
-                </span>
-              )}
-              {infoGeral?.categoria_id && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                  {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
