@@ -275,43 +275,64 @@ export default function IndicadorDetalhe({ user }) {
         
         if (error) throw error;
         
-        if (!data || data.length === 0) {
-          router.push('/visualizacao-indicadores');
-          return;
-        }
+        // ✅ SEMPRE definir dados, mesmo se vazio
+        const dadosIndicadores = data || [];
         
         // Armazenar dados originais
-        setIndicadoresOriginais(data);
+        setIndicadoresOriginais(dadosIndicadores);
         
-        // Aplicar filtro de período
-        const indicadoresFiltrados = filtrarPorPeriodo(data);
-        setIndicadores(indicadoresFiltrados);
-        
-        // O nome do indicador deve ser o mesmo em todos os registros
-        setNomeIndicador(data[0].indicador || 'Indicador sem nome');
-        
-        // Verificar se todos os registros estão marcados como lidos (usar dados filtrados)
-        const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
-        setTodosMarcadosComoLidos(todosLidos);
-        
-        // Verificar status geral (importante, ler_depois, arquivado) (usar dados filtrados)
-        // Considera que o status está ativo se PELO MENOS UM registro estiver marcado
-        const statusGeral = {
-          importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
-          ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
-          arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
-        };
-        setStatusGeral(statusGeral);
-        
-        // Pegar as informações gerais do primeiro registro (projeto, categoria)
-        setInfoGeral({
-          projeto_id: data[0].projeto_id,
-          categoria_id: data[0].categoria_id,
-          created_at: data[0].created_at
-        });
+        // Se não há dados, ainda assim configurar estados
+        if (dadosIndicadores.length === 0) {
+          setIndicadores([]);
+          setNomeIndicador('Indicador sem dados');
+          setTodosMarcadosComoLidos(false);
+          setStatusGeral({
+            importante: false,
+            ler_depois: false,
+            arquivado: false
+          });
+          setInfoGeral(null);
+        } else {
+          // Aplicar filtro de período
+          const indicadoresFiltrados = filtrarPorPeriodo(dadosIndicadores);
+          setIndicadores(indicadoresFiltrados);
+          
+          // O nome do indicador deve ser o mesmo em todos os registros
+          setNomeIndicador(dadosIndicadores[0].indicador || 'Indicador sem nome');
+          
+          // Verificar se todos os registros estão marcados como lidos (usar dados filtrados)
+          const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
+          setTodosMarcadosComoLidos(todosLidos);
+          
+          // Verificar status geral (importante, ler_depois, arquivado) (usar dados filtrados)
+          // Considera que o status está ativo se PELO MENOS UM registro estiver marcado
+          const statusGeral = {
+            importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
+            ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
+            arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
+          };
+          setStatusGeral(statusGeral);
+          
+          // Pegar as informações gerais do primeiro registro (projeto, categoria)
+          setInfoGeral({
+            projeto_id: dadosIndicadores[0].projeto_id,
+            categoria_id: dadosIndicadores[0].categoria_id,
+            created_at: dadosIndicadores[0].created_at
+          });
+        }
       } catch (error) {
         console.error('Erro ao buscar indicadores:', error);
-        router.push('/visualizacao-indicadores');
+        // ✅ Em caso de erro, não redirecionar, apenas definir estados vazios
+        setIndicadores([]);
+        setIndicadoresOriginais([]);
+        setNomeIndicador('Erro ao carregar indicador');
+        setTodosMarcadosComoLidos(false);
+        setStatusGeral({
+          importante: false,
+          ler_depois: false,
+          arquivado: false
+        });
+        setInfoGeral(null);
       } finally {
         setLoading(false);
       }
@@ -322,13 +343,13 @@ export default function IndicadorDetalhe({ user }) {
     }
   }, [user, id, router]);
 
-  // Aplicar filtro quando mudarem os critérios de filtro
+  // ✅ Aplicar filtro quando mudarem os critérios de filtro COM TOAST
   useEffect(() => {
     if (indicadoresOriginais.length > 0) {
       const indicadoresFiltrados = filtrarPorPeriodo(indicadoresOriginais);
       setIndicadores(indicadoresFiltrados);
       
-      // ✅ NOVO: Toast quando não há dados no período específico
+      // ✅ Toast quando não há dados no período específico
       if (filtroPeriodo === 'especifico' && indicadoresFiltrados.length === 0 && indicadoresOriginais.length > 0) {
         toast('📅 Nenhum indicador encontrado no período selecionado', {
           duration: 4000,
@@ -594,14 +615,7 @@ export default function IndicadorDetalhe({ user }) {
     );
   }
 
-  if (!indicadores || indicadores.length === 0) {
-    return (
-      <div className="min-h-screen bg-white flex justify-center items-center">
-        <p className="text-gray-500">Indicadores não encontrados</p>
-      </div>
-    );
-  }
-
+  // ✅ SEMPRE renderizar o layout completo, independente de ter dados ou não
   return (
     <div className="min-h-screen bg-white lg:bg-gray-50">
       <Head>
@@ -784,7 +798,7 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* KPIs - Mobile */}
+          {/* KPIs - Mobile - SEMPRE mostrados */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -810,7 +824,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Gráficos - Mobile */}
+          {/* Gráficos - Mobile - SEMPRE mostrados */}
           <div className="mb-6 space-y-6">
             {/* Gráfico Valor Apresentado */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
@@ -889,7 +903,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Tabela - Mobile - Compacta e Responsiva */}
+          {/* Tabela - Mobile - SEMPRE mostrada */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -924,13 +938,13 @@ export default function IndicadorDetalhe({ user }) {
               </table>
             </div>
             
-            {/* Rodapé com total - Mobile */}
+            {/* Rodapé com total - Mobile - SEMPRE mostrado */}
             <div className="px-4 py-3 bg-gray-50 text-center text-gray-500 text-xs border-t">
               Total de períodos: {indicadores.length}
             </div>
           </div>
 
-          {/* Botão Marcar como Lido - Mobile (abaixo da tabela) */}
+          {/* Botão Marcar como Lido - Mobile - SEMPRE mostrado */}
           <div className="mt-4 mb-4">
             <button
               onClick={toggleLidoTodos}
@@ -1215,7 +1229,7 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* KPIs - Desktop */}
+          {/* KPIs - Desktop - SEMPRE mostrados */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1241,7 +1255,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Gráficos - Desktop */}
+          {/* Gráficos - Desktop - SEMPRE mostrados */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gráfico Valor Apresentado */}
@@ -1322,7 +1336,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Tabela - Desktop */}
+          {/* Tabela - Desktop - SEMPRE mostrada */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1362,7 +1376,7 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
-          {/* Botão Marcar como Lido - Desktop (abaixo da tabela, canto direito) */}
+          {/* Botão Marcar como Lido - Desktop - SEMPRE mostrado */}
           <div className="mt-6 flex justify-end">
             <button
               onClick={toggleLidoTodos}
@@ -1388,7 +1402,7 @@ export default function IndicadorDetalhe({ user }) {
             </button>
           </div>
           
-          {/* Informações adicionais */}
+          {/* Informações adicionais - SEMPRE mostradas */}
           <div className="mt-4 text-center text-gray-500 text-sm">
             Total de períodos: {indicadores.length}
           </div>
