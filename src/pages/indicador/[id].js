@@ -1065,6 +1065,20 @@ export default function IndicadorDetalhe({ user }) {
               </button>
             </div>
 
+            {/* 🔥 NOVA POSIÇÃO: Tags logo após o título */}
+            <div className="flex space-x-3 mb-4">
+              {infoGeral?.projeto_id && (
+                <span className="px-3 py-1.5 bg-red-100 text-red-800 text-sm rounded-full font-medium">
+                  {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
+                </span>
+              )}
+              {infoGeral?.categoria_id && (
+                <span className="px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                  {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
+                </span>
+              )}
+            </div>
+
             {/* Filtro de período - Desktop */}
             {showFiltroPeriodo && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
@@ -1158,23 +1172,9 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             )}
             
-            {/* Segunda linha: Tags */}
-            <div className="flex items-center justify-between">
-              {/* Lado esquerdo: Tags */}
-              <div className="flex space-x-3">
-                {infoGeral?.projeto_id && (
-                  <span className="px-3 py-1.5 bg-red-100 text-red-800 text-sm rounded-full font-medium">
-                    {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
-                  </span>
-                )}
-                {infoGeral?.categoria_id && (
-                  <span className="px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
-                    {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
-                  </span>
-                )}
-              </div>
-              
-              {/* Lado direito: Botões de ação */}
+            {/* 🔥 MODIFICADO: Segunda linha - APENAS botões de ação (tags removidas) */}
+            <div className="flex items-center justify-end">
+              {/* Botões de ação */}
               <div className="flex space-x-3">
                 {/* Botão Importante */}
                 <button
