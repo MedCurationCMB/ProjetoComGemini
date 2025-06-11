@@ -7,7 +7,6 @@ import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
-import { toast } from 'react-hot-toast';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
