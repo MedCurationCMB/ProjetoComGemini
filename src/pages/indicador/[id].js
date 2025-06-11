@@ -88,57 +88,134 @@ export default function IndicadorDetalhe({ user }) {
     });
   };
 
-  // Função corrigida para filtrar por período
+  // Função corrigida e mais robusta para filtrar por período
   const filtrarPorPeriodo = (indicadoresOriginais) => {
     if (filtroPeriodo === 'todos') {
       return indicadoresOriginais;
     }
 
+    // Função auxiliar para converter string de data em Date de forma segura
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+      
+      // Tenta diferentes formatos de data
+      let date;
+      
+      // Se já é um objeto Date
+      if (dateString instanceof Date) {
+        date = new Date(dateString);
+      }
+      // Se é string, tenta converter
+      else if (typeof dateString === 'string') {
+        // Remove qualquer informação de timezone e força UTC
+        const cleanDate = dateString.split('T')[0]; // Pega só a parte da data (YYYY-MM-DD)
+        date = new Date(cleanDate + 'T00:00:00'); // Força horário 00:00:00
+      }
+      else {
+        date = new Date(dateString);
+      }
+      
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        console.warn('Data inválida:', dateString);
+        return null;
+      }
+      
+      return date;
+    };
+
+    // Função auxiliar para comparar apenas as datas (sem horário)
+    const isSameOrAfter = (date1, date2) => {
+      if (!date1 || !date2) return false;
+      
+      const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+      const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+      
+      return d1 >= d2;
+    };
+
+    const isBetween = (date, start, end) => {
+      if (!date || !start || !end) return false;
+      
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      
+      return d >= s && d <= e;
+    };
+
     const hoje = new Date();
-    // Zerar horas para comparação apenas de datas
-    hoje.setHours(23, 59, 59, 999);
+    
+    // Debug: mostrar data de hoje
+    console.log('Data de hoje:', hoje.toLocaleDateString('pt-BR'));
+    console.log('Filtro selecionado:', filtroPeriodo);
     
     let dataLimite;
 
     switch (filtroPeriodo) {
       case '7dias':
-        dataLimite = new Date(hoje);
+        dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 7);
-        dataLimite.setHours(0, 0, 0, 0);
+        console.log('Data limite (7 dias):', dataLimite.toLocaleDateString('pt-BR'));
         break;
+        
       case '30dias':
-        dataLimite = new Date(hoje);
+        dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 30);
-        dataLimite.setHours(0, 0, 0, 0);
+        console.log('Data limite (30 dias):', dataLimite.toLocaleDateString('pt-BR'));
         break;
+        
       case '90dias':
-        dataLimite = new Date(hoje);
+        dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 90);
-        dataLimite.setHours(0, 0, 0, 0);
+        console.log('Data limite (90 dias):', dataLimite.toLocaleDateString('pt-BR'));
         break;
+        
       case 'especifico':
         if (dataInicio && dataFim) {
-          const inicio = new Date(dataInicio);
-          inicio.setHours(0, 0, 0, 0);
-          const fim = new Date(dataFim);
-          fim.setHours(23, 59, 59, 999);
+          const inicio = parseDate(dataInicio);
+          const fim = parseDate(dataFim);
+          
+          if (!inicio || !fim) {
+            console.warn('Datas de início ou fim inválidas');
+            return indicadoresOriginais;
+          }
+          
+          console.log('Período específico:', inicio.toLocaleDateString('pt-BR'), 'até', fim.toLocaleDateString('pt-BR'));
           
           return indicadoresOriginais.filter(ind => {
-            const periodoRef = new Date(ind.periodo_referencia);
-            periodoRef.setHours(0, 0, 0, 0);
-            return periodoRef >= inicio && periodoRef <= fim;
+            const periodoRef = parseDate(ind.periodo_referencia);
+            if (!periodoRef) return false;
+            
+            const dentroIntervalo = isBetween(periodoRef, inicio, fim);
+            console.log('Indicador:', periodoRef.toLocaleDateString('pt-BR'), 'dentro do intervalo:', dentroIntervalo);
+            
+            return dentroIntervalo;
           });
         }
         return indicadoresOriginais;
+        
       default:
         return indicadoresOriginais;
     }
 
-    return indicadoresOriginais.filter(ind => {
-      const periodoRef = new Date(ind.periodo_referencia);
-      periodoRef.setHours(0, 0, 0, 0);
-      return periodoRef >= dataLimite;
+    // Filtrar para os casos de 7, 30 e 90 dias
+    const resultados = indicadoresOriginais.filter(ind => {
+      const periodoRef = parseDate(ind.periodo_referencia);
+      if (!periodoRef) {
+        console.warn('Data do indicador inválida:', ind.periodo_referencia);
+        return false;
+      }
+      
+      const dentroIntervalo = isSameOrAfter(periodoRef, dataLimite);
+      console.log('Indicador:', periodoRef.toLocaleDateString('pt-BR'), 'dentro do intervalo:', dentroIntervalo);
+      
+      return dentroIntervalo;
     });
+    
+    console.log('Total de indicadores filtrados:', resultados.length, 'de', indicadoresOriginais.length);
+    
+    return resultados;
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
