@@ -33,23 +33,52 @@ export default function IndicadorDetalhe({ user }) {
 
   // Função para calcular o tamanho ideal das barras
   const calculateBarSize = (dataLength) => {
-    // Definir tamanho fixo baseado em 7 barras como referência
+    // Tamanho fixo baseado na visualização de 7 barras
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    
-    // Tamanho fixo para quando há 7 barras (referência)
-    const fixedSize = isMobile ? 35 : 50; // Tamanho fixo para mobile e desktop
-    
-    // Sempre retornar o mesmo tamanho, independente da quantidade de dados
-    return fixedSize;
+    return isMobile ? 35 : 50; // Tamanho fixo
   };
 
   // Função para calcular largura do container quando há muitos dados
   const calculateContainerWidth = (dataLength) => {
-    const barWidth = calculateBarSize(dataLength); // Agora sempre retorna tamanho fixo
+    const barWidth = calculateBarSize(dataLength);
     const spacing = 15; // Espaçamento entre barras
     const margins = 40; // Margens totais
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
+  };
+
+  // Função para calcular os KPIs
+  const calcularKPIs = () => {
+    if (!indicadores || indicadores.length === 0) {
+      return {
+        somaValorIndicador: 0,
+        mediaValorIndicador: 0,
+        somaValorApresentado: 0,
+        mediaValorApresentado: 0
+      };
+    }
+
+    const valoresIndicador = indicadores.map(ind => parseFloat(ind.valor_indicador) || 0);
+    const valoresApresentado = indicadores.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
+
+    const somaValorIndicador = valoresIndicador.reduce((acc, val) => acc + val, 0);
+    const somaValorApresentado = valoresApresentado.reduce((acc, val) => acc + val, 0);
+
+    return {
+      somaValorIndicador,
+      mediaValorIndicador: indicadores.length > 0 ? somaValorIndicador / indicadores.length : 0,
+      somaValorApresentado,
+      mediaValorApresentado: indicadores.length > 0 ? somaValorApresentado / indicadores.length : 0
+    };
+  };
+
+  // Função para formatar valores dos KPIs
+  const formatKPIValue = (value) => {
+    if (value === null || value === undefined || isNaN(value)) return '0';
+    return value.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 2 
+    });
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -371,6 +400,7 @@ export default function IndicadorDetalhe({ user }) {
   };
 
   const dadosGrafico = prepararDadosGrafico();
+  const kpis = calcularKPIs();
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -477,6 +507,32 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
+          {/* KPIs - Mobile */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
+                <p className="text-xs font-medium text-gray-600 mb-1">Soma Valor Indicador</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaValorIndicador)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
+                <p className="text-xs font-medium text-gray-600 mb-1">Média Valor Indicador</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaValorIndicador)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
+                <p className="text-xs font-medium text-gray-600 mb-1">Soma Valor Apresentado</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaValorApresentado)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
+                <p className="text-xs font-medium text-gray-600 mb-1">Média Valor Apresentado</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaValorApresentado)}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Gráficos - Mobile */}
           <div className="mb-6 space-y-6">
             {/* Gráfico Valor Apresentado */}
@@ -783,6 +839,32 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
+          {/* KPIs - Desktop */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                <p className="text-sm font-medium text-gray-600">Soma Valor Indicador</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaValorIndicador)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                <p className="text-sm font-medium text-gray-600">Média Valor Indicador</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaValorIndicador)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                <p className="text-sm font-medium text-gray-600">Soma Valor Apresentado</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaValorApresentado)}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-orange-500">
+                <p className="text-sm font-medium text-gray-600">Média Valor Apresentado</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaValorApresentado)}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Gráficos - Desktop */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
