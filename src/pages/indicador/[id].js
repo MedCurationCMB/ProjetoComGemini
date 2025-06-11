@@ -684,10 +684,6 @@ export default function IndicadorDetalhe({ user }) {
                 }`}
               >
                 <FiFilter className="w-5 h-5" />
-                {/* Indicador de filtro ativo */}
-                {filtroPeriodo !== 'todos' && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white"></div>
-                )}
               </button>
             </div>
             
