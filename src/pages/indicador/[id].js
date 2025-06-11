@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
   const { id } = router.query; // Este é o id_controleindicador
   const [indicadores, setIndicadores] = useState([]);
+  const [indicadoresOriginais, setIndicadoresOriginais] = useState([]); // Para manter dados originais
   const [nomeIndicador, setNomeIndicador] = useState('');
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState({});
@@ -30,6 +31,12 @@ export default function IndicadorDetalhe({ user }) {
 
   // Novo estado para controlar o modal de confirmação de arquivar
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
+  // Estados para filtro de período
+  const [showFiltroPeriodo, setShowFiltroPeriodo] = useState(false);
+  const [filtroPeriodo, setFiltroPeriodo] = useState('todos'); // 'todos', '7dias', '30dias', '90dias', 'especifico'
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   // Função para calcular o tamanho ideal das barras
   const calculateBarSize = (dataLength) => {
@@ -78,6 +85,45 @@ export default function IndicadorDetalhe({ user }) {
     return value.toLocaleString('pt-BR', { 
       minimumFractionDigits: 0, 
       maximumFractionDigits: 2 
+    });
+  };
+
+  // Função para filtrar por período
+  const filtrarPorPeriodo = (indicadoresOriginais) => {
+    if (filtroPeriodo === 'todos') {
+      return indicadoresOriginais;
+    }
+
+    const hoje = new Date();
+    let dataLimite;
+
+    switch (filtroPeriodo) {
+      case '7dias':
+        dataLimite = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30dias':
+        dataLimite = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90dias':
+        dataLimite = new Date(hoje.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'especifico':
+        if (dataInicio && dataFim) {
+          const inicio = new Date(dataInicio);
+          const fim = new Date(dataFim);
+          return indicadoresOriginais.filter(ind => {
+            const periodoRef = new Date(ind.periodo_referencia);
+            return periodoRef >= inicio && periodoRef <= fim;
+          });
+        }
+        return indicadoresOriginais;
+      default:
+        return indicadoresOriginais;
+    }
+
+    return indicadoresOriginais.filter(ind => {
+      const periodoRef = new Date(ind.periodo_referencia);
+      return periodoRef >= dataLimite;
     });
   };
 
@@ -153,20 +199,26 @@ export default function IndicadorDetalhe({ user }) {
           return;
         }
         
-        setIndicadores(data);
+        // Armazenar dados originais
+        setIndicadoresOriginais(data);
+        
+        // Aplicar filtro de período
+        const indicadoresFiltrados = filtrarPorPeriodo(data);
+        setIndicadores(indicadoresFiltrados);
+        
         // O nome do indicador deve ser o mesmo em todos os registros
         setNomeIndicador(data[0].indicador || 'Indicador sem nome');
         
-        // Verificar se todos os registros estão marcados como lidos
-        const todosLidos = data.every(indicador => indicador.lido === true);
+        // Verificar se todos os registros estão marcados como lidos (usar dados filtrados)
+        const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
         setTodosMarcadosComoLidos(todosLidos);
         
-        // Verificar status geral (importante, ler_depois, arquivado)
+        // Verificar status geral (importante, ler_depois, arquivado) (usar dados filtrados)
         // Considera que o status está ativo se PELO MENOS UM registro estiver marcado
         const statusGeral = {
-          importante: data.some(indicador => indicador.importante === true),
-          ler_depois: data.some(indicador => indicador.ler_depois === true),
-          arquivado: data.some(indicador => indicador.arquivado === true)
+          importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
+          ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
+          arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
         };
         setStatusGeral(statusGeral);
         
@@ -188,6 +240,25 @@ export default function IndicadorDetalhe({ user }) {
       fetchIndicadores();
     }
   }, [user, id, router]);
+
+  // Aplicar filtro quando mudarem os critérios de filtro
+  useEffect(() => {
+    if (indicadoresOriginais.length > 0) {
+      const indicadoresFiltrados = filtrarPorPeriodo(indicadoresOriginais);
+      setIndicadores(indicadoresFiltrados);
+      
+      // Recalcular status baseado nos dados filtrados
+      const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
+      setTodosMarcadosComoLidos(todosLidos);
+      
+      const statusGeral = {
+        importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
+        ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
+        arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
+      };
+      setStatusGeral(statusGeral);
+    }
+  }, [filtroPeriodo, dataInicio, dataFim, indicadoresOriginais]);
 
   // Função para marcar todos os indicadores como lidos (toggle)
   const toggleLidoTodos = async () => {
@@ -218,6 +289,11 @@ export default function IndicadorDetalhe({ user }) {
       
       // Atualizar o estado local
       setIndicadores(prev => 
+        prev.map(ind => ({ ...ind, lido: novoStatus }))
+      );
+      
+      // Atualizar dados originais também
+      setIndicadoresOriginais(prev => 
         prev.map(ind => ({ ...ind, lido: novoStatus }))
       );
       
@@ -273,6 +349,11 @@ export default function IndicadorDetalhe({ user }) {
         prev.map(ind => ({ ...ind, [campo]: novoValor }))
       );
       
+      // Atualizar dados originais também
+      setIndicadoresOriginais(prev => 
+        prev.map(ind => ({ ...ind, [campo]: novoValor }))
+      );
+      
       // Atualizar status geral
       setStatusGeral(prev => ({ ...prev, [campo]: novoValor }));
       
@@ -318,6 +399,11 @@ export default function IndicadorDetalhe({ user }) {
       
       // Atualizar o estado local
       setIndicadores(prev => 
+        prev.map(ind => ({ ...ind, arquivado: true }))
+      );
+      
+      // Atualizar dados originais também
+      setIndicadoresOriginais(prev => 
         prev.map(ind => ({ ...ind, arquivado: true }))
       );
       
@@ -480,27 +566,125 @@ export default function IndicadorDetalhe({ user }) {
                   {nomeIndicador}
                 </h1>
               </div>
+              
+              {/* Botão de filtro */}
+              <button
+                onClick={() => setShowFiltroPeriodo(!showFiltroPeriodo)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showFiltroPeriodo || filtroPeriodo !== 'todos'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FiFilter className="w-5 h-5" />
+              </button>
             </div>
             
-            {/* Tags e data - Mobile */}
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-2">
-                {infoGeral?.projeto_id && (
-                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                    {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
-                  </span>
-                )}
-                {infoGeral?.categoria_id && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
-                  </span>
+            {/* Filtro de período - Mobile */}
+            {showFiltroPeriodo && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Filtrar por Período
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFiltroPeriodo('todos')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === 'todos'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('7dias')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '7dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 7 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('30dias')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '30dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 30 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('90dias')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '90dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 90 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('especifico')}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === 'especifico'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Período Específico
+                  </button>
+                </div>
+                
+                {/* Campos de data para período específico */}
+                {filtroPeriodo === 'especifico' && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Data Início
+                      </label>
+                      <input
+                        type="date"
+                        value={dataInicio}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Data Fim
+                      </label>
+                      <input
+                        type="date"
+                        value={dataFim}
+                        onChange={(e) => setDataFim(e.target.value)}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              <div className="flex items-center text-gray-500 text-xs">
-                <FiCalendar className="w-3 h-3 mr-1" />
-                {formatDate(infoGeral?.created_at)}
-              </div>
+            )}
+            
+            {/* Tags - Mobile */}
+            <div className="flex space-x-2">
+              {infoGeral?.projeto_id && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                  {projetos[infoGeral.projeto_id] || 'Projeto N/A'}
+                </span>
+              )}
+              {infoGeral?.categoria_id && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {categorias[infoGeral.categoria_id] || 'Categoria N/A'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -744,9 +928,9 @@ export default function IndicadorDetalhe({ user }) {
         {/* Header fixo com título e botão voltar - Desktop */}
         <div className="sticky top-0 bg-white shadow-sm z-10 px-8 py-6 border-b">
           <div className="max-w-6xl mx-auto">
-            {/* Primeira linha: Botão Voltar + Título + Data */}
+            {/* Primeira linha: Botão Voltar + Título + Filtro */}
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center flex-1 min-w-0">
+              <div className="flex items-center">
                 <button 
                   onClick={voltarParaInicioDesktop}
                   className="mr-4 flex-shrink-0 flex items-center text-blue-600 hover:text-blue-800 transition-colors"
@@ -760,12 +944,111 @@ export default function IndicadorDetalhe({ user }) {
                 </h1>
               </div>
               
-              {/* Data no lado direito */}
-              <div className="flex items-center text-gray-500 text-base ml-6 flex-shrink-0">
-                <FiCalendar className="w-5 h-5 mr-2" />
-                {formatDate(infoGeral?.created_at)}
-              </div>
+              {/* Botão de filtro */}
+              <button
+                onClick={() => setShowFiltroPeriodo(!showFiltroPeriodo)}
+                className={`p-3 rounded-lg transition-colors ${
+                  showFiltroPeriodo || filtroPeriodo !== 'todos'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FiFilter className="w-5 h-5" />
+              </button>
             </div>
+
+            {/* Filtro de período - Desktop */}
+            {showFiltroPeriodo && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-600 mb-3">
+                  Filtrar por Período
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setFiltroPeriodo('todos')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === 'todos'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('7dias')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '7dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 7 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('30dias')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '30dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 30 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('90dias')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === '90dias'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Últimos 90 dias
+                  </button>
+                  
+                  <button
+                    onClick={() => setFiltroPeriodo('especifico')}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                      filtroPeriodo === 'especifico'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Período Específico
+                  </button>
+                </div>
+                
+                {/* Campos de data para período específico */}
+                {filtroPeriodo === 'especifico' && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Data Início
+                      </label>
+                      <input
+                        type="date"
+                        value={dataInicio}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Data Fim
+                      </label>
+                      <input
+                        type="date"
+                        value={dataFim}
+                        onChange={(e) => setDataFim(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Segunda linha: Tags */}
             <div className="flex items-center justify-between">
