@@ -88,7 +88,7 @@ export default function IndicadorDetalhe({ user }) {
     });
   };
 
-  // Função corrigida e mais robusta para filtrar por período
+  // Função CORRIGIDA para filtrar por período
   const filtrarPorPeriodo = (indicadoresOriginais) => {
     if (filtroPeriodo === 'todos') {
       return indicadoresOriginais;
@@ -98,24 +98,17 @@ export default function IndicadorDetalhe({ user }) {
     const parseDate = (dateString) => {
       if (!dateString) return null;
       
-      // Tenta diferentes formatos de data
       let date;
       
-      // Se já é um objeto Date
       if (dateString instanceof Date) {
         date = new Date(dateString);
-      }
-      // Se é string, tenta converter
-      else if (typeof dateString === 'string') {
-        // Remove qualquer informação de timezone e força UTC
-        const cleanDate = dateString.split('T')[0]; // Pega só a parte da data (YYYY-MM-DD)
-        date = new Date(cleanDate + 'T00:00:00'); // Força horário 00:00:00
-      }
-      else {
+      } else if (typeof dateString === 'string') {
+        const cleanDate = dateString.split('T')[0];
+        date = new Date(cleanDate + 'T00:00:00');
+      } else {
         date = new Date(dateString);
       }
       
-      // Verifica se a data é válida
       if (isNaN(date.getTime())) {
         console.warn('Data inválida:', dateString);
         return null;
@@ -124,29 +117,20 @@ export default function IndicadorDetalhe({ user }) {
       return date;
     };
 
-    // Função auxiliar para comparar apenas as datas (sem horário)
-    const isSameOrAfter = (date1, date2) => {
-      if (!date1 || !date2) return false;
-      
-      const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
-      const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
-      
-      return d1 >= d2;
-    };
-
-    const isBetween = (date, start, end) => {
-      if (!date || !start || !end) return false;
+    // ✅ FUNÇÃO CORRIGIDA - deve estar ENTRE dataLimite e hoje
+    const isWithinRange = (date, startDate, endDate) => {
+      if (!date || !startDate || !endDate) return false;
       
       const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
       
-      return d >= s && d <= e;
+      // ✅ DEVE ESTAR ENTRE start E end (inclusive)
+      return d >= start && d <= end;
     };
 
     const hoje = new Date();
     
-    // Debug: mostrar data de hoje
     console.log('Data de hoje:', hoje.toLocaleDateString('pt-BR'));
     console.log('Filtro selecionado:', filtroPeriodo);
     
@@ -157,18 +141,21 @@ export default function IndicadorDetalhe({ user }) {
         dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 7);
         console.log('Data limite (7 dias):', dataLimite.toLocaleDateString('pt-BR'));
+        console.log('Intervalo válido:', dataLimite.toLocaleDateString('pt-BR'), 'até', hoje.toLocaleDateString('pt-BR'));
         break;
         
       case '30dias':
         dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 30);
         console.log('Data limite (30 dias):', dataLimite.toLocaleDateString('pt-BR'));
+        console.log('Intervalo válido:', dataLimite.toLocaleDateString('pt-BR'), 'até', hoje.toLocaleDateString('pt-BR'));
         break;
         
       case '90dias':
         dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - 90);
         console.log('Data limite (90 dias):', dataLimite.toLocaleDateString('pt-BR'));
+        console.log('Intervalo válido:', dataLimite.toLocaleDateString('pt-BR'), 'até', hoje.toLocaleDateString('pt-BR'));
         break;
         
       case 'especifico':
@@ -187,7 +174,7 @@ export default function IndicadorDetalhe({ user }) {
             const periodoRef = parseDate(ind.periodo_referencia);
             if (!periodoRef) return false;
             
-            const dentroIntervalo = isBetween(periodoRef, inicio, fim);
+            const dentroIntervalo = isWithinRange(periodoRef, inicio, fim);
             console.log('Indicador:', periodoRef.toLocaleDateString('pt-BR'), 'dentro do intervalo:', dentroIntervalo);
             
             return dentroIntervalo;
@@ -199,7 +186,7 @@ export default function IndicadorDetalhe({ user }) {
         return indicadoresOriginais;
     }
 
-    // Filtrar para os casos de 7, 30 e 90 dias
+    // ✅ FILTRAR: deve estar ENTRE dataLimite e hoje (não só >= dataLimite)
     const resultados = indicadoresOriginais.filter(ind => {
       const periodoRef = parseDate(ind.periodo_referencia);
       if (!periodoRef) {
@@ -207,8 +194,11 @@ export default function IndicadorDetalhe({ user }) {
         return false;
       }
       
-      const dentroIntervalo = isSameOrAfter(periodoRef, dataLimite);
-      console.log('Indicador:', periodoRef.toLocaleDateString('pt-BR'), 'dentro do intervalo:', dentroIntervalo);
+      // ✅ CORRIGIDO: deve estar no intervalo [dataLimite, hoje]
+      const dentroIntervalo = isWithinRange(periodoRef, dataLimite, hoje);
+      console.log('Indicador:', periodoRef.toLocaleDateString('pt-BR'), 'dentro do intervalo [' + 
+                  dataLimite.toLocaleDateString('pt-BR') + ' até ' + 
+                  hoje.toLocaleDateString('pt-BR') + ']:', dentroIntervalo);
       
       return dentroIntervalo;
     });
