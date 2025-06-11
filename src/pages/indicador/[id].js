@@ -45,12 +45,21 @@ export default function IndicadorDetalhe({ user }) {
   };
 
   // Função para calcular largura do container quando há muitos dados
-  const calculateContainerWidth = (dataLength) => {
+  const calculateContainerWidth = (dataLength, isMobile = false) => {
     const barWidth = calculateBarSize(dataLength);
     const spacing = 15; // Espaçamento entre barras
     const margins = 40; // Margens totais
     
-    return Math.max(300, (barWidth + spacing) * dataLength + margins);
+    // Definir quantas barras mostrar inicialmente
+    const maxVisibleBars = isMobile ? 6 : 7;
+    
+    // Se temos poucos dados, usar largura total
+    if (dataLength <= maxVisibleBars) {
+      return Math.max(300, (barWidth + spacing) * dataLength + margins);
+    }
+    
+    // Se temos muitos dados, limitar à largura de maxVisibleBars + espaço para scroll
+    return (barWidth + spacing) * maxVisibleBars + margins;
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -484,7 +493,7 @@ export default function IndicadorDetalhe({ user }) {
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado por Período</h3>
               <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length, true) : '100%' }}>
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
@@ -522,7 +531,7 @@ export default function IndicadorDetalhe({ user }) {
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor do Indicador por Período</h3>
               <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length, true) : '100%' }}>
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
@@ -791,7 +800,7 @@ export default function IndicadorDetalhe({ user }) {
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado por Período</h3>
                 <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length, false) : '100%' }}>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
@@ -829,7 +838,7 @@ export default function IndicadorDetalhe({ user }) {
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor do Indicador por Período</h3>
                 <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length, false) : '100%' }}>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
