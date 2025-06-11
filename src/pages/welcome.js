@@ -71,7 +71,7 @@ export default function Welcome({ user }) {
             
             <Link 
               href="/upload" 
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Upload de Arquivo PDF
             </Link>
@@ -80,7 +80,7 @@ export default function Welcome({ user }) {
           <div className="grid grid-cols-1 gap-4 mt-4">
             <Link 
               href="/analise-multipla" 
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              className="bg-violet-600 hover:bg-violet-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Análise Múltipla de Documentos
             </Link>
@@ -115,7 +115,7 @@ export default function Welcome({ user }) {
 
             <Link 
               href="/controle-indicador-geral" 
-              className="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Controle de Indicadores Geral
             </Link>
@@ -128,8 +128,15 @@ export default function Welcome({ user }) {
             </Link>
 
             <Link 
+              href="/visualizacao-indicadores" 
+              className="bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Visualização de Indicadores
+            </Link>
+
+            <Link 
               href="/cadastros" 
-              className="bg-lime-600 hover:bg-lime-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              className="bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Cadastros
             </Link>
