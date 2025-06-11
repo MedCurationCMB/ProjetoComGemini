@@ -677,10 +677,10 @@ export default function IndicadorDetalhe({ user }) {
               {/* Botão de filtro MELHORADO */}
               <button
                 onClick={() => setShowFiltroPeriodo(!showFiltroPeriodo)}
-                className={`relative p-3 rounded-xl transition-all duration-200 ${
+                className={`p-3 rounded-lg transition-colors ${
                   showFiltroPeriodo || filtroPeriodo !== 'todos'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105'
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 <FiFilter className="w-5 h-5" />
