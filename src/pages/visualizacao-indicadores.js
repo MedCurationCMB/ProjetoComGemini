@@ -48,6 +48,26 @@ export default function VisualizacaoIndicadores({ user }) {
   const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
 
+  // 2. FUNÇÃO PARA VERIFICAR SE É TIPO KPI OU NULL
+  const isKpiOrNull = (indicador) => {
+    if (!indicador.controle_indicador) return false;
+    
+    const tipoApresentacao = indicador.controle_indicador.tipos_apresentacao?.nome;
+    
+    // Se tipo_apresentacao é NULL ou se o nome é 'KPI'
+    return !tipoApresentacao || tipoApresentacao === 'KPI';
+  };
+
+  // 3. FUNÇÃO PARA FORMATAR VALOR DO INDICADOR
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
+
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
     try {
@@ -236,10 +256,17 @@ export default function VisualizacaoIndicadores({ user }) {
           return;
         }
         
-        // Iniciar a consulta com filtros básicos obrigatórios
+        // Iniciar a consulta com filtros básicos obrigatórios E join com tabelas relacionadas
         let query = supabase
           .from('controle_indicador_geral')
-          .select('*')
+          .select(`
+            *,
+            controle_indicador!inner(
+              id,
+              tipo_apresentacao,
+              tipos_apresentacao(nome)
+            )
+          `)
           .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
           .not('indicador', 'is', null)  // ← SEGUNDO: não pode ser null
           .not('indicador', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
@@ -292,7 +319,7 @@ export default function VisualizacaoIndicadores({ user }) {
         // ALTERAÇÃO: Ordenar por periodo_referencia se existir, caso contrário por created_at
         // Primeiro tentativa: ordenar por periodo_referencia (nulls last) e depois por created_at
         query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
-             .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false });
 
         const { data, error } = await query;
 
@@ -301,18 +328,18 @@ export default function VisualizacaoIndicadores({ user }) {
         // ✅ NOVA LÓGICA: Agrupar por id_controleindicador e manter apenas o mais recente
         const indicadoresAgrupados = {};
         (data || []).forEach(indicador => {
-        const controlId = indicador.id_controleindicador;
-        
-        // Se não existe esse id_controleindicador ainda, ou se este tem data mais recente
-        if (!indicadoresAgrupados[controlId] || 
-            new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
-            indicadoresAgrupados[controlId] = indicador;
-        }
+          const controlId = indicador.id_controleindicador;
+          
+          // Se não existe esse id_controleindicador ainda, ou se este tem data mais recente
+          if (!indicadoresAgrupados[controlId] || 
+              new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
+              indicadoresAgrupados[controlId] = indicador;
+          }
         });
 
         // Converter de volta para array e ordenar novamente
         const indicadoresFinais = Object.values(indicadoresAgrupados)
-        .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+          .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
 
         setIndicadores(indicadoresFinais);
       } catch (error) {
@@ -1007,45 +1034,83 @@ export default function VisualizacaoIndicadores({ user }) {
 
                   {/* Cards regulares - Mobile */}
                   {regularIndicadores.length > 0 ? (
-                    regularIndicadores.map((indicador, index) => (
-                      <div key={indicador.id} className={index > 0 ? "mt-4" : ""}>
-                        <Link href={`/indicador/${indicador.id_controleindicador}`}>
-                          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
-                                {indicador.indicador || 'Sem indicador'}
-                              </h3>
-                              <div className="flex items-center space-x-2">
-                                {getStatusIndicators(indicador)}
-                                {shouldShowReadLaterIcon(indicador) && (
-                                  <FiClock className="w-4 h-4 text-blue-600" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex space-x-2">
-                                {indicador.projeto_id && (
-                                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                    {projetos[indicador.projeto_id]}
-                                  </span>
-                                )}
-                                {indicador.categoria_id && (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                    {categorias[indicador.categoria_id]}
-                                  </span>
-                                )}
+                    regularIndicadores.map((indicador, index) => {
+                      const isKPI = isKpiOrNull(indicador);
+                      
+                      return (
+                        <div key={indicador.id} className={index > 0 ? "mt-4" : ""}>
+                          <Link href={`/indicador/${indicador.id_controleindicador}`}>
+                            <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
+                                  {indicador.indicador || 'Sem indicador'}
+                                </h3>
+                                <div className="flex items-center space-x-2">
+                                  {getStatusIndicators(indicador)}
+                                  {shouldShowReadLaterIcon(indicador) && (
+                                    <FiClock className="w-4 h-4 text-blue-600" />
+                                  )}
+                                </div>
                               </div>
                               
-                              <div className="flex items-center text-gray-500 text-xs">
-                                <FiCalendar className="w-3 h-3 mr-1" />
-                                {formatDate(indicador)}
-                              </div>
+                              {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
+                              {isKPI && (
+                                <div className="mb-3">
+                                  <div className="text-2xl font-bold text-blue-600">
+                                    {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Layout condicional para as tags e data */}
+                              {isKPI ? (
+                                // Para KPI: tags e data na mesma linha
+                                <div className="flex items-center justify-between">
+                                  <div className="flex space-x-2">
+                                    {indicador.projeto_id && (
+                                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                        {projetos[indicador.projeto_id]}
+                                      </span>
+                                    )}
+                                    {indicador.categoria_id && (
+                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                        {categorias[indicador.categoria_id]}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center text-gray-500 text-xs">
+                                    <FiCalendar className="w-3 h-3 mr-1" />
+                                    {formatDate(indicador)}
+                                  </div>
+                                </div>
+                              ) : (
+                                // Para outros tipos: layout original
+                                <div className="flex items-center justify-between">
+                                  <div className="flex space-x-2">
+                                    {indicador.projeto_id && (
+                                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                        {projetos[indicador.projeto_id]}
+                                      </span>
+                                    )}
+                                    {indicador.categoria_id && (
+                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                        {categorias[indicador.categoria_id]}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center text-gray-500 text-xs">
+                                    <FiCalendar className="w-3 h-3 mr-1" />
+                                    {formatDate(indicador)}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </Link>
-                      </div>
-                    ))
+                          </Link>
+                        </div>
+                      );
+                    })
                   ) : (
                     !destaqueIndicador && (
                       <div className="py-8 text-center text-gray-500">
@@ -1107,45 +1172,83 @@ export default function VisualizacaoIndicadores({ user }) {
 
                     {/* Cards regulares - Desktop */}
                     {regularIndicadores.length > 0 ? (
-                      regularIndicadores.map((indicador) => (
-                        <div key={indicador.id}>
-                          <Link href={`/indicador/${indicador.id_controleindicador}`}>
-                            <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
-                              <div className="flex justify-between items-start mb-3">
-                                <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                                  {indicador.indicador || 'Sem indicador'}
-                                </h3>
-                                <div className="flex items-center space-x-2">
-                                  {getStatusIndicators(indicador)}
-                                  {shouldShowReadLaterIcon(indicador) && (
-                                    <FiClock className="w-4 h-4 text-blue-600" />
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                  {indicador.projeto_id && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
-                                      {projetos[indicador.projeto_id]}
-                                    </span>
-                                  )}
-                                  {indicador.categoria_id && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
-                                      {categorias[indicador.categoria_id]}
-                                    </span>
-                                  )}
+                      regularIndicadores.map((indicador) => {
+                        const isKPI = isKpiOrNull(indicador);
+                        
+                        return (
+                          <div key={indicador.id}>
+                            <Link href={`/indicador/${indicador.id_controleindicador}`}>
+                              <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+                                <div className="flex justify-between items-start mb-3">
+                                  <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                                    {indicador.indicador || 'Sem indicador'}
+                                  </h3>
+                                  <div className="flex items-center space-x-2">
+                                    {getStatusIndicators(indicador)}
+                                    {shouldShowReadLaterIcon(indicador) && (
+                                      <FiClock className="w-4 h-4 text-blue-600" />
+                                    )}
+                                  </div>
                                 </div>
                                 
-                                <div className="flex items-center justify-end text-gray-500 text-xs">
-                                  <FiCalendar className="w-3 h-3 mr-1" />
-                                  {formatDate(indicador)}
-                                </div>
+                                {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
+                                {isKPI && (
+                                  <div className="mb-4">
+                                    <div className="text-3xl font-bold text-blue-600">
+                                      {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Layout condicional para as tags e data */}
+                                {isKPI ? (
+                                  // Para KPI: tags e data na mesma linha
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex flex-wrap gap-2">
+                                      {indicador.projeto_id && (
+                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                                          {projetos[indicador.projeto_id]}
+                                        </span>
+                                      )}
+                                      {indicador.categoria_id && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                                          {categorias[indicador.categoria_id]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center text-gray-500 text-xs">
+                                      <FiCalendar className="w-3 h-3 mr-1" />
+                                      {formatDate(indicador)}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  // Para outros tipos: layout original (space-y-2)
+                                  <div className="space-y-2">
+                                    <div className="flex flex-wrap gap-2">
+                                      {indicador.projeto_id && (
+                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                                          {projetos[indicador.projeto_id]}
+                                        </span>
+                                      )}
+                                      {indicador.categoria_id && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                                          {categorias[indicador.categoria_id]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-end text-gray-500 text-xs">
+                                      <FiCalendar className="w-3 h-3 mr-1" />
+                                      {formatDate(indicador)}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </Link>
-                        </div>
-                      ))
+                            </Link>
+                          </div>
+                        );
+                      })
                     ) : (
                       !destaqueIndicador && (
                         <div className="lg:col-span-2 xl:col-span-3 py-8 text-center text-gray-500">
