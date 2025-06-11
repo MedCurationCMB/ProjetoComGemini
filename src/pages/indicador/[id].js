@@ -33,20 +33,19 @@ export default function IndicadorDetalhe({ user }) {
 
   // Função para calcular o tamanho ideal das barras
   const calculateBarSize = (dataLength) => {
-    // Para mobile: barras entre 25px e 45px
-    // Para desktop: barras entre 35px e 60px
+    // Definir tamanho fixo baseado em 7 barras como referência
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    const minSize = isMobile ? 25 : 35;
-    const maxSize = isMobile ? 45 : 60;
     
-    if (dataLength <= 3) return maxSize;
-    if (dataLength <= 6) return Math.round((minSize + maxSize) / 2);
-    return minSize;
+    // Tamanho fixo para quando há 7 barras (referência)
+    const fixedSize = isMobile ? 35 : 50; // Tamanho fixo para mobile e desktop
+    
+    // Sempre retornar o mesmo tamanho, independente da quantidade de dados
+    return fixedSize;
   };
 
   // Função para calcular largura do container quando há muitos dados
   const calculateContainerWidth = (dataLength) => {
-    const barWidth = calculateBarSize(dataLength);
+    const barWidth = calculateBarSize(dataLength); // Agora sempre retorna tamanho fixo
     const spacing = 15; // Espaçamento entre barras
     const margins = 40; // Margens totais
     
