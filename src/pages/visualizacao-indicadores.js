@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
+import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
 import { 
   FiArchive,
   FiSearch, 
@@ -66,6 +67,148 @@ export default function VisualizacaoIndicadores({ user }) {
     if (isNaN(num)) return valor;
     
     return num.toLocaleString('pt-BR');
+  };
+
+  // 4. FUNÇÃO PARA VERIFICAR SE É TIPO GRÁFICO DE BARRAS
+  const isGraficoBarras = (indicador) => {
+    if (!indicador.controle_indicador) return false;
+    
+    const tipoApresentacao = indicador.controle_indicador.tipos_apresentacao?.nome;
+    
+    return tipoApresentacao === 'Gráfico de Barras';
+  };
+
+  // 5. FUNÇÃO PARA BUSCAR DADOS DO GRÁFICO
+  const fetchGraficoData = async (idControleindicador) => {
+    try {
+      const { data, error } = await supabase
+        .from('controle_indicador_geral')
+        .select('*')
+        .eq('id_controleindicador', idControleindicador)
+        .not('periodo_referencia', 'is', null)
+        .order('periodo_referencia', { ascending: true }); // Ordenar crescente para gráfico
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar dados do gráfico:', error);
+      return [];
+    }
+  };
+
+  // 6. FUNÇÃO PARA FORMATAR DATA PARA GRÁFICO (DD-MM-AA)
+  const formatDateGrafico = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      
+      return `${day}-${month}-${year}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
+  const calculateBarSize = (dataLength, isMobile = false) => {
+    return isMobile ? 35 : 50;
+  };
+
+  // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER
+  const calculateContainerWidth = (dataLength, isMobile = false) => {
+    const barWidth = calculateBarSize(dataLength, isMobile);
+    const spacing = 15;
+    const margins = 40;
+    
+    return Math.max(300, (barWidth + spacing) * dataLength + margins);
+  };
+
+  // 9. COMPONENTE DO GRÁFICO DE BARRAS
+  const GraficoBarrasComponent = ({ indicador, isMobile = false }) => {
+    const [graficoData, setGraficoData] = useState([]);
+    const [loadingGrafico, setLoadingGrafico] = useState(true);
+
+    useEffect(() => {
+      const loadGraficoData = async () => {
+        setLoadingGrafico(true);
+        const data = await fetchGraficoData(indicador.id_controleindicador);
+        
+        // Preparar dados para o gráfico
+        const dadosGrafico = data.map(item => ({
+          periodo: formatDateGrafico(item.periodo_referencia),
+          periodoCompleto: item.periodo_referencia,
+          valorApresentado: parseFloat(item.valor_indicador_apresentado) || 0,
+        })).sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+        
+        setGraficoData(dadosGrafico);
+        setLoadingGrafico(false);
+      };
+
+      loadGraficoData();
+    }, [indicador.id_controleindicador]);
+
+    if (loadingGrafico) {
+      return (
+        <div className="mb-3 flex justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (graficoData.length === 0) {
+      return (
+        <div className="mb-3 text-center text-gray-500 text-sm">
+          Sem dados para gráfico
+        </div>
+      );
+    }
+
+    const altura = isMobile ? 120 : 160;
+    const fontSize = isMobile ? 8 : 10;
+
+    return (
+      <div className="mb-3">
+        <div className="overflow-x-auto">
+          <div style={{ 
+            minWidth: graficoData.length > 6 ? calculateContainerWidth(graficoData.length, isMobile) : '100%' 
+          }}>
+            <div style={{ height: altura }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={graficoData} 
+                  margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+                  maxBarSize={calculateBarSize(graficoData.length, isMobile)}
+                  barCategoryGap="15%"
+                >
+                  <XAxis 
+                    dataKey="periodo" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: fontSize, fill: '#6B7280' }}
+                  />
+                  <Bar 
+                    dataKey="valorApresentado" 
+                    fill="#3B82F6"
+                    radius={[2, 2, 0, 0]}
+                  >
+                    <LabelList 
+                      dataKey="valorApresentado" 
+                      position="top" 
+                      style={{ fontSize: `${fontSize}px`, fill: '#374151' }}
+                      formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Função para buscar dados de apresentação
@@ -1053,17 +1196,28 @@ export default function VisualizacaoIndicadores({ user }) {
                                 </div>
                               </div>
                               
-                              {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
-                              {isKPI && (
-                                <div className="mb-3">
-                                  <div className="text-4xl font-bold text-black">
-                                    {formatarValorIndicador(indicador.valor_indicador_apresentado)}
-                                  </div>
-                                </div>
-                              )}
+                              {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
+                              {(() => {
+                                const isKPI = isKpiOrNull(indicador);
+                                const isGrafico = isGraficoBarras(indicador);
+                                
+                                if (isKPI) {
+                                  return (
+                                    <div className="mb-3">
+                                      <div className="text-4xl font-bold text-black">
+                                        {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+                                      </div>
+                                    </div>
+                                  );
+                                } else if (isGrafico) {
+                                  return <GraficoBarrasComponent indicador={indicador} isMobile={true} />;
+                                }
+                                
+                                return null;
+                              })()}
                               
                               {/* Layout condicional para as tags e data */}
-                              {isKPI ? (
+                              {(isKPI || isGrafico) ? (
                                 // Para KPI: tags e data na mesma linha
                                 <div className="flex items-center justify-between">
                                   <div className="flex space-x-2">
@@ -1191,17 +1345,28 @@ export default function VisualizacaoIndicadores({ user }) {
                                   </div>
                                 </div>
                                 
-                                {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
-                                {isKPI && (
-                                  <div className="mb-4">
-                                    <div className="text-5xl font-bold text-black">
-                                      {formatarValorIndicador(indicador.valor_indicador_apresentado)}
-                                    </div>
-                                  </div>
-                                )}
+                                {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
+                                {(() => {
+                                  const isKPI = isKpiOrNull(indicador);
+                                  const isGrafico = isGraficoBarras(indicador);
+                                  
+                                  if (isKPI) {
+                                    return (
+                                      <div className="mb-4">
+                                        <div className="text-5xl font-bold text-black">
+                                          {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+                                        </div>
+                                      </div>
+                                    );
+                                  } else if (isGrafico) {
+                                    return <GraficoBarrasComponent indicador={indicador} isMobile={false} />;
+                                  }
+                                  
+                                  return null;
+                                })()}
                                 
                                 {/* Layout condicional para as tags e data */}
-                                {isKPI ? (
+                                {(isKPI || isGrafico) ? (
                                   // Para KPI: tags e data na mesma linha
                                   <div className="flex items-center justify-between">
                                     <div className="flex flex-wrap gap-2">
