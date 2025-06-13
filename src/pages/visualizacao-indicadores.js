@@ -170,10 +170,8 @@ export default function VisualizacaoIndicadores({ user }) {
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
 
-    // ✅ NOVA LÓGICA DE SCROLL DIFERENCIADA
-    const shouldShowScroll = isMobile 
-      ? graficoData.length > 6  // Mobile: mantém > 6 barras
-      : graficoData.length > 4; // Desktop: novo > 4 barras
+    // ✅ SCROLL VOLTA PARA > 6 EM AMBOS (MOBILE E DESKTOP)
+    const shouldShowScroll = graficoData.length > 6;
 
     return (
       <div className="mb-3">
@@ -1333,14 +1331,17 @@ export default function VisualizacaoIndicadores({ user }) {
                     {regularIndicadores.length > 0 ? (
                       regularIndicadores.map((indicador) => {
                         const isKPI = isKpiOrNull(indicador);
-                        const isGrafico = isGraficoBarras(indicador); // ← ADICIONAR ESTA LINHA
+                        const isGrafico = isGraficoBarras(indicador);
+                        
+                        // ✅ SE FOR GRÁFICO DE BARRAS, OCUPA TAMANHO DESTAQUE
+                        const cardSpanClass = isGrafico ? "lg:col-span-2 xl:col-span-3" : "";
                         
                         return (
-                          <div key={indicador.id}>
+                          <div key={indicador.id} className={cardSpanClass}>
                             <Link href={`/indicador/${indicador.id_controleindicador}`}>
                               <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                                 <div className="flex justify-between items-start mb-3">
-                                  <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                                  <h3 className={`font-bold text-gray-900 flex-1 pr-2 ${isGrafico ? 'text-xl' : 'text-lg'}`}>
                                     {indicador.indicador || 'Sem indicador'}
                                   </h3>
                                   <div className="flex items-center space-x-2">
@@ -1374,19 +1375,19 @@ export default function VisualizacaoIndicadores({ user }) {
                                   <div className="flex items-center justify-between">
                                     <div className="flex flex-wrap gap-2">
                                       {indicador.projeto_id && (
-                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                                        <span className={`px-2 py-1 bg-red-100 text-red-800 rounded-full whitespace-nowrap ${isGrafico ? 'text-sm' : 'text-xs'}`}>
                                           {projetos[indicador.projeto_id]}
                                         </span>
                                       )}
                                       {indicador.categoria_id && (
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                                        <span className={`px-2 py-1 bg-blue-100 text-blue-800 rounded-full whitespace-nowrap ${isGrafico ? 'text-sm' : 'text-xs'}`}>
                                           {categorias[indicador.categoria_id]}
                                         </span>
                                       )}
                                     </div>
                                     
-                                    <div className="flex items-center text-gray-500 text-xs">
-                                      <FiCalendar className="w-3 h-3 mr-1" />
+                                    <div className={`flex items-center text-gray-500 ${isGrafico ? 'text-sm' : 'text-xs'}`}>
+                                      <FiCalendar className={`mr-1 ${isGrafico ? 'w-4 h-4' : 'w-3 h-3'}`} />
                                       {formatDate(indicador)}
                                     </div>
                                   </div>
