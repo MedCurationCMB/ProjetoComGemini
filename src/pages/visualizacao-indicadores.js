@@ -115,13 +115,13 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
   const calculateBarSize = (dataLength, isMobile = false) => {
-    return isMobile ? 35 : 55;
+    return isMobile ? 35 : 60;
   };
 
   // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER
   const calculateContainerWidth = (dataLength, isMobile = false) => {
     const barWidth = calculateBarSize(dataLength, isMobile);
-    const spacing = isMobile ? 15 : 10; // ✅ Desktop: 10px (era 15px)
+    const spacing = isMobile ? 15 : 8; // ✅ Desktop: 10px (era 15px)
     const margins = 40;
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
@@ -175,7 +175,7 @@ export default function VisualizacaoIndicadores({ user }) {
       ? graficoData.length > 6  // Mobile: mantém > 6 barras
       : graficoData.length > 7; // Desktop: novo > 7 barras
 
-    const barCategoryGap = isMobile ? "15%" : "10%"; // ✅ Desktop: 10% (era 15%)
+    const barCategoryGap = isMobile ? "15%" : "8%"; // ✅ Desktop: 10% (era 15%)
 
     return (
       <div className="mb-3">
