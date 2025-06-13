@@ -1179,6 +1179,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   {regularIndicadores.length > 0 ? (
                     regularIndicadores.map((indicador, index) => {
                       const isKPI = isKpiOrNull(indicador);
+                      const isGrafico = isGraficoBarras(indicador); // ← ADICIONAR ESTA LINHA
                       
                       return (
                         <div key={indicador.id} className={index > 0 ? "mt-4" : ""}>
@@ -1198,9 +1199,6 @@ export default function VisualizacaoIndicadores({ user }) {
                               
                               {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
                               {(() => {
-                                const isKPI = isKpiOrNull(indicador);
-                                const isGrafico = isGraficoBarras(indicador);
-                                
                                 if (isKPI) {
                                   return (
                                     <div className="mb-3">
@@ -1218,7 +1216,7 @@ export default function VisualizacaoIndicadores({ user }) {
                               
                               {/* Layout condicional para as tags e data */}
                               {(isKPI || isGrafico) ? (
-                                // Para KPI: tags e data na mesma linha
+                                // Para KPI/Gráfico: tags e data na mesma linha
                                 <div className="flex items-center justify-between">
                                   <div className="flex space-x-2">
                                     {indicador.projeto_id && (
@@ -1328,6 +1326,7 @@ export default function VisualizacaoIndicadores({ user }) {
                     {regularIndicadores.length > 0 ? (
                       regularIndicadores.map((indicador) => {
                         const isKPI = isKpiOrNull(indicador);
+                        const isGrafico = isGraficoBarras(indicador); // ← ADICIONAR ESTA LINHA
                         
                         return (
                           <div key={indicador.id}>
@@ -1347,9 +1346,6 @@ export default function VisualizacaoIndicadores({ user }) {
                                 
                                 {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
                                 {(() => {
-                                  const isKPI = isKpiOrNull(indicador);
-                                  const isGrafico = isGraficoBarras(indicador);
-                                  
                                   if (isKPI) {
                                     return (
                                       <div className="mb-4">
@@ -1367,7 +1363,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                 
                                 {/* Layout condicional para as tags e data */}
                                 {(isKPI || isGrafico) ? (
-                                  // Para KPI: tags e data na mesma linha
+                                  // Para KPI/Gráfico: tags e data na mesma linha
                                   <div className="flex items-center justify-between">
                                     <div className="flex flex-wrap gap-2">
                                       {indicador.projeto_id && (
