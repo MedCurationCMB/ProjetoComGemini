@@ -4,42 +4,24 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import LogoDisplay from '../components/LogoDisplay';
 import { 
   FiFolder,
   FiBarChart3,
   FiAlertTriangle,
   FiClock,
   FiTrendingUp,
-  FiCalendar,
-  FiMenu,
-  FiUser,
-  FiSettings,
-  FiLogOut
+  FiCalendar
 } from 'react-icons/fi';
 
 export default function VisualizacaoGeralIndicadores({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [showMenu, setShowMenu] = useState(false);
   const [kpis, setKpis] = useState({
     totalArquivos: 0,
     totalIndicadores: 0,
     indicadoresSemValor: 0,
     indicadoresVencidos: 0
   });
-
-  // Função para fazer logout
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast.success('Logout realizado com sucesso!');
-      router.push('/login');
-    } catch (error) {
-      toast.error(error.message || 'Erro ao fazer logout');
-    }
-  };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -68,7 +50,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (indicadoresError) throw indicadoresError;
 
-        // 3. Total de indicadores sem valor definido (valor_indicador_apresentado é NULL)
+        // 3. Total de indicadores sem valor definido
         const { count: indicadoresSemValor, error: semValorError } = await supabase
           .from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
@@ -77,7 +59,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         if (semValorError) throw semValorError;
 
         // 4. Total de indicadores sem valor definido e com prazo vencido
-        const hoje = new Date().toISOString().split('T')[0]; // Data de hoje no formato YYYY-MM-DD
+        const hoje = new Date().toISOString().split('T')[0];
         
         const { count: indicadoresVencidos, error: vencidosError } = await supabase
           .from('controle_indicador_geral')
@@ -128,144 +110,25 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>Visualização Geral (Indicadores)</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo */}
-      <div className="sticky top-0 bg-white shadow-sm z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile: Header com logo e menu */}
-          <div className="lg:hidden">
-            <div className="flex items-center justify-between mb-4">
-              <LogoDisplay 
-                className=""
-                fallbackText="Visualização Geral"
-                showFallback={true}
-              />
-              
-              {/* Menu hambúrguer */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 hover:bg-gray-100 rounded-md"
-                >
-                  <FiMenu className="w-6 h-6 text-gray-600" />
-                </button>
-                
-                {/* Dropdown do menu */}
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        // TODO: Implementar perfil
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiUser className="mr-3 h-4 w-4" />
-                      Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        // TODO: Implementar configurações
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Configurações
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleLogout();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
-                    >
-                      <FiLogOut className="mr-3 h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop: Header com logo e menu */}
-          <div className="hidden lg:block">
-            <div className="flex items-center justify-between">
-              <LogoDisplay 
-                className=""
-                fallbackText="Visualização Geral"
-                showFallback={true}
-              />
-              
-              {/* Menu hambúrguer - Desktop */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 hover:bg-gray-100 rounded-md"
-                >
-                  <FiMenu className="w-6 h-6 text-gray-600" />
-                </button>
-                
-                {/* Dropdown do menu */}
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        // TODO: Implementar perfil
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiUser className="mr-3 h-4 w-4" />
-                      Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        // TODO: Implementar configurações
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Configurações
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleLogout();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
-                    >
-                      <FiLogOut className="mr-3 h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+      {/* Header simples */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900">Visualização Geral (Indicadores)</h1>
+            <Link 
+              href="/welcome" 
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Voltar
+            </Link>
           </div>
         </div>
       </div>
 
       {/* Conteúdo principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-black">Visualização Geral (Indicadores)</h1>
-            <p className="text-gray-600 text-sm mt-1">Dashboard com métricas principais do sistema</p>
-          </div>
-          
-          <Link 
-            href="/welcome" 
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Voltar
-          </Link>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -326,11 +189,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex items-center">
-                  <p className="text-xs text-gray-500">
-                    {calculatePercentage(kpis.indicadoresSemValor, kpis.totalIndicadores)}% do total
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500">
+                  {calculatePercentage(kpis.indicadoresSemValor, kpis.totalIndicadores)}% do total
+                </p>
               </div>
             </div>
 
@@ -348,11 +209,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex items-center">
-                  <p className="text-xs text-gray-500">
-                    {calculatePercentage(kpis.indicadoresVencidos, kpis.indicadoresSemValor)}% dos sem valor
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500">
+                  {calculatePercentage(kpis.indicadoresVencidos, kpis.indicadoresSemValor)}% dos sem valor
+                </p>
               </div>
             </div>
           </div>
@@ -411,16 +270,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </div>
         )}
       </div>
-
-      {/* Overlay para fechar menus quando clicar fora */}
-      {showMenu && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-25 z-10"
-          onClick={() => {
-            setShowMenu(false);
-          }}
-        />
-      )}
     </div>
   );
 }
