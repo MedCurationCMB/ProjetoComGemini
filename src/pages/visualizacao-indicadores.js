@@ -127,7 +127,7 @@ export default function VisualizacaoIndicadores({ user }) {
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
   };
 
-  // 9. COMPONENTE DO GRÁFICO DE BARRAS
+  // 9. COMPONENTE DO GRÁFICO DE BARRAS - VERSÃO COMPLETA ATUALIZADA
   const GraficoBarrasComponent = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
     const [loadingGrafico, setLoadingGrafico] = useState(true);
@@ -170,11 +170,18 @@ export default function VisualizacaoIndicadores({ user }) {
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
 
+    // ✅ NOVA LÓGICA DE SCROLL DIFERENCIADA
+    const shouldShowScroll = isMobile 
+      ? graficoData.length > 6  // Mobile: mantém > 6 barras
+      : graficoData.length > 4; // Desktop: novo > 4 barras
+
     return (
       <div className="mb-3">
         <div className="overflow-x-auto">
           <div style={{ 
-            minWidth: graficoData.length > 6 ? calculateContainerWidth(graficoData.length, isMobile) : '100%' 
+            minWidth: shouldShowScroll ? 
+              calculateContainerWidth(graficoData.length, isMobile) : 
+              '100%' 
           }}>
             <div style={{ height: altura }}>
               <ResponsiveContainer width="100%" height="100%">
