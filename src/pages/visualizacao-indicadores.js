@@ -1056,7 +1056,7 @@ export default function VisualizacaoIndicadores({ user }) {
                               {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
                               {isKPI && (
                                 <div className="mb-3">
-                                  <div className="text-2xl font-bold text-blue-600">
+                                  <div className="text-4xl font-bold text-black">
                                     {formatarValorIndicador(indicador.valor_indicador_apresentado)}
                                   </div>
                                 </div>
@@ -1194,7 +1194,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                 {/* NOVO: Mostrar valor do indicador se for KPI ou NULL */}
                                 {isKPI && (
                                   <div className="mb-4">
-                                    <div className="text-3xl font-bold text-blue-600">
+                                    <div className="text-5xl font-bold text-black">
                                       {formatarValorIndicador(indicador.valor_indicador_apresentado)}
                                     </div>
                                   </div>
