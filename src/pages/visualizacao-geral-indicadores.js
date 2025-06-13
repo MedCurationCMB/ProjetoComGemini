@@ -8,7 +8,7 @@ import Navbar from '../components/Navbar';
 import LogoDisplay from '../components/LogoDisplay';
 import { 
   FiFolder,
-  FiBarChart3,
+  FiBarChart2,
   FiAlertTriangle,
   FiClock,
   FiTrendingUp,
