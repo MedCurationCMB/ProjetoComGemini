@@ -346,7 +346,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   </p>
                 </div>
                 <div className="flex-shrink-0">
-                  <FiBarChart3 className="h-8 w-8 text-green-500" />
+                  <FiBarChart2 className="h-8 w-8 text-green-500" />
                 </div>
               </div>
               <div className="mt-4">
