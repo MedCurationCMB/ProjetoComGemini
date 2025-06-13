@@ -8,7 +8,7 @@ import Navbar from '../components/Navbar';
 import LogoDisplay from '../components/LogoDisplay';
 import { 
   FiFolder,
-  FiBarChart2,
+  FiBarChart3,
   FiAlertTriangle,
   FiClock,
   FiTrendingUp,
@@ -23,6 +23,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [tabelaIndicadores, setTabelaIndicadores] = useState([]);
   const [kpis, setKpis] = useState({
     totalArquivos: 0,
     totalIndicadores: 0,
@@ -49,7 +50,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user, router]);
 
-  // Buscar dados dos KPIs
+  // Buscar dados dos KPIs e tabela
   useEffect(() => {
     const fetchKPIs = async () => {
       try {
@@ -88,13 +89,55 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (vencidosError) throw vencidosError;
 
-        // Atualizar estado com os resultados
+        // 5. Buscar dados para a tabela - indicadores sem valor agrupados por projeto e categoria
+        const { data: tabelaData, error: tabelaError } = await supabase
+          .from('controle_indicador_geral')
+          .select(`
+            projeto_id,
+            categoria_id,
+            projetos!inner(nome),
+            categorias!inner(nome)
+          `)
+          .is('valor_indicador_apresentado', null)
+          .not('projeto_id', 'is', null)
+          .not('categoria_id', 'is', null);
+
+        if (tabelaError) throw tabelaError;
+
+        // Processar dados da tabela para agrupar por projeto e categoria
+        const agrupados = {};
+        (tabelaData || []).forEach(item => {
+          const key = `${item.projeto_id}-${item.categoria_id}`;
+          if (!agrupados[key]) {
+            agrupados[key] = {
+              projeto_id: item.projeto_id,
+              categoria_id: item.categoria_id,
+              nome_projeto: item.projetos?.nome || 'N/A',
+              nome_categoria: item.categorias?.nome || 'N/A',
+              count: 0
+            };
+          }
+          agrupados[key].count++;
+        });
+
+        // Converter objeto em array e ordenar
+        const tabelaFinal = Object.values(agrupados).sort((a, b) => {
+          // Ordenar por count decrescente, depois por nome do projeto
+          if (b.count !== a.count) {
+            return b.count - a.count;
+          }
+          return a.nome_projeto.localeCompare(b.nome_projeto);
+        });
+
+        // Atualizar estados
         setKpis({
           totalArquivos: totalArquivos || 0,
           totalIndicadores: totalIndicadores || 0,
           indicadoresSemValor: indicadoresSemValor || 0,
           indicadoresVencidos: indicadoresVencidos || 0
         });
+
+        setTabelaIndicadores(tabelaFinal);
 
       } catch (error) {
         console.error('Erro ao buscar KPIs:', error);
@@ -303,7 +346,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   </p>
                 </div>
                 <div className="flex-shrink-0">
-                  <FiBarChart2 className="h-8 w-8 text-green-500" />
+                  <FiBarChart3 className="h-8 w-8 text-green-500" />
                 </div>
               </div>
               <div className="mt-4">
@@ -407,6 +450,86 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     com data de entrega anterior à data atual.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tabela de Indicadores sem Valor por Projeto e Categoria */}
+        {!loading && tabelaIndicadores.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <FiAlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
+              Indicadores Sem Valor por Projeto e Categoria
+            </h2>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome do Projeto
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome da Categoria
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Indicadores Sem Valor
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tabelaIndicadores.map((item, index) => (
+                    <tr key={`${item.projeto_id}-${item.categoria_id}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.nome_projeto}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {item.nome_categoria}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                          item.count > 10 
+                            ? 'bg-red-100 text-red-800'
+                            : item.count > 5
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {formatNumber(item.count)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Rodapé da tabela */}
+            <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+              <span>
+                Total de combinações: {formatNumber(tabelaIndicadores.length)}
+              </span>
+              <span>
+                Total de indicadores sem valor: {formatNumber(tabelaIndicadores.reduce((sum, item) => sum + item.count, 0))}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Mensagem caso não haja dados na tabela */}
+        {!loading && tabelaIndicadores.length === 0 && kpis.indicadoresSemValor > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <FiAlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
+              Indicadores Sem Valor por Projeto e Categoria
+            </h2>
+            <div className="text-center py-8">
+              <div className="text-gray-500">
+                <p>Existem indicadores sem valor definido, mas eles não possuem projeto ou categoria associados.</p>
               </div>
             </div>
           </div>
