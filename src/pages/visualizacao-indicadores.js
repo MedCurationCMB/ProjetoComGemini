@@ -115,13 +115,13 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
   const calculateBarSize = (dataLength, isMobile = false) => {
-    return isMobile ? 35 : 50;
+    return isMobile ? 35 : 55;
   };
 
   // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER
   const calculateContainerWidth = (dataLength, isMobile = false) => {
     const barWidth = calculateBarSize(dataLength, isMobile);
-    const spacing = 15;
+    const spacing = isMobile ? 15 : 10; // ✅ Desktop: 10px (era 15px)
     const margins = 40;
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
@@ -175,6 +175,8 @@ export default function VisualizacaoIndicadores({ user }) {
       ? graficoData.length > 6  // Mobile: mantém > 6 barras
       : graficoData.length > 7; // Desktop: novo > 7 barras
 
+    const barCategoryGap = isMobile ? "15%" : "10%"; // ✅ Desktop: 10% (era 15%)
+
     return (
       <div className="mb-3">
         <div className="overflow-x-auto">
@@ -189,7 +191,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   data={graficoData} 
                   margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
                   maxBarSize={calculateBarSize(graficoData.length, isMobile)}
-                  barCategoryGap="15%"
+                  barCategoryGap={barCategoryGap} // ✅ USAR A VARIÁVEL DINÂMICA
                 >
                   <XAxis 
                     dataKey="periodo" 
