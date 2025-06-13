@@ -170,8 +170,10 @@ export default function VisualizacaoIndicadores({ user }) {
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
 
-    // ✅ SCROLL VOLTA PARA > 6 EM AMBOS (MOBILE E DESKTOP)
-    const shouldShowScroll = graficoData.length > 6;
+    // ✅ NOVA LÓGICA: MOBILE > 6, DESKTOP > 7
+    const shouldShowScroll = isMobile 
+      ? graficoData.length > 6  // Mobile: mantém > 6 barras
+      : graficoData.length > 7; // Desktop: novo > 7 barras
 
     return (
       <div className="mb-3">
