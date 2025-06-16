@@ -643,15 +643,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               
               {/* Rodapé da tabela com total */}
               <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">
-                    Total de combinações: {tabelaProjetosCategoria.length}
-                  </span>
-                  <span className="font-medium text-gray-900">
-                    Total de indicadores sem valor: {formatNumber(
-                      tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
-                    )}
-                  </span>
+                <div className="text-sm text-center font-medium text-gray-900">
+                  Total: {formatNumber(
+                    tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
+                  )} indicadores
                 </div>
               </div>
             </div>
