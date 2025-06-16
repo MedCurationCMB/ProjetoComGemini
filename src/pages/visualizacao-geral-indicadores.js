@@ -256,7 +256,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Atualizar estado com os resultados
         setKpis({
           totalIndicadores: totalIndicadores,
-          indicadoresDentroPrazo: dentroPrazo,
+          indicadoresDentroPrazo: indicadoresDentroPrazo,
           indicadoresSemValor: indicadoresSemValor || 0,
           indicadoresVencidos: totalEmAtraso || 0
         });
