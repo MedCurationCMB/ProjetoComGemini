@@ -27,7 +27,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [kpis, setKpis] = useState({
     totalIndicadores: 0,
-    indicadoresDentroPrazo: 0, // NOVO KPI
+    indicadoresDentroPrazo: 0,
     indicadoresSemValor: 0,
     indicadoresVencidos: 0
   });
@@ -87,7 +87,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     };
   };
 
-  // Função auxiliar para construir query com filtros
+  // Função auxiliar para construir query com filtros de projeto e categoria
   const construirQueryComFiltros = (queryBase) => {
     let query = queryBase;
 
@@ -103,11 +103,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return query;
   };
 
-  // Função para aplicar filtros de data especificamente
+  // Função para aplicar filtros de data
   const aplicarFiltrosData = (queryBase) => {
     let query = queryBase;
 
-    // Preparar filtros de data baseado na seleção
+    // Verificar se há filtro de período ativo
+    const temFiltroPeriodo = filtros.periodo && filtros.periodo !== '';
+    
+    if (!temFiltroPeriodo) {
+      // SEM FILTRO DE DATA: retorna a query sem filtro de data
+      return query;
+    }
+
+    // COM FILTRO DE DATA: aplicar filtros baseado na seleção
     let dataInicioFiltro = null;
     let dataFimFiltro = null;
 
@@ -127,6 +135,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
 
     return query;
+  };
+
+  // Verificar se há filtro de período ativo
+  const temFiltroPeriodoAtivo = () => {
+    return filtros.periodo && 
+           (filtros.periodo !== 'personalizado' || 
+            (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim));
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -199,67 +214,115 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Data de hoje para comparações
         const hoje = new Date().toISOString().split('T')[0];
 
-        // 1. Total de indicadores dentro do prazo - TODOS (com e sem valor) (prazo_entrega >= hoje)
-        let queryDentroPrazo = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .gte('prazo_entrega', hoje);
-        
-        queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
-        const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
+        // Verificar se há filtro de período ativo
+        const temFiltroPeriodo = temFiltroPeriodoAtivo();
 
-        if (dentroPrazoError) throw dentroPrazoError;
+        if (temFiltroPeriodo) {
+          // ===== COM FILTRO DE PERÍODO =====
+          
+          // 1. Total de indicadores no período filtrado
+          let queryTotal = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true });
+          
+          queryTotal = construirQueryComFiltros(queryTotal);
+          queryTotal = aplicarFiltrosData(queryTotal);
+          
+          const { count: totalIndicadoresNoPeriodo, error: totalError } = await queryTotal;
+          if (totalError) throw totalError;
 
-        // 2. Total de indicadores vencidos SEM valor (prazo_entrega < hoje E valor = NULL)
-        let queryVencidosSemValor = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .lt('prazo_entrega', hoje)
-          .is('valor_indicador_apresentado', null);
+          // 2. Indicadores dentro do prazo (no período filtrado)
+          let queryDentroPrazo = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .gte('prazo_entrega', hoje);
+          
+          queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
+          queryDentroPrazo = aplicarFiltrosData(queryDentroPrazo);
+          
+          const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
+          if (dentroPrazoError) throw dentroPrazoError;
 
-        // Para vencidos sem valor, aplicar apenas filtros de projeto e categoria, não de data
-        if (filtros.projeto_id) {
-          queryVencidosSemValor = queryVencidosSemValor.eq('projeto_id', filtros.projeto_id);
+          // 3. Indicadores sem valor (no período filtrado)
+          let querySemValor = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .is('valor_indicador_apresentado', null);
+          
+          querySemValor = construirQueryComFiltros(querySemValor);
+          querySemValor = aplicarFiltrosData(querySemValor);
+          
+          const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
+          if (semValorError) throw semValorError;
+
+          // 4. Indicadores vencidos sem valor (no período filtrado)
+          let queryVencidos = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .is('valor_indicador_apresentado', null)
+            .lt('prazo_entrega', hoje);
+
+          queryVencidos = construirQueryComFiltros(queryVencidos);
+          queryVencidos = aplicarFiltrosData(queryVencidos);
+
+          const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
+          if (vencidosError) throw vencidosError;
+
+          // Atualizar estado
+          setKpis({
+            totalIndicadores: totalIndicadoresNoPeriodo || 0,
+            indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
+            indicadoresSemValor: indicadoresSemValor || 0,
+            indicadoresVencidos: indicadoresVencidos || 0
+          });
+
+        } else {
+          // ===== SEM FILTRO DE PERÍODO (PADRÃO) =====
+          
+          // 1. Total de indicadores (TODOS)
+          let queryTotal = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true });
+          
+          queryTotal = construirQueryComFiltros(queryTotal);
+          
+          const { count: totalIndicadores, error: totalError } = await queryTotal;
+          if (totalError) throw totalError;
+
+          // 2. Indicadores dentro do prazo (>= hoje)
+          let queryDentroPrazo = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .gte('prazo_entrega', hoje);
+          
+          queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
+          
+          const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
+          if (dentroPrazoError) throw dentroPrazoError;
+
+          // 3. Indicadores sem valor (TODOS)
+          let querySemValor = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .is('valor_indicador_apresentado', null);
+          
+          querySemValor = construirQueryComFiltros(querySemValor);
+          
+          const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
+          if (semValorError) throw semValorError;
+
+          // 4. Indicadores vencidos sem valor (prazo < hoje E sem valor)
+          let queryVencidos = supabase.from('controle_indicador_geral')
+            .select('*', { count: 'exact', head: true })
+            .is('valor_indicador_apresentado', null)
+            .lt('prazo_entrega', hoje);
+
+          queryVencidos = construirQueryComFiltros(queryVencidos);
+
+          const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
+          if (vencidosError) throw vencidosError;
+
+          // Atualizar estado
+          setKpis({
+            totalIndicadores: totalIndicadores || 0,
+            indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
+            indicadoresSemValor: indicadoresSemValor || 0,
+            indicadoresVencidos: indicadoresVencidos || 0
+          });
         }
-        if (filtros.categoria_id) {
-          queryVencidosSemValor = queryVencidosSemValor.eq('categoria_id', filtros.categoria_id);
-        }
-
-        const { count: totalVencidosSemValor, error: vencidosSemValorError } = await queryVencidosSemValor;
-
-        if (vencidosSemValorError) throw vencidosSemValorError;
-
-        // 3. Total de indicadores = Dentro do prazo (todos) + Vencidos sem valor
-        const totalIndicadores = (indicadoresDentroPrazo || 0) + (totalVencidosSemValor || 0);
-
-        // 4. Total de indicadores sem valor definido
-        let querySemValor = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .is('valor_indicador_apresentado', null);
-        
-        querySemValor = construirQueryComFiltros(querySemValor);
-        const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
-
-        if (semValorError) throw semValorError;
-
-        // 5. Total de indicadores vencidos sem valor (para o KPI "Indicador em Atraso")
-        let queryIndicadoresEmAtraso = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', hoje);
-
-        // Para indicadores em atraso, aplicar apenas filtros de projeto e categoria, NÃO de data
-        queryIndicadoresEmAtraso = construirQueryComFiltros(queryIndicadoresEmAtraso);
-
-        const { count: indicadoresEmAtraso, error: indicadoresEmAtrasoError } = await queryIndicadoresEmAtraso;
-
-        if (indicadoresEmAtrasoError) throw indicadoresEmAtrasoError;
-
-        // Atualizar estado com os resultados
-        setKpis({
-          totalIndicadores: totalIndicadores,
-          indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
-          indicadoresSemValor: indicadoresSemValor || 0,
-          indicadoresVencidos: indicadoresEmAtraso || 0
-        });
 
       } catch (error) {
         console.error('Erro ao buscar KPIs:', error);
@@ -930,12 +993,12 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500">
-                  {hasFiltrosAtivos() ? 'Indicadores relevantes (filtrados)' : 'Dentro do prazo + Vencidos sem valor'}
+                  {temFiltroPeriodoAtivo() ? 'Indicadores no período filtrado' : 'Todos os indicadores do sistema'}
                 </p>
               </div>
             </div>
 
-            {/* KPI 2: NOVO - Indicadores Dentro do Prazo */}
+            {/* KPI 2: Indicadores Dentro do Prazo */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
