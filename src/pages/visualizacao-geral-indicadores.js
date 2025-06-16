@@ -16,7 +16,8 @@ import {
   FiMenu,
   FiUser,
   FiSettings,
-  FiLogOut
+  FiLogOut,
+  FiTable
 } from 'react-icons/fi';
 
 export default function VisualizacaoGeralIndicadores({ user }) {
@@ -29,6 +30,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     indicadoresSemValor: 0,
     indicadoresVencidos: 0
   });
+  const [tabelaProjetosCategoria, setTabelaProjetosCategoria] = useState([]);
+  const [loadingTabela, setLoadingTabela] = useState(true);
 
   // Função para fazer logout
   const handleLogout = async () => {
@@ -106,6 +109,97 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
     if (user) {
       fetchKPIs();
+    }
+  }, [user]);
+
+  // Buscar dados da tabela Projetos x Categoria
+  useEffect(() => {
+    const fetchTabelaProjetosCategoria = async () => {
+      try {
+        setLoadingTabela(true);
+
+        // 1. Buscar todos os indicadores sem valor definido com projeto e categoria
+        const { data: indicadoresSemValor, error: indicadoresError } = await supabase
+          .from('controle_indicador_geral')
+          .select('projeto_id, categoria_id')
+          .is('valor_indicador_apresentado', null)
+          .not('projeto_id', 'is', null)
+          .not('categoria_id', 'is', null);
+
+        if (indicadoresError) throw indicadoresError;
+
+        // 2. Agrupar por projeto_id e categoria_id e contar
+        const agrupamento = {};
+        indicadoresSemValor.forEach(item => {
+          const chave = `${item.projeto_id}_${item.categoria_id}`;
+          if (!agrupamento[chave]) {
+            agrupamento[chave] = {
+              projeto_id: item.projeto_id,
+              categoria_id: item.categoria_id,
+              quantidade: 0
+            };
+          }
+          agrupamento[chave].quantidade++;
+        });
+
+        // 3. Buscar nomes dos projetos e categorias únicos
+        const projetoIds = [...new Set(indicadoresSemValor.map(item => item.projeto_id))];
+        const categoriaIds = [...new Set(indicadoresSemValor.map(item => item.categoria_id))];
+
+        // Buscar nomes dos projetos
+        const { data: projetos, error: projetosError } = await supabase
+          .from('projetos')
+          .select('id, nome')
+          .in('id', projetoIds);
+
+        if (projetosError) throw projetosError;
+
+        // Buscar nomes das categorias
+        const { data: categorias, error: categoriasError } = await supabase
+          .from('categorias')
+          .select('id, nome')
+          .in('id', categoriaIds);
+
+        if (categoriasError) throw categoriasError;
+
+        // 4. Criar objetos de lookup
+        const projetosLookup = {};
+        projetos.forEach(projeto => {
+          projetosLookup[projeto.id] = projeto.nome;
+        });
+
+        const categoriasLookup = {};
+        categorias.forEach(categoria => {
+          categoriasLookup[categoria.id] = categoria.nome;
+        });
+
+        // 5. Montar dados finais da tabela
+        const dadosTabela = Object.values(agrupamento).map(item => ({
+          projeto_id: item.projeto_id,
+          categoria_id: item.categoria_id,
+          nome_projeto: projetosLookup[item.projeto_id] || 'Projeto não encontrado',
+          nome_categoria: categoriasLookup[item.categoria_id] || 'Categoria não encontrada',
+          quantidade_sem_valor: item.quantidade
+        })).sort((a, b) => {
+          // Ordenar por nome do projeto, depois por nome da categoria
+          if (a.nome_projeto === b.nome_projeto) {
+            return a.nome_categoria.localeCompare(b.nome_categoria);
+          }
+          return a.nome_projeto.localeCompare(b.nome_projeto);
+        });
+
+        setTabelaProjetosCategoria(dadosTabela);
+
+      } catch (error) {
+        console.error('Erro ao buscar dados da tabela:', error);
+        toast.error('Erro ao carregar tabela de projetos e categorias');
+      } finally {
+        setLoadingTabela(false);
+      }
+    };
+
+    if (user) {
+      fetchTabelaProjetosCategoria();
     }
   }, [user]);
 
@@ -411,6 +505,78 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           </div>
         )}
+
+        {/* Nova Seção: Tabela de Projetos x Categorias */}
+        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <FiTable className="h-5 w-5 mr-2 text-purple-500" />
+            Indicadores sem Valor por Projeto e Categoria
+          </h2>
+          
+          {loadingTabela ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+            </div>
+          ) : tabelaProjetosCategoria.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>Nenhum indicador sem valor definido encontrado</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Projeto
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Categoria
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Indicadores sem Valor
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tabelaProjetosCategoria.map((item, index) => (
+                    <tr key={`${item.projeto_id}_${item.categoria_id}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.nome_projeto}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {item.nome_categoria}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                          {formatNumber(item.quantidade_sem_valor)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {/* Rodapé da tabela com total */}
+              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">
+                    Total de combinações: {tabelaProjetosCategoria.length}
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    Total de indicadores sem valor: {formatNumber(
+                      tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Overlay para fechar menus quando clicar fora */}
