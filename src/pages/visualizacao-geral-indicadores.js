@@ -256,9 +256,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Atualizar estado com os resultados
         setKpis({
           totalIndicadores: totalIndicadores,
-          indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
+          indicadoresDentroPrazo: dentroPrazo,
           indicadoresSemValor: indicadoresSemValor || 0,
-          indicadoresVencidos: indicadoresEmAtraso || 0
+          indicadoresVencidos: totalEmAtraso || 0
         });
 
       } catch (error) {
@@ -930,7 +930,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500">
-                  {hasFiltrosAtivos() ? 'Indicadores relevantes (filtrados)' : 'Dentro do prazo + Vencidos sem valor'}
+                  {hasFiltrosAtivos() ? 'Pendentes + Concluídos + Em atraso' : 'Pendentes + Concluídos + Em atraso'}
                 </p>
               </div>
             </div>
