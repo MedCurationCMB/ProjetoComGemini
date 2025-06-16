@@ -192,7 +192,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Data de hoje para comparações
         const hoje = new Date().toISOString().split('T')[0];
 
-        // 1. Total de indicadores dentro do prazo - TODOS (com e sem valor) (prazo_entrega >= hoje)
+        // 1. NOVO: Total de indicadores dentro do prazo (prazo_entrega >= hoje)
         let queryDentroPrazo = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .gte('prazo_entrega', hoje);
@@ -202,26 +202,25 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (dentroPrazoError) throw dentroPrazoError;
 
-        // 2. Total de indicadores vencidos SEM valor (prazo_entrega < hoje E valor = NULL)
-        let queryVencidosSemValor = supabase.from('controle_indicador_geral')
+        // 2. Total de indicadores vencidos (prazo_entrega < hoje)
+        let queryVencidos = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
-          .lt('prazo_entrega', hoje)
-          .is('valor_indicador_apresentado', null);
+          .lt('prazo_entrega', hoje);
 
-        // Para vencidos sem valor, aplicar apenas filtros de projeto e categoria, não de data
+        // Para vencidos, aplicar apenas filtros de projeto e categoria, não de data
         if (filtros.projeto_id) {
-          queryVencidosSemValor = queryVencidosSemValor.eq('projeto_id', filtros.projeto_id);
+          queryVencidos = queryVencidos.eq('projeto_id', filtros.projeto_id);
         }
         if (filtros.categoria_id) {
-          queryVencidosSemValor = queryVencidosSemValor.eq('categoria_id', filtros.categoria_id);
+          queryVencidos = queryVencidos.eq('categoria_id', filtros.categoria_id);
         }
 
-        const { count: totalVencidosSemValor, error: vencidosSemValorError } = await queryVencidosSemValor;
+        const { count: totalVencidos, error: vencidosError } = await queryVencidos;
 
-        if (vencidosSemValorError) throw vencidosSemValorError;
+        if (vencidosError) throw vencidosError;
 
-        // 3. Total de indicadores = Dentro do prazo (todos) + Vencidos sem valor
-        const totalIndicadores = (indicadoresDentroPrazo || 0) + (totalVencidosSemValor || 0);
+        // 3. Total de indicadores = Dentro do prazo + Vencidos
+        const totalIndicadores = (indicadoresDentroPrazo || 0) + (totalVencidos || 0);
 
         // 4. Total de indicadores sem valor definido
         let querySemValor = supabase.from('controle_indicador_geral')
@@ -233,30 +232,30 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (semValorError) throw semValorError;
 
-        // 5. Total de indicadores vencidos sem valor (para o KPI "Indicador em Atraso")
-        let queryIndicadoresEmAtraso = supabase.from('controle_indicador_geral')
+        // 5. Total de indicadores sem valor definido e com prazo vencido
+        let queryVencidosSemValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', hoje);
 
-        // Para indicadores em atraso, aplicar apenas filtros de projeto e categoria, não de data
+        // Para vencidos sem valor, aplicar apenas filtros de projeto e categoria, não de data
         if (filtros.projeto_id) {
-          queryIndicadoresEmAtraso = queryIndicadoresEmAtraso.eq('projeto_id', filtros.projeto_id);
+          queryVencidosSemValor = queryVencidosSemValor.eq('projeto_id', filtros.projeto_id);
         }
         if (filtros.categoria_id) {
-          queryIndicadoresEmAtraso = queryIndicadoresEmAtraso.eq('categoria_id', filtros.categoria_id);
+          queryVencidosSemValor = queryVencidosSemValor.eq('categoria_id', filtros.categoria_id);
         }
 
-        const { count: indicadoresEmAtraso, error: indicadoresEmAtrasoError } = await queryIndicadoresEmAtraso;
+        const { count: indicadoresVencidosSemValor, error: vencidosSemValorError } = await queryVencidosSemValor;
 
-        if (indicadoresEmAtrasoError) throw indicadoresEmAtrasoError;
+        if (vencidosSemValorError) throw vencidosSemValorError;
 
         // Atualizar estado com os resultados
         setKpis({
           totalIndicadores: totalIndicadores,
           indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
           indicadoresSemValor: indicadoresSemValor || 0,
-          indicadoresVencidos: indicadoresEmAtraso || 0
+          indicadoresVencidos: indicadoresVencidosSemValor || 0
         });
 
       } catch (error) {
@@ -934,7 +933,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500">
-                  {hasFiltrosAtivos() ? 'Indicadores relevantes (filtrados)' : 'Dentro do prazo + Vencidos sem valor'}
+                  {hasFiltrosAtivos() ? 'Indicadores filtrados' : 'Indicadores cadastrados no sistema'}
                 </p>
               </div>
             </div>
