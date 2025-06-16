@@ -517,14 +517,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </tbody>
                   </table>
                   
-                  {/* Rodapé da tabela */}
-                  <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                    <div className="text-sm text-center font-medium text-gray-900">
-                      Total: {formatNumber(
-                        tabelaProjetos.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
-                      )} indicadores
-                    </div>
-                  </div>
+
                 </div>
               )}
             </div>
@@ -576,14 +569,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </tbody>
                   </table>
                   
-                  {/* Rodapé da tabela */}
-                  <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                    <div className="text-sm text-center font-medium text-gray-900">
-                      Total: {formatNumber(
-                        tabelaCategorias.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
-                      )} indicadores
-                    </div>
-                  </div>
+
                 </div>
               )}
             </div>
@@ -645,14 +631,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </tbody>
               </table>
               
-              {/* Rodapé da tabela com total */}
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                <div className="text-sm text-center font-medium text-gray-900">
-                  Total: {formatNumber(
-                    tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
-                  )} indicadores
-                </div>
-              </div>
+
             </div>
           )}
         </div>
