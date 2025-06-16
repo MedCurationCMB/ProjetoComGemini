@@ -108,11 +108,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoadingTabelas(true);
 
-        // 1. Buscar todos os indicadores sem valor definido com projeto e categoria
-        const { data: indicadoresSemValor, error: indicadoresError } = await supabase
+        // Data de hoje para comparação de vencimento
+        const hoje = new Date().toISOString().split('T')[0];
+
+        // 1. Buscar todos os indicadores sem valor definido e vencidos
+        const { data: indicadoresVencidos, error: indicadoresError } = await supabase
           .from('controle_indicador_geral')
           .select('projeto_id, categoria_id')
           .is('valor_indicador_apresentado', null)
+          .lt('prazo_entrega', hoje)
           .not('projeto_id', 'is', null)
           .not('categoria_id', 'is', null);
 
@@ -120,7 +124,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         // 2. Agrupar por projeto_id e categoria_id e contar (tabela combinada)
         const agrupamentoCombinado = {};
-        indicadoresSemValor.forEach(item => {
+        indicadoresVencidos.forEach(item => {
           const chave = `${item.projeto_id}_${item.categoria_id}`;
           if (!agrupamentoCombinado[chave]) {
             agrupamentoCombinado[chave] = {
@@ -134,7 +138,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         // 3. Agrupar apenas por projeto_id
         const agrupamentoProjetos = {};
-        indicadoresSemValor.forEach(item => {
+        indicadoresVencidos.forEach(item => {
           if (!agrupamentoProjetos[item.projeto_id]) {
             agrupamentoProjetos[item.projeto_id] = {
               projeto_id: item.projeto_id,
@@ -146,7 +150,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         // 4. Agrupar apenas por categoria_id
         const agrupamentoCategorias = {};
-        indicadoresSemValor.forEach(item => {
+        indicadoresVencidos.forEach(item => {
           if (!agrupamentoCategorias[item.categoria_id]) {
             agrupamentoCategorias[item.categoria_id] = {
               categoria_id: item.categoria_id,
@@ -157,8 +161,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         });
 
         // 5. Buscar nomes dos projetos e categorias únicos
-        const projetoIds = [...new Set(indicadoresSemValor.map(item => item.projeto_id))];
-        const categoriaIds = [...new Set(indicadoresSemValor.map(item => item.categoria_id))];
+        const projetoIds = [...new Set(indicadoresVencidos.map(item => item.projeto_id))];
+        const categoriaIds = [...new Set(indicadoresVencidos.map(item => item.categoria_id))];
 
         // Buscar nomes dos projetos
         const { data: projetos, error: projetosError } = await supabase
@@ -193,7 +197,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           categoria_id: item.categoria_id,
           nome_projeto: projetosLookup[item.projeto_id] || 'Projeto não encontrado',
           nome_categoria: categoriasLookup[item.categoria_id] || 'Categoria não encontrada',
-          quantidade_sem_valor: item.quantidade
+          quantidade_vencidos: item.quantidade
         })).sort((a, b) => {
           // Ordenar por nome do projeto, depois por nome da categoria
           if (a.nome_projeto === b.nome_projeto) {
@@ -206,14 +210,14 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         const dadosTabelaProjetos = Object.values(agrupamentoProjetos).map(item => ({
           projeto_id: item.projeto_id,
           nome_projeto: projetosLookup[item.projeto_id] || 'Projeto não encontrado',
-          quantidade_sem_valor: item.quantidade
+          quantidade_vencidos: item.quantidade
         })).sort((a, b) => a.nome_projeto.localeCompare(b.nome_projeto));
 
         // 9. Montar dados da tabela de categorias
         const dadosTabelaCategorias = Object.values(agrupamentoCategorias).map(item => ({
           categoria_id: item.categoria_id,
           nome_categoria: categoriasLookup[item.categoria_id] || 'Categoria não encontrada',
-          quantidade_sem_valor: item.quantidade
+          quantidade_vencidos: item.quantidade
         })).sort((a, b) => a.nome_categoria.localeCompare(b.nome_categoria));
 
         setTabelaProjetosCategoria(dadosTabelaCombinada);
@@ -470,7 +474,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FiTable className="h-5 w-5 mr-2 text-blue-500" />
-                Projetos com Indicadores sem Valor
+                Projetos com Indicadores em Atraso
               </h2>
               
               {loadingTabelas ? (
@@ -480,7 +484,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               ) : tabelaProjetos.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhum projeto com indicadores sem valor</p>
+                  <p>Nenhum projeto com indicadores em atraso</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -491,7 +495,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Projeto
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores sem Valor
+                          Indicadores em Atraso
                         </th>
                       </tr>
                     </thead>
@@ -504,8 +508,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                              {formatNumber(item.quantidade_sem_valor)}
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                              {formatNumber(item.quantidade_vencidos)}
                             </span>
                           </td>
                         </tr>
@@ -517,7 +521,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
                     <div className="text-sm text-center font-medium text-gray-900">
                       Total: {formatNumber(
-                        tabelaProjetos.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
+                        tabelaProjetos.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
                       )} indicadores
                     </div>
                   </div>
@@ -529,7 +533,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FiTable className="h-5 w-5 mr-2 text-purple-500" />
-                Categorias com Indicadores sem Valor
+                Categorias com Indicadores em Atraso
               </h2>
               
               {loadingTabelas ? (
@@ -539,7 +543,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               ) : tabelaCategorias.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhuma categoria com indicadores sem valor</p>
+                  <p>Nenhuma categoria com indicadores em atraso</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -550,7 +554,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Categoria
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores sem Valor
+                          Indicadores em Atraso
                         </th>
                       </tr>
                     </thead>
@@ -563,8 +567,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                              {formatNumber(item.quantidade_sem_valor)}
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                              {formatNumber(item.quantidade_vencidos)}
                             </span>
                           </td>
                         </tr>
@@ -576,7 +580,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
                     <div className="text-sm text-center font-medium text-gray-900">
                       Total: {formatNumber(
-                        tabelaCategorias.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
+                        tabelaCategorias.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
                       )} indicadores
                     </div>
                   </div>
@@ -590,7 +594,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <FiTable className="h-5 w-5 mr-2 text-green-500" />
-            Detalhamento por Projeto e Categoria
+            Detalhamento de Indicadores em Atraso por Projeto e Categoria
           </h2>
           
           {loadingTabelas ? (
@@ -600,7 +604,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           ) : tabelaProjetosCategoria.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Nenhum indicador sem valor definido encontrado</p>
+              <p>Nenhum indicador em atraso encontrado</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -614,7 +618,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       Categoria
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Indicadores sem Valor
+                      Indicadores em Atraso
                     </th>
                   </tr>
                 </thead>
@@ -632,8 +636,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                          {formatNumber(item.quantidade_sem_valor)}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                          {formatNumber(item.quantidade_vencidos)}
                         </span>
                       </td>
                     </tr>
@@ -645,7 +649,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
                 <div className="text-sm text-center font-medium text-gray-900">
                   Total: {formatNumber(
-                    tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_sem_valor, 0)
+                    tabelaProjetosCategoria.reduce((sum, item) => sum + item.quantidade_vencidos, 0)
                   )} indicadores
                 </div>
               </div>
