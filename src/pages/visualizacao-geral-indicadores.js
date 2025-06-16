@@ -85,6 +85,41 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     };
   };
 
+  // Função auxiliar para construir query com filtros
+  const construirQueryComFiltros = (queryBase) => {
+    let query = queryBase;
+
+    // Aplicar filtros se necessário
+    if (filtros.projeto_id) {
+      query = query.eq('projeto_id', filtros.projeto_id);
+    }
+
+    if (filtros.categoria_id) {
+      query = query.eq('categoria_id', filtros.categoria_id);
+    }
+
+    // Preparar filtros de data baseado na seleção
+    let dataInicioFiltro = null;
+    let dataFimFiltro = null;
+
+    if (filtros.periodo && filtros.periodo !== 'personalizado') {
+      const periodo = calcularPeriodo(filtros.periodo);
+      dataInicioFiltro = periodo.dataInicio;
+      dataFimFiltro = periodo.dataFim;
+    } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+      dataInicioFiltro = filtros.data_inicio;
+      dataFimFiltro = filtros.data_fim;
+    }
+
+    // Aplicar filtro de data se especificado
+    if (dataInicioFiltro && dataFimFiltro) {
+      query = query.gte('prazo_entrega', dataInicioFiltro)
+                  .lte('prazo_entrega', dataFimFiltro);
+    }
+
+    return query;
+  };
+
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
@@ -152,40 +187,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoading(true);
 
-        // Preparar filtros de data baseado na seleção
-        let dataInicioFiltro = null;
-        let dataFimFiltro = null;
-
-        if (filtros.periodo && filtros.periodo !== 'personalizado') {
-          const periodo = calcularPeriodo(filtros.periodo);
-          dataInicioFiltro = periodo.dataInicio;
-          dataFimFiltro = periodo.dataFim;
-        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
-          dataInicioFiltro = filtros.data_inicio;
-          dataFimFiltro = filtros.data_fim;
-        }
-
-        // Construir query base
-        let queryBase = supabase.from('controle_indicador_geral');
-
-        // Aplicar filtros se necessário
-        if (filtros.projeto_id) {
-          queryBase = queryBase.eq('projeto_id', filtros.projeto_id);
-        }
-
-        if (filtros.categoria_id) {
-          queryBase = queryBase.eq('categoria_id', filtros.categoria_id);
-        }
-
-        // Aplicar filtro de data se especificado
-        if (dataInicioFiltro && dataFimFiltro) {
-          queryBase = queryBase.gte('prazo_entrega', dataInicioFiltro)
-                              .lte('prazo_entrega', dataFimFiltro);
-        }
-
         // 1. Total de indicadores
-        const { count: totalIndicadores, error: indicadoresError } = await queryBase
-          .select('*', { count: 'exact', head: true });
+        let queryTotal = supabase.from('controle_indicador_geral').select('*', { count: 'exact', head: true });
+        queryTotal = construirQueryComFiltros(queryTotal);
+        const { count: totalIndicadores, error: indicadoresError } = await queryTotal;
 
         if (indicadoresError) throw indicadoresError;
 
@@ -193,19 +198,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         let querySemValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null);
-
-        // Aplicar os mesmos filtros
-        if (filtros.projeto_id) {
-          querySemValor = querySemValor.eq('projeto_id', filtros.projeto_id);
-        }
-        if (filtros.categoria_id) {
-          querySemValor = querySemValor.eq('categoria_id', filtros.categoria_id);
-        }
-        if (dataInicioFiltro && dataFimFiltro) {
-          querySemValor = querySemValor.gte('prazo_entrega', dataInicioFiltro)
-                                      .lte('prazo_entrega', dataFimFiltro);
-        }
-
+        
+        querySemValor = construirQueryComFiltros(querySemValor);
         const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
 
         if (semValorError) throw semValorError;
@@ -218,14 +212,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', hoje);
 
-        // Aplicar os mesmos filtros
+        // Para vencidos, aplicar apenas filtros de projeto e categoria, não de data
         if (filtros.projeto_id) {
           queryVencidos = queryVencidos.eq('projeto_id', filtros.projeto_id);
         }
         if (filtros.categoria_id) {
           queryVencidos = queryVencidos.eq('categoria_id', filtros.categoria_id);
         }
-        // Nota: Para vencidos, não aplicamos o filtro de data personalizado
 
         const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
 
@@ -260,19 +253,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Data de hoje para comparação de vencimento
         const hoje = new Date().toISOString().split('T')[0];
 
-        // Preparar filtros de data baseado na seleção
-        let dataInicioFiltro = null;
-        let dataFimFiltro = null;
-
-        if (filtros.periodo && filtros.periodo !== 'personalizado') {
-          const periodo = calcularPeriodo(filtros.periodo);
-          dataInicioFiltro = periodo.dataInicio;
-          dataFimFiltro = periodo.dataFim;
-        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
-          dataInicioFiltro = filtros.data_inicio;
-          dataFimFiltro = filtros.data_fim;
-        }
-
         // Construir query base para indicadores vencidos
         let queryIndicadores = supabase
           .from('controle_indicador_geral')
@@ -282,7 +262,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           .not('projeto_id', 'is', null)
           .not('categoria_id', 'is', null);
 
-        // Aplicar filtros se necessário
+        // Para as tabelas, aplicar apenas filtros de projeto e categoria, não de data
         if (filtros.projeto_id) {
           queryIndicadores = queryIndicadores.eq('projeto_id', filtros.projeto_id);
         }
@@ -290,8 +270,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         if (filtros.categoria_id) {
           queryIndicadores = queryIndicadores.eq('categoria_id', filtros.categoria_id);
         }
-
-        // Para as tabelas, não aplicamos filtro de data futura, apenas mantemos o filtro de vencidos
 
         const { data: indicadoresVencidos, error: indicadoresError } = await queryIndicadores;
 
