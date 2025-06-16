@@ -16,7 +16,8 @@ import {
   FiLogOut,
   FiTable,
   FiFilter,
-  FiX
+  FiX,
+  FiCheckCircle
 } from 'react-icons/fi';
 
 export default function VisualizacaoGeralIndicadores({ user }) {
@@ -26,6 +27,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [kpis, setKpis] = useState({
     totalIndicadores: 0,
+    indicadoresDentroPrazo: 0, // NOVO KPI
     indicadoresSemValor: 0,
     indicadoresVencidos: 0
   });
@@ -187,6 +189,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoading(true);
 
+        // Data de hoje para comparações
+        const hoje = new Date().toISOString().split('T')[0];
+
         // 1. Total de indicadores
         let queryTotal = supabase.from('controle_indicador_geral').select('*', { count: 'exact', head: true });
         queryTotal = construirQueryComFiltros(queryTotal);
@@ -194,7 +199,17 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (indicadoresError) throw indicadoresError;
 
-        // 2. Total de indicadores sem valor definido
+        // 2. NOVO: Total de indicadores dentro do prazo (prazo_entrega >= hoje)
+        let queryDentroPrazo = supabase.from('controle_indicador_geral')
+          .select('*', { count: 'exact', head: true })
+          .gte('prazo_entrega', hoje);
+        
+        queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
+        const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
+
+        if (dentroPrazoError) throw dentroPrazoError;
+
+        // 3. Total de indicadores sem valor definido
         let querySemValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null);
@@ -204,9 +219,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (semValorError) throw semValorError;
 
-        // 3. Total de indicadores sem valor definido e com prazo vencido
-        const hoje = new Date().toISOString().split('T')[0];
-        
+        // 4. Total de indicadores sem valor definido e com prazo vencido
         let queryVencidos = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null)
@@ -227,6 +240,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // Atualizar estado com os resultados
         setKpis({
           totalIndicadores: totalIndicadores || 0,
+          indicadoresDentroPrazo: indicadoresDentroPrazo || 0, // NOVO KPI
           indicadoresSemValor: indicadoresSemValor || 0,
           indicadoresVencidos: indicadoresVencidos || 0
         });
@@ -890,7 +904,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* KPI 1: Total de Indicadores */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
@@ -911,7 +925,29 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
             </div>
 
-            {/* KPI 2: Indicadores Sem Valor */}
+            {/* KPI 2: NOVO - Indicadores Dentro do Prazo */}
+            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600">Dentro do Prazo</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {formatNumber(kpis.indicadoresDentroPrazo)}
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <FiCheckCircle className="h-8 w-8 text-blue-500" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center">
+                  <p className="text-xs text-gray-500">
+                    {calculatePercentage(kpis.indicadoresDentroPrazo, kpis.totalIndicadores)}% do total
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* KPI 3: Indicadores Sem Valor */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -933,7 +969,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
             </div>
 
-            {/* KPI 3: Indicadores em Atraso */}
+            {/* KPI 4: Indicadores em Atraso */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
