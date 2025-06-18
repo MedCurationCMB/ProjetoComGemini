@@ -1278,6 +1278,78 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           )}
         </div>
+
+        {/* NOVA SEÇÃO DE KPIs - Total Geral dos Indicadores */}
+        <div className="mb-8">
+          <div className="mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-black">Total Geral dos Indicadores</h2>
+            <p className="text-gray-600 text-sm mt-1">
+              Visão consolidada de todos os indicadores do sistema
+            </p>
+          </div>
+
+          {loading || loadingAtraso ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* KPI 1: Total Geral (incluindo atrasados) - Verde + Vermelho */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">Total Geral (incluindo atrasados)</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">
+                      {formatNumber(kpis.indicadoresComValor + kpisAtraso.todosAtrasados)}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <FiBarChart2 className="h-8 w-8 text-indigo-500" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
+                      Com valor: {formatNumber(kpis.indicadoresComValor)}
+                    </span>
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
+                      Atrasados: {formatNumber(kpisAtraso.todosAtrasados)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI 2: Pendentes - Amarelo + Vermelho */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-amber-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">Pendentes</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">
+                      {formatNumber(kpis.indicadoresSemValor + kpisAtraso.todosAtrasados)}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <FiAlertTriangle className="h-8 w-8 text-amber-500" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+                      Sem valor: {formatNumber(kpis.indicadoresSemValor)}
+                    </span>
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
+                      Atrasados: {formatNumber(kpisAtraso.todosAtrasados)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Seção das duas tabelas lado a lado */}
         {!loading && (
