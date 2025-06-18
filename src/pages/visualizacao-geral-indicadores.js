@@ -81,7 +81,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       periodo: periodoPadrao.periodo, // Definir período padrão como '30dias'
       data_inicio: periodoPadrao.dataInicio, // Data de hoje
       data_fim: periodoPadrao.dataFim, // Hoje + 30 dias
-      data_referencia_atraso: '' // Permanece vazio para usar hoje como padrão
+      data_referencia_atraso: '' // Permanece vazio para usar data_inicio como padrão
     };
   });
 
@@ -123,6 +123,22 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     };
   };
 
+  // NOVA FUNÇÃO: Obter data de referência para atraso com lógica de prioridade
+  const getDataReferenciaAtraso = () => {
+    // Se há data de referência customizada, ela prevalece
+    if (filtros.data_referencia_atraso) {
+      return filtros.data_referencia_atraso;
+    }
+    
+    // Caso contrário, usar a data_inicio dos primeiros 3 KPIs
+    if (filtros.data_inicio) {
+      return filtros.data_inicio;
+    }
+    
+    // Fallback: data de hoje
+    return formatarDataLocal(new Date());
+  };
+
   // Função para gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
     if (!filtros.periodo) {
@@ -152,19 +168,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return `Indicadores com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
   };
 
-  // Função para gerar texto descritivo dos indicadores em atraso
+  // NOVA FUNÇÃO: Gerar texto descritivo dos indicadores em atraso com lógica atualizada
   const gerarTextoDescritivoAtraso = () => {
-    if (!filtros.data_referencia_atraso) {
-      return "Todos os indicadores em atraso";
-    }
-
+    const dataReferencia = getDataReferenciaAtraso();
+    
     // Formatar data para exibição (DD/MM/AAAA)
     const formatarData = (dataString) => {
       const partes = dataString.split('-');
       return `${partes[2]}/${partes[1]}/${partes[0]}`; // dd/mm/yyyy
     };
 
-    return `Indicadores em atraso com base na data de referência: ${formatarData(filtros.data_referencia_atraso)}`;
+    // Verificar se está usando data customizada ou sincronizada
+    const usandoDataCustomizada = filtros.data_referencia_atraso !== '';
+    const tipoReferencia = usandoDataCustomizada ? 'personalizada' : 'sincronizada com KPIs principais';
+
+    return `Indicadores em atraso com base na data de referência: ${formatarData(dataReferencia)} (${tipoReferencia})`;
   };
 
   // Função auxiliar para construir query com filtros de projeto e categoria
@@ -216,17 +234,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim));
   };
 
-  // Função para obter a data de referência para atraso
-  const getDataReferenciaAtraso = () => {
-    return filtros.data_referencia_atraso || formatarDataLocal(new Date());
-  };
-
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
       router.replace('/login');
     }
   }, [user, router]);
+
+  // NOVO USEEFFECT: Sincronizar data_referencia_atraso quando data_inicio muda
+  useEffect(() => {
+    // Só sincronizar se não houver data de referência customizada
+    if (!filtros.data_referencia_atraso && filtros.data_inicio) {
+      // Não precisa fazer nada porque getDataReferenciaAtraso() já pega a data_inicio automaticamente
+      // Este useEffect existe para reagir às mudanças e recarregar os dados de atraso
+    }
+  }, [filtros.data_inicio, filtros.data_referencia_atraso]);
 
   // Carregar filtros disponíveis
   useEffect(() => {
@@ -348,7 +370,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoadingAtraso(true);
 
-        // Data de referência para atraso
+        // MUDANÇA: Usar nova função que prioriza data customizada ou usa data_inicio
         const dataReferencia = getDataReferenciaAtraso();
 
         // Calcular datas para os períodos
@@ -414,15 +436,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     if (user) {
       fetchKPIsAtraso();
     }
-  }, [user, filtros]);
+  }, [user, filtros]); // DEPENDÊNCIA: incluir todos os filtros para reagir às mudanças
 
-  // Buscar dados das tabelas - ATUALIZADO para usar data de referência de atraso
+  // Buscar dados das tabelas
   useEffect(() => {
     const fetchTabelas = async () => {
       try {
         setLoadingTabelas(true);
 
-        // ATUALIZADO: Usar data de referência de atraso em vez da data de hoje
+        // MUDANÇA: Usar nova função que sincroniza com data_inicio ou usa data customizada
         const dataReferenciaAtraso = getDataReferenciaAtraso();
 
         // Construir query base para indicadores vencidos usando a data de referência
@@ -430,7 +452,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           .from('controle_indicador_geral')
           .select('projeto_id, categoria_id')
           .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', dataReferenciaAtraso) // MUDANÇA: usar data de referência
+          .lt('prazo_entrega', dataReferenciaAtraso)
           .not('projeto_id', 'is', null)
           .not('categoria_id', 'is', null);
 
@@ -554,7 +576,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     if (user) {
       fetchTabelas();
     }
-  }, [user, filtros]); // DEPENDÊNCIA: incluir filtros para reagir à mudança de data de referência
+  }, [user, filtros]); // DEPENDÊNCIA: incluir filtros para reagir a todas as mudanças
 
   // Função para limpar filtros
   const limparFiltros = () => {
@@ -566,7 +588,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       periodo: periodoPadrao.periodo,
       data_inicio: periodoPadrao.dataInicio,
       data_fim: periodoPadrao.dataFim,
-      data_referencia_atraso: ''
+      data_referencia_atraso: '' // Limpar para voltar à sincronização automática
     });
     setShowFilters(false);
   };
@@ -575,7 +597,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const hasFiltrosAtivos = () => {
     return filtros.projeto_id || 
            filtros.categoria_id || 
-           filtros.data_referencia_atraso;
+           filtros.data_referencia_atraso; // Não incluir período porque sempre tem por padrão
   };
 
   // Função para formatar números
@@ -721,17 +743,23 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </select>
                   </div>
 
-                  {/* NOVO: Filtro de Data de Referência para Indicadores em Atraso */}
+                  {/* ATUALIZADO: Filtro de Data de Referência para Indicadores em Atraso */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Data de Referência (Indicadores em Atraso)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Data de Referência (Indicadores em Atraso)
+                    </label>
                     <input
                       type="date"
                       value={filtros.data_referencia_atraso}
                       onChange={(e) => setFiltros(prev => ({ ...prev, data_referencia_atraso: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={filtros.data_inicio}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Se não informado, será usado a data de hoje
+                      {filtros.data_referencia_atraso 
+                        ? 'Usando data personalizada' 
+                        : `Sincronizado com KPIs principais (${filtros.data_inicio ? new Date(filtros.data_inicio).toLocaleDateString('pt-BR') : 'hoje'})`
+                      }
                     </p>
                   </div>
 
@@ -957,7 +985,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </select>
                   </div>
 
-                  {/* NOVO: Filtro de Data de Referência para Indicadores em Atraso */}
+                  {/* ATUALIZADO: Filtro de Data de Referência para Indicadores em Atraso */}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Data de Referência (Atraso)</label>
                     <input
@@ -965,9 +993,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       value={filtros.data_referencia_atraso}
                       onChange={(e) => setFiltros(prev => ({ ...prev, data_referencia_atraso: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={filtros.data_inicio}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Se não informado, será usado a data de hoje
+                      {filtros.data_referencia_atraso 
+                        ? 'Usando data personalizada' 
+                        : `Sync com KPIs (${filtros.data_inicio ? new Date(filtros.data_inicio).toLocaleDateString('pt-BR') : 'hoje'})`
+                      }
                     </p>
                   </div>
 
@@ -1253,7 +1285,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           )}
         </div>
-
+        
         {/* Seção das duas tabelas lado a lado */}
         {!loading && (
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
