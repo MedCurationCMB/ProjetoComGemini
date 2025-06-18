@@ -141,6 +141,14 @@ export default function Welcome({ user }) {
               Visualização Geral (Indicadores)
             </Link>
 
+            {/* NOVO LINK ADICIONADO */}
+            <Link 
+              href="/visualizacao-geral-documentos" 
+              className="bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Visualização Geral (Documentos)
+            </Link>
+
             <Link 
               href="/cadastros" 
               className="bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
