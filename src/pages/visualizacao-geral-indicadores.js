@@ -310,19 +310,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoading(true);
 
-        // MUDANÇA: Sempre aplicar filtro de período (padrão ou selecionado)
+        // MUDANÇA: Remover a busca do total separadamente e calcular como soma dos outros dois
         
-        // 1. Total de indicadores no período filtrado
-        let queryTotal = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true });
-        
-        queryTotal = construirQueryComFiltros(queryTotal);
-        queryTotal = aplicarFiltrosData(queryTotal);
-        
-        const { count: totalIndicadoresNoPeriodo, error: totalError } = await queryTotal;
-        if (totalError) throw totalError;
-
-        // 2. Indicadores com valor (no período filtrado)
+        // 1. Indicadores com valor (no período filtrado)
         let queryComValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .not('valor_indicador_apresentado', 'is', null);
@@ -333,7 +323,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         const { count: indicadoresComValor, error: comValorError } = await queryComValor;
         if (comValorError) throw comValorError;
 
-        // 3. Indicadores sem valor (no período filtrado)
+        // 2. Indicadores sem valor (no período filtrado)
         let querySemValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null);
@@ -344,9 +334,12 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
         if (semValorError) throw semValorError;
 
+        // 3. NOVA LÓGICA: Total é a soma dos dois anteriores
+        const totalIndicadores = (indicadoresComValor || 0) + (indicadoresSemValor || 0);
+
         // Atualizar estado
         setKpis({
-          totalIndicadores: totalIndicadoresNoPeriodo || 0,
+          totalIndicadores: totalIndicadores,
           indicadoresComValor: indicadoresComValor || 0,
           indicadoresSemValor: indicadoresSemValor || 0
         });
