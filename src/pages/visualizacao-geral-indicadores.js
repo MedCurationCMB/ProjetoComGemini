@@ -59,10 +59,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   };
 
-  // Função para calcular datas dos períodos
+  // Função para calcular datas dos períodos com correção do fuso horário
   const calcularPeriodo = (tipo) => {
     const hoje = new Date();
-    const dataInicio = new Date(hoje); // Sempre começa hoje
+    const dataInicio = new Date(hoje);
     let dataFim = new Date(hoje);
 
     switch (tipo) {
@@ -80,9 +80,17 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
 
     return {
-      dataInicio: dataInicio.toISOString().split('T')[0], // Hoje
-      dataFim: dataFim.toISOString().split('T')[0] // Hoje + X dias
+      dataInicio: formatarDataLocal(dataInicio),
+      dataFim: formatarDataLocal(dataFim)
     };
+  };
+
+  // Função utilitária para formatar data local no formato yyyy-mm-dd
+  const formatarDataLocal = (data) => {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
   };
 
   // Função para gerar texto descritivo baseado nos filtros
@@ -107,8 +115,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
     // Formatar datas para exibição (DD/MM/AAAA)
     const formatarData = (dataString) => {
-      const data = new Date(dataString);
-      return data.toLocaleDateString('pt-BR');
+      const partes = dataString.split('-');
+      return `${partes[2]}/${partes[1]}/${partes[0]}`; // dd/mm/yyyy
     };
 
     return `Indicadores com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
@@ -239,7 +247,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         setLoading(true);
 
         // Data de hoje para comparações
-        const hoje = new Date().toISOString().split('T')[0];
+        const hoje = formatarDataLocal(new Date());
 
         // Verificar se há filtro de período ativo
         const temFiltroPeriodo = temFiltroPeriodoAtivo();
