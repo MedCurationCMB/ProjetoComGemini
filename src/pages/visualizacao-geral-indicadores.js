@@ -1300,7 +1300,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-600">Total Geral (incluindo atrasados)</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {formatNumber(kpis.indicadoresComValor + kpisAtraso.todosAtrasados)}
+                      {formatNumber(kpis.totalIndicadores + kpisAtraso.todosAtrasados)}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
@@ -1310,8 +1310,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <div className="mt-4">
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
                     <span className="flex items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
-                      Com valor: {formatNumber(kpis.indicadoresComValor)}
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                      Total período: {formatNumber(kpis.totalIndicadores)}
                     </span>
                     <span className="flex items-center">
                       <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
