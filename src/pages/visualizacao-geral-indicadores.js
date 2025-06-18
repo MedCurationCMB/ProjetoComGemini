@@ -9,7 +9,6 @@ import LogoDisplay from '../components/LogoDisplay';
 import { 
   FiBarChart2,
   FiAlertTriangle,
-  FiClock,
   FiMenu,
   FiUser,
   FiSettings,
@@ -28,8 +27,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const [kpis, setKpis] = useState({
     totalIndicadores: 0,
     indicadoresDentroPrazo: 0,
-    indicadoresSemValor: 0,
-    indicadoresVencidos: 0
+    indicadoresSemValor: 0
   });
   const [tabelaProjetosCategoria, setTabelaProjetosCategoria] = useState([]);
   const [tabelaProjetos, setTabelaProjetos] = useState([]);
@@ -85,6 +83,35 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       dataInicio: dataInicio.toISOString().split('T')[0], // Hoje
       dataFim: dataFim.toISOString().split('T')[0] // Hoje + X dias
     };
+  };
+
+  // Função para gerar texto descritivo baseado nos filtros
+  const gerarTextoDescritivo = () => {
+    if (!filtros.periodo) {
+      return "Todos os indicadores";
+    }
+
+    let dataInicio, dataFim;
+
+    if (filtros.periodo === 'personalizado') {
+      if (!filtros.data_inicio || !filtros.data_fim) {
+        return "Todos os indicadores";
+      }
+      dataInicio = filtros.data_inicio;
+      dataFim = filtros.data_fim;
+    } else {
+      const periodo = calcularPeriodo(filtros.periodo);
+      dataInicio = periodo.dataInicio;
+      dataFim = periodo.dataFim;
+    }
+
+    // Formatar datas para exibição (DD/MM/AAAA)
+    const formatarData = (dataString) => {
+      const data = new Date(dataString);
+      return data.toLocaleDateString('pt-BR');
+    };
+
+    return `Indicadores com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
   };
 
   // Função auxiliar para construir query com filtros de projeto e categoria
@@ -205,7 +232,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user]);
 
-  // Buscar dados dos KPIs - VERSÃO CORRIGIDA
+  // Buscar dados dos KPIs
   useEffect(() => {
     const fetchKPIs = async () => {
       try {
@@ -252,36 +279,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
           if (semValorError) throw semValorError;
 
-          // ✅ 4. NOVA LÓGICA: Indicadores em atraso baseado na data de início do filtro
-          // Determinar qual data usar como referência para "atraso"
-          let dataReferenciaAtraso = hoje; // Padrão é hoje
-
-          if (filtros.periodo && filtros.periodo !== 'personalizado') {
-            // Para períodos predefinidos, usar "hoje" como referência
-            dataReferenciaAtraso = hoje;
-          } else if (filtros.periodo === 'personalizado' && filtros.data_inicio) {
-            // Para período personalizado, usar a data_inicio selecionada
-            dataReferenciaAtraso = filtros.data_inicio;
-          }
-
-          // Query para indicadores em atraso - SEMPRE todas as linhas, sem filtro de data
-          let queryVencidos = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .is('valor_indicador_apresentado', null)
-            .lt('prazo_entrega', dataReferenciaAtraso); // Usar data de referência
-
-          // Aplicar apenas filtros de projeto e categoria, NÃO de data
-          queryVencidos = construirQueryComFiltros(queryVencidos);
-
-          const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
-          if (vencidosError) throw vencidosError;
-
           // Atualizar estado
           setKpis({
             totalIndicadores: totalIndicadoresNoPeriodo || 0,
             indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
-            indicadoresSemValor: indicadoresSemValor || 0,
-            indicadoresVencidos: indicadoresVencidos || 0
+            indicadoresSemValor: indicadoresSemValor || 0
           });
 
         } else {
@@ -316,23 +318,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
           if (semValorError) throw semValorError;
 
-          // ✅ 4. Indicadores vencidos sem valor (prazo < hoje E sem valor) - LÓGICA ORIGINAL MANTIDA
-          let queryVencidos = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .is('valor_indicador_apresentado', null)
-            .lt('prazo_entrega', hoje);
-
-          queryVencidos = construirQueryComFiltros(queryVencidos);
-
-          const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
-          if (vencidosError) throw vencidosError;
-
           // Atualizar estado
           setKpis({
             totalIndicadores: totalIndicadores || 0,
             indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
-            indicadoresSemValor: indicadoresSemValor || 0,
-            indicadoresVencidos: indicadoresVencidos || 0
+            indicadoresSemValor: indicadoresSemValor || 0
           });
         }
 
@@ -969,7 +959,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-black">Visualização Geral (Indicadores)</h1>
             <p className="text-gray-600 text-sm mt-1">
-              Dashboard com métricas principais do sistema
+              {gerarTextoDescritivo()}
               {hasFiltrosAtivos() && (
                 <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
               )}
@@ -989,7 +979,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* KPI 1: Total de Indicadores */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
@@ -1049,28 +1039,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <div className="flex items-center">
                   <p className="text-xs text-gray-500">
                     {calculatePercentage(kpis.indicadoresSemValor, kpis.totalIndicadores)}% do total
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* KPI 4: Indicadores em Atraso */}
-            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Indicador em Atraso</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {formatNumber(kpis.indicadoresVencidos)}
-                  </p>
-                </div>
-                <div className="flex-shrink-0">
-                  <FiClock className="h-8 w-8 text-red-500" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="flex items-center">
-                  <p className="text-xs text-gray-500">
-                    {calculatePercentage(kpis.indicadoresVencidos, kpis.indicadoresSemValor)}% dos sem valor
                   </p>
                 </div>
               </div>
