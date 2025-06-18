@@ -16,15 +16,12 @@ import {
   FiTable,
   FiFilter,
   FiX,
-  FiCheckCircle,
-  FiClock,
-  FiAlertOctagon
+  FiCheckCircle
 } from 'react-icons/fi';
 
 export default function VisualizacaoGeralIndicadores({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [loadingAtraso, setLoadingAtraso] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [kpis, setKpis] = useState({
@@ -32,14 +29,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     indicadoresDentroPrazo: 0,
     indicadoresSemValor: 0
   });
-  
-  // Novos KPIs para indicadores em atraso
-  const [kpisAtraso, setKpisAtraso] = useState({
-    todosAtrasados: 0,
-    atrasadosAte7Dias: 0,
-    atrasadosAte30Dias: 0
-  });
-
   const [tabelaProjetosCategoria, setTabelaProjetosCategoria] = useState([]);
   const [tabelaProjetos, setTabelaProjetos] = useState([]);
   const [tabelaCategorias, setTabelaCategorias] = useState([]);
@@ -55,8 +44,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     categoria_id: '',
     periodo: '', // '15dias', '30dias', '60dias', 'personalizado'
     data_inicio: '',
-    data_fim: '',
-    data_referencia_atraso: '' // Nova data de referência para indicadores em atraso
+    data_fim: ''
   });
 
   // Função para fazer logout
@@ -134,21 +122,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return `Indicadores com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
   };
 
-  // Função para gerar texto descritivo dos indicadores em atraso
-  const gerarTextoDescritivoAtraso = () => {
-    if (!filtros.data_referencia_atraso) {
-      return "Todos os indicadores em atraso";
-    }
-
-    // Formatar data para exibição (DD/MM/AAAA)
-    const formatarData = (dataString) => {
-      const partes = dataString.split('-');
-      return `${partes[2]}/${partes[1]}/${partes[0]}`; // dd/mm/yyyy
-    };
-
-    return `Indicadores em atraso com base na data de referência: ${formatarData(filtros.data_referencia_atraso)}`;
-  };
-
   // Função auxiliar para construir query com filtros de projeto e categoria
   const construirQueryComFiltros = (queryBase) => {
     let query = queryBase;
@@ -204,11 +177,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return filtros.periodo && 
            (filtros.periodo !== 'personalizado' || 
             (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim));
-  };
-
-  // Função para obter a data de referência para atraso
-  const getDataReferenciaAtraso = () => {
-    return filtros.data_referencia_atraso || formatarDataLocal(new Date());
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -379,80 +347,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados dos KPIs de indicadores em atraso
-  useEffect(() => {
-    const fetchKPIsAtraso = async () => {
-      try {
-        setLoadingAtraso(true);
-
-        // Data de referência para atraso
-        const dataReferencia = getDataReferenciaAtraso();
-
-        // Calcular datas para os períodos
-        const dataRef = new Date(dataReferencia);
-        const data7DiasAntes = new Date(dataRef);
-        data7DiasAntes.setDate(data7DiasAntes.getDate() - 7);
-        const data30DiasAntes = new Date(dataRef);
-        data30DiasAntes.setDate(data30DiasAntes.getDate() - 30);
-
-        const data7DiasAntesStr = formatarDataLocal(data7DiasAntes);
-        const data30DiasAntesStr = formatarDataLocal(data30DiasAntes);
-
-        // 1. Todos os indicadores em atraso (valor_indicador_apresentado = NULL e prazo_entrega < data_referencia)
-        let queryTodosAtrasados = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', dataReferencia);
-        
-        queryTodosAtrasados = construirQueryComFiltros(queryTodosAtrasados);
-        
-        const { count: todosAtrasados, error: todosAtrasadosError } = await queryTodosAtrasados;
-        if (todosAtrasadosError) throw todosAtrasadosError;
-
-        // 2. Indicadores em atraso até 7 dias antes da data de referência
-        let queryAtrasados7Dias = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', dataReferencia)
-          .gte('prazo_entrega', data7DiasAntesStr);
-        
-        queryAtrasados7Dias = construirQueryComFiltros(queryAtrasados7Dias);
-        
-        const { count: atrasadosAte7Dias, error: atrasados7DiasError } = await queryAtrasados7Dias;
-        if (atrasados7DiasError) throw atrasados7DiasError;
-
-        // 3. Indicadores em atraso até 30 dias antes da data de referência
-        let queryAtrasados30Dias = supabase.from('controle_indicador_geral')
-          .select('*', { count: 'exact', head: true })
-          .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', dataReferencia)
-          .gte('prazo_entrega', data30DiasAntesStr);
-        
-        queryAtrasados30Dias = construirQueryComFiltros(queryAtrasados30Dias);
-        
-        const { count: atrasadosAte30Dias, error: atrasados30DiasError } = await queryAtrasados30Dias;
-        if (atrasados30DiasError) throw atrasados30DiasError;
-
-        // Atualizar estado dos KPIs de atraso
-        setKpisAtraso({
-          todosAtrasados: todosAtrasados || 0,
-          atrasadosAte7Dias: atrasadosAte7Dias || 0,
-          atrasadosAte30Dias: atrasadosAte30Dias || 0
-        });
-
-      } catch (error) {
-        console.error('Erro ao buscar KPIs de indicadores em atraso:', error);
-        toast.error('Erro ao carregar dados de indicadores em atraso');
-      } finally {
-        setLoadingAtraso(false);
-      }
-    };
-
-    if (user) {
-      fetchKPIsAtraso();
-    }
-  }, [user, filtros]);
-
   // Buscar dados das tabelas
   useEffect(() => {
     const fetchTabelas = async () => {
@@ -600,8 +494,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       categoria_id: '',
       periodo: '',
       data_inicio: '',
-      data_fim: '',
-      data_referencia_atraso: ''
+      data_fim: ''
     });
     setShowFilters(false);
   };
@@ -611,8 +504,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return filtros.projeto_id || 
            filtros.categoria_id || 
            filtros.periodo || 
-           (filtros.data_inicio && filtros.data_fim) ||
-           filtros.data_referencia_atraso;
+           (filtros.data_inicio && filtros.data_fim);
   };
 
   // Função para formatar números
@@ -756,20 +648,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                         <option key={id} value={id}>{nome}</option>
                       ))}
                     </select>
-                  </div>
-
-                  {/* NOVO: Filtro de Data de Referência para Indicadores em Atraso */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Data de Referência (Indicadores em Atraso)</label>
-                    <input
-                      type="date"
-                      value={filtros.data_referencia_atraso}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, data_referencia_atraso: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Se não informado, será usado a data de hoje
-                    </p>
                   </div>
 
                   {/* Filtro de Período */}
@@ -954,7 +832,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Filtro de Projeto */}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Projeto</label>
@@ -983,20 +861,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                         <option key={id} value={id}>{nome}</option>
                       ))}
                     </select>
-                  </div>
-
-                  {/* NOVO: Filtro de Data de Referência para Indicadores em Atraso */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Data de Referência (Atraso)</label>
-                    <input
-                      type="date"
-                      value={filtros.data_referencia_atraso}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, data_referencia_atraso: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Se não informado, será usado a data de hoje
-                    </p>
                   </div>
 
                   {/* Campos de data personalizada */}
@@ -1118,13 +982,12 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </Link>
         </div>
 
-        {/* PRIMEIRA SEÇÃO DE KPIs - Indicadores Gerais */}
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* KPI 1: Total de Indicadores */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
@@ -1190,88 +1053,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           </div>
         )}
-
-        {/* NOVA SEÇÃO DE KPIs - Indicadores em Atraso */}
-        <div className="mb-8">
-          <div className="mb-6">
-            <h2 className="text-xl lg:text-2xl font-bold text-black">Indicadores em Atraso</h2>
-            <p className="text-gray-600 text-sm mt-1">
-              {gerarTextoDescritivoAtraso()}
-            </p>
-          </div>
-
-          {loadingAtraso ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* KPI 1: Todos os Indicadores em Atraso */}
-              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Todos os Indicadores</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {formatNumber(kpisAtraso.todosAtrasados)}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <FiAlertOctagon className="h-8 w-8 text-red-500" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs text-gray-500">
-                    Total de indicadores em atraso
-                  </p>
-                </div>
-              </div>
-
-              {/* KPI 2: Indicadores em Atraso até 7 dias antes */}
-              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Até 7 Dias Antes</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {formatNumber(kpisAtraso.atrasadosAte7Dias)}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <FiClock className="h-8 w-8 text-orange-500" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="flex items-center">
-                    <p className="text-xs text-gray-500">
-                      {calculatePercentage(kpisAtraso.atrasadosAte7Dias, kpisAtraso.todosAtrasados)}% dos atrasados
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* KPI 3: Indicadores em Atraso até 30 dias antes */}
-              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Até 30 Dias Antes</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {formatNumber(kpisAtraso.atrasadosAte30Dias)}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <FiClock className="h-8 w-8 text-purple-500" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="flex items-center">
-                    <p className="text-xs text-gray-500">
-                      {calculatePercentage(kpisAtraso.atrasadosAte30Dias, kpisAtraso.todosAtrasados)}% dos atrasados
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Seção das duas tabelas lado a lado */}
         {!loading && (
