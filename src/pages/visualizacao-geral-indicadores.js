@@ -205,7 +205,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user]);
 
-  // Buscar dados dos KPIs
+  // Buscar dados dos KPIs - VERSÃO CORRIGIDA
   useEffect(() => {
     const fetchKPIs = async () => {
       try {
@@ -252,14 +252,26 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
           if (semValorError) throw semValorError;
 
-          // 4. Indicadores vencidos sem valor (no período filtrado)
+          // ✅ 4. NOVA LÓGICA: Indicadores em atraso baseado na data de início do filtro
+          // Determinar qual data usar como referência para "atraso"
+          let dataReferenciaAtraso = hoje; // Padrão é hoje
+
+          if (filtros.periodo && filtros.periodo !== 'personalizado') {
+            // Para períodos predefinidos, usar "hoje" como referência
+            dataReferenciaAtraso = hoje;
+          } else if (filtros.periodo === 'personalizado' && filtros.data_inicio) {
+            // Para período personalizado, usar a data_inicio selecionada
+            dataReferenciaAtraso = filtros.data_inicio;
+          }
+
+          // Query para indicadores em atraso - SEMPRE todas as linhas, sem filtro de data
           let queryVencidos = supabase.from('controle_indicador_geral')
             .select('*', { count: 'exact', head: true })
             .is('valor_indicador_apresentado', null)
-            .lt('prazo_entrega', hoje);
+            .lt('prazo_entrega', dataReferenciaAtraso); // Usar data de referência
 
+          // Aplicar apenas filtros de projeto e categoria, NÃO de data
           queryVencidos = construirQueryComFiltros(queryVencidos);
-          queryVencidos = aplicarFiltrosData(queryVencidos);
 
           const { count: indicadoresVencidos, error: vencidosError } = await queryVencidos;
           if (vencidosError) throw vencidosError;
@@ -304,7 +316,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
           if (semValorError) throw semValorError;
 
-          // 4. Indicadores vencidos sem valor (prazo < hoje E sem valor)
+          // ✅ 4. Indicadores vencidos sem valor (prazo < hoje E sem valor) - LÓGICA ORIGINAL MANTIDA
           let queryVencidos = supabase.from('controle_indicador_geral')
             .select('*', { count: 'exact', head: true })
             .is('valor_indicador_apresentado', null)
