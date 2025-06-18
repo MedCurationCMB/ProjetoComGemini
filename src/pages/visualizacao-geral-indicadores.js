@@ -453,25 +453,25 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados das tabelas
+  // Buscar dados das tabelas - ATUALIZADO para usar data de referência de atraso
   useEffect(() => {
     const fetchTabelas = async () => {
       try {
         setLoadingTabelas(true);
 
-        // Data de hoje para comparação de vencimento
-        const hoje = new Date().toISOString().split('T')[0];
+        // ATUALIZADO: Usar data de referência de atraso em vez da data de hoje
+        const dataReferenciaAtraso = getDataReferenciaAtraso();
 
-        // Construir query base para indicadores vencidos
+        // Construir query base para indicadores vencidos usando a data de referência
         let queryIndicadores = supabase
           .from('controle_indicador_geral')
           .select('projeto_id, categoria_id')
           .is('valor_indicador_apresentado', null)
-          .lt('prazo_entrega', hoje)
+          .lt('prazo_entrega', dataReferenciaAtraso) // MUDANÇA: usar data de referência
           .not('projeto_id', 'is', null)
           .not('categoria_id', 'is', null);
 
-        // Para as tabelas, aplicar apenas filtros de projeto e categoria, NÃO de data
+        // Aplicar filtros de projeto e categoria
         queryIndicadores = construirQueryComFiltros(queryIndicadores);
 
         const { data: indicadoresVencidos, error: indicadoresError } = await queryIndicadores;
@@ -591,7 +591,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     if (user) {
       fetchTabelas();
     }
-  }, [user, filtros]);
+  }, [user, filtros]); // DEPENDÊNCIA: incluir filtros para reagir à mudança de data de referência
 
   // Função para limpar filtros
   const limparFiltros = () => {
