@@ -29,7 +29,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [kpis, setKpis] = useState({
     totalIndicadores: 0,
-    indicadoresDentroPrazo: 0,
+    indicadoresComValor: 0,
     indicadoresSemValor: 0
   });
   
@@ -297,16 +297,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: totalIndicadoresNoPeriodo, error: totalError } = await queryTotal;
           if (totalError) throw totalError;
 
-          // 2. Indicadores dentro do prazo (no período filtrado)
-          let queryDentroPrazo = supabase.from('controle_indicador_geral')
+          // 2. Indicadores com valor (no período filtrado)
+          let queryComValor = supabase.from('controle_indicador_geral')
             .select('*', { count: 'exact', head: true })
-            .gte('prazo_entrega', hoje);
+            .not('valor_indicador_apresentado', 'is', null);
           
-          queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
-          queryDentroPrazo = aplicarFiltrosData(queryDentroPrazo);
+          queryComValor = construirQueryComFiltros(queryComValor);
+          queryComValor = aplicarFiltrosData(queryComValor);
           
-          const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
-          if (dentroPrazoError) throw dentroPrazoError;
+          const { count: indicadoresComValor, error: comValorError } = await queryComValor;
+          if (comValorError) throw comValorError;
 
           // 3. Indicadores sem valor (no período filtrado)
           let querySemValor = supabase.from('controle_indicador_geral')
@@ -322,7 +322,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           // Atualizar estado
           setKpis({
             totalIndicadores: totalIndicadoresNoPeriodo || 0,
-            indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
+            indicadoresComValor: indicadoresComValor || 0,
             indicadoresSemValor: indicadoresSemValor || 0
           });
 
@@ -338,15 +338,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           const { count: totalIndicadores, error: totalError } = await queryTotal;
           if (totalError) throw totalError;
 
-          // 2. Indicadores dentro do prazo (>= hoje)
-          let queryDentroPrazo = supabase.from('controle_indicador_geral')
+          // 2. Indicadores com valor
+          let queryComValor = supabase.from('controle_indicador_geral')
             .select('*', { count: 'exact', head: true })
-            .gte('prazo_entrega', hoje);
+            .not('valor_indicador_apresentado', 'is', null);
           
-          queryDentroPrazo = construirQueryComFiltros(queryDentroPrazo);
+          queryComValor = construirQueryComFiltros(queryComValor);
           
-          const { count: indicadoresDentroPrazo, error: dentroPrazoError } = await queryDentroPrazo;
-          if (dentroPrazoError) throw dentroPrazoError;
+          const { count: indicadoresComValor, error: comValorError } = await queryComValor;
+          if (comValorError) throw comValorError;
 
           // 3. Indicadores sem valor (TODOS)
           let querySemValor = supabase.from('controle_indicador_geral')
@@ -361,7 +361,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           // Atualizar estado
           setKpis({
             totalIndicadores: totalIndicadores || 0,
-            indicadoresDentroPrazo: indicadoresDentroPrazo || 0,
+            indicadoresComValor: indicadoresComValor || 0,
             indicadoresSemValor: indicadoresSemValor || 0
           });
         }
@@ -1145,13 +1145,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
             </div>
 
-            {/* KPI 2: Indicadores Dentro do Prazo */}
+            {/* KPI 2: Indicadores Com Valor */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Dentro do Prazo</p>
+                  <p className="text-sm font-medium text-gray-600">Com Valor Definido</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {formatNumber(kpis.indicadoresDentroPrazo)}
+                    {formatNumber(kpis.indicadoresComValor)}
                   </p>
                 </div>
                 <div className="flex-shrink-0">
@@ -1161,7 +1161,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               <div className="mt-4">
                 <div className="flex items-center">
                   <p className="text-xs text-gray-500">
-                    {calculatePercentage(kpis.indicadoresDentroPrazo, kpis.totalIndicadores)}% do total
+                    {calculatePercentage(kpis.indicadoresComValor, kpis.totalIndicadores)}% do total
                   </p>
                 </div>
               </div>
