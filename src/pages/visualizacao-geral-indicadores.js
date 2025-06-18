@@ -50,13 +50,39 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     projetos: {},
     categorias: {}
   });
-  const [filtros, setFiltros] = useState({
-    projeto_id: '',
-    categoria_id: '',
-    periodo: '', // '15dias', '30dias', '60dias', 'personalizado'
-    data_inicio: '',
-    data_fim: '',
-    data_referencia_atraso: '' // Nova data de referência para indicadores em atraso
+
+  // Função utilitária para formatar data local no formato yyyy-mm-dd
+  const formatarDataLocal = (data) => {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  // Função para calcular período padrão (hoje + 30 dias)
+  const calcularPeriodoPadrao = () => {
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + 30);
+
+    return {
+      dataInicio: formatarDataLocal(hoje),
+      dataFim: formatarDataLocal(dataFim),
+      periodo: '30dias'
+    };
+  };
+
+  // Inicializar filtros com período padrão
+  const [filtros, setFiltros] = useState(() => {
+    const periodoPadrao = calcularPeriodoPadrao();
+    return {
+      projeto_id: '',
+      categoria_id: '',
+      periodo: periodoPadrao.periodo, // Definir período padrão como '30dias'
+      data_inicio: periodoPadrao.dataInicio, // Data de hoje
+      data_fim: periodoPadrao.dataFim, // Hoje + 30 dias
+      data_referencia_atraso: '' // Permanece vazio para usar hoje como padrão
+    };
   });
 
   // Função para fazer logout
@@ -74,7 +100,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   // Função para calcular datas dos períodos com correção do fuso horário
   const calcularPeriodo = (tipo) => {
     const hoje = new Date();
-    const dataInicio = new Date(hoje);
+    const dataInicio = new Date(hoje); // MUDANÇA: início sempre é hoje
     let dataFim = new Date(hoje);
 
     switch (tipo) {
@@ -95,14 +121,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       dataInicio: formatarDataLocal(dataInicio),
       dataFim: formatarDataLocal(dataFim)
     };
-  };
-
-  // Função utilitária para formatar data local no formato yyyy-mm-dd
-  const formatarDataLocal = (data) => {
-    const ano = data.getFullYear();
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const dia = String(data.getDate()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
   };
 
   // Função para gerar texto descritivo baseado nos filtros
@@ -169,15 +187,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const aplicarFiltrosData = (queryBase) => {
     let query = queryBase;
 
-    // Verificar se há filtro de período ativo
-    const temFiltroPeriodo = filtros.periodo && filtros.periodo !== '';
-    
-    if (!temFiltroPeriodo) {
-      // SEM FILTRO DE DATA: retorna a query sem filtro de data
-      return query;
-    }
-
-    // COM FILTRO DE DATA: aplicar filtros baseado na seleção
+    // MUDANÇA: Sempre aplicar filtro de período por padrão
     let dataInicioFiltro = null;
     let dataFimFiltro = null;
 
@@ -190,7 +200,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       dataFimFiltro = filtros.data_fim;
     }
 
-    // Aplicar filtro de data se especificado
+    // Aplicar filtro de data
     if (dataInicioFiltro && dataFimFiltro) {
       query = query.gte('prazo_entrega', dataInicioFiltro)
                   .lte('prazo_entrega', dataFimFiltro);
@@ -278,93 +288,46 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       try {
         setLoading(true);
 
-        // Data de hoje para comparações
-        const hoje = formatarDataLocal(new Date());
+        // MUDANÇA: Sempre aplicar filtro de período (padrão ou selecionado)
+        
+        // 1. Total de indicadores no período filtrado
+        let queryTotal = supabase.from('controle_indicador_geral')
+          .select('*', { count: 'exact', head: true });
+        
+        queryTotal = construirQueryComFiltros(queryTotal);
+        queryTotal = aplicarFiltrosData(queryTotal);
+        
+        const { count: totalIndicadoresNoPeriodo, error: totalError } = await queryTotal;
+        if (totalError) throw totalError;
 
-        // Verificar se há filtro de período ativo
-        const temFiltroPeriodo = temFiltroPeriodoAtivo();
+        // 2. Indicadores com valor (no período filtrado)
+        let queryComValor = supabase.from('controle_indicador_geral')
+          .select('*', { count: 'exact', head: true })
+          .not('valor_indicador_apresentado', 'is', null);
+        
+        queryComValor = construirQueryComFiltros(queryComValor);
+        queryComValor = aplicarFiltrosData(queryComValor);
+        
+        const { count: indicadoresComValor, error: comValorError } = await queryComValor;
+        if (comValorError) throw comValorError;
 
-        if (temFiltroPeriodo) {
-          // ===== COM FILTRO DE PERÍODO =====
-          
-          // 1. Total de indicadores no período filtrado
-          let queryTotal = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true });
-          
-          queryTotal = construirQueryComFiltros(queryTotal);
-          queryTotal = aplicarFiltrosData(queryTotal);
-          
-          const { count: totalIndicadoresNoPeriodo, error: totalError } = await queryTotal;
-          if (totalError) throw totalError;
+        // 3. Indicadores sem valor (no período filtrado)
+        let querySemValor = supabase.from('controle_indicador_geral')
+          .select('*', { count: 'exact', head: true })
+          .is('valor_indicador_apresentado', null);
+        
+        querySemValor = construirQueryComFiltros(querySemValor);
+        querySemValor = aplicarFiltrosData(querySemValor);
+        
+        const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
+        if (semValorError) throw semValorError;
 
-          // 2. Indicadores com valor (no período filtrado)
-          let queryComValor = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .not('valor_indicador_apresentado', 'is', null);
-          
-          queryComValor = construirQueryComFiltros(queryComValor);
-          queryComValor = aplicarFiltrosData(queryComValor);
-          
-          const { count: indicadoresComValor, error: comValorError } = await queryComValor;
-          if (comValorError) throw comValorError;
-
-          // 3. Indicadores sem valor (no período filtrado)
-          let querySemValor = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .is('valor_indicador_apresentado', null);
-          
-          querySemValor = construirQueryComFiltros(querySemValor);
-          querySemValor = aplicarFiltrosData(querySemValor);
-          
-          const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
-          if (semValorError) throw semValorError;
-
-          // Atualizar estado
-          setKpis({
-            totalIndicadores: totalIndicadoresNoPeriodo || 0,
-            indicadoresComValor: indicadoresComValor || 0,
-            indicadoresSemValor: indicadoresSemValor || 0
-          });
-
-        } else {
-          // ===== SEM FILTRO DE PERÍODO (PADRÃO) =====
-          
-          // 1. Total de indicadores (TODOS)
-          let queryTotal = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true });
-          
-          queryTotal = construirQueryComFiltros(queryTotal);
-          
-          const { count: totalIndicadores, error: totalError } = await queryTotal;
-          if (totalError) throw totalError;
-
-          // 2. Indicadores com valor
-          let queryComValor = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .not('valor_indicador_apresentado', 'is', null);
-          
-          queryComValor = construirQueryComFiltros(queryComValor);
-          
-          const { count: indicadoresComValor, error: comValorError } = await queryComValor;
-          if (comValorError) throw comValorError;
-
-          // 3. Indicadores sem valor (TODOS)
-          let querySemValor = supabase.from('controle_indicador_geral')
-            .select('*', { count: 'exact', head: true })
-            .is('valor_indicador_apresentado', null);
-          
-          querySemValor = construirQueryComFiltros(querySemValor);
-          
-          const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
-          if (semValorError) throw semValorError;
-
-          // Atualizar estado
-          setKpis({
-            totalIndicadores: totalIndicadores || 0,
-            indicadoresComValor: indicadoresComValor || 0,
-            indicadoresSemValor: indicadoresSemValor || 0
-          });
-        }
+        // Atualizar estado
+        setKpis({
+          totalIndicadores: totalIndicadoresNoPeriodo || 0,
+          indicadoresComValor: indicadoresComValor || 0,
+          indicadoresSemValor: indicadoresSemValor || 0
+        });
 
       } catch (error) {
         console.error('Erro ao buscar KPIs:', error);
@@ -595,12 +558,14 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
   // Função para limpar filtros
   const limparFiltros = () => {
+    // MUDANÇA: Ao limpar filtros, voltar ao período padrão
+    const periodoPadrao = calcularPeriodoPadrao();
     setFiltros({
       projeto_id: '',
       categoria_id: '',
-      periodo: '',
-      data_inicio: '',
-      data_fim: '',
+      periodo: periodoPadrao.periodo,
+      data_inicio: periodoPadrao.dataInicio,
+      data_fim: periodoPadrao.dataFim,
       data_referencia_atraso: ''
     });
     setShowFilters(false);
@@ -610,8 +575,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   const hasFiltrosAtivos = () => {
     return filtros.projeto_id || 
            filtros.categoria_id || 
-           filtros.periodo || 
-           (filtros.data_inicio && filtros.data_fim) ||
            filtros.data_referencia_atraso;
   };
 
@@ -774,15 +737,18 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
                   {/* Filtro de Período */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">Filtro por Prazo</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Filtro por Prazo (Primeiros 3 KPIs)</label>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setFiltros(prev => ({ 
-                          ...prev, 
-                          periodo: prev.periodo === '15dias' ? '' : '15dias',
-                          data_inicio: '',
-                          data_fim: ''
-                        }))}
+                        onClick={() => {
+                          const periodo = calcularPeriodo('15dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '15dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
                           filtros.periodo === '15dias'
                             ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -793,12 +759,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       </button>
                       
                       <button
-                        onClick={() => setFiltros(prev => ({ 
-                          ...prev, 
-                          periodo: prev.periodo === '30dias' ? '' : '30dias',
-                          data_inicio: '',
-                          data_fim: ''
-                        }))}
+                        onClick={() => {
+                          const periodo = calcularPeriodo('30dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '30dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
                           filtros.periodo === '30dias'
                             ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -809,12 +778,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       </button>
                       
                       <button
-                        onClick={() => setFiltros(prev => ({ 
-                          ...prev, 
-                          periodo: prev.periodo === '60dias' ? '' : '60dias',
-                          data_inicio: '',
-                          data_fim: ''
-                        }))}
+                        onClick={() => {
+                          const periodo = calcularPeriodo('60dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '60dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
                           filtros.periodo === '60dias'
                             ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -827,7 +799,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => setFiltros(prev => ({ 
                           ...prev, 
-                          periodo: prev.periodo === 'personalizado' ? '' : 'personalizado'
+                          periodo: 'personalizado'
                         }))}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
                           filtros.periodo === 'personalizado'
@@ -1026,15 +998,18 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
                 {/* Filtro de Período */}
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">Filtro por Prazo</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Filtro por Prazo (Primeiros 3 KPIs)</label>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => setFiltros(prev => ({ 
-                        ...prev, 
-                        periodo: prev.periodo === '15dias' ? '' : '15dias',
-                        data_inicio: '',
-                        data_fim: ''
-                      }))}
+                      onClick={() => {
+                        const periodo = calcularPeriodo('15dias');
+                        setFiltros(prev => ({ 
+                          ...prev, 
+                          periodo: '15dias',
+                          data_inicio: periodo.dataInicio,
+                          data_fim: periodo.dataFim
+                        }));
+                      }}
                       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                         filtros.periodo === '15dias'
                           ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -1045,12 +1020,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </button>
                     
                     <button
-                      onClick={() => setFiltros(prev => ({ 
-                        ...prev, 
-                        periodo: prev.periodo === '30dias' ? '' : '30dias',
-                        data_inicio: '',
-                        data_fim: ''
-                      }))}
+                      onClick={() => {
+                        const periodo = calcularPeriodo('30dias');
+                        setFiltros(prev => ({ 
+                          ...prev, 
+                          periodo: '30dias',
+                          data_inicio: periodo.dataInicio,
+                          data_fim: periodo.dataFim
+                        }));
+                      }}
                       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                         filtros.periodo === '30dias'
                           ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -1061,12 +1039,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </button>
                     
                     <button
-                      onClick={() => setFiltros(prev => ({ 
-                        ...prev, 
-                        periodo: prev.periodo === '60dias' ? '' : '60dias',
-                        data_inicio: '',
-                        data_fim: ''
-                      }))}
+                      onClick={() => {
+                        const periodo = calcularPeriodo('60dias');
+                        setFiltros(prev => ({ 
+                          ...prev, 
+                          periodo: '60dias',
+                          data_inicio: periodo.dataInicio,
+                          data_fim: periodo.dataFim
+                        }));
+                      }}
                       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                         filtros.periodo === '60dias'
                           ? 'bg-blue-100 text-blue-800 border border-blue-300' 
@@ -1079,7 +1060,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     <button
                       onClick={() => setFiltros(prev => ({ 
                         ...prev, 
-                        periodo: prev.periodo === 'personalizado' ? '' : 'personalizado'
+                        periodo: 'personalizado'
                       }))}
                       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                         filtros.periodo === 'personalizado'
@@ -1140,7 +1121,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500">
-                  {temFiltroPeriodoAtivo() ? 'Indicadores no período filtrado' : 'Todos os indicadores do sistema'}
+                  Indicadores no período filtrado (hoje + 30 dias por padrão)
                 </p>
               </div>
             </div>
