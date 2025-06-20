@@ -6,7 +6,16 @@ import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX } from 'react-icons/fi';
-import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
+import { 
+  ComposedChart, 
+  Bar, 
+  Line, 
+  XAxis, 
+  ResponsiveContainer, 
+  LabelList,
+  Legend,
+  Tooltip
+} from 'recharts';
 
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
@@ -54,17 +63,47 @@ export default function IndicadorDetalhe({ user }) {
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
   };
 
-  // Função para calcular os KPIs
+  // ✅ FUNÇÃO MODIFICADA: Calcular KPIs separando Realizado e Meta
   const calcularKPIs = () => {
     if (!indicadores || indicadores.length === 0) {
       return {
         somaValorIndicador: 0,
         mediaValorIndicador: 0,
         somaValorApresentado: 0,
-        mediaValorApresentado: 0
+        mediaValorApresentado: 0,
+        // Novos KPIs separados
+        somaRealizadoApresentado: 0,
+        mediaRealizadoApresentado: 0,
+        somaRealizadoIndicador: 0,
+        mediaRealizadoIndicador: 0,
+        somaMetaApresentado: 0,
+        mediaMetaApresentado: 0,
+        somaMetaIndicador: 0,
+        mediaMetaIndicador: 0,
+        totalRealizado: 0,
+        totalMeta: 0
       };
     }
 
+    // Separar por tipo_indicador
+    const realizados = indicadores.filter(ind => ind.tipo_indicador === 1);
+    const metas = indicadores.filter(ind => ind.tipo_indicador === 2);
+
+    // KPIs para Realizado
+    const valoresRealizadoApresentado = realizados.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
+    const valoresRealizadoIndicador = realizados.map(ind => parseFloat(ind.valor_indicador) || 0);
+    
+    const somaRealizadoApresentado = valoresRealizadoApresentado.reduce((acc, val) => acc + val, 0);
+    const somaRealizadoIndicador = valoresRealizadoIndicador.reduce((acc, val) => acc + val, 0);
+
+    // KPIs para Meta
+    const valoresMetaApresentado = metas.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
+    const valoresMetaIndicador = metas.map(ind => parseFloat(ind.valor_indicador) || 0);
+    
+    const somaMetaApresentado = valoresMetaApresentado.reduce((acc, val) => acc + val, 0);
+    const somaMetaIndicador = valoresMetaIndicador.reduce((acc, val) => acc + val, 0);
+
+    // KPIs totais (mantendo compatibilidade)
     const valoresIndicador = indicadores.map(ind => parseFloat(ind.valor_indicador) || 0);
     const valoresApresentado = indicadores.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
 
@@ -72,10 +111,23 @@ export default function IndicadorDetalhe({ user }) {
     const somaValorApresentado = valoresApresentado.reduce((acc, val) => acc + val, 0);
 
     return {
+      // KPIs totais (compatibilidade)
       somaValorIndicador,
       mediaValorIndicador: indicadores.length > 0 ? somaValorIndicador / indicadores.length : 0,
       somaValorApresentado,
-      mediaValorApresentado: indicadores.length > 0 ? somaValorApresentado / indicadores.length : 0
+      mediaValorApresentado: indicadores.length > 0 ? somaValorApresentado / indicadores.length : 0,
+      
+      // Novos KPIs separados
+      somaRealizadoApresentado,
+      mediaRealizadoApresentado: realizados.length > 0 ? somaRealizadoApresentado / realizados.length : 0,
+      somaRealizadoIndicador,
+      mediaRealizadoIndicador: realizados.length > 0 ? somaRealizadoIndicador / realizados.length : 0,
+      somaMetaApresentado,
+      mediaMetaApresentado: metas.length > 0 ? somaMetaApresentado / metas.length : 0,
+      somaMetaIndicador,
+      mediaMetaIndicador: metas.length > 0 ? somaMetaIndicador / metas.length : 0,
+      totalRealizado: realizados.length,
+      totalMeta: metas.length
     };
   };
 
@@ -585,21 +637,75 @@ export default function IndicadorDetalhe({ user }) {
     return num.toLocaleString('pt-BR');
   };
 
-  // Função para preparar dados para os gráficos
-  const prepararDadosGrafico = () => {
+  // ✅ FUNÇÃO NOVA: Preparar dados para gráfico combinado
+  const prepararDadosGraficoCombinado = () => {
+    if (!indicadores || indicadores.length === 0) return [];
+    
+    // Agrupar por período de referência
+    const dadosAgrupados = {};
+    
+    indicadores.forEach(indicador => {
+      const periodo = formatDateGrafico(indicador.periodo_referencia);
+      const periodoCompleto = indicador.periodo_referencia;
+      
+      if (!dadosAgrupados[periodo]) {
+        dadosAgrupados[periodo] = {
+          periodo,
+          periodoCompleto,
+          // Inicializar valores
+          realizadoApresentado: null,
+          realizadoIndicador: null,
+          metaApresentado: null,
+          metaIndicador: null
+        };
+      }
+      
+      // Preencher baseado no tipo_indicador
+      if (indicador.tipo_indicador === 1) { // Realizado
+        dadosAgrupados[periodo].realizadoApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
+      } else if (indicador.tipo_indicador === 2) { // Meta
+        dadosAgrupados[periodo].metaApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].metaIndicador = parseFloat(indicador.valor_indicador) || 0;
+      }
+    });
+    
+    // Converter para array e ordenar por data
+    return Object.values(dadosAgrupados)
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+  };
+
+  // ✅ FUNÇÃO MODIFICADA: Preparar dados para tabela com tipo
+  const prepararDadosTabela = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
     return indicadores
       .map(indicador => ({
-        periodo: formatDateGrafico(indicador.periodo_referencia), // Usando formato DD-MM-AA para gráficos
-        periodoCompleto: indicador.periodo_referencia,
-        valorApresentado: parseFloat(indicador.valor_indicador_apresentado) || 0,
-        valorIndicador: parseFloat(indicador.valor_indicador) || 0
+        ...indicador,
+        tipoTexto: indicador.tipo_indicador === 1 ? 'Realizado' : 'Meta'
       }))
-      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto)); // Ordenar por data crescente para o gráfico
+      .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia)); // Ordenar por data decrescente para tabela
   };
 
-  const dadosGrafico = prepararDadosGrafico();
+  // Componente personalizado para Tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
+          <p className="font-medium text-gray-900">{`Período: ${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {`${entry.name}: ${entry.value?.toLocaleString('pt-BR') || 0}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const dadosGraficoCombinado = prepararDadosGraficoCombinado();
+  const dadosTabela = prepararDadosTabela();
   const kpis = calcularKPIs();
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
@@ -799,45 +905,62 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* KPIs - Mobile - SEMPRE mostrados */}
+          {/* ✅ KPIs MODIFICADOS - Mobile - Com divisão Realizado/Meta */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
+              {/* KPIs Realizado */}
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
-                <p className="text-xs font-medium text-gray-600 mb-1">Soma Valor Apresentado</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaValorApresentado)}</p>
+                <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Apresentado</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
+                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
               </div>
               
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-400">
-                <p className="text-xs font-medium text-gray-600 mb-1">Média Valor Apresentado</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaValorApresentado)}</p>
+                <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Indicador</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
+                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
               </div>
               
+              {/* KPIs Meta */}
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
-                <p className="text-xs font-medium text-gray-600 mb-1">Soma Valor Indicador</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaValorIndicador)}</p>
+                <p className="text-xs font-medium text-gray-600 mb-1">Meta - Valor Apresentado</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaMetaApresentado)}</p>
+                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
               </div>
               
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-400">
-                <p className="text-xs font-medium text-gray-600 mb-1">Média Valor Indicador</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaValorIndicador)}</p>
+                <p className="text-xs font-medium text-gray-600 mb-1">Meta - Valor Indicador</p>
+                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaMetaIndicador)}</p>
+                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+              </div>
+            </div>
+            
+            {/* Contadores de registros */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-600">Total Realizado</p>
+                <p className="text-sm font-semibold text-blue-600">{kpis.totalRealizado}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-600">Total Meta</p>
+                <p className="text-sm font-semibold text-green-600">{kpis.totalMeta}</p>
               </div>
             </div>
           </div>
 
-          {/* Gráficos - Mobile - SEMPRE mostrados */}
+          {/* ✅ GRÁFICOS COMBINADOS - Mobile */}
           <div className="mb-6 space-y-6">
-            {/* Gráfico Valor Apresentado */}
+            {/* Gráfico Combinado - Valor Apresentado */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado por Período</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado (Realizado vs Meta)</h3>
               <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={dadosGrafico} 
+                      <ComposedChart 
+                        data={dadosGraficoCombinado} 
                         margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                        maxBarSize={calculateBarSize(dadosGrafico.length)}
                         barCategoryGap="15%"
                       >
                         <XAxis 
@@ -846,36 +969,44 @@ export default function IndicadorDetalhe({ user }) {
                           tickLine={false}
                           tick={{ fontSize: 8, fill: '#6B7280' }}
                         />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend 
+                          wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }}
+                          iconSize={8}
+                        />
                         <Bar 
-                          dataKey="valorApresentado" 
-                          fill="#3B82F6"
+                          dataKey="realizadoApresentado" 
+                          fill="#3B82F6" 
+                          name="Realizado"
                           radius={[2, 2, 0, 0]}
-                        >
-                          <LabelList 
-                            dataKey="valorApresentado" 
-                            position="top" 
-                            style={{ fontSize: '10px', fill: '#374151' }}
-                            formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                          />
-                        </Bar>
-                      </BarChart>
+                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="metaApresentado" 
+                          stroke="#10B981" 
+                          strokeWidth={2}
+                          dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
+                          name="Meta"
+                          connectNulls={false}
+                        />
+                      </ComposedChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Gráfico Valor do Indicador */}
+            {/* Gráfico Combinado - Valor Indicador */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor do Indicador por Período</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Indicador (Realizado vs Meta)</h3>
               <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGrafico.length > 6 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={dadosGrafico} 
+                      <ComposedChart 
+                        data={dadosGraficoCombinado} 
                         margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                        maxBarSize={calculateBarSize(dadosGrafico.length)}
                         barCategoryGap="15%"
                       >
                         <XAxis 
@@ -884,19 +1015,28 @@ export default function IndicadorDetalhe({ user }) {
                           tickLine={false}
                           tick={{ fontSize: 8, fill: '#6B7280' }}
                         />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend 
+                          wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }}
+                          iconSize={8}
+                        />
                         <Bar 
-                          dataKey="valorIndicador" 
-                          fill="#10B981"
+                          dataKey="realizadoIndicador" 
+                          fill="#8B5CF6" 
+                          name="Realizado"
                           radius={[2, 2, 0, 0]}
-                        >
-                          <LabelList 
-                            dataKey="valorIndicador" 
-                            position="top" 
-                            style={{ fontSize: '10px', fill: '#374151' }}
-                            formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                          />
-                        </Bar>
-                      </BarChart>
+                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="metaIndicador" 
+                          stroke="#F59E0B" 
+                          strokeWidth={2}
+                          dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                          name="Meta"
+                          connectNulls={false}
+                        />
+                      </ComposedChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
@@ -904,7 +1044,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Tabela - Mobile - SEMPRE mostrada */}
+          {/* ✅ TABELA MODIFICADA - Mobile - Com coluna Tipo */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -912,6 +1052,9 @@ export default function IndicadorDetalhe({ user }) {
                   <tr>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                       Período
+                    </th>
+                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                      Tipo
                     </th>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                       Valor Apresentado
@@ -922,10 +1065,19 @@ export default function IndicadorDetalhe({ user }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white">
-                  {indicadores.map((indicador, index) => (
+                  {dadosTabela.map((indicador, index) => (
                     <tr key={indicador.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
                       <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
                         {formatDate(indicador.periodo_referencia)}
+                      </td>
+                      <td className="px-2 py-3 text-xs border-r border-gray-200">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          indicador.tipo_indicador === 1 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {indicador.tipoTexto}
+                        </span>
                       </td>
                       <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
                         {formatValue(indicador.valor_indicador_apresentado)}
@@ -941,7 +1093,7 @@ export default function IndicadorDetalhe({ user }) {
             
             {/* Rodapé com total - Mobile - SEMPRE mostrado */}
             <div className="px-4 py-3 bg-gray-50 text-center text-gray-500 text-xs border-t">
-              Total de períodos: {indicadores.length}
+              Total de períodos: {dadosTabela.length} • Realizado: {kpis.totalRealizado} • Meta: {kpis.totalMeta}
             </div>
           </div>
 
@@ -1065,7 +1217,7 @@ export default function IndicadorDetalhe({ user }) {
               </button>
             </div>
 
-            {/* 🔥 NOVA POSIÇÃO: Tags logo após o título */}
+            {/* Tags logo após o título */}
             <div className="flex space-x-3 mb-4">
               {infoGeral?.projeto_id && (
                 <span className="px-3 py-1.5 bg-red-100 text-red-800 text-sm rounded-full font-medium">
@@ -1118,7 +1270,7 @@ export default function IndicadorDetalhe({ user }) {
                   >
                     Últimos 30 dias
                   </button>
-                  
+
                   <button
                     onClick={() => setFiltroPeriodo('90dias')}
                     className={`flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
@@ -1172,7 +1324,7 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             )}
             
-            {/* 🔥 MODIFICADO: Segunda linha - APENAS botões de ação (tags removidas) */}
+            {/* Segunda linha - APENAS botões de ação */}
             <div className="flex items-center justify-end">
               {/* Botões de ação */}
               <div className="flex space-x-3">
@@ -1230,46 +1382,67 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* KPIs - Desktop - SEMPRE mostrados */}
+          {/* ✅ KPIs MODIFICADOS - Desktop - Com divisão Realizado/Meta */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              {/* KPIs Realizado */}
               <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
-                <p className="text-sm font-medium text-gray-600">Soma Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaValorApresentado)}</p>
+                <p className="text-sm font-medium text-gray-600">Realizado - Valor Apresentado</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
+                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
               </div>
               
               <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-400">
-                <p className="text-sm font-medium text-gray-600">Média Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaValorApresentado)}</p>
+                <p className="text-sm font-medium text-gray-600">Realizado - Valor Indicador</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
+                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
               </div>
               
+              {/* KPIs Meta */}
               <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
-                <p className="text-sm font-medium text-gray-600">Soma Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaValorIndicador)}</p>
+                <p className="text-sm font-medium text-gray-600">Meta - Valor Apresentado</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaMetaApresentado)}</p>
+                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
               </div>
               
               <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-400">
-                <p className="text-sm font-medium text-gray-600">Média Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaValorIndicador)}</p>
+                <p className="text-sm font-medium text-gray-600">Meta - Valor Indicador</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaMetaIndicador)}</p>
+                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+              </div>
+            </div>
+            
+            {/* Contadores de registros - Desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <p className="text-sm text-gray-600">Total de Períodos</p>
+                <p className="text-lg font-semibold text-gray-800">{dadosTabela.length}</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <p className="text-sm text-gray-600">Total Realizado</p>
+                <p className="text-lg font-semibold text-blue-600">{kpis.totalRealizado}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <p className="text-sm text-gray-600">Total Meta</p>
+                <p className="text-lg font-semibold text-green-600">{kpis.totalMeta}</p>
               </div>
             </div>
           </div>
 
-          {/* Gráficos - Desktop - SEMPRE mostrados */}
+          {/* ✅ GRÁFICOS COMBINADOS - Desktop */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico Valor Apresentado */}
+              {/* Gráfico Combinado - Valor Apresentado */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado por Período</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado (Realizado vs Meta)</h3>
                 <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                  <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={dadosGrafico} 
+                        <ComposedChart 
+                          data={dadosGraficoCombinado} 
                           margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                          maxBarSize={calculateBarSize(dadosGrafico.length)}
                           barCategoryGap="12%"
                         >
                           <XAxis 
@@ -1278,36 +1451,44 @@ export default function IndicadorDetalhe({ user }) {
                             tickLine={false}
                             tick={{ fontSize: 12, fill: '#6B7280' }}
                           />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend 
+                            wrapperStyle={{ fontSize: '12px', paddingTop: '15px' }}
+                            iconSize={12}
+                          />
                           <Bar 
-                            dataKey="valorApresentado" 
-                            fill="#3B82F6"
+                            dataKey="realizadoApresentado" 
+                            fill="#3B82F6" 
+                            name="Realizado"
                             radius={[4, 4, 0, 0]}
-                          >
-                            <LabelList 
-                              dataKey="valorApresentado" 
-                              position="top" 
-                              style={{ fontSize: '12px', fill: '#374151' }}
-                              formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                            />
-                          </Bar>
-                        </BarChart>
+                            maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="metaApresentado" 
+                            stroke="#10B981" 
+                            strokeWidth={3}
+                            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                            name="Meta"
+                            connectNulls={false}
+                          />
+                        </ComposedChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Gráfico Valor do Indicador */}
+              {/* Gráfico Combinado - Valor Indicador */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor do Indicador por Período</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Indicador (Realizado vs Meta)</h3>
                 <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGrafico.length > 7 ? calculateContainerWidth(dadosGrafico.length) : '100%' }}>
+                  <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={dadosGrafico} 
+                        <ComposedChart 
+                          data={dadosGraficoCombinado} 
                           margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                          maxBarSize={calculateBarSize(dadosGrafico.length)}
                           barCategoryGap="12%"
                         >
                           <XAxis 
@@ -1316,19 +1497,28 @@ export default function IndicadorDetalhe({ user }) {
                             tickLine={false}
                             tick={{ fontSize: 12, fill: '#6B7280' }}
                           />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend 
+                            wrapperStyle={{ fontSize: '12px', paddingTop: '15px' }}
+                            iconSize={12}
+                          />
                           <Bar 
-                            dataKey="valorIndicador" 
-                            fill="#10B981"
+                            dataKey="realizadoIndicador" 
+                            fill="#8B5CF6" 
+                            name="Realizado"
                             radius={[4, 4, 0, 0]}
-                          >
-                            <LabelList 
-                              dataKey="valorIndicador" 
-                              position="top" 
-                              style={{ fontSize: '12px', fill: '#374151' }}
-                              formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                            />
-                          </Bar>
-                        </BarChart>
+                            maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="metaIndicador" 
+                            stroke="#F59E0B" 
+                            strokeWidth={3}
+                            dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                            name="Meta"
+                            connectNulls={false}
+                          />
+                        </ComposedChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -1337,13 +1527,16 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Tabela - Desktop - SEMPRE mostrada */}
+          {/* ✅ TABELA MODIFICADA - Desktop - Com coluna Tipo */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Período de Referência
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Valor Apresentado
@@ -1354,12 +1547,21 @@ export default function IndicadorDetalhe({ user }) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {indicadores.map((indicador, index) => (
+                {dadosTabela.map((indicador, index) => (
                   <tr key={indicador.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
                         {formatDate(indicador.periodo_referencia)}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                        indicador.tipo_indicador === 1 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {indicador.tipoTexto}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
@@ -1401,11 +1603,6 @@ export default function IndicadorDetalhe({ user }) {
                 'Marcar como Lido'
               )}
             </button>
-          </div>
-          
-          {/* Informações adicionais - SEMPRE mostradas */}
-          <div className="mt-4 text-center text-gray-500 text-sm">
-            Total de períodos: {indicadores.length}
           </div>
         </div>
       </div>
