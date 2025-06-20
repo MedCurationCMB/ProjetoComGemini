@@ -1,4 +1,4 @@
-// src/components/AdicionarLinhaIndicadorBaseDialog.js
+// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Modificada (SEM tipo_indicador)
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -9,16 +9,14 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   onSuccess, 
   categorias, 
   projetos, 
-  tiposIndicador, 
   subcategorias 
 }) => {
-  // Estado inicial do formulário
+  // Estado inicial do formulário - REMOVIDO tipo_indicador
   const [formData, setFormData] = useState({
     projeto_id: '',
     categoria_id: '',
     indicador: '',
     observacao: '',
-    tipo_indicador: '',
     subcategoria_id: '',
     prazo_entrega_inicial: '',
     recorrencia: 'sem recorrencia',
@@ -57,8 +55,8 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     try {
       setLoading(true);
       
-      // Validar campos obrigatórios
-      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || !formData.tipo_indicador || !formData.subcategoria_id) {
+      // Validar campos obrigatórios - REMOVIDO tipo_indicador da validação
+      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || !formData.subcategoria_id) {
         toast.error('Por favor, preencha todos os campos obrigatórios');
         setLoading(false);
         return;
@@ -79,13 +77,13 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         }
       }
       
-      // Preparar dados para inserção
+      // Preparar dados para inserção - REMOVIDO tipo_indicador
       const dadosInsercao = {
         projeto_id: formData.projeto_id,
         categoria_id: formData.categoria_id,
         indicador: formData.indicador.trim(),
         observacao: formData.observacao.trim() || null,
-        tipo_indicador: parseInt(formData.tipo_indicador),
+        // tipo_indicador: REMOVIDO - será definido automaticamente pela função
         subcategoria_id: parseInt(formData.subcategoria_id),
         prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
         recorrencia: formData.recorrencia,
@@ -103,7 +101,16 @@ const AdicionarLinhaIndicadorBaseDialog = ({
       
       if (error) throw error;
       
-      toast.success('Linha de indicador adicionada com sucesso!');
+      // Calcular quantas linhas serão criadas para informar o usuário
+      let totalLinhasEsperadas;
+      if (formData.recorrencia === 'sem recorrencia' || !formData.repeticoes || parseInt(formData.repeticoes) <= 0) {
+        totalLinhasEsperadas = 2; // 1 linha base × 2 (Meta + Realizado)
+      } else {
+        const repeticoes = parseInt(formData.repeticoes);
+        totalLinhasEsperadas = (1 + repeticoes) * 2; // (linha base + repetições) × 2
+      }
+      
+      toast.success(`Linha de indicador adicionada com sucesso! Foram criadas ${totalLinhasEsperadas} linhas automaticamente (Meta + Realizado).`);
       
       // Chamar a função de sucesso e fechar o diálogo
       if (onSuccess) {
@@ -129,6 +136,26 @@ const AdicionarLinhaIndicadorBaseDialog = ({
           >
             <FiX className="h-6 w-6" />
           </button>
+        </div>
+        
+        {/* Informação sobre a criação automática */}
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start">
+            <FiCheck className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-blue-800">Criação Automática Meta/Realizado</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Para cada período configurado, o sistema criará automaticamente duas linhas: 
+                uma para <strong>Meta</strong> e outra para <strong>Realizado</strong>.
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                {formData.recorrencia === 'sem recorrencia' || !formData.repeticoes || parseInt(formData.repeticoes) <= 0
+                  ? 'Será criada 1 linha base → 2 linhas finais (1 Meta + 1 Realizado)'
+                  : `Serão criadas ${1 + (parseInt(formData.repeticoes) || 0)} linhas → ${(1 + (parseInt(formData.repeticoes) || 0)) * 2} linhas finais`
+                }
+              </p>
+            </div>
+          </div>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -208,49 +235,27 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             />
           </div>
           
-          {/* Segunda linha: Tipo de Indicador e Subcategoria */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tipo de Indicador */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Indicador <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="tipo_indicador"
-                value={formData.tipo_indicador}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Selecione um tipo</option>
-                {Object.entries(tiposIndicador).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Subcategoria */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Subcategoria <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="subcategoria_id"
-                value={formData.subcategoria_id}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Selecione uma subcategoria</option>
-                {Object.entries(subcategorias).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* REMOVIDO: Tipo de Indicador - agora é automático */}
+          
+          {/* Subcategoria */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subcategoria <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="subcategoria_id"
+              value={formData.subcategoria_id}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            >
+              <option value="">Selecione uma subcategoria</option>
+              {Object.entries(subcategorias).map(([id, nome]) => (
+                <option key={id} value={id}>
+                  {nome}
+                </option>
+              ))}
+            </select>
           </div>
           
           {/* Prazo inicial */}
@@ -339,7 +344,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                 required={formData.recorrencia !== 'sem recorrencia'}
               />
               <p className="text-sm text-gray-500 mt-1">
-                Quantas vezes este item deve se repetir
+                Quantas vezes este item deve se repetir (além da linha base)
               </p>
             </div>
           )}

@@ -9,7 +9,7 @@ const ControleIndicadorTable = ({ user }) => {
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
-  const [tiposIndicador, setTiposIndicador] = useState({});
+  // REMOVIDO: const [tiposIndicador, setTiposIndicador] = useState({});
   const [subcategorias, setSubcategorias] = useState({});
   const [loading, setLoading] = useState(true);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
@@ -26,7 +26,7 @@ const ControleIndicadorTable = ({ user }) => {
     if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
-      fetchTiposIndicador();
+      // REMOVIDO: fetchTiposIndicador();
       fetchSubcategorias();
       fetchControles();
     }
@@ -99,7 +99,8 @@ const ControleIndicadorTable = ({ user }) => {
     }
   };
 
-  // Buscar tipos de indicador
+  // REMOVIDO: Buscar tipos de indicador (não é mais necessário para o formulário)
+  /*
   const fetchTiposIndicador = async () => {
     try {
       const { data, error } = await supabase
@@ -110,7 +111,7 @@ const ControleIndicadorTable = ({ user }) => {
       
       const tiposObj = {};
       data.forEach(tipoItem => {
-        tiposObj[tipoItem.id] = tipoItem.tipo;  // ← MUDANÇA: 'tipo' em vez de 'nome'
+        tiposObj[tipoItem.id] = tipoItem.tipo;
       });
       
       setTiposIndicador(tiposObj);
@@ -118,6 +119,7 @@ const ControleIndicadorTable = ({ user }) => {
       console.error('Erro ao carregar tipos de indicador:', error);
     }
   };
+  */
 
   // Buscar subcategorias
   const fetchSubcategorias = async () => {
@@ -358,14 +360,13 @@ const ControleIndicadorTable = ({ user }) => {
         </div>
       </div>
 
-      {/* Modal para adicionar linha de indicador */}
+      {/* Modal para adicionar linha de indicador - REMOVIDO tiposIndicador */}
       {showAdicionarLinhaDialog && (
         <AdicionarLinhaIndicadorBaseDialog
           onClose={() => setShowAdicionarLinhaDialog(false)}
           onSuccess={handleAdicionarLinhaSuccess}
           categorias={categorias}
           projetos={projetos}
-          tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
         />
       )}
@@ -387,9 +388,7 @@ const ControleIndicadorTable = ({ user }) => {
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Indicador
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Tipo Indicador
-              </th>
+              {/* REMOVIDO: Coluna Tipo Indicador - não é mais relevante para a tabela base */}
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Subcategoria
               </th>
@@ -401,6 +400,9 @@ const ControleIndicadorTable = ({ user }) => {
               </th>
               <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Obrigatório
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Linhas Criadas
               </th>
             </tr>
           </thead>
@@ -420,9 +422,7 @@ const ControleIndicadorTable = ({ user }) => {
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {item.indicador}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {tiposIndicador[item.tipo_indicador] || 'Tipo indisponível'}
-                  </td>
+                  {/* REMOVIDO: Coluna Tipo Indicador */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
                   </td>
@@ -454,6 +454,30 @@ const ControleIndicadorTable = ({ user }) => {
                         Não
                       </span>
                     )}
+                  </td>
+                  {/* NOVA COLUNA: Mostrar quantas linhas foram criadas automaticamente */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(() => {
+                      // Calcular quantas linhas foram criadas baseado na configuração
+                      let linhasBase;
+                      if (!item.repeticoes || item.repeticoes <= 0) {
+                        linhasBase = 1; // Apenas linha base
+                      } else {
+                        linhasBase = 1 + item.repeticoes; // Linha base + repetições
+                      }
+                      const totalLinhas = linhasBase * 2; // Multiplicado por 2 (Meta + Realizado)
+                      
+                      return (
+                        <div className="text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {totalLinhas} linhas
+                          </span>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {linhasBase} × 2 (Meta/Real)
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))
