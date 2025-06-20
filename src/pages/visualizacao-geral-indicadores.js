@@ -518,9 +518,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         const dataReferenciaAtraso = getDataReferenciaAtraso();
 
+        // ✅ NOVA CONSULTA: Buscar indicadores em atraso COM tipo_indicador
         let queryIndicadores = supabase
           .from('controle_indicador_geral')
-          .select('projeto_id, categoria_id')
+          .select('projeto_id, categoria_id, tipo_indicador')
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', dataReferenciaAtraso)
           .not('projeto_id', 'is', null)
@@ -532,7 +533,9 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (indicadoresError) throw indicadoresError;
 
-        // Processamento das tabelas (lógica original mantida)
+        // ✅ NOVO PROCESSAMENTO: Agrupamento com divisão por tipo_indicador
+        
+        // Agrupamento combinado (Projeto + Categoria) com tipo_indicador
         const agrupamentoCombinado = {};
         indicadoresVencidos.forEach(item => {
           const chave = `${item.projeto_id}_${item.categoria_id}`;
@@ -540,34 +543,58 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             agrupamentoCombinado[chave] = {
               projeto_id: item.projeto_id,
               categoria_id: item.categoria_id,
-              quantidade: 0
+              realizado: 0,
+              meta: 0
             };
           }
-          agrupamentoCombinado[chave].quantidade++;
+          
+          // tipo_indicador: 1 = Realizado, 2 = Meta
+          if (item.tipo_indicador === 1) {
+            agrupamentoCombinado[chave].realizado++;
+          } else if (item.tipo_indicador === 2) {
+            agrupamentoCombinado[chave].meta++;
+          }
         });
 
+        // Agrupamento por Projetos com tipo_indicador
         const agrupamentoProjetos = {};
         indicadoresVencidos.forEach(item => {
           if (!agrupamentoProjetos[item.projeto_id]) {
             agrupamentoProjetos[item.projeto_id] = {
               projeto_id: item.projeto_id,
-              quantidade: 0
+              realizado: 0,
+              meta: 0
             };
           }
-          agrupamentoProjetos[item.projeto_id].quantidade++;
+          
+          // tipo_indicador: 1 = Realizado, 2 = Meta
+          if (item.tipo_indicador === 1) {
+            agrupamentoProjetos[item.projeto_id].realizado++;
+          } else if (item.tipo_indicador === 2) {
+            agrupamentoProjetos[item.projeto_id].meta++;
+          }
         });
 
+        // Agrupamento por Categorias com tipo_indicador
         const agrupamentoCategorias = {};
         indicadoresVencidos.forEach(item => {
           if (!agrupamentoCategorias[item.categoria_id]) {
             agrupamentoCategorias[item.categoria_id] = {
               categoria_id: item.categoria_id,
-              quantidade: 0
+              realizado: 0,
+              meta: 0
             };
           }
-          agrupamentoCategorias[item.categoria_id].quantidade++;
+          
+          // tipo_indicador: 1 = Realizado, 2 = Meta
+          if (item.tipo_indicador === 1) {
+            agrupamentoCategorias[item.categoria_id].realizado++;
+          } else if (item.tipo_indicador === 2) {
+            agrupamentoCategorias[item.categoria_id].meta++;
+          }
         });
 
+        // Buscar nomes dos projetos e categorias (mantém lógica original)
         const projetoIds = [...new Set(indicadoresVencidos.map(item => item.projeto_id))];
         const categoriaIds = [...new Set(indicadoresVencidos.map(item => item.categoria_id))];
 
@@ -585,6 +612,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         if (categoriasError) throw categoriasError;
 
+        // Criar lookups para nomes
         const projetosLookup = {};
         projetos.forEach(projeto => {
           projetosLookup[projeto.id] = projeto.nome;
@@ -595,12 +623,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           categoriasLookup[categoria.id] = categoria.nome;
         });
 
+        // ✅ NOVA ESTRUTURA: Dados das tabelas com divisão Realizado/Meta
+        
+        // Tabela combinada (Projeto + Categoria)
         const dadosTabelaCombinada = Object.values(agrupamentoCombinado).map(item => ({
           projeto_id: item.projeto_id,
           categoria_id: item.categoria_id,
           nome_projeto: projetosLookup[item.projeto_id] || 'Projeto não encontrado',
           nome_categoria: categoriasLookup[item.categoria_id] || 'Categoria não encontrada',
-          quantidade_vencidos: item.quantidade
+          realizado: item.realizado,
+          meta: item.meta
         })).sort((a, b) => {
           if (a.nome_projeto === b.nome_projeto) {
             return a.nome_categoria.localeCompare(b.nome_categoria);
@@ -608,16 +640,20 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           return a.nome_projeto.localeCompare(b.nome_projeto);
         });
 
+        // Tabela de Projetos
         const dadosTabelaProjetos = Object.values(agrupamentoProjetos).map(item => ({
           projeto_id: item.projeto_id,
           nome_projeto: projetosLookup[item.projeto_id] || 'Projeto não encontrado',
-          quantidade_vencidos: item.quantidade
+          realizado: item.realizado,
+          meta: item.meta
         })).sort((a, b) => a.nome_projeto.localeCompare(b.nome_projeto));
 
+        // Tabela de Categorias
         const dadosTabelaCategorias = Object.values(agrupamentoCategorias).map(item => ({
           categoria_id: item.categoria_id,
           nome_categoria: categoriasLookup[item.categoria_id] || 'Categoria não encontrada',
-          quantidade_vencidos: item.quantidade
+          realizado: item.realizado,
+          meta: item.meta
         })).sort((a, b) => a.nome_categoria.localeCompare(b.nome_categoria));
 
         setTabelaProjetosCategoria(dadosTabelaCombinada);
@@ -1465,7 +1501,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Projeto
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores em Atraso
+                          Realizado
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Meta
                         </th>
                       </tr>
                     </thead>
@@ -1478,8 +1517,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                              {formatNumber(item.quantidade_vencidos)}
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                              {formatNumber(item.realizado)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              {formatNumber(item.meta)}
                             </span>
                           </td>
                         </tr>
@@ -1520,7 +1564,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Categoria
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores em Atraso
+                          Realizado
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Meta
                         </th>
                       </tr>
                     </thead>
@@ -1533,8 +1580,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                              {formatNumber(item.quantidade_vencidos)}
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                              {formatNumber(item.realizado)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              {formatNumber(item.meta)}
                             </span>
                           </td>
                         </tr>
@@ -1580,7 +1632,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       Categoria
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Indicadores em Atraso
+                      Realizado
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Meta
                     </th>
                   </tr>
                 </thead>
@@ -1598,8 +1653,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                          {formatNumber(item.quantidade_vencidos)}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          {formatNumber(item.realizado)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          {formatNumber(item.meta)}
                         </span>
                       </td>
                     </tr>
