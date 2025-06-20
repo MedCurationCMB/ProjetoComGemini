@@ -142,14 +142,14 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   // Função para gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
     if (!filtros.periodo) {
-      return "Todos os indicadores";
+      return "Todos os indicadores do tipo Realizado";
     }
 
     let dataInicio, dataFim;
 
     if (filtros.periodo === 'personalizado') {
       if (!filtros.data_inicio || !filtros.data_fim) {
-        return "Todos os indicadores";
+        return "Todos os indicadores do tipo Realizado";
       }
       dataInicio = filtros.data_inicio;
       dataFim = filtros.data_fim;
@@ -165,7 +165,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       return `${partes[2]}/${partes[1]}/${partes[0]}`; // dd/mm/yyyy
     };
 
-    return `Indicadores com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
+    return `Indicadores do tipo Realizado com prazo de entrega entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
   };
 
   // NOVA FUNÇÃO: Gerar texto descritivo dos indicadores em atraso com lógica atualizada
@@ -182,12 +182,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     const usandoDataCustomizada = filtros.data_referencia_atraso !== '';
     const tipoReferencia = usandoDataCustomizada ? 'personalizada' : 'sincronizada com KPIs principais';
 
-    return `Indicadores em atraso com base na data de referência: ${formatarData(dataReferencia)} (${tipoReferencia})`;
+    return `Indicadores do tipo Realizado em atraso com base na data de referência: ${formatarData(dataReferencia)} (${tipoReferencia})`;
   };
 
   // Função auxiliar para construir query com filtros de projeto e categoria
   const construirQueryComFiltros = (queryBase) => {
     let query = queryBase;
+
+    // ✅ MUDANÇA PRINCIPAL: Sempre filtrar por tipo_indicador = Realizado (ID 1)
+    query = query.eq('tipo_indicador', 1);
 
     // Aplicar filtros de projeto e categoria
     if (filtros.projeto_id) {
@@ -254,19 +257,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   useEffect(() => {
     const fetchFiltrosDisponiveis = async () => {
       try {
-        // Buscar projetos únicos que têm indicadores
+        // ✅ MUDANÇA: Buscar projetos únicos que têm indicadores do tipo Realizado
         const { data: projetosData, error: projetosError } = await supabase
           .from('controle_indicador_geral')
           .select('projeto_id, projetos(nome)')
+          .eq('tipo_indicador', 1) // ← FILTRAR POR REALIZADO
           .not('projeto_id', 'is', null)
           .not('projetos.nome', 'is', null);
 
         if (projetosError) throw projetosError;
 
-        // Buscar categorias únicas que têm indicadores
+        // ✅ MUDANÇA: Buscar categorias únicas que têm indicadores do tipo Realizado
         const { data: categoriasData, error: categoriasError } = await supabase
           .from('controle_indicador_geral')
           .select('categoria_id, categorias(nome)')
+          .eq('tipo_indicador', 1) // ← FILTRAR POR REALIZADO
           .not('categoria_id', 'is', null)
           .not('categorias.nome', 'is', null);
 
@@ -304,7 +309,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user]);
 
-  // Buscar dados dos KPIs
+  // ✅ MUDANÇA PRINCIPAL: Buscar dados dos KPIs - APENAS INDICADORES DO TIPO REALIZADO
   useEffect(() => {
     const fetchKPIs = async () => {
       try {
@@ -312,23 +317,23 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
         // MUDANÇA: Remover a busca do total separadamente e calcular como soma dos outros dois
         
-        // 1. Indicadores com valor (no período filtrado)
+        // 1. Indicadores com valor (no período filtrado) - APENAS REALIZADO
         let queryComValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .not('valor_indicador_apresentado', 'is', null);
         
-        queryComValor = construirQueryComFiltros(queryComValor);
+        queryComValor = construirQueryComFiltros(queryComValor); // ← JÁ INCLUI FILTRO DE REALIZADO
         queryComValor = aplicarFiltrosData(queryComValor);
         
         const { count: indicadoresComValor, error: comValorError } = await queryComValor;
         if (comValorError) throw comValorError;
 
-        // 2. Indicadores sem valor (no período filtrado)
+        // 2. Indicadores sem valor (no período filtrado) - APENAS REALIZADO
         let querySemValor = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null);
         
-        querySemValor = construirQueryComFiltros(querySemValor);
+        querySemValor = construirQueryComFiltros(querySemValor); // ← JÁ INCLUI FILTRO DE REALIZADO
         querySemValor = aplicarFiltrosData(querySemValor);
         
         const { count: indicadoresSemValor, error: semValorError } = await querySemValor;
@@ -357,7 +362,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados dos KPIs de indicadores em atraso
+  // ✅ MUDANÇA PRINCIPAL: Buscar dados dos KPIs de indicadores em atraso - APENAS REALIZADO
   useEffect(() => {
     const fetchKPIsAtraso = async () => {
       try {
@@ -376,37 +381,37 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         const data7DiasAntesStr = formatarDataLocal(data7DiasAntes);
         const data30DiasAntesStr = formatarDataLocal(data30DiasAntes);
 
-        // 1. Todos os indicadores em atraso (valor_indicador_apresentado = NULL e prazo_entrega < data_referencia)
+        // 1. Todos os indicadores em atraso (valor_indicador_apresentado = NULL e prazo_entrega < data_referencia) - APENAS REALIZADO
         let queryTodosAtrasados = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', dataReferencia);
         
-        queryTodosAtrasados = construirQueryComFiltros(queryTodosAtrasados);
+        queryTodosAtrasados = construirQueryComFiltros(queryTodosAtrasados); // ← JÁ INCLUI FILTRO DE REALIZADO
         
         const { count: todosAtrasados, error: todosAtrasadosError } = await queryTodosAtrasados;
         if (todosAtrasadosError) throw todosAtrasadosError;
 
-        // 2. Indicadores em atraso até 7 dias antes da data de referência
+        // 2. Indicadores em atraso até 7 dias antes da data de referência - APENAS REALIZADO
         let queryAtrasados7Dias = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', dataReferencia)
           .gte('prazo_entrega', data7DiasAntesStr);
         
-        queryAtrasados7Dias = construirQueryComFiltros(queryAtrasados7Dias);
+        queryAtrasados7Dias = construirQueryComFiltros(queryAtrasados7Dias); // ← JÁ INCLUI FILTRO DE REALIZADO
         
         const { count: atrasadosAte7Dias, error: atrasados7DiasError } = await queryAtrasados7Dias;
         if (atrasados7DiasError) throw atrasados7DiasError;
 
-        // 3. Indicadores em atraso até 30 dias antes da data de referência
+        // 3. Indicadores em atraso até 30 dias antes da data de referência - APENAS REALIZADO
         let queryAtrasados30Dias = supabase.from('controle_indicador_geral')
           .select('*', { count: 'exact', head: true })
           .is('valor_indicador_apresentado', null)
           .lt('prazo_entrega', dataReferencia)
           .gte('prazo_entrega', data30DiasAntesStr);
         
-        queryAtrasados30Dias = construirQueryComFiltros(queryAtrasados30Dias);
+        queryAtrasados30Dias = construirQueryComFiltros(queryAtrasados30Dias); // ← JÁ INCLUI FILTRO DE REALIZADO
         
         const { count: atrasadosAte30Dias, error: atrasados30DiasError } = await queryAtrasados30Dias;
         if (atrasados30DiasError) throw atrasados30DiasError;
@@ -431,7 +436,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   }, [user, filtros]); // DEPENDÊNCIA: incluir todos os filtros para reagir às mudanças
 
-  // Buscar dados das tabelas
+  // ✅ MUDANÇA PRINCIPAL: Buscar dados das tabelas - APENAS INDICADORES DO TIPO REALIZADO
   useEffect(() => {
     const fetchTabelas = async () => {
       try {
@@ -440,7 +445,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         // MUDANÇA: Usar nova função que sincroniza com data_inicio ou usa data customizada
         const dataReferenciaAtraso = getDataReferenciaAtraso();
 
-        // Construir query base para indicadores vencidos usando a data de referência
+        // Construir query base para indicadores vencidos usando a data de referência - APENAS REALIZADO
         let queryIndicadores = supabase
           .from('controle_indicador_geral')
           .select('projeto_id, categoria_id')
@@ -449,7 +454,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           .not('projeto_id', 'is', null)
           .not('categoria_id', 'is', null);
 
-        // Aplicar filtros de projeto e categoria
+        // Aplicar filtros de projeto e categoria (já inclui filtro de REALIZADO)
         queryIndicadores = construirQueryComFiltros(queryIndicadores);
 
         const { data: indicadoresVencidos, error: indicadoresError } = await queryIndicadores;
@@ -612,7 +617,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Visualização Geral (Indicadores)</title>
+        <title>Visualização Geral (Indicadores) - Realizado</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -1107,7 +1112,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-black">Visualização Geral (Indicadores)</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-black">Visualização Geral (Indicadores) - Realizado</h1>
             <p className="text-gray-600 text-sm mt-1">
               {gerarTextoDescritivo()}
               {hasFiltrosAtivos() && (
@@ -1124,18 +1129,18 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </Link>
         </div>
 
-        {/* PRIMEIRA SEÇÃO DE KPIs - Indicadores Gerais */}
+        {/* PRIMEIRA SEÇÃO DE KPIs - Indicadores Gerais (APENAS REALIZADO) */}
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* KPI 1: Total de Indicadores */}
+            {/* KPI 1: Total de Indicadores (REALIZADO) */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Total de Indicadores</p>
+                  <p className="text-sm font-medium text-gray-600">Total de Indicadores (Realizado)</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {formatNumber(kpis.totalIndicadores)}
                   </p>
@@ -1146,16 +1151,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
               <div className="mt-4">
                 <p className="text-xs text-gray-500">
-                  Indicadores no período filtrado (hoje + 30 dias por padrão)
+                  Indicadores do tipo Realizado no período filtrado
                 </p>
               </div>
             </div>
 
-            {/* KPI 2: Indicadores Com Valor */}
+            {/* KPI 2: Indicadores Com Valor (REALIZADO) */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Com Valor Definido</p>
+                  <p className="text-sm font-medium text-gray-600">Com Valor Definido (Realizado)</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {formatNumber(kpis.indicadoresComValor)}
                   </p>
@@ -1173,11 +1178,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               </div>
             </div>
 
-            {/* KPI 3: Indicadores Sem Valor */}
+            {/* KPI 3: Indicadores Sem Valor (REALIZADO) */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">Sem Valor Definido</p>
+                  <p className="text-sm font-medium text-gray-600">Sem Valor Definido (Realizado)</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {formatNumber(kpis.indicadoresSemValor)}
                   </p>
@@ -1197,10 +1202,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </div>
         )}
 
-        {/* NOVA SEÇÃO DE KPIs - Indicadores em Atraso */}
+        {/* NOVA SEÇÃO DE KPIs - Indicadores em Atraso (APENAS REALIZADO) */}
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-xl lg:text-2xl font-bold text-black">Indicadores em Atraso</h2>
+            <h2 className="text-xl lg:text-2xl font-bold text-black">Indicadores em Atraso (Realizado)</h2>
             <p className="text-gray-600 text-sm mt-1">
               {gerarTextoDescritivoAtraso()}
             </p>
@@ -1212,11 +1217,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* KPI 1: Todos os Indicadores em Atraso */}
+              {/* KPI 1: Todos os Indicadores em Atraso (REALIZADO) */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Todos os Indicadores</p>
+                    <p className="text-sm font-medium text-gray-600">Todos os Indicadores (Realizado)</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
                       {formatNumber(kpisAtraso.todosAtrasados)}
                     </p>
@@ -1227,16 +1232,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
                 <div className="mt-4">
                   <p className="text-xs text-gray-500">
-                    Total de indicadores em atraso
+                    Total de indicadores do tipo Realizado em atraso
                   </p>
                 </div>
               </div>
 
-              {/* KPI 2: Indicadores em Atraso até 7 dias antes */}
+              {/* KPI 2: Indicadores em Atraso até 7 dias antes (REALIZADO) */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Até 7 Dias Antes</p>
+                    <p className="text-sm font-medium text-gray-600">Até 7 Dias Antes (Realizado)</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
                       {formatNumber(kpisAtraso.atrasadosAte7Dias)}
                     </p>
@@ -1254,11 +1259,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
               </div>
 
-              {/* KPI 3: Indicadores em Atraso até 30 dias antes */}
+              {/* KPI 3: Indicadores em Atraso até 30 dias antes (REALIZADO) */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Até 30 Dias Antes</p>
+                    <p className="text-sm font-medium text-gray-600">Até 30 Dias Antes (Realizado)</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
                       {formatNumber(kpisAtraso.atrasadosAte30Dias)}
                     </p>
@@ -1279,12 +1284,12 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           )}
         </div>
 
-        {/* NOVA SEÇÃO DE KPIs - Total Geral dos Indicadores */}
+        {/* NOVA SEÇÃO DE KPIs - Total Geral dos Indicadores (REALIZADO) */}
         <div className="mb-8">
           <div className="mb-6">
-            <h2 className="text-xl lg:text-2xl font-bold text-black">Total Geral dos Indicadores</h2>
+            <h2 className="text-xl lg:text-2xl font-bold text-black">Total Geral dos Indicadores (Realizado)</h2>
             <p className="text-gray-600 text-sm mt-1">
-              Visão consolidada de todos os indicadores do sistema
+              Visão consolidada de todos os indicadores do tipo Realizado do sistema
             </p>
           </div>
 
@@ -1294,11 +1299,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* KPI 1: Total Geral (incluindo atrasados) - Verde + Vermelho */}
+              {/* KPI 1: Total Geral (incluindo atrasados) - Verde + Vermelho (REALIZADO) */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Total Geral (incluindo atrasados)</p>
+                    <p className="text-sm font-medium text-gray-600">Total Geral (incluindo atrasados) - Realizado</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
                       {formatNumber(kpis.totalIndicadores + kpisAtraso.todosAtrasados)}
                     </p>
@@ -1321,11 +1326,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
               </div>
 
-              {/* KPI 2: Pendentes - Amarelo + Vermelho */}
+              {/* KPI 2: Pendentes - Amarelo + Vermelho (REALIZADO) */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-amber-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">Pendentes</p>
+                    <p className="text-sm font-medium text-gray-600">Pendentes (Realizado)</p>
                     <p className="text-3xl font-bold text-gray-900 mt-1">
                       {formatNumber(kpis.indicadoresSemValor + kpisAtraso.todosAtrasados)}
                     </p>
@@ -1354,11 +1359,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
         {/* Seção das duas tabelas lado a lado */}
         {!loading && (
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Tabela de Projetos */}
+            {/* Tabela de Projetos (REALIZADO) */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FiTable className="h-5 w-5 mr-2 text-blue-500" />
-                Projetos com Indicadores em Atraso
+                Projetos com Indicadores em Atraso (Realizado)
                 {hasFiltrosAtivos() && (
                   <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     Filtrado
@@ -1373,7 +1378,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               ) : tabelaProjetos.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhum projeto com indicadores em atraso</p>
+                  <p>Nenhum projeto com indicadores do tipo Realizado em atraso</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1384,7 +1389,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Projeto
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores em Atraso
+                          Indicadores em Atraso (Realizado)
                         </th>
                       </tr>
                     </thead>
@@ -1409,11 +1414,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               )}
             </div>
 
-            {/* Tabela de Categorias */}
+            {/* Tabela de Categorias (REALIZADO) */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FiTable className="h-5 w-5 mr-2 text-purple-500" />
-                Categorias com Indicadores em Atraso
+                Categorias com Indicadores em Atraso (Realizado)
                 {hasFiltrosAtivos() && (
                   <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     Filtrado
@@ -1428,7 +1433,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               ) : tabelaCategorias.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhuma categoria com indicadores em atraso</p>
+                  <p>Nenhuma categoria com indicadores do tipo Realizado em atraso</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1439,7 +1444,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                           Categoria
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Indicadores em Atraso
+                          Indicadores em Atraso (Realizado)
                         </th>
                       </tr>
                     </thead>
@@ -1466,11 +1471,11 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </div>
         )}
 
-        {/* Tabela de Projetos x Categorias (mantida abaixo das duas tabelas) */}
+        {/* Tabela de Projetos x Categorias (mantida abaixo das duas tabelas) - REALIZADO */}
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <FiTable className="h-5 w-5 mr-2 text-green-500" />
-            Detalhamento de Indicadores em Atraso por Projeto e Categoria
+            Detalhamento de Indicadores em Atraso por Projeto e Categoria (Realizado)
             {hasFiltrosAtivos() && (
               <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                 Filtrado
@@ -1485,7 +1490,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           ) : tabelaProjetosCategoria.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Nenhum indicador em atraso encontrado</p>
+              <p>Nenhum indicador do tipo Realizado em atraso encontrado</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1499,7 +1504,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       Categoria
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Indicadores em Atraso
+                      Indicadores em Atraso (Realizado)
                     </th>
                   </tr>
                 </thead>
