@@ -1189,14 +1189,14 @@ export default function VisualizacaoGeralIndicadores({ user }) {
           </Link>
         </div>
 
-        {/* ✅ MODIFICAÇÃO PRINCIPAL: KPIs com divisão Meta/Realizado */}
+        {/* ✅ MODIFICAÇÃO PRINCIPAL: KPIs com divisão Meta/Realizado + Texto Original */}
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* KPI 1: Total de Indicadores com divisão Meta/Realizado */}
+            {/* KPI 1: Total de Indicadores com divisão Meta/Realizado + Texto Original */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -1213,10 +1213,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <p className="text-xs text-gray-500">
                   Realizado: {formatNumber(kpisDetalhados.totalRealizado)} | Meta: {formatNumber(kpisDetalhados.totalMeta)}
                 </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Indicadores no período filtrado (hoje + 30 dias por padrão)
+                </p>
               </div>
             </div>
 
-            {/* KPI 2: Indicadores Com Valor com divisão Meta/Realizado */}
+            {/* KPI 2: Indicadores Com Valor com divisão Meta/Realizado + Texto Original */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -1233,10 +1236,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <p className="text-xs text-gray-500">
                   Realizado: {formatNumber(kpisDetalhados.comValorRealizado)} | Meta: {formatNumber(kpisDetalhados.comValorMeta)}
                 </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {calculatePercentage(kpis.indicadoresComValor, kpis.totalIndicadores)}% do total
+                </p>
               </div>
             </div>
 
-            {/* KPI 3: Indicadores Sem Valor com divisão Meta/Realizado */}
+            {/* KPI 3: Indicadores Sem Valor com divisão Meta/Realizado + Texto Original */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -1253,12 +1259,15 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <p className="text-xs text-gray-500">
                   Realizado: {formatNumber(kpisDetalhados.semValorRealizado)} | Meta: {formatNumber(kpisDetalhados.semValorMeta)}
                 </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {calculatePercentage(kpis.indicadoresSemValor, kpis.totalIndicadores)}% do total
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ✅ MODIFICAÇÃO PRINCIPAL: KPIs de Atraso com divisão Meta/Realizado */}
+        {/* ✅ MODIFICAÇÃO PRINCIPAL: KPIs de Atraso com divisão Meta/Realizado + Texto Original */}
         <div className="mb-8">
           <div className="mb-6">
             <h2 className="text-xl lg:text-2xl font-bold text-black">Indicadores em Atraso</h2>
@@ -1273,7 +1282,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* KPI 1: Todos os Indicadores em Atraso com divisão Meta/Realizado */}
+              {/* KPI 1: Todos os Indicadores em Atraso com divisão Meta/Realizado + Texto Original */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -1290,10 +1299,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <p className="text-xs text-gray-500">
                     Realizado: {formatNumber(kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.todosAtrasadosMeta)}
                   </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Total de indicadores em atraso
+                  </p>
                 </div>
               </div>
 
-              {/* KPI 2: Indicadores em Atraso até 7 dias com divisão Meta/Realizado */}
+              {/* KPI 2: Indicadores em Atraso até 7 dias com divisão Meta/Realizado + Texto Original */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -1310,10 +1322,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <p className="text-xs text-gray-500">
                     Realizado: {formatNumber(kpisAtrasoDetalhados.ate7DiasRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.ate7DiasMeta)}
                   </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {calculatePercentage(kpisAtraso.atrasadosAte7Dias, kpisAtraso.todosAtrasados)}% dos atrasados
+                  </p>
                 </div>
               </div>
 
-              {/* KPI 3: Indicadores em Atraso até 30 dias com divisão Meta/Realizado */}
+              {/* KPI 3: Indicadores em Atraso até 30 dias com divisão Meta/Realizado + Texto Original */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -1330,13 +1345,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <p className="text-xs text-gray-500">
                     Realizado: {formatNumber(kpisAtrasoDetalhados.ate30DiasRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.ate30DiasMeta)}
                   </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {calculatePercentage(kpisAtraso.atrasadosAte30Dias, kpisAtraso.todosAtrasados)}% dos atrasados
+                  </p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* ✅ MODIFICAÇÃO PRINCIPAL: Total Geral com divisão Meta/Realizado */}
+        {/* ✅ MODIFICAÇÃO PRINCIPAL: Total Geral com divisão Meta/Realizado + Texto Original */}
         <div className="mb-8">
           <div className="mb-6">
             <h2 className="text-xl lg:text-2xl font-bold text-black">Total Geral dos Indicadores</h2>
@@ -1351,7 +1369,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* KPI 1: Total Geral (incluindo atrasados) com divisão Meta/Realizado */}
+              {/* KPI 1: Total Geral (incluindo atrasados) com divisão Meta/Realizado + Texto Original */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -1368,10 +1386,20 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <p className="text-xs text-gray-500">
                     Realizado: {formatNumber(kpisDetalhados.totalRealizado + kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisDetalhados.totalMeta + kpisAtrasoDetalhados.todosAtrasadosMeta)}
                   </p>
+                  <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                      Total período: {formatNumber(kpis.totalIndicadores)}
+                    </span>
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
+                      Atrasados: {formatNumber(kpisAtraso.todosAtrasados)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* KPI 2: Pendentes com divisão Meta/Realizado */}
+              {/* KPI 2: Pendentes com divisão Meta/Realizado + Texto Original */}
               <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-amber-500">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -1388,6 +1416,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <p className="text-xs text-gray-500">
                     Realizado: {formatNumber(kpisDetalhados.semValorRealizado + kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisDetalhados.semValorMeta + kpisAtrasoDetalhados.todosAtrasadosMeta)}
                   </p>
+                  <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+                      Sem valor: {formatNumber(kpis.indicadoresSemValor)}
+                    </span>
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
+                      Atrasados: {formatNumber(kpisAtraso.todosAtrasados)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
