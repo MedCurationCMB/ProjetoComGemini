@@ -220,13 +220,19 @@ const AtualizacaoMassaIndicadorDialog = ({
         // Validar tipo_unidade_indicador
         let tipo_unidade_id = null;
         if (tipo_unidade_indicador && tipo_unidade_indicador.toString().trim() !== '') {
+          const textoDigitado = tipo_unidade_indicador.toString().trim();
+          
+          // Buscar pelo nome exato (case-insensitive) na tabela tipos_unidade_indicador
           const tipoEncontrado = Object.entries(tiposUnidadeIndicador).find(
-            ([id, nome]) => nome === tipo_unidade_indicador.toString().trim()
+            ([id, nome]) => nome.toLowerCase() === textoDigitado.toLowerCase()
           );
+          
           if (!tipoEncontrado) {
-            erros.push(`Linha ${rowNumber}: Tipo Unidade "${tipo_unidade_indicador}" não é válido`);
+            erros.push(`Linha ${rowNumber}: Tipo Unidade "${textoDigitado}" não foi encontrado. Tipos válidos: ${Object.values(tiposUnidadeIndicador).join(', ')}`);
             return;
           }
+          
+          // Pegar o ID correspondente ao nome encontrado
           tipo_unidade_id = parseInt(tipoEncontrado[0]);
         }
         
