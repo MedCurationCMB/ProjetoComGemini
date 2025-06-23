@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão atualizada com função de atualização em massa
+// Componente CopiaControleIndicadorGeralTable.js - Versão completa com atualização em massa
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -409,11 +409,18 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Item atualizado com sucesso!');
   };
 
-  // Função para lidar com o sucesso da atualização em massa
+  // Função para lidar com o sucesso da atualização em massa (planilha)
   const handleAtualizacaoMassaSuccess = () => {
     setShowAtualizacaoMassaDialog(false);
     fetchControles();
-    toast.success('Atualização em massa concluída!');
+    toast.success('Atualização em massa (planilha) concluída!');
+  };
+
+  // Função para lidar com o sucesso da atualização inline
+  const handleAtualizacaoInlineSuccess = () => {
+    setShowAtualizacaoInlineDialog(false);
+    fetchControles();
+    toast.success('Atualização inline concluída!');
   };
 
   // Aplicar filtros
@@ -576,7 +583,7 @@ const CopiaControleIndicadorGeralTable = ({
           
           {/* Botões de Ação */}
           <div className="flex space-x-3">
-            {/* Botão Atualizar Informações em Massa */}
+            {/* Botão Atualizar Informações em Massa (Planilha) */}
             <button
               onClick={() => setShowAtualizacaoMassaDialog(true)}
               disabled={controles.length === 0}
@@ -588,6 +595,21 @@ const CopiaControleIndicadorGeralTable = ({
               title={controles.length === 0 ? 'Nenhum registro disponível para atualização' : 'Atualizar informações em massa via Excel'}
             >
               <FiRefreshCw className="mr-2" />
+              Atualizar Informações em Massa (Planilha)
+            </button>
+            
+            {/* Botão Atualizar Informações em Massa (Inline) */}
+            <button
+              onClick={() => setShowAtualizacaoInlineDialog(true)}
+              disabled={controles.length === 0}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+                controles.length === 0
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+              }`}
+              title={controles.length === 0 ? 'Nenhum registro disponível para edição' : 'Editar múltiplos registros ao mesmo tempo'}
+            >
+              <FiEdit className="mr-2" />
               Atualizar Informações em Massa
             </button>
             
@@ -805,7 +827,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* Modal para atualização em massa */}
+      {/* Modal para atualização em massa (planilha) */}
       {showAtualizacaoMassaDialog && (
         <AtualizacaoMassaIndicadorDialog
           onClose={() => setShowAtualizacaoMassaDialog(false)}
@@ -862,7 +884,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* ✅ TABELA SIMPLIFICADA - APENAS AS COLUNAS SOLICITADAS */}
+      {/* TABELA SIMPLIFICADA - APENAS AS COLUNAS SOLICITADAS */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300">
           <thead>
@@ -1037,16 +1059,15 @@ const CopiaControleIndicadorGeralTable = ({
           <div className="flex items-start">
             <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
             <div>
-              <h4 className="font-medium text-blue-900">Atualização em Massa</h4>
+              <h4 className="font-medium text-blue-900">Duas Opções de Atualização em Massa</h4>
               <p className="text-sm text-blue-700 mt-1">
-                Você pode atualizar múltiplos indicadores de uma vez usando a funcionalidade "Atualizar Informações em Massa". 
-                Esta funcionalidade permite:
+                Você pode atualizar múltiplos indicadores de duas formas diferentes:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1">
-                <li>• Baixar uma planilha Excel com os dados atuais (respeitando os filtros aplicados)</li>
-                <li>• Editar múltiplos campos simultaneamente na planilha</li>
-                <li>• Fazer upload da planilha modificada para atualizar todos os registros</li>
-                <li>• Campos editáveis: Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
+                <li>• <strong>Atualização via Planilha (🟠 Laranja):</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
+                <li>• <strong>Atualização Inline (🟣 Roxo):</strong> Edite diretamente na interface, todos os registros visíveis</li>
+                <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
+                <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
               </ul>
               <p className="text-sm text-blue-700 mt-2">
                 <strong>Registros disponíveis para atualização:</strong> {controles.length} indicador(es)
