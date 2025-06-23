@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão completa com atualização em massa
+// Componente CopiaControleIndicadorGeralTable.js - Ajustado para novo layout
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -33,6 +33,9 @@ const CopiaControleIndicadorGeralTable = ({
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
+
+  // ✅ REMOÇÃO: Não mostrar mais os filtros internos já que agora estão no header
+  // A seção de filtros será removida do componente
 
   useEffect(() => {
     if (user?.id) {
@@ -423,38 +426,6 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Atualização inline concluída!');
   };
 
-  // Aplicar filtros
-  const aplicarFiltros = () => {
-    fetchControles();
-  };
-
-  // Limpar filtros
-  const limparFiltros = () => {
-    setFiltroProjetoId('');
-    setFiltroCategoriaId('');
-    setFiltroValorPendente(false);
-    
-    const hoje = new Date();
-    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    dataFim.setDate(dataFim.getDate() + 30);
-    
-    const formatarDataLocal = (data) => {
-      const ano = data.getFullYear();
-      const mes = String(data.getMonth() + 1).padStart(2, '0');
-      const dia = String(data.getDate()).padStart(2, '0');
-      return `${ano}-${mes}-${dia}`;
-    };
-
-    setFiltrosPrazo({
-      periodo: '30dias',
-      data_inicio: formatarDataLocal(dataInicio),
-      data_fim: formatarDataLocal(dataFim)
-    });
-    
-    setTimeout(fetchControles, 0);
-  };
-
   // Obter estatísticas dos indicadores para a aba ativa
   const getEstatisticasAba = () => {
     const total = controles.length;
@@ -503,9 +474,9 @@ const CopiaControleIndicadorGeralTable = ({
 
   return (
     <div>
-      {/* Estatísticas da aba ativa */}
+      {/* ✅ NOVO: Estatísticas da aba ativa com estilo moderno */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -519,7 +490,7 @@ const CopiaControleIndicadorGeralTable = ({
           </div>
         </div>
 
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -533,7 +504,7 @@ const CopiaControleIndicadorGeralTable = ({
           </div>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
@@ -547,7 +518,7 @@ const CopiaControleIndicadorGeralTable = ({
           </div>
         </div>
 
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
@@ -561,7 +532,7 @@ const CopiaControleIndicadorGeralTable = ({
           </div>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -576,243 +547,55 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-medium">Filtros</h3>
-          
-          {/* Botões de Ação */}
-          <div className="flex space-x-3">
-            {/* Botão Atualizar Informações em Massa (Planilha) */}
-            <button
-              onClick={() => setShowAtualizacaoMassaDialog(true)}
-              disabled={controles.length === 0}
-              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
-                controles.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-              }`}
-              title={controles.length === 0 ? 'Nenhum registro disponível para atualização' : 'Atualizar informações em massa via Excel'}
-            >
-              <FiRefreshCw className="mr-2" />
-              Atualizar Informações em Massa (Planilha)
-            </button>
-            
-            {/* Botão Atualizar Informações em Massa (Inline) */}
-            <button
-              onClick={() => setShowAtualizacaoInlineDialog(true)}
-              disabled={controles.length === 0}
-              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
-                controles.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'
-              }`}
-              title={controles.length === 0 ? 'Nenhum registro disponível para edição' : 'Editar múltiplos registros ao mesmo tempo'}
-            >
-              <FiEdit className="mr-2" />
-              Atualizar Informações em Massa
-            </button>
-            
-            {/* Botão Adicionar Linha de Indicador Geral */}
-            <button
-              onClick={() => setShowAdicionarLinhaDialog(true)}
-              className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              <FiPlus className="mr-2" />
-              Adicionar Linha de Indicador Geral
-            </button>
-          </div>
+      {/* ✅ NOVO: Botões de Ação em estilo moderno */}
+      <div className="mb-6 bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">Ações Disponíveis</h3>
         </div>
         
-        <div className="space-y-4">
-          {/* Primeira linha: Filtros por Prazo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtro por Prazo de Entrega
-            </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button
-                onClick={() => {
-                  const periodo = calcularPeriodo('15dias');
-                  setFiltrosPrazo({
-                    periodo: '15dias',
-                    data_inicio: periodo.dataInicio,
-                    data_fim: periodo.dataFim
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  filtrosPrazo?.periodo === '15dias'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Próximos 15 dias
-              </button>
-              
-              <button
-                onClick={() => {
-                  const periodo = calcularPeriodo('30dias');
-                  setFiltrosPrazo({
-                    periodo: '30dias',
-                    data_inicio: periodo.dataInicio,
-                    data_fim: periodo.dataFim
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  filtrosPrazo?.periodo === '30dias'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Próximos 30 dias
-              </button>
-              
-              <button
-                onClick={() => {
-                  const periodo = calcularPeriodo('60dias');
-                  setFiltrosPrazo({
-                    periodo: '60dias',
-                    data_inicio: periodo.dataInicio,
-                    data_fim: periodo.dataFim
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  filtrosPrazo?.periodo === '60dias'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Próximos 60 dias
-              </button>
-              
-              <button
-                onClick={() => setFiltrosPrazo(prev => ({ 
-                  ...prev, 
-                  periodo: 'personalizado'
-                }))}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  filtrosPrazo?.periodo === 'personalizado'
-                    ? 'bg-purple-100 text-purple-800 border border-purple-300' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Período Personalizado
-              </button>
-            </div>
-
-            {/* Campos de data personalizada */}
-            {filtrosPrazo?.periodo === 'personalizado' && (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Data Início</label>
-                  <input
-                    type="date"
-                    value={filtrosPrazo.data_inicio || ''}
-                    onChange={(e) => setFiltrosPrazo(prev => ({ ...prev, data_inicio: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Data Fim</label>
-                  <input
-                    type="date"
-                    value={filtrosPrazo.data_fim || ''}
-                    onChange={(e) => setFiltrosPrazo(prev => ({ ...prev, data_fim: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Mostrar período ativo */}
-            <p className="text-sm text-gray-600">
-              📅 Período ativo: {
-                filtrosPrazo?.data_inicio ? 
-                filtrosPrazo.data_inicio.split('-').reverse().join('/') : 'Não definido'
-              } até {
-                filtrosPrazo?.data_fim ? 
-                filtrosPrazo.data_fim.split('-').reverse().join('/') : 'Não definido'
-              }
-            </p>
-          </div>
-
-          {/* Segunda linha: Outros filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Projeto (apenas projetos vinculados)
-              </label>
-              <select
-                value={filtroProjetoId}
-                onChange={(e) => setFiltroProjetoId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Todos os projetos vinculados</option>
-                {Object.entries(projetos).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoria
-              </label>
-              <select
-                value={filtroCategoriaId}
-                onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Todas as categorias</option>
-                {Object.entries(categorias).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro por Valor Pendente */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Filtrar por Pendência
-              </label>
-              <div className="flex items-center mt-2">
-                <input
-                  type="checkbox"
-                  id="filtroValorPendente"
-                  checked={filtroValorPendente}
-                  onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="filtroValorPendente" className="ml-2 block text-sm text-gray-700">
-                  Apenas sem valor apresentado
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Mostra apenas indicadores sem valor_indicador_apresentado
-              </p>
-            </div>
-            
-            <div className="flex items-end space-x-2">
-              <button 
-                onClick={aplicarFiltros}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Aplicar
-              </button>
-              <button 
-                onClick={limparFiltros}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-              >
-                Limpar
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-3">
+          {/* Botão Atualizar Informações em Massa (Planilha) */}
+          <button
+            onClick={() => setShowAtualizacaoMassaDialog(true)}
+            disabled={controles.length === 0}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+              controles.length === 0
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-orange-600 hover:bg-orange-700 text-white'
+            }`}
+            title={controles.length === 0 ? 'Nenhum registro disponível para atualização' : 'Atualizar informações em massa via Excel'}
+          >
+            <FiRefreshCw className="mr-2" />
+            Atualizar Informações em Massa (Planilha)
+          </button>
+          
+          {/* Botão Atualizar Informações em Massa (Inline) */}
+          <button
+            onClick={() => setShowAtualizacaoInlineDialog(true)}
+            disabled={controles.length === 0}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+              controles.length === 0
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+            title={controles.length === 0 ? 'Nenhum registro disponível para edição' : 'Editar múltiplos registros ao mesmo tempo'}
+          >
+            <FiEdit className="mr-2" />
+            Atualizar Informações em Massa
+          </button>
+          
+          {/* Botão Adicionar Linha de Indicador Geral */}
+          <button
+            onClick={() => setShowAdicionarLinhaDialog(true)}
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            <FiPlus className="mr-2" />
+            Adicionar Linha de Indicador Geral
+          </button>
         </div>
       </div>
+
+      {/* ✅ REMOÇÃO: A seção de filtros foi removida pois agora está no header da página */}
 
       {/* Modal para adicionar linha de indicador geral */}
       {showAdicionarLinhaDialog && (
@@ -884,180 +667,223 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* TABELA SIMPLIFICADA - APENAS AS COLUNAS SOLICITADAS */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead>
-            <tr>
-              {/* ID */}
-              <th 
-                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleToggleOrdenacao('id')}
-              >
-                <div className="flex items-center">
-                  ID
-                  <OrdenacaoIcon campo="id" />
-                </div>
-              </th>
-              
-              {/* PROJETO */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Projeto
-              </th>
-              
-              {/* CATEGORIA */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Categoria
-              </th>
-              
-              {/* INDICADOR */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Indicador
-              </th>
-              
-              {/* SUBCATEGORIA */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Subcategoria
-              </th>
-              
-              {/* PRAZO ATUAL */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Prazo Atual
-              </th>
-              
-              {/* PERÍODO DE REFERÊNCIA */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Período de Referência
-              </th>
-              
-              {/* VALOR APRESENTADO */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Valor Apresentado
-              </th>
-              
-              {/* UNIDADE DO INDICADOR */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Unidade do Indicador
-              </th>
-              
-              {/* VALOR CALCULADO */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Valor Calculado
-              </th>
-              
-              {/* AÇÕES */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
-            {controles.length > 0 ? (
-              controles.map((item) => (
-                <tr key={item.id}>
-                  {/* ID */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.id}
-                  </td>
-                  
-                  {/* PROJETO */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {projetos[item.projeto_id] || 'Projeto indisponível'}
-                  </td>
-                  
-                  {/* CATEGORIA */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {categorias[item.categoria_id] || 'Categoria indisponível'}
-                  </td>
-                  
-                  {/* INDICADOR */}
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.indicador}
-                  </td>
-                  
-                  {/* SUBCATEGORIA */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
-                  </td>
-                  
-                  {/* PRAZO ATUAL */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex items-center">
-                      <FiCalendar className="mr-1 text-blue-500" />
-                      {formatDate(item.prazo_entrega)}
-                    </div>
-                  </td>
-                  
-                  {/* PERÍODO DE REFERÊNCIA */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex items-center">
-                      <FiCalendar className="mr-1 text-green-500" />
-                      {formatDate(item.periodo_referencia)}
-                    </div>
-                  </td>
-                  
-                  {/* VALOR APRESENTADO */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.valor_indicador_apresentado || '-'}
-                  </td>
-                  
-                  {/* UNIDADE DO INDICADOR */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {tiposUnidadeIndicador[item.tipo_unidade_indicador] || '-'}
-                  </td>
-                  
-                  {/* VALOR CALCULADO */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.valor_indicador || '-'}
-                  </td>
-                  
-                  {/* AÇÕES */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      {/* Botão para editar linha */}
-                      <button
-                        onClick={() => setEditarItemId(item.id)}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center"
-                        title="Editar Item"
-                      >
-                        <FiEdit className="mr-1" />
-                        Editar
-                      </button>
-                      
-                      {/* Botão para anexar documento (apenas se não tiver documento) */}
-                      {!item.tem_documento && (
-                        <button
-                          onClick={() => setAnexarDocumentoId(item.id)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center"
-                          title="Anexar Documento"
-                        >
-                          <FiUpload className="mr-1" />
-                          Anexar
-                        </button>
+      {/* ✅ NOVO: TABELA com estilo moderno */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {/* ID */}
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleToggleOrdenacao('id')}
+                >
+                  <div className="flex items-center">
+                    ID
+                    <OrdenacaoIcon campo="id" />
+                  </div>
+                </th>
+                
+                {/* PROJETO */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Projeto
+                </th>
+                
+                {/* CATEGORIA */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categoria
+                </th>
+                
+                {/* INDICADOR */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Indicador
+                </th>
+                
+                {/* SUBCATEGORIA */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Subcategoria
+                </th>
+                
+                {/* PRAZO ATUAL */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Prazo Atual
+                </th>
+                
+                {/* PERÍODO DE REFERÊNCIA */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Período de Referência
+                </th>
+                
+                {/* VALOR APRESENTADO */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Valor Apresentado
+                </th>
+                
+                {/* UNIDADE DO INDICADOR */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Unidade do Indicador
+                </th>
+                
+                {/* VALOR CALCULADO */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Valor Calculado
+                </th>
+                
+                {/* AÇÕES */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {controles.length > 0 ? (
+                controles.map((item, index) => (
+                  <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    {/* ID */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {item.id}
+                    </td>
+                    
+                    {/* PROJETO */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={projetos[item.projeto_id] || 'Projeto indisponível'}>
+                        {projetos[item.projeto_id] || 'Projeto indisponível'}
+                      </div>
+                    </td>
+                    
+                    {/* CATEGORIA */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={categorias[item.categoria_id] || 'Categoria indisponível'}>
+                        {categorias[item.categoria_id] || 'Categoria indisponível'}
+                      </div>
+                    </td>
+                    
+                    {/* INDICADOR */}
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div className="max-w-sm" title={item.indicador}>
+                        {item.indicador}
+                      </div>
+                    </td>
+                    
+                    {/* SUBCATEGORIA */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}>
+                        {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
+                      </div>
+                    </td>
+                    
+                    {/* PRAZO ATUAL */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <FiCalendar className="mr-1 text-blue-500" />
+                        {formatDate(item.prazo_entrega)}
+                      </div>
+                    </td>
+                    
+                    {/* PERÍODO DE REFERÊNCIA */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <FiCalendar className="mr-1 text-green-500" />
+                        {formatDate(item.periodo_referencia)}
+                      </div>
+                    </td>
+                    
+                    {/* VALOR APRESENTADO */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.valor_indicador_apresentado ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {item.valor_indicador_apresentado}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          -
+                        </span>
                       )}
+                    </td>
+                    
+                    {/* UNIDADE DO INDICADOR */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {tiposUnidadeIndicador[item.tipo_unidade_indicador] ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {tiposUnidadeIndicador[item.tipo_unidade_indicador]}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    
+                    {/* VALOR CALCULADO */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.valor_indicador ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {item.valor_indicador}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    
+                    {/* AÇÕES */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        {/* Botão para editar linha */}
+                        <button
+                          onClick={() => setEditarItemId(item.id)}
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          title="Editar Item"
+                        >
+                          <FiEdit className="mr-1 h-3 w-3" />
+                          Editar
+                        </button>
+                        
+                        {/* Botão para anexar documento (apenas se não tiver documento) */}
+                        {!item.tem_documento && (
+                          <button
+                            onClick={() => setAnexarDocumentoId(item.id)}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            title="Anexar Documento"
+                          >
+                            <FiUpload className="mr-1 h-3 w-3" />
+                            Anexar
+                          </button>
+                        )}
+                        
+                        {/* Indicador visual se tem documento */}
+                        {item.tem_documento && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <FiCheck className="mr-1 h-3 w-3" />
+                            Com Doc
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="11" className="px-6 py-8 text-center text-sm text-gray-500">
+                    <div className="flex flex-col items-center">
+                      <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
+                      <div>
+                        {/* Mensagem adaptada para o filtro por tipo */}
+                        {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
+                      </div>
                     </div>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="11" className="px-6 py-4 text-center text-sm text-gray-500">
-                  {/* Mensagem adaptada para o filtro por tipo */}
-                  {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
-                  {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
-                  {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Informações adicionais sobre atualização em massa */}
+      {/* ✅ NOVO: Informações adicionais sobre atualização em massa */}
       {controles.length > 0 && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
-            <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+            <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
             <div>
               <h4 className="font-medium text-blue-900">Duas Opções de Atualização em Massa</h4>
               <p className="text-sm text-blue-700 mt-1">
@@ -1069,9 +895,14 @@ const CopiaControleIndicadorGeralTable = ({
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
               </ul>
-              <p className="text-sm text-blue-700 mt-2">
-                <strong>Registros disponíveis para atualização:</strong> {controles.length} indicador(es)
-              </p>
+              <div className="mt-3 p-3 bg-white rounded-md border border-blue-200">
+                <p className="text-sm text-blue-700">
+                  <strong>📊 Registros disponíveis para atualização:</strong> {controles.length} indicador(es)
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Baseado nos filtros aplicados: {filtroTipoIndicador} • {filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • {filtrosPrazo?.periodo || 'Sem filtro de prazo'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
