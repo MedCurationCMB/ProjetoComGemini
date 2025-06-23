@@ -9,6 +9,24 @@ export default function ControleIndicadorGeral({ user }) {
   const router = useRouter();
   const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos', 'realizado', 'meta'
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
+  const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + 30);
+    
+    const formatarDataLocal = (data) => {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    };
+
+    return {
+      periodo: '30dias',
+      data_inicio: formatarDataLocal(hoje),
+      data_fim: formatarDataLocal(dataFim)
+    };
+  });
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -167,6 +185,8 @@ export default function ControleIndicadorGeral({ user }) {
               filtroTipoIndicador={abaAtiva} 
               filtroValorPendente={filtroValorPendente}
               setFiltroValorPendente={setFiltroValorPendente}
+              filtrosPrazo={filtrosPrazo}
+              setFiltrosPrazo={setFiltrosPrazo}
             />
           </div>
         </div>

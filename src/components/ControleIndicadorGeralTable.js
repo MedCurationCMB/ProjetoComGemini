@@ -11,7 +11,9 @@ const ControleIndicadorGeralTable = ({
   user, 
   filtroTipoIndicador = 'todos',
   filtroValorPendente = false,
-  setFiltroValorPendente
+  setFiltroValorPendente,
+  filtrosPrazo,
+  setFiltrosPrazo
 }) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
@@ -59,6 +61,13 @@ const ControleIndicadorGeralTable = ({
       fetchControles();
     }
   }, [filtroValorPendente]);
+
+  // ✅ NOVO: Recarregar dados quando os filtros de prazo mudarem
+  useEffect(() => {
+    if (!loading && projetosVinculados.length >= 0) {
+      fetchControles();
+    }
+  }, [filtrosPrazo]);
 
   // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
@@ -205,6 +214,61 @@ const ControleIndicadorGeralTable = ({
     return query;
   };
 
+  const calcularPeriodo = (tipo) => {
+    const hoje = new Date();
+    const dataInicio = new Date(hoje);
+    let dataFim = new Date(hoje);
+
+    switch (tipo) {
+      case '15dias':
+        dataFim.setDate(dataFim.getDate() + 15);
+        break;
+      case '30dias':
+        dataFim.setDate(dataFim.getDate() + 30);
+        break;
+      case '60dias':
+        dataFim.setDate(dataFim.getDate() + 60);
+        break;
+      default:
+        return { dataInicio: null, dataFim: null };
+    }
+
+    const formatarDataLocal = (data) => {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    };
+
+    return {
+      dataInicio: formatarDataLocal(dataInicio),
+      dataFim: formatarDataLocal(dataFim)
+    };
+  };
+
+  const aplicarFiltrosPrazo = (query) => {
+    if (!filtrosPrazo) return query;
+
+    let dataInicioFiltro = null;
+    let dataFimFiltro = null;
+
+    if (filtrosPrazo.periodo && filtrosPrazo.periodo !== 'personalizado') {
+      const periodo = calcularPeriodo(filtrosPrazo.periodo);
+      dataInicioFiltro = periodo.dataInicio;
+      dataFimFiltro = periodo.dataFim;
+    } else if (filtrosPrazo.periodo === 'personalizado' && filtrosPrazo.data_inicio && filtrosPrazo.data_fim) {
+      dataInicioFiltro = filtrosPrazo.data_inicio;
+      dataFimFiltro = filtrosPrazo.data_fim;
+    }
+
+    if (dataInicioFiltro && dataFimFiltro) {
+      query = query.gte('prazo_entrega', dataInicioFiltro)
+                  .lte('prazo_entrega', dataFimFiltro);
+    }
+
+    return query;
+  };
+
   // ✅ FUNÇÃO MODIFICADA: Buscar os dados com filtro por tipo
   const fetchControles = async () => {
     try {
@@ -226,6 +290,9 @@ const ControleIndicadorGeralTable = ({
 
       // ✅ NOVO: Aplicar filtro por valor pendente
       query = aplicarFiltroValorPendente(query);
+
+      // ✅ NOVO: Aplicar filtro por prazo
+      query = aplicarFiltrosPrazo(query);
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -398,6 +465,23 @@ const ControleIndicadorGeralTable = ({
     setFiltroProjetoId('');
     setFiltroCategoriaId('');
     setFiltroValorPendente(false);
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + 30);
+    
+    const formatarDataLocal = (data) => {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    };
+
+    setFiltrosPrazo({
+      periodo: '30dias',
+      data_inicio: formatarDataLocal(hoje),
+      data_fim: formatarDataLocal(dataFim)
+    });
+    
     setTimeout(fetchControles, 0);
   };
 
@@ -537,78 +621,186 @@ const ControleIndicadorGeralTable = ({
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="space-y-4">
+          {/* Primeira linha: Filtros por Prazo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Projeto (apenas projetos vinculados)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filtro por Prazo de Entrega
             </label>
-            <select
-              value={filtroProjetoId}
-              onChange={(e) => setFiltroProjetoId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todos os projetos vinculados</option>
-              {Object.entries(projetos).map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria
-            </label>
-            <select
-              value={filtroCategoriaId}
-              onChange={(e) => setFiltroCategoriaId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todas as categorias</option>
-              {Object.entries(categorias).map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* ✅ NOVO FILTRO POR VALOR PENDENTE */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filtrar por Pendência
-            </label>
-            <div className="flex items-center mt-2">
-              <input
-                type="checkbox"
-                id="filtroValorPendente"
-                checked={filtroValorPendente}
-                onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="filtroValorPendente" className="ml-2 block text-sm text-gray-700">
-                Apenas sem valor apresentado
-              </label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                onClick={() => {
+                  const periodo = calcularPeriodo('15dias');
+                  setFiltrosPrazo({
+                    periodo: '15dias',
+                    data_inicio: periodo.dataInicio,
+                    data_fim: periodo.dataFim
+                  });
+                }}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                  filtrosPrazo?.periodo === '15dias'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Próximos 15 dias
+              </button>
+              
+              <button
+                onClick={() => {
+                  const periodo = calcularPeriodo('30dias');
+                  setFiltrosPrazo({
+                    periodo: '30dias',
+                    data_inicio: periodo.dataInicio,
+                    data_fim: periodo.dataFim
+                  });
+                }}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                  filtrosPrazo?.periodo === '30dias'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Próximos 30 dias
+              </button>
+              
+              <button
+                onClick={() => {
+                  const periodo = calcularPeriodo('60dias');
+                  setFiltrosPrazo({
+                    periodo: '60dias',
+                    data_inicio: periodo.dataInicio,
+                    data_fim: periodo.dataFim
+                  });
+                }}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                  filtrosPrazo?.periodo === '60dias'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Próximos 60 dias
+              </button>
+              
+              <button
+                onClick={() => setFiltrosPrazo(prev => ({ 
+                  ...prev, 
+                  periodo: 'personalizado'
+                }))}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                  filtrosPrazo?.periodo === 'personalizado'
+                    ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Período Personalizado
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Mostra apenas indicadores sem valor_indicador_apresentado
+
+            {/* Campos de data personalizada */}
+            {filtrosPrazo?.periodo === 'personalizado' && (
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Data Início</label>
+                  <input
+                    type="date"
+                    value={filtrosPrazo.data_inicio || ''}
+                    onChange={(e) => setFiltrosPrazo(prev => ({ ...prev, data_inicio: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Data Fim</label>
+                  <input
+                    type="date"
+                    value={filtrosPrazo.data_fim || ''}
+                    onChange={(e) => setFiltrosPrazo(prev => ({ ...prev, data_fim: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Mostrar período ativo */}
+            <p className="text-sm text-gray-600">
+              📅 Período ativo: {filtrosPrazo?.data_inicio ? new Date(filtrosPrazo.data_inicio).toLocaleDateString('pt-BR') : 'Não definido'} até {filtrosPrazo?.data_fim ? new Date(filtrosPrazo.data_fim).toLocaleDateString('pt-BR') : 'Não definido'}
             </p>
           </div>
-          
-          <div className="flex items-end space-x-2">
-            <button 
-              onClick={aplicarFiltros}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Aplicar
-            </button>
-            <button 
-              onClick={limparFiltros}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Limpar
-            </button>
+
+          {/* Segunda linha: Outros filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Projeto (apenas projetos vinculados)
+              </label>
+              <select
+                value={filtroProjetoId}
+                onChange={(e) => setFiltroProjetoId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Todos os projetos vinculados</option>
+                {Object.entries(projetos).map(([id, nome]) => (
+                  <option key={id} value={id}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoria
+              </label>
+              <select
+                value={filtroCategoriaId}
+                onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Todas as categorias</option>
+                {Object.entries(categorias).map(([id, nome]) => (
+                  <option key={id} value={id}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Valor Pendente */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por Pendência
+              </label>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="filtroValorPendente"
+                  checked={filtroValorPendente}
+                  onChange={(e) => setFiltroValorPendente(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="filtroValorPendente" className="ml-2 block text-sm text-gray-700">
+                  Apenas sem valor apresentado
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Mostra apenas indicadores sem valor_indicador_apresentado
+              </p>
+            </div>
+            
+            <div className="flex items-end space-x-2">
+              <button 
+                onClick={aplicarFiltros}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Aplicar
+              </button>
+              <button 
+                onClick={limparFiltros}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Limpar
+              </button>
+            </div>
           </div>
         </div>
       </div>
