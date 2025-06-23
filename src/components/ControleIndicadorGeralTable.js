@@ -7,7 +7,12 @@ import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDi
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 
-const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) => {
+const ControleIndicadorGeralTable = ({ 
+  user, 
+  filtroTipoIndicador = 'todos',
+  filtroValorPendente = false,
+  setFiltroValorPendente
+}) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
@@ -47,6 +52,13 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
       fetchControles();
     }
   }, [filtroTipoIndicador]);
+
+  // ✅ NOVO: Recarregar dados quando o filtro de valor pendente mudar
+  useEffect(() => {
+    if (!loading && projetosVinculados.length >= 0) {
+      fetchControles();
+    }
+  }, [filtroValorPendente]);
 
   // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
@@ -186,6 +198,13 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
     return query;
   };
 
+  const aplicarFiltroValorPendente = (query) => {
+    if (filtroValorPendente) {
+      return query.is('valor_indicador_apresentado', null);
+    }
+    return query;
+  };
+
   // ✅ FUNÇÃO MODIFICADA: Buscar os dados com filtro por tipo
   const fetchControles = async () => {
     try {
@@ -204,6 +223,9 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
       
       // ✅ NOVO: Aplicar filtro por tipo de indicador baseado na aba ativa
       query = aplicarFiltroTipoIndicador(query);
+
+      // ✅ NOVO: Aplicar filtro por valor pendente
+      query = aplicarFiltroValorPendente(query);
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -375,6 +397,7 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
   const limparFiltros = () => {
     setFiltroProjetoId('');
     setFiltroCategoriaId('');
+    setFiltroValorPendente(false);
     setTimeout(fetchControles, 0);
   };
 
@@ -384,8 +407,10 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
     const comDocumento = controles.filter(item => item.tem_documento).length;
     const semDocumento = total - comDocumento;
     const obrigatorios = controles.filter(item => item.obrigatorio).length;
+    const comValor = controles.filter(item => item.valor_indicador_apresentado !== null && item.valor_indicador_apresentado !== '').length;
+    const semValor = total - comValor;
     
-    return { total, comDocumento, semDocumento, obrigatorios };
+    return { total, comDocumento, semDocumento, obrigatorios, comValor, semValor };
   };
 
   const estatisticas = getEstatisticasAba();
@@ -425,7 +450,7 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
   return (
     <div>
       {/* ✅ NOVO: Estatísticas da aba ativa */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -481,6 +506,20 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
             </div>
           </div>
         </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">?</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-900">Sem Valor</p>
+              <p className="text-lg font-semibold text-red-700">{estatisticas.semValor}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -498,7 +537,7 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Projeto (apenas projetos vinculados)
@@ -533,6 +572,28 @@ const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) =>
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* ✅ NOVO FILTRO POR VALOR PENDENTE */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filtrar por Pendência
+            </label>
+            <div className="flex items-center mt-2">
+              <input
+                type="checkbox"
+                id="filtroValorPendente"
+                checked={filtroValorPendente}
+                onChange={(e) => setFiltroValorPendente(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="filtroValorPendente" className="ml-2 block text-sm text-gray-700">
+                Apenas sem valor apresentado
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Mostra apenas indicadores sem valor_indicador_apresentado
+            </p>
           </div>
           
           <div className="flex items-end space-x-2">

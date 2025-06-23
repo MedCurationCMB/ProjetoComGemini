@@ -8,6 +8,7 @@ import ControleIndicadorGeralTable from '../components/ControleIndicadorGeralTab
 export default function ControleIndicadorGeral({ user }) {
   const router = useRouter();
   const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos', 'realizado', 'meta'
+  const [filtroValorPendente, setFiltroValorPendente] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -164,6 +165,8 @@ export default function ControleIndicadorGeral({ user }) {
             <ControleIndicadorGeralTable 
               user={user} 
               filtroTipoIndicador={abaAtiva} 
+              filtroValorPendente={filtroValorPendente}
+              setFiltroValorPendente={setFiltroValorPendente}
             />
           </div>
         </div>
