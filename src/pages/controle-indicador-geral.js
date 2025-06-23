@@ -11,9 +11,12 @@ export default function ControleIndicadorGeral({ user }) {
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
   const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
     const hoje = new Date();
-    const dataFim = new Date(hoje);
+    // ✅ CORREÇÃO: Criar data local sem horário
+    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     dataFim.setDate(dataFim.getDate() + 30);
     
+    // ✅ FUNÇÃO CORRIGIDA: Sem problemas de fuso
     const formatarDataLocal = (data) => {
       const ano = data.getFullYear();
       const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -23,7 +26,7 @@ export default function ControleIndicadorGeral({ user }) {
 
     return {
       periodo: '30dias',
-      data_inicio: formatarDataLocal(hoje),
+      data_inicio: formatarDataLocal(dataInicio),
       data_fim: formatarDataLocal(dataFim)
     };
   });

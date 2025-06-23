@@ -216,8 +216,8 @@ const ControleIndicadorGeralTable = ({
 
   const calcularPeriodo = (tipo) => {
     const hoje = new Date();
-    const dataInicio = new Date(hoje);
-    let dataFim = new Date(hoje);
+    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); // ✅ Criar data local
+    let dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()); // ✅ Criar data local
 
     switch (tipo) {
       case '15dias':
@@ -233,6 +233,7 @@ const ControleIndicadorGeralTable = ({
         return { dataInicio: null, dataFim: null };
     }
 
+    // ✅ FUNÇÃO CORRIGIDA: Formatação sem problemas de fuso
     const formatarDataLocal = (data) => {
       const ano = data.getFullYear();
       const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -465,10 +466,14 @@ const ControleIndicadorGeralTable = ({
     setFiltroProjetoId('');
     setFiltroCategoriaId('');
     setFiltroValorPendente(false);
+    
+    // ✅ CORREÇÃO: Criar datas locais sem horário
     const hoje = new Date();
-    const dataFim = new Date(hoje);
+    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     dataFim.setDate(dataFim.getDate() + 30);
     
+    // ✅ FUNÇÃO CORRIGIDA: Sem problemas de fuso
     const formatarDataLocal = (data) => {
       const ano = data.getFullYear();
       const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -478,7 +483,7 @@ const ControleIndicadorGeralTable = ({
 
     setFiltrosPrazo({
       periodo: '30dias',
-      data_inicio: formatarDataLocal(hoje),
+      data_inicio: formatarDataLocal(dataInicio),
       data_fim: formatarDataLocal(dataFim)
     });
     
@@ -723,7 +728,23 @@ const ControleIndicadorGeralTable = ({
 
             {/* Mostrar período ativo */}
             <p className="text-sm text-gray-600">
-              📅 Período ativo: {filtrosPrazo?.data_inicio ? new Date(filtrosPrazo.data_inicio).toLocaleDateString('pt-BR') : 'Não definido'} até {filtrosPrazo?.data_fim ? new Date(filtrosPrazo.data_fim).toLocaleDateString('pt-BR') : 'Não definido'}
+              📅 Período ativo: {
+                filtrosPrazo?.data_inicio ? 
+                (() => {
+                  // ✅ CORREÇÃO: Parse sem fuso horário
+                  const [ano, mes, dia] = filtrosPrazo.data_inicio.split('-');
+                  const dataInicio = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                  return dataInicio.toLocaleDateString('pt-BR');
+                })() : 'Não definido'
+              } até {
+                filtrosPrazo?.data_fim ? 
+                (() => {
+                  // ✅ CORREÇÃO: Parse sem fuso horário
+                  const [ano, mes, dia] = filtrosPrazo.data_fim.split('-');
+                  const dataFim = new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+                  return dataFim.toLocaleDateString('pt-BR');
+                })() : 'Não definido'
+              }
             </p>
           </div>
 
