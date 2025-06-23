@@ -1,11 +1,12 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão simplificada com colunas reduzidas
+// Componente CopiaControleIndicadorGeralTable.js - Versão atualizada com função de atualização em massa
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDialog';
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
+import AtualizacaoMassaIndicadorDialog from './AtualizacaoMassaIndicadorDialog';
 
 const CopiaControleIndicadorGeralTable = ({ 
   user, 
@@ -26,6 +27,7 @@ const CopiaControleIndicadorGeralTable = ({
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
+  const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
@@ -405,6 +407,13 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Item atualizado com sucesso!');
   };
 
+  // Função para lidar com o sucesso da atualização em massa
+  const handleAtualizacaoMassaSuccess = () => {
+    setShowAtualizacaoMassaDialog(false);
+    fetchControles();
+    toast.success('Atualização em massa concluída!');
+  };
+
   // Aplicar filtros
   const aplicarFiltros = () => {
     fetchControles();
@@ -563,14 +572,32 @@ const CopiaControleIndicadorGeralTable = ({
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-medium">Filtros</h3>
           
-          {/* Botão Adicionar Linha de Indicador Geral */}
-          <button
-            onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            <FiPlus className="mr-2" />
-            Adicionar Linha de Indicador Geral
-          </button>
+          {/* Botões de Ação */}
+          <div className="flex space-x-3">
+            {/* Botão Atualizar Informações em Massa */}
+            <button
+              onClick={() => setShowAtualizacaoMassaDialog(true)}
+              disabled={controles.length === 0}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+                controles.length === 0
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-orange-600 hover:bg-orange-700 text-white'
+              }`}
+              title={controles.length === 0 ? 'Nenhum registro disponível para atualização' : 'Atualizar informações em massa via Excel'}
+            >
+              <FiRefreshCw className="mr-2" />
+              Atualizar Informações em Massa
+            </button>
+            
+            {/* Botão Adicionar Linha de Indicador Geral */}
+            <button
+              onClick={() => setShowAdicionarLinhaDialog(true)}
+              className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              <FiPlus className="mr-2" />
+              Adicionar Linha de Indicador Geral
+            </button>
+          </div>
         </div>
         
         <div className="space-y-4">
@@ -776,6 +803,20 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
+      {/* Modal para atualização em massa */}
+      {showAtualizacaoMassaDialog && (
+        <AtualizacaoMassaIndicadorDialog
+          onClose={() => setShowAtualizacaoMassaDialog(false)}
+          onSuccess={handleAtualizacaoMassaSuccess}
+          dadosTabela={controles} // Passa os dados atuais da tabela (com filtros aplicados)
+          categorias={categorias}
+          projetos={projetos}
+          tiposIndicador={tiposIndicador}
+          subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
       {/* Modal para editar linha de indicador geral */}
       {editarItemId && (
         <EditarLinhaIndicadorGeralDialog
@@ -973,6 +1014,31 @@ const CopiaControleIndicadorGeralTable = ({
           </tbody>
         </table>
       </div>
+
+      {/* Informações adicionais sobre atualização em massa */}
+      {controles.length > 0 && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start">
+            <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
+            <div>
+              <h4 className="font-medium text-blue-900">Atualização em Massa</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                Você pode atualizar múltiplos indicadores de uma vez usando a funcionalidade "Atualizar Informações em Massa". 
+                Esta funcionalidade permite:
+              </p>
+              <ul className="text-sm text-blue-700 mt-2 space-y-1">
+                <li>• Baixar uma planilha Excel com os dados atuais (respeitando os filtros aplicados)</li>
+                <li>• Editar múltiplos campos simultaneamente na planilha</li>
+                <li>• Fazer upload da planilha modificada para atualizar todos os registros</li>
+                <li>• Campos editáveis: Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
+              </ul>
+              <p className="text-sm text-blue-700 mt-2">
+                <strong>Registros disponíveis para atualização:</strong> {controles.length} indicador(es)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
