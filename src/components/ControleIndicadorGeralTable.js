@@ -1,4 +1,4 @@
-// Componente ControleIndicadorGeralTable.js - Versão corrigida para formatação de datas
+// Componente ControleIndicadorGeralTable.js - Versão com filtro por tipo de indicador
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -7,7 +7,7 @@ import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDi
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 
-const ControleIndicadorGeralTable = ({ user }) => {
+const ControleIndicadorGeralTable = ({ user, filtroTipoIndicador = 'todos' }) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
@@ -40,6 +40,13 @@ const ControleIndicadorGeralTable = ({ user }) => {
       fetchControles();
     }
   }, [projetosVinculados]);
+
+  // ✅ NOVO: Recarregar dados quando o filtro de tipo mudar
+  useEffect(() => {
+    if (!loading && projetosVinculados.length >= 0) {
+      fetchControles();
+    }
+  }, [filtroTipoIndicador]);
 
   // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
@@ -168,7 +175,18 @@ const ControleIndicadorGeralTable = ({ user }) => {
     }
   };
 
-  // Buscar os dados de controle_indicador_geral APENAS dos projetos vinculados
+  // ✅ FUNÇÃO MODIFICADA: Aplicar filtro por tipo de indicador
+  const aplicarFiltroTipoIndicador = (query) => {
+    if (filtroTipoIndicador === 'realizado') {
+      return query.eq('tipo_indicador', 1); // Tipo 1 = Realizado
+    } else if (filtroTipoIndicador === 'meta') {
+      return query.eq('tipo_indicador', 2); // Tipo 2 = Meta
+    }
+    // Para 'todos', não aplicar filtro adicional
+    return query;
+  };
+
+  // ✅ FUNÇÃO MODIFICADA: Buscar os dados com filtro por tipo
   const fetchControles = async () => {
     try {
       setLoading(true);
@@ -184,7 +202,10 @@ const ControleIndicadorGeralTable = ({ user }) => {
         .select('*')
         .in('projeto_id', projetosVinculados);
       
-      // Aplicar filtros se estiverem definidos
+      // ✅ NOVO: Aplicar filtro por tipo de indicador baseado na aba ativa
+      query = aplicarFiltroTipoIndicador(query);
+      
+      // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
         query = query.eq('projeto_id', filtroProjetoId);
       }
@@ -215,7 +236,7 @@ const ControleIndicadorGeralTable = ({ user }) => {
       if (error) throw error;
       
       setControles(Array.isArray(data) ? data : []);
-      console.log('Controles carregados:', data?.length || 0);
+      console.log(`Controles carregados (filtro: ${filtroTipoIndicador}):`, data?.length || 0);
     } catch (error) {
       toast.error('Erro ao carregar dados de controle');
       console.error(error);
@@ -357,6 +378,18 @@ const ControleIndicadorGeralTable = ({ user }) => {
     setTimeout(fetchControles, 0);
   };
 
+  // ✅ NOVA FUNÇÃO: Obter estatísticas dos indicadores para a aba ativa
+  const getEstatisticasAba = () => {
+    const total = controles.length;
+    const comDocumento = controles.filter(item => item.tem_documento).length;
+    const semDocumento = total - comDocumento;
+    const obrigatorios = controles.filter(item => item.obrigatorio).length;
+    
+    return { total, comDocumento, semDocumento, obrigatorios };
+  };
+
+  const estatisticas = getEstatisticasAba();
+
   // Componente para exibir o ícone de ordenação
   const OrdenacaoIcon = ({ campo }) => {
     if (ordenacao.campo !== campo) return null;
@@ -391,10 +424,69 @@ const ControleIndicadorGeralTable = ({ user }) => {
 
   return (
     <div>
+      {/* ✅ NOVO: Estatísticas da aba ativa */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">📊</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-blue-900">Total</p>
+              <p className="text-lg font-semibold text-blue-700">{estatisticas.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <FiCheck className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-900">Com Documento</p>
+              <p className="text-lg font-semibold text-green-700">{estatisticas.comDocumento}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                <FiX className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-yellow-900">Sem Documento</p>
+              <p className="text-lg font-semibold text-yellow-700">{estatisticas.semDocumento}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">!</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-purple-900">Obrigatórios</p>
+              <p className="text-lg font-semibold text-purple-700">{estatisticas.obrigatorios}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-medium">Filtros</h3>
+          <h3 className="text-lg font-medium">Filtros Adicionais</h3>
           
           {/* Botão Adicionar Linha de Indicador Geral */}
           <button
@@ -595,7 +687,14 @@ const ControleIndicadorGeralTable = ({ user }) => {
                     {item.indicador}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {tiposIndicador[item.tipo_indicador] || 'Tipo indisponível'}
+                    {/* ✅ NOVO: Destacar o tipo de indicador com cores baseado na aba ativa */}
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      item.tipo_indicador === 1 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {tiposIndicador[item.tipo_indicador] || 'Tipo indisponível'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
@@ -707,7 +806,10 @@ const ControleIndicadorGeralTable = ({ user }) => {
             ) : (
               <tr>
                 <td colSpan="18" className="px-6 py-4 text-center text-sm text-gray-500">
-                  Nenhum item de controle encontrado para os projetos vinculados
+                  {/* ✅ NOVA MENSAGEM: Adaptada para o filtro por tipo */}
+                  {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
+                  {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
+                  {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
                 </td>
               </tr>
             )}
