@@ -7,6 +7,7 @@ import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDi
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 import AtualizacaoMassaIndicadorDialog from './AtualizacaoMassaIndicadorDialog';
+import AtualizacaoInlineIndicadorDialog from './AtualizacaoInlineIndicadorDialog';
 
 const CopiaControleIndicadorGeralTable = ({ 
   user, 
@@ -28,6 +29,7 @@ const CopiaControleIndicadorGeralTable = ({
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
+  const [showAtualizacaoInlineDialog, setShowAtualizacaoInlineDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
@@ -808,6 +810,20 @@ const CopiaControleIndicadorGeralTable = ({
         <AtualizacaoMassaIndicadorDialog
           onClose={() => setShowAtualizacaoMassaDialog(false)}
           onSuccess={handleAtualizacaoMassaSuccess}
+          dadosTabela={controles} // Passa os dados atuais da tabela (com filtros aplicados)
+          categorias={categorias}
+          projetos={projetos}
+          tiposIndicador={tiposIndicador}
+          subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
+      {/* Modal para atualização inline */}
+      {showAtualizacaoInlineDialog && (
+        <AtualizacaoInlineIndicadorDialog
+          onClose={() => setShowAtualizacaoInlineDialog(false)}
+          onSuccess={handleAtualizacaoInlineSuccess}
           dadosTabela={controles} // Passa os dados atuais da tabela (com filtros aplicados)
           categorias={categorias}
           projetos={projetos}
