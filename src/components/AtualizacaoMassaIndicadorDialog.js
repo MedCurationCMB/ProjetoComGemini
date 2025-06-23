@@ -584,26 +584,34 @@ const AtualizacaoMassaIndicadorDialog = ({
               <table className="min-w-full bg-white">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Indicador</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Obrigatório</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Indicador</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo Entrega</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período Referência</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo Unidade</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Obrigatório</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {dadosParaAtualizar.slice(0, 20).map((item) => (
                     <tr key={item.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.id}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.indicador}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado || '-'}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.obrigatorio ? 'Sim' : 'Não'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.id}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.indicador}>
+                        {item.indicador}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.periodo_referencia || '-'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado || '-'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        {item.tipo_unidade_indicador ? tiposUnidadeIndicador[item.tipo_unidade_indicador] || '-' : '-'}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.obrigatorio ? 'Sim' : 'Não'}</td>
                     </tr>
                   ))}
                   {dadosParaAtualizar.length > 20 && (
                     <tr>
-                      <td colSpan="5" className="px-4 py-2 text-sm text-gray-500 text-center">
+                      <td colSpan="7" className="px-3 py-2 text-sm text-gray-500 text-center">
                         ... e mais {dadosParaAtualizar.length - 20} registro(s)
                       </td>
                     </tr>
