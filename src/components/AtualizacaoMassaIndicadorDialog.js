@@ -410,27 +410,36 @@ const AtualizacaoMassaIndicadorDialog = ({
                 Cancelar
               </button>
               
-              <button
-                onClick={gerarPlanilhaExcel}
-                disabled={loading || dadosTabela.length === 0}
-                className={`px-6 py-2 rounded-md flex items-center ${
-                  loading || dadosTabela.length === 0
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <FiDownload className="mr-2" />
-                    Baixar Planilha
-                  </>
-                )}
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={gerarPlanilhaExcel}
+                  disabled={loading || dadosTabela.length === 0}
+                  className={`px-6 py-2 rounded-md flex items-center ${
+                    loading || dadosTabela.length === 0
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <FiDownload className="mr-2" />
+                      Baixar Planilha
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center"
+                >
+                  Próximo Passo →
+                </button>
+              </div>
             </div>
           </div>
         )}
