@@ -63,23 +63,16 @@ export default function IndicadorDetalhe({ user }) {
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
   };
 
-  // ✅ FUNÇÃO MODIFICADA: Calcular KPIs separando Realizado e Meta
+  // ✅ FUNÇÃO MODIFICADA: Calcular KPIs - APENAS Realizado + Soma Meta
   const calcularKPIs = () => {
     if (!indicadores || indicadores.length === 0) {
       return {
-        somaValorIndicador: 0,
-        mediaValorIndicador: 0,
-        somaValorApresentado: 0,
-        mediaValorApresentado: 0,
-        // Novos KPIs separados
+        // KPIs apenas para Realizado
         somaRealizadoApresentado: 0,
-        mediaRealizadoApresentado: 0,
         somaRealizadoIndicador: 0,
-        mediaRealizadoIndicador: 0,
+        // Soma dos valores Meta (para mostrar onde antes era média)
         somaMetaApresentado: 0,
-        mediaMetaApresentado: 0,
         somaMetaIndicador: 0,
-        mediaMetaIndicador: 0,
         totalRealizado: 0,
         totalMeta: 0
       };
@@ -96,36 +89,20 @@ export default function IndicadorDetalhe({ user }) {
     const somaRealizadoApresentado = valoresRealizadoApresentado.reduce((acc, val) => acc + val, 0);
     const somaRealizadoIndicador = valoresRealizadoIndicador.reduce((acc, val) => acc + val, 0);
 
-    // KPIs para Meta
+    // ✅ NOVO: Soma dos valores Meta (para mostrar nos KPIs)
     const valoresMetaApresentado = metas.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
     const valoresMetaIndicador = metas.map(ind => parseFloat(ind.valor_indicador) || 0);
     
     const somaMetaApresentado = valoresMetaApresentado.reduce((acc, val) => acc + val, 0);
     const somaMetaIndicador = valoresMetaIndicador.reduce((acc, val) => acc + val, 0);
 
-    // KPIs totais (mantendo compatibilidade)
-    const valoresIndicador = indicadores.map(ind => parseFloat(ind.valor_indicador) || 0);
-    const valoresApresentado = indicadores.map(ind => parseFloat(ind.valor_indicador_apresentado) || 0);
-
-    const somaValorIndicador = valoresIndicador.reduce((acc, val) => acc + val, 0);
-    const somaValorApresentado = valoresApresentado.reduce((acc, val) => acc + val, 0);
-
     return {
-      // KPIs totais (compatibilidade)
-      somaValorIndicador,
-      mediaValorIndicador: indicadores.length > 0 ? somaValorIndicador / indicadores.length : 0,
-      somaValorApresentado,
-      mediaValorApresentado: indicadores.length > 0 ? somaValorApresentado / indicadores.length : 0,
-      
-      // Novos KPIs separados
+      // KPIs apenas para Realizado
       somaRealizadoApresentado,
-      mediaRealizadoApresentado: realizados.length > 0 ? somaRealizadoApresentado / realizados.length : 0,
       somaRealizadoIndicador,
-      mediaRealizadoIndicador: realizados.length > 0 ? somaRealizadoIndicador / realizados.length : 0,
+      // Soma dos valores Meta
       somaMetaApresentado,
-      mediaMetaApresentado: metas.length > 0 ? somaMetaApresentado / metas.length : 0,
       somaMetaIndicador,
-      mediaMetaIndicador: metas.length > 0 ? somaMetaIndicador / metas.length : 0,
       totalRealizado: realizados.length,
       totalMeta: metas.length
     };
@@ -905,34 +882,22 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* ✅ KPIs MODIFICADOS - Mobile - Com divisão Realizado/Meta */}
+          {/* ✅ KPIs MODIFICADOS - Mobile - APENAS 2 cards de Realizado + Soma Meta */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
-              {/* KPIs Realizado */}
+              {/* KPI 1: Realizado - Valor Apresentado */}
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
                 <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Apresentado</p>
                 <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
+                <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
               </div>
               
+              {/* KPI 2: Realizado - Valor Indicador */}
               <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-400">
                 <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Indicador</p>
                 <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
-              </div>
-              
-              {/* KPIs Meta */}
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
-                <p className="text-xs font-medium text-gray-600 mb-1">Meta - Valor Apresentado</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaMetaApresentado)}</p>
-                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-400">
-                <p className="text-xs font-medium text-gray-600 mb-1">Meta - Valor Indicador</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaMetaIndicador)}</p>
-                <p className="text-xs text-gray-400">Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+                <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
               </div>
             </div>
             
@@ -1382,50 +1347,38 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* ✅ KPIs MODIFICADOS - Desktop - Com divisão Realizado/Meta */}
+          {/* ✅ KPIs MODIFICADOS - Desktop - APENAS 2 cards de Realizado + Soma Meta */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {/* KPIs Realizado */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              {/* KPI 1: Realizado - Valor Apresentado */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
                 <p className="text-sm font-medium text-gray-600">Realizado - Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
+                <p className="text-sm text-gray-500 mt-2">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
               </div>
               
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-400">
+              {/* KPI 2: Realizado - Valor Indicador */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-400">
                 <p className="text-sm font-medium text-gray-600">Realizado - Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
-              </div>
-              
-              {/* KPIs Meta */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
-                <p className="text-sm font-medium text-gray-600">Meta - Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaMetaApresentado)}</p>
-                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-400">
-                <p className="text-sm font-medium text-gray-600">Meta - Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaMetaIndicador)}</p>
-                <p className="text-xs text-gray-500 mt-1">Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
+                <p className="text-sm text-gray-500 mt-2">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
               </div>
             </div>
             
             {/* Contadores de registros - Desktop */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">Total de Períodos</p>
-                <p className="text-lg font-semibold text-gray-800">{dadosTabela.length}</p>
+                <p className="text-xl font-semibold text-gray-800">{dadosTabela.length}</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <div className="bg-blue-50 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">Total Realizado</p>
-                <p className="text-lg font-semibold text-blue-600">{kpis.totalRealizado}</p>
+                <p className="text-xl font-semibold text-blue-600">{kpis.totalRealizado}</p>
               </div>
-              <div className="bg-green-50 rounded-lg p-3 text-center">
+              <div className="bg-green-50 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">Total Meta</p>
-                <p className="text-lg font-semibold text-green-600">{kpis.totalMeta}</p>
+                <p className="text-xl font-semibold text-green-600">{kpis.totalMeta}</p>
               </div>
             </div>
           </div>
