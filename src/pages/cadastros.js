@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabaseClient";
+import { isUserAdmin } from "../utils/userUtils";
 import { FiEdit, FiSave, FiX, FiPlus } from "react-icons/fi";
 
 export default function Cadastros({ user }) {
@@ -30,6 +31,11 @@ export default function Cadastros({ user }) {
   const [novoNome, setNovoNome] = useState('');
   const [novoTextoPrompt, setNovoTextoPrompt] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
+
+  // Estados para administrador
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [visibilidadeAbas, setVisibilidadeAbas] = useState({});
+  const [salvandoVisibilidade, setSalvandoVisibilidade] = useState(false);
 
   // Estados para apresentação de variáveis
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
@@ -98,6 +104,25 @@ export default function Cadastros({ user }) {
     }
   }, [user, router]);
 
+  // Verificar se é admin e carregar visibilidade das abas
+  useEffect(() => {
+    const checkAdminAndLoadVisibility = async () => {
+      if (user) {
+        try {
+          const adminStatus = await isUserAdmin(user.id);
+          setIsAdmin(adminStatus);
+          
+          // Carregar configurações de visibilidade das abas
+          await fetchVisibilidadeAbas();
+        } catch (error) {
+          console.error('Erro ao verificar admin status:', error);
+        }
+      }
+    };
+
+    checkAdminAndLoadVisibility();
+  }, [user]);
+
   // Carregar dados quando o componente monta ou a aba muda
   useEffect(() => {
     if (user) {
@@ -107,6 +132,42 @@ export default function Cadastros({ user }) {
       }
     }
   }, [user, activeTab]);
+
+  // Função para buscar configurações de visibilidade das abas
+  const fetchVisibilidadeAbas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes_sistema')
+        .select('chave, valor')
+        .like('chave', 'aba_visivel_%');
+      
+      if (error) throw error;
+      
+      // Converter para objeto
+      const configObj = {};
+      data.forEach(item => {
+        // Extrair nome da aba da chave (ex: aba_visivel_projetos -> projetos)
+        const nomeAba = item.chave.replace('aba_visivel_', '');
+        configObj[nomeAba] = item.valor === 'true';
+      });
+      
+      // Definir valores padrão para abas que não existem na configuração
+      const configCompleta = {};
+      Object.keys(tabsConfig).forEach(aba => {
+        configCompleta[aba] = configObj[aba] !== undefined ? configObj[aba] : true;
+      });
+      
+      setVisibilidadeAbas(configCompleta);
+    } catch (error) {
+      console.error('Erro ao carregar visibilidade das abas:', error);
+      // Definir todas como visíveis por padrão em caso de erro
+      const configPadrao = {};
+      Object.keys(tabsConfig).forEach(aba => {
+        configPadrao[aba] = true;
+      });
+      setVisibilidadeAbas(configPadrao);
+    }
+  };
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -173,6 +234,53 @@ export default function Cadastros({ user }) {
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para alternar visibilidade de uma aba
+  const toggleVisibilidadeAba = async (nomeAba) => {
+    try {
+      setSalvandoVisibilidade(true);
+      
+      const novoValor = !visibilidadeAbas[nomeAba];
+      
+      // Upsert na tabela de configurações
+      const { error } = await supabase
+        .from('configuracoes_sistema')
+        .upsert({
+          chave: `aba_visivel_${nomeAba}`,
+          valor: novoValor.toString(),
+          descricao: `Controla se a aba ${tabsConfig[nomeAba].label} é visível para usuários normais`
+        }, {
+          onConflict: 'chave'
+        });
+      
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setVisibilidadeAbas(prev => ({
+        ...prev,
+        [nomeAba]: novoValor
+      }));
+      
+      toast.success(`Visibilidade da aba ${tabsConfig[nomeAba].label} ${novoValor ? 'ativada' : 'desativada'} para usuários`);
+      
+    } catch (error) {
+      console.error('Erro ao salvar visibilidade:', error);
+      toast.error('Erro ao alterar visibilidade da aba');
+    } finally {
+      setSalvandoVisibilidade(false);
+    }
+  };
+
+  // Função para obter abas visíveis baseado no status de admin
+  const getAbasVisiveis = () => {
+    if (isAdmin) {
+      // Admins veem todas as abas
+      return Object.keys(tabsConfig);
+    } else {
+      // Usuários normais veem apenas abas configuradas como visíveis
+      return Object.keys(tabsConfig).filter(aba => visibilidadeAbas[aba] === true);
     }
   };
 
@@ -379,6 +487,36 @@ export default function Cadastros({ user }) {
 
   const dadosAtivos = getDadosAbaAtiva();
   const config = tabsConfig[activeTab];
+  const abasVisiveis = getAbasVisiveis();
+
+  // Se não há abas visíveis para o usuário
+  if (abasVisiveis.length === 0) {
+    return (
+      <div>
+        <Head>
+          <title>Cadastros</title>
+        </Head>
+
+        <Navbar user={user} />
+
+        <main className="container mx-auto px-4 py-8">
+          <h1 className="text-2xl font-bold mb-6">Gerenciamento de Cadastros</h1>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <p className="text-yellow-800">
+              Nenhuma seção de cadastros está disponível para você no momento. 
+              Entre em contato com o administrador se precisar de acesso.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Se a aba ativa não está visível, mudar para a primeira aba visível
+  if (!abasVisiveis.includes(activeTab)) {
+    setActiveTab(abasVisiveis[0]);
+    return null;
+  }
 
   return (
     <div>
@@ -394,7 +532,7 @@ export default function Cadastros({ user }) {
         {/* Tabs de navegação */}
         <div className="border-b border-gray-200 mb-6">
           <ul className="flex flex-wrap -mb-px">
-            {Object.entries(tabsConfig).map(([key, tabConfig]) => (
+            {abasVisiveis.map((key) => (
               <li key={key} className="mr-2">
                 <button
                   onClick={() => setActiveTab(key)}
@@ -404,7 +542,7 @@ export default function Cadastros({ user }) {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {tabConfig.label}
+                  {tabsConfig[key].label}
                 </button>
               </li>
             ))}
@@ -413,6 +551,43 @@ export default function Cadastros({ user }) {
 
         {/* Conteúdo da tab atual */}
         <div>
+          {/* Controle de Visibilidade para Admins */}
+          {isAdmin && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">
+                    Controle de Visibilidade - {config.label}
+                  </h3>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Como administrador, você pode controlar se esta aba é visível para usuários normais.
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visibilidadeAbas[activeTab] || false}
+                      onChange={() => toggleVisibilidadeAba(activeTab)}
+                      disabled={salvandoVisibilidade}
+                      className="sr-only"
+                    />
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      visibilidadeAbas[activeTab] ? 'bg-blue-600' : 'bg-gray-200'
+                    } ${salvandoVisibilidade ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        visibilidadeAbas[activeTab] ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-blue-800">
+                      {visibilidadeAbas[activeTab] ? 'Visível para usuários' : 'Oculta para usuários'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabela de Apresentação da Variável - apenas para projetos e categorias */}
           {config.hasApresentacao && (
             <div className="mb-8">
