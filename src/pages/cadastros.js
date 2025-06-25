@@ -82,7 +82,7 @@ export default function Cadastros({ user }) {
     prompts: {
       label: 'Prompts',
       tabela: 'prompts',
-      campo: 'nome_prompts',
+      campo: 'nome_prompt',
       campoTexto: 'texto_prompt',
       singular: 'prompt',
       artigo: 'um',
@@ -534,7 +534,7 @@ export default function Cadastros({ user }) {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {config.campo === 'nome_prompts' ? 'Nome do Prompt' : 'Nome'}
+                        {config.campo === 'nome_prompt' ? 'Nome do Prompt' : 'Nome'}
                       </th>
                       {config.hasTexto && (
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -668,7 +668,7 @@ export default function Cadastros({ user }) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {config.campo === 'nome_prompts' ? 'Nome do Prompt' : `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
+                  {config.campo === 'nome_prompt' ? 'Nome do Prompt' : `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
                 </label>
                 <input
                   type="text"
