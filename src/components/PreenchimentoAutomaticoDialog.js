@@ -16,12 +16,23 @@ const PreenchimentoAutomaticoDialog = ({ onClose, onSuccess, dadosTabela }) => {
     }
 
     try {
-      // Converter prazo atual para objeto Date
-      const dataPrazo = new Date(prazoAtual);
+      // ✅ CORREÇÃO: Criar data sem problemas de fuso horário
+      // Se a data está no formato YYYY-MM-DD, criar manualmente
+      let dataPrazo;
+      
+      if (/^\d{4}-\d{2}-\d{2}$/.test(prazoAtual)) {
+        // Formato YYYY-MM-DD - criar data manual para evitar fuso horário
+        const [year, month, day] = prazoAtual.split('-');
+        dataPrazo = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        // Outros formatos
+        dataPrazo = new Date(prazoAtual);
+      }
+      
+      // ✅ CORREÇÃO: Usar nova instância para não modificar a original
+      let dataReferencia = new Date(dataPrazo.getFullYear(), dataPrazo.getMonth(), dataPrazo.getDate());
       
       // Calcular data de referência baseada na recorrência
-      let dataReferencia = new Date(dataPrazo);
-      
       if (recorrencia === 'dia') {
         dataReferencia.setDate(dataReferencia.getDate() - tempoRecorrencia);
       } else if (recorrencia === 'mês') {
@@ -32,7 +43,7 @@ const PreenchimentoAutomaticoDialog = ({ onClose, onSuccess, dadosTabela }) => {
         return null; // Tipo de recorrência não reconhecido
       }
       
-      // Retornar no formato YYYY-MM-DD
+      // ✅ CORREÇÃO: Retornar no formato YYYY-MM-DD sem problemas de fuso
       const ano = dataReferencia.getFullYear();
       const mes = String(dataReferencia.getMonth() + 1).padStart(2, '0');
       const dia = String(dataReferencia.getDate()).padStart(2, '0');
@@ -158,9 +169,29 @@ const PreenchimentoAutomaticoDialog = ({ onClose, onSuccess, dadosTabela }) => {
     if (!dateString || dateString === 'Vazio') return dateString;
     
     try {
-      const [year, month, day] = dateString.split('-');
-      return `${day}/${month}/${year}`;
+      // ✅ CORREÇÃO: Tratar especificamente datas no formato YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-');
+        // Criar data manual para evitar problemas de fuso horário
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        
+        // Formatação manual para garantir consistência
+        const diaFormatado = String(date.getDate()).padStart(2, '0');
+        const mesFormatado = String(date.getMonth() + 1).padStart(2, '0');
+        const anoFormatado = date.getFullYear();
+        
+        return `${diaFormatado}/${mesFormatado}/${anoFormatado}`;
+      }
+      
+      // Para outros formatos, tentar parsing normal
+      const date = new Date(dateString);
+      const diaFormatado = String(date.getDate()).padStart(2, '0');
+      const mesFormatado = String(date.getMonth() + 1).padStart(2, '0');
+      const anoFormatado = date.getFullYear();
+      
+      return `${diaFormatado}/${mesFormatado}/${anoFormatado}`;
     } catch (e) {
+      console.error('Erro ao formatar data:', e, 'Data recebida:', dateString);
       return dateString;
     }
   };
