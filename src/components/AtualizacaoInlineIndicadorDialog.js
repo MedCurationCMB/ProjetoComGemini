@@ -14,6 +14,15 @@ const AtualizacaoInlineIndicadorDialog = ({
   subcategorias,
   tiposUnidadeIndicador
 }) => {
+
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
   const [dadosEditaveis, setDadosEditaveis] = useState([]);
   const [loading, setLoading] = useState(false);
   const [alteracoesPendentes, setAlteracoesPendentes] = useState(new Set());
@@ -292,6 +301,12 @@ const AtualizacaoInlineIndicadorDialog = ({
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0.00"
                     />
+                    {/* ✅ ADICIONAR PREVIEW FORMATADO ABAIXO DO INPUT */}
+                    {item.valor_indicador_apresentado && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Preview: {formatarValorIndicador(item.valor_indicador_apresentado)}
+                      </div>
+                    )}
                   </td>
                   
                   {/* Tipo Unidade (editável) */}

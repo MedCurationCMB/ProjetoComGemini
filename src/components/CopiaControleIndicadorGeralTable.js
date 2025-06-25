@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Ajustado para novo layout
+// Componente CopiaControleIndicadorGeralTable.js - Versão Completa com Formatação PT-BR
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -18,6 +18,16 @@ const CopiaControleIndicadorGeralTable = ({
   filtrosPrazo,
   setFiltrosPrazo
 }) => {
+  // ✅ NOVA FUNÇÃO: Formatar valores numéricos para padrão brasileiro
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
+
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
@@ -35,9 +45,6 @@ const CopiaControleIndicadorGeralTable = ({
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
-
-  // ✅ REMOÇÃO: Não mostrar mais os filtros internos já que agora estão no header
-  // A seção de filtros será removida do componente
 
   useEffect(() => {
     if (user?.id) {
@@ -483,7 +490,7 @@ const CopiaControleIndicadorGeralTable = ({
 
   return (
     <div>
-      {/* ✅ NOVO: Estatísticas da aba ativa com estilo moderno */}
+      {/* Estatísticas da aba ativa com estilo moderno */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
           <div className="flex items-center">
@@ -556,7 +563,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* ✅ NOVO: Botões de Ação em estilo moderno */}
+      {/* Botões de Ação em estilo moderno */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
@@ -618,8 +625,6 @@ const CopiaControleIndicadorGeralTable = ({
           </button>
         </div>
       </div>
-
-      {/* ✅ REMOÇÃO: A seção de filtros foi removida pois agora está no header da página */}
 
       {/* Modal para adicionar linha de indicador geral */}
       {showAdicionarLinhaDialog && (
@@ -700,7 +705,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* ✅ NOVO: TABELA com estilo moderno */}
+      {/* TABELA com estilo moderno e formatação PT-BR */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -821,11 +826,11 @@ const CopiaControleIndicadorGeralTable = ({
                       </div>
                     </td>
                     
-                    {/* VALOR APRESENTADO */}
+                    {/* ✅ VALOR APRESENTADO - COM FORMATAÇÃO PT-BR */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.valor_indicador_apresentado ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {item.valor_indicador_apresentado}
+                          {formatarValorIndicador(item.valor_indicador_apresentado)}
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -845,11 +850,11 @@ const CopiaControleIndicadorGeralTable = ({
                       )}
                     </td>
                     
-                    {/* VALOR CALCULADO */}
+                    {/* ✅ VALOR CALCULADO - COM FORMATAÇÃO PT-BR */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.valor_indicador ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          {item.valor_indicador}
+                          {formatarValorIndicador(item.valor_indicador)}
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -912,7 +917,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* ✅ NOVO: Informações adicionais sobre atualização em massa */}
+      {/* Informações adicionais sobre atualização em massa */}
       {controles.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
@@ -927,6 +932,7 @@ const CopiaControleIndicadorGeralTable = ({
                 <li>• <strong>Atualização Inline (🟣 Roxo):</strong> Edite diretamente na interface, todos os registros visíveis</li>
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
+                <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
               </ul>
               <div className="mt-3 p-3 bg-white rounded-md border border-blue-200">
                 <p className="text-sm text-blue-700">
@@ -934,6 +940,9 @@ const CopiaControleIndicadorGeralTable = ({
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   Baseado nos filtros aplicados: {filtroTipoIndicador} • {filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • {filtrosPrazo?.periodo || 'Sem filtro de prazo'}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade
                 </p>
               </div>
             </div>

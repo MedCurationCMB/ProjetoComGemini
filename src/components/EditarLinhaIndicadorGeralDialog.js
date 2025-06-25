@@ -14,6 +14,14 @@ const EditarLinhaIndicadorGeralDialog = ({
   subcategorias, 
   tiposUnidadeIndicador 
 }) => {
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
   const [formData, setFormData] = useState({
     prazo_entrega: '',
     indicador: '',
@@ -489,7 +497,9 @@ const EditarLinhaIndicadorGeralDialog = ({
                 <p><strong>Subcategoria:</strong> {subcategorias[controleItem?.subcategoria_id] || 'N/A'}</p>
                 <p><strong>ID Base:</strong> {controleItem?.id_controleindicador || 'N/A'}</p>
                 <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
-                <p><strong>Valor Calculado Atual:</strong> {controleItem?.valor_indicador || '-'}</p>
+                {/* ✅ ADICIONAR VALORES FORMATADOS */}
+                <p><strong>Valor Apresentado Atual:</strong> {formatarValorIndicador(controleItem?.valor_indicador_apresentado) || 'Não informado'}</p>
+                <p><strong>Valor Calculado Atual:</strong> {formatarValorIndicador(controleItem?.valor_indicador) || 'Não calculado'}</p>
                 
                 {documentoAtual && (
                   <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-100">
@@ -585,6 +595,12 @@ const EditarLinhaIndicadorGeralDialog = ({
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Digite o valor do indicador (ex: 15.75)"
                 />
+                {/* ✅ ADICIONAR PREVIEW FORMATADO */}
+                {formData.valor_indicador_apresentado && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    <strong>Preview:</strong> {formatarValorIndicador(formData.valor_indicador_apresentado)}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-gray-500">
                   Este é o valor numérico que será apresentado para o indicador.
                 </p>
@@ -624,7 +640,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                       O valor calculado é preenchido automaticamente pelo sistema e não pode ser editado manualmente.
                     </p>
                     <p className="text-sm text-blue-600 font-medium mt-1">
-                      Valor atual: {controleItem?.valor_indicador || 'Não calculado'}
+                      Valor atual: {formatarValorIndicador(controleItem?.valor_indicador) || 'Não calculado'}
                     </p>
                   </div>
                 </div>

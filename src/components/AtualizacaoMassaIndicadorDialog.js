@@ -15,6 +15,14 @@ const AtualizacaoMassaIndicadorDialog = ({
   subcategorias,
   tiposUnidadeIndicador
 }) => {
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
   const [step, setStep] = useState(1); // 1: Download, 2: Upload, 3: Confirmação
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -719,7 +727,7 @@ const AtualizacaoMassaIndicadorDialog = ({
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.periodo_referencia || '-'}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado || '-'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado ? formatarValorIndicador(item.valor_indicador_apresentado) : '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-900">
                         {item.tipo_unidade_indicador ? tiposUnidadeIndicador[item.tipo_unidade_indicador] || '-' : '-'}
                       </td>
