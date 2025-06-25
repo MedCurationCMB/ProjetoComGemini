@@ -20,6 +20,52 @@ const AtualizacaoMassaIndicadorDialog = ({
   const [loading, setLoading] = useState(false);
   const [dadosParaAtualizar, setDadosParaAtualizar] = useState([]);
   const [errosValidacao, setErrosValidacao] = useState([]);
+  const [preencherPeriodoAutomatico, setPreencherPeriodoAutomatico] = useState(false);
+
+  // Função para calcular o período de referência baseado na recorrência
+  const calcularPeriodoReferencia = (prazoAtual, recorrencia, tempoRecorrencia) => {
+    if (!prazoAtual || !recorrencia || recorrencia === 'sem recorrencia' || !tempoRecorrencia) {
+      return null;
+    }
+
+    try {
+      // Criar data sem problemas de fuso horário
+      let dataPrazo;
+      
+      if (/^\d{4}-\d{2}-\d{2}$/.test(prazoAtual)) {
+        // Formato YYYY-MM-DD - criar data manual para evitar fuso horário
+        const [year, month, day] = prazoAtual.split('-');
+        dataPrazo = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        // Outros formatos
+        dataPrazo = new Date(prazoAtual);
+      }
+      
+      // Usar nova instância para não modificar a original
+      let dataReferencia = new Date(dataPrazo.getFullYear(), dataPrazo.getMonth(), dataPrazo.getDate());
+      
+      // Calcular data de referência baseada na recorrência
+      if (recorrencia === 'dia') {
+        dataReferencia.setDate(dataReferencia.getDate() - tempoRecorrencia);
+      } else if (recorrencia === 'mês') {
+        dataReferencia.setMonth(dataReferencia.getMonth() - tempoRecorrencia);
+      } else if (recorrencia === 'ano') {
+        dataReferencia.setFullYear(dataReferencia.getFullYear() - tempoRecorrencia);
+      } else {
+        return null;
+      }
+      
+      // Retornar no formato YYYY-MM-DD
+      const ano = dataReferencia.getFullYear();
+      const mes = String(dataReferencia.getMonth() + 1).padStart(2, '0');
+      const dia = String(dataReferencia.getDate()).padStart(2, '0');
+      
+      return `${ano}-${mes}-${dia}`;
+    } catch (error) {
+      console.error('Erro ao calcular período de referência:', error);
+      return null;
+    }
+  };
 
   // Função para gerar e baixar a planilha Excel
   const gerarPlanilhaExcel = async () => {
@@ -52,8 +98,26 @@ const AtualizacaoMassaIndicadorDialog = ({
         fgColor: { argb: 'FFE6F3FF' }
       };
       
-      // Adicionar dados
+      // Adicionar dados com preenchimento automático opcional
+      let registrosPreenchidos = 0;
+      
       dadosTabela.forEach(item => {
+        // Calcular período de referência se a opção estiver marcada e o campo estiver vazio
+        let periodoReferencia = item.periodo_referencia || '';
+        
+        if (preencherPeriodoAutomatico && (!item.periodo_referencia || item.periodo_referencia === '')) {
+          const periodoCalculado = calcularPeriodoReferencia(
+            item.prazo_entrega,
+            item.recorrencia,
+            item.tempo_recorrencia
+          );
+          
+          if (periodoCalculado) {
+            periodoReferencia = periodoCalculado;
+            registrosPreenchidos++;
+          }
+        }
+        
         worksheet.addRow({
           id: item.id,
           projeto: projetos[item.projeto_id] || 'N/A',
@@ -61,7 +125,7 @@ const AtualizacaoMassaIndicadorDialog = ({
           indicador: item.indicador || '',
           observacao: item.observacao || '',
           prazo_entrega: item.prazo_entrega || '',
-          periodo_referencia: item.periodo_referencia || '',
+          periodo_referencia: periodoReferencia,
           valor_indicador_apresentado: item.valor_indicador_apresentado || '',
           tipo_unidade_indicador: tiposUnidadeIndicador[item.tipo_unidade_indicador] || '',
           obrigatorio: item.obrigatorio ? 'true' : 'false'
@@ -94,6 +158,16 @@ const AtualizacaoMassaIndicadorDialog = ({
       instrucoes.addRow(['   - Tipo Unidade Indicador (use exatamente um dos valores disponíveis)']);
       instrucoes.addRow(['   - Obrigatório (apenas "true" ou "false")']);
       instrucoes.addRow([]);
+      
+      // Informar sobre preenchimento automático se foi usado
+      if (preencherPeriodoAutomatico && registrosPreenchidos > 0) {
+        instrucoes.addRow(['📋 PREENCHIMENTO AUTOMÁTICO APLICADO:']);
+        instrucoes.addRow([`   - ${registrosPreenchidos} período(s) de referência foram calculados automaticamente`]);
+        instrucoes.addRow(['   - Fórmula usada: Período = Prazo Atual - Tempo de Recorrência']);
+        instrucoes.addRow(['   - Você pode modificar estes valores se necessário']);
+        instrucoes.addRow([]);
+      }
+      
       instrucoes.addRow(['3. Tipos de Unidade Disponíveis:']);
       
       // Adicionar lista de tipos de unidade
@@ -116,7 +190,11 @@ const AtualizacaoMassaIndicadorDialog = ({
       // Criar link de download
       const link = document.createElement('a');
       link.href = url;
-      link.download = `indicadores_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const timestamp = new Date().toISOString().split('T')[0];
+      const nomeArquivo = preencherPeriodoAutomatico && registrosPreenchidos > 0 
+        ? `indicadores_com_preenchimento_${timestamp}.xlsx`
+        : `indicadores_${timestamp}.xlsx`;
+      link.download = nomeArquivo;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -124,7 +202,13 @@ const AtualizacaoMassaIndicadorDialog = ({
       // Limpar URL
       window.URL.revokeObjectURL(url);
       
-      toast.success('Planilha baixada com sucesso!');
+      // Feedback melhorado
+      if (preencherPeriodoAutomatico && registrosPreenchidos > 0) {
+        toast.success(`Planilha baixada com ${registrosPreenchidos} período(s) preenchido(s) automaticamente!`);
+      } else {
+        toast.success('Planilha baixada com sucesso!');
+      }
+      
       setStep(2);
       
     } catch (error) {
@@ -405,6 +489,39 @@ const AtualizacaoMassaIndicadorDialog = ({
                 <p>• Total de registros: <strong>{dadosTabela.length}</strong></p>
                 <p>• Colunas editáveis: Indicador, Observação, Prazo Entrega, Período Referência, Valor Apresentado, Tipo Unidade, Obrigatório</p>
                 <p>• Colunas protegidas: ID, Projeto, Categoria (não modificar)</p>
+              </div>
+            </div>
+
+            {/* Opção de Preenchimento Automático */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="preencherPeriodoAutomatico"
+                  checked={preencherPeriodoAutomatico}
+                  onChange={(e) => setPreencherPeriodoAutomatico(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
+                />
+                <div className="ml-3">
+                  <label htmlFor="preencherPeriodoAutomatico" className="font-medium text-blue-900 cursor-pointer">
+                    Preencher Automático Período de Referência
+                  </label>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Ao marcar esta opção, a planilha será gerada com os períodos de referência calculados automaticamente 
+                    para indicadores que ainda não possuem essa informação (baseado na recorrência).
+                  </p>
+                  <div className="mt-2 text-xs text-blue-600">
+                    <p>📋 <strong>Fórmula:</strong> Período de Referência = Prazo Atual - Tempo de Recorrência</p>
+                    <p>🎯 <strong>Aplicado apenas em:</strong> Registros com período de referência vazio e recorrência válida</p>
+                    <p>📊 <strong>Elegíveis:</strong> {dadosTabela.filter(item => 
+                      (!item.periodo_referencia || item.periodo_referencia === '') &&
+                      item.prazo_entrega &&
+                      item.recorrencia &&
+                      item.recorrencia !== 'sem recorrencia' &&
+                      item.tempo_recorrencia
+                    ).length} de {dadosTabela.length} registros</p>
+                  </div>
+                </div>
               </div>
             </div>
 
