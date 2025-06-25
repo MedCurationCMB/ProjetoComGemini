@@ -8,6 +8,7 @@ import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 import AtualizacaoMassaIndicadorDialog from './AtualizacaoMassaIndicadorDialog';
 import AtualizacaoInlineIndicadorDialog from './AtualizacaoInlineIndicadorDialog';
+import PreenchimentoAutomaticoDialog from './PreenchimentoAutomaticoDialog';
 
 const CopiaControleIndicadorGeralTable = ({ 
   user, 
@@ -30,6 +31,7 @@ const CopiaControleIndicadorGeralTable = ({
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
   const [showAtualizacaoInlineDialog, setShowAtualizacaoInlineDialog] = useState(false);
+  const [showPreenchimentoAutomaticoDialog, setShowPreenchimentoAutomaticoDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
@@ -426,6 +428,13 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Atualização inline concluída!');
   };
 
+  // Função para lidar com o sucesso do preenchimento automático
+  const handlePreenchimentoAutomaticoSuccess = () => {
+    setShowPreenchimentoAutomaticoDialog(false);
+    fetchControles();
+    toast.success('Preenchimento automático concluído!');
+  };
+
   // Obter estatísticas dos indicadores para a aba ativa
   const getEstatisticasAba = () => {
     const total = controles.length;
@@ -592,6 +601,21 @@ const CopiaControleIndicadorGeralTable = ({
             <FiPlus className="mr-2" />
             Adicionar Linha de Indicador Geral
           </button>
+
+          {/* Botão Preencher Automático Período de Referência */}
+          <button
+            onClick={() => setShowPreenchimentoAutomaticoDialog(true)}
+            disabled={controles.length === 0}
+            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+              controles.length === 0
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+            title={controles.length === 0 ? 'Nenhum registro disponível' : 'Preencher automaticamente períodos de referência vazios baseado na recorrência'}
+          >
+            <FiCalendar className="mr-2" />
+            Preencher Automático Período de Referência
+          </button>
         </div>
       </div>
 
@@ -664,6 +688,15 @@ const CopiaControleIndicadorGeralTable = ({
           tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
+      {/* Modal para preenchimento automático */}
+      {showPreenchimentoAutomaticoDialog && (
+        <PreenchimentoAutomaticoDialog
+          onClose={() => setShowPreenchimentoAutomaticoDialog(false)}
+          onSuccess={handlePreenchimentoAutomaticoSuccess}
+          dadosTabela={controles} // Passa os dados atuais da tabela (com filtros aplicados)
         />
       )}
 
