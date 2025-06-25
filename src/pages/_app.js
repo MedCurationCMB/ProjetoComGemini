@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { isUserActive } from '../utils/userUtils';
-import { LocaleProvider } from '../contexts/LocaleContext';
 import '../styles/globals.css';
 import '../styles/tiptap.css';
 
@@ -146,18 +145,18 @@ function MyApp({ Component, pageProps }) {
       router.pathname === '/login' || 
       router.pathname === '/cadastro') {
     return (
-      <LocaleProvider>
+      <>
         <Toaster position="top-right" />
         <Component {...pageProps} user={user} />
-      </LocaleProvider>
+      </>
     );
   }
 
   return (
-    <LocaleProvider>
+    <>
       <Toaster position="top-right" />
       <Component {...pageProps} user={user} />
-    </LocaleProvider>
+    </>
   );
 }
 
