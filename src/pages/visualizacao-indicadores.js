@@ -115,19 +115,19 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
   const calculateBarSize = (dataLength, isMobile = false) => {
-    return isMobile ? 35 : 60;
+    return isMobile ? 45 : 80;
   };
 
   // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER
   const calculateContainerWidth = (dataLength, isMobile = false) => {
     const barWidth = calculateBarSize(dataLength, isMobile);
-    const spacing = isMobile ? 8 : 4; // ✅ Desktop: 10px (era 15px)
-    const margins = 40;
+    const spacing = isMobile ? 2 : 1; // ✅ Desktop: 10px (era 15px)
+    const margins = 20;
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
   };
 
-  // 9. COMPONENTE DO GRÁFICO DE BARRAS - ✅ MODIFICADO: barCategoryGap reduzido
+  // 9. COMPONENTE DO GRÁFICO DE BARRAS - ✅ MODIFICADO: Configurações mais agressivas
   const GraficoBarrasComponent = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
     const [loadingGrafico, setLoadingGrafico] = useState(true);
@@ -170,13 +170,13 @@ export default function VisualizacaoIndicadores({ user }) {
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
 
-    // ✅ NOVA LÓGICA: MOBILE > 6, DESKTOP > 7
+    // ✅ MODIFICADO: Mais barras visíveis antes do scroll
     const shouldShowScroll = isMobile 
-      ? graficoData.length > 6  // Mobile: mantém > 6 barras
-      : graficoData.length > 7; // Desktop: novo > 7 barras
+      ? graficoData.length > 8  // Mobile: aumentado de 6 para 8
+      : graficoData.length > 10; // Desktop: aumentado de 7 para 10
 
-    // ✅ MODIFICADO: barCategoryGap reduzido para aproximar as barras
-    const barCategoryGap = isMobile ? "8%" : "4%"; // ✅ REDUZIDO: Mobile: 8% (era 15%), Desktop: 4% (era 8%)
+    // ✅ MODIFICADO: barCategoryGap mínimo
+    const barCategoryGap = isMobile ? "2%" : "1%"; // ✅ MÍNIMO: Mobile: 2%, Desktop: 1%
 
     return (
       <div className="mb-3">
@@ -190,15 +190,17 @@ export default function VisualizacaoIndicadores({ user }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={graficoData} 
-                  margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+                  margin={{ top: 20, right: 3, left: 3, bottom: 5 }} // ✅ REDUZIDO: Margens laterais menores
                   maxBarSize={calculateBarSize(graficoData.length, isMobile)}
-                  barCategoryGap={barCategoryGap} // ✅ USAR A VARIÁVEL DINÂMICA COM VALORES REDUZIDOS
+                  barCategoryGap={barCategoryGap} // ✅ GAP MÍNIMO
+                  barGap={0} // ✅ NOVO: Remove gap entre barras da mesma categoria
                 >
                   <XAxis 
                     dataKey="periodo" 
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: fontSize, fill: '#6B7280' }}
+                    interval={0} // ✅ NOVO: Mostra todos os labels (pode precisar ajustar se ficarem sobrepostos)
                   />
                   <Bar 
                     dataKey="valorApresentado" 
