@@ -670,16 +670,35 @@ export default function IndicadorDetalhe({ user }) {
       .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
   };
 
-  // ✅ FUNÇÃO MODIFICADA: Preparar dados para tabela com tipo
+  // ✅ FUNÇÃO NOVA: Preparar dados para tabela MODIFICADA
   const prepararDadosTabela = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
-    return indicadores
-      .map(indicador => ({
-        ...indicador,
-        tipoTexto: indicador.tipo_indicador === 1 ? 'Realizado' : 'Meta'
-      }))
-      .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia)); // Ordenar por data decrescente para tabela
+    // Agrupar por período de referência
+    const dadosAgrupados = {};
+    
+    indicadores.forEach(indicador => {
+      const periodo = indicador.periodo_referencia;
+      
+      if (!dadosAgrupados[periodo]) {
+        dadosAgrupados[periodo] = {
+          periodo_referencia: periodo,
+          valor_apresentado_realizado: null,
+          valor_apresentado_meta: null
+        };
+      }
+      
+      // Preencher baseado no tipo_indicador
+      if (indicador.tipo_indicador === 1) { // Realizado
+        dadosAgrupados[periodo].valor_apresentado_realizado = indicador.valor_indicador_apresentado;
+      } else if (indicador.tipo_indicador === 2) { // Meta
+        dadosAgrupados[periodo].valor_apresentado_meta = indicador.valor_indicador_apresentado;
+      }
+    });
+    
+    // Converter para array e ordenar por data decrescente
+    return Object.values(dadosAgrupados)
+      .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
   };
 
   // Componente personalizado para Tooltip
@@ -1041,7 +1060,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* ✅ TABELA MODIFICADA - Mobile - Com coluna Tipo */}
+          {/* ✅ TABELA NOVA - Mobile - SEM coluna Tipo, COM novas colunas */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -1051,36 +1070,24 @@ export default function IndicadorDetalhe({ user }) {
                       Período
                     </th>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Tipo
-                    </th>
-                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Valor Apresentado
+                      Valor Apresentado (Realizado)
                     </th>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor Indicador
+                      Valor Apresentado (Meta)
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
-                  {dadosTabela.map((indicador, index) => (
-                    <tr key={indicador.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
+                  {dadosTabela.map((linha, index) => (
+                    <tr key={index} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
                       <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
-                        {formatDate(indicador.periodo_referencia)}
-                      </td>
-                      <td className="px-2 py-3 text-xs border-r border-gray-200">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          indicador.tipo_indicador === 1 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {indicador.tipoTexto}
-                        </span>
+                        {formatDate(linha.periodo_referencia)}
                       </td>
                       <td className="px-2 py-3 text-xs font-medium text-gray-900 border-r border-gray-200">
-                        {formatValue(indicador.valor_indicador_apresentado)}
+                        {formatValue(linha.valor_apresentado_realizado)}
                       </td>
                       <td className="px-2 py-3 text-xs font-medium text-gray-900">
-                        {formatValue(indicador.valor_indicador)}
+                        {formatValue(linha.valor_apresentado_meta)}
                       </td>
                     </tr>
                   ))}
@@ -1526,7 +1533,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* ✅ TABELA MODIFICADA - Desktop - Com coluna Tipo */}
+          {/* ✅ TABELA NOVA - Desktop - SEM coluna Tipo, COM novas colunas */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1535,41 +1542,29 @@ export default function IndicadorDetalhe({ user }) {
                     Período de Referência
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
+                    Valor Apresentado (Realizado)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Apresentado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor do Indicador
+                    Valor Apresentado (Meta)
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dadosTabela.map((indicador, index) => (
-                  <tr key={indicador.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                {dadosTabela.map((linha, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        {formatDate(indicador.periodo_referencia)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                        indicador.tipo_indicador === 1 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {indicador.tipoTexto}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {formatValue(indicador.valor_indicador_apresentado)}
+                        {formatDate(linha.periodo_referencia)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        {formatValue(indicador.valor_indicador)}
+                        {formatValue(linha.valor_apresentado_realizado)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {formatValue(linha.valor_apresentado_meta)}
                       </div>
                     </td>
                   </tr>
