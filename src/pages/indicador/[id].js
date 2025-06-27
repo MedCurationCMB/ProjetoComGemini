@@ -1542,10 +1542,10 @@ export default function IndicadorDetalhe({ user }) {
                     Período de Referência
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Apresentado (Realizado)
+                    Realizado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Apresentado (Meta)
+                    Meta
                   </th>
                 </tr>
               </thead>
