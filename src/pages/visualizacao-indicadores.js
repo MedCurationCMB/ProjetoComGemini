@@ -121,13 +121,13 @@ export default function VisualizacaoIndicadores({ user }) {
   // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER
   const calculateContainerWidth = (dataLength, isMobile = false) => {
     const barWidth = calculateBarSize(dataLength, isMobile);
-    const spacing = isMobile ? 15 : 8; // ✅ Desktop: 10px (era 15px)
+    const spacing = isMobile ? 8 : 4; // ✅ Desktop: 10px (era 15px)
     const margins = 40;
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
   };
 
-  // 9. COMPONENTE DO GRÁFICO DE BARRAS - VERSÃO COMPLETA ATUALIZADA
+  // 9. COMPONENTE DO GRÁFICO DE BARRAS - ✅ MODIFICADO: barCategoryGap reduzido
   const GraficoBarrasComponent = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
     const [loadingGrafico, setLoadingGrafico] = useState(true);
@@ -175,7 +175,8 @@ export default function VisualizacaoIndicadores({ user }) {
       ? graficoData.length > 6  // Mobile: mantém > 6 barras
       : graficoData.length > 7; // Desktop: novo > 7 barras
 
-    const barCategoryGap = isMobile ? "15%" : "8%"; // ✅ Desktop: 10% (era 15%)
+    // ✅ MODIFICADO: barCategoryGap reduzido para aproximar as barras
+    const barCategoryGap = isMobile ? "8%" : "4%"; // ✅ REDUZIDO: Mobile: 8% (era 15%), Desktop: 4% (era 8%)
 
     return (
       <div className="mb-3">
@@ -191,7 +192,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   data={graficoData} 
                   margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
                   maxBarSize={calculateBarSize(graficoData.length, isMobile)}
-                  barCategoryGap={barCategoryGap} // ✅ USAR A VARIÁVEL DINÂMICA
+                  barCategoryGap={barCategoryGap} // ✅ USAR A VARIÁVEL DINÂMICA COM VALORES REDUZIDOS
                 >
                   <XAxis 
                     dataKey="periodo" 
