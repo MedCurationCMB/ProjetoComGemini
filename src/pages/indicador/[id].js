@@ -821,7 +821,7 @@ export default function IndicadorDetalhe({ user }) {
               )}
             </div>
             
-            {/* Filtro de período - Mobile - APENAS campos de data melhorados */}
+            {/* Filtro de período - Mobile */}
             {showFiltroPeriodo && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <label className="block text-xs font-medium text-gray-600 mb-2">
@@ -884,7 +884,7 @@ export default function IndicadorDetalhe({ user }) {
                   </button>
                 </div>
                 
-                {/* ✅ APENAS os campos de data melhorados - igual ao desktop */}
+                {/* Campos de data para período específico */}
                 {filtroPeriodo === 'especifico' && (
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -951,25 +951,26 @@ export default function IndicadorDetalhe({ user }) {
                 <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
               </div>
             </div>
-            
-            {/* Contadores de registros permanecem iguais */}
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-lg p-2 text-center">
-                <p className="text-xs text-gray-600">Total Realizado</p>
-                <p className="text-sm font-semibold text-blue-600">{kpis.totalRealizado}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-2 text-center">
-                <p className="text-xs text-gray-600">Total Meta</p>
-                <p className="text-sm font-semibold text-green-600">{kpis.totalMeta}</p>
-              </div>
-            </div>
           </div>
 
-          {/* ✅ GRÁFICOS COMBINADOS - Mobile */}
+          {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM LEGENDA FIXA */}
           <div className="mb-6 space-y-6">
             {/* Gráfico Combinado - Valor Apresentado */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado (Realizado vs Meta)</h3>
+              
+              {/* ✅ LEGENDA FIXA - Mobile */}
+              <div className="mb-3 flex justify-center space-x-4">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+                  <span className="text-xs text-gray-600">Realizado</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 rounded mr-2"></div>
+                  <span className="text-xs text-gray-600">Meta</span>
+                </div>
+              </div>
+              
               <div className="overflow-x-auto">
                 <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                   <div className="h-32">
@@ -986,10 +987,6 @@ export default function IndicadorDetalhe({ user }) {
                           tick={{ fontSize: 8, fill: '#6B7280' }}
                         />
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend 
-                          wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }}
-                          iconSize={8}
-                        />
                         <Bar 
                           dataKey="realizadoApresentado" 
                           fill="#3B82F6" 
@@ -1016,6 +1013,19 @@ export default function IndicadorDetalhe({ user }) {
             {/* Gráfico Combinado - Valor Indicador */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Indicador (Realizado vs Meta)</h3>
+              
+              {/* ✅ LEGENDA FIXA - Mobile */}
+              <div className="mb-3 flex justify-center space-x-4">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-purple-500 rounded mr-2"></div>
+                  <span className="text-xs text-gray-600">Realizado</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
+                  <span className="text-xs text-gray-600">Meta</span>
+                </div>
+              </div>
+              
               <div className="overflow-x-auto">
                 <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                   <div className="h-32">
@@ -1032,10 +1042,6 @@ export default function IndicadorDetalhe({ user }) {
                           tick={{ fontSize: 8, fill: '#6B7280' }}
                         />
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend 
-                          wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }}
-                          iconSize={8}
-                        />
                         <Bar 
                           dataKey="realizadoIndicador" 
                           fill="#8B5CF6" 
@@ -1095,10 +1101,7 @@ export default function IndicadorDetalhe({ user }) {
               </table>
             </div>
             
-            {/* Rodapé com total - Mobile - SEMPRE mostrado */}
-            <div className="px-4 py-3 bg-gray-50 text-center text-gray-500 text-xs border-t">
-              Total de períodos: {dadosTabela.length} • Realizado: {kpis.totalRealizado} • Meta: {kpis.totalMeta}
-            </div>
+            {/* ✅ REMOVIDO: Rodapé com total de períodos */}
           </div>
 
           {/* Botão Marcar como Lido - Mobile - SEMPRE mostrado */}
@@ -1389,7 +1392,7 @@ export default function IndicadorDetalhe({ user }) {
           {/* ✅ KPIs MODIFICADOS - Desktop - 4 cards: 2 soma + 2 média */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* KPI 1: Realizado - Valor Apresentado (SOMA) */}
               <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                 <p className="text-sm font-medium text-gray-600">Realizado - Valor Apresentado</p>
@@ -1418,30 +1421,27 @@ export default function IndicadorDetalhe({ user }) {
                 <p className="text-xs text-gray-500 mt-1">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
               </div>
             </div>
-            
-            {/* Contadores de registros permanecem iguais */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">Total de Períodos</p>
-                <p className="text-xl font-semibold text-gray-800">{dadosTabela.length}</p>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">Total Realizado</p>
-                <p className="text-xl font-semibold text-blue-600">{kpis.totalRealizado}</p>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">Total Meta</p>
-                <p className="text-xl font-semibold text-green-600">{kpis.totalMeta}</p>
-              </div>
-            </div>
           </div>
 
-          {/* ✅ GRÁFICOS COMBINADOS - Desktop */}
+          {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM LEGENDA FIXA */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gráfico Combinado - Valor Apresentado */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado (Realizado vs Meta)</h3>
+                
+                {/* ✅ LEGENDA FIXA - Desktop */}
+                <div className="mb-4 flex justify-center space-x-6">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
+                    <span className="text-sm text-gray-600">Realizado</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                    <span className="text-sm text-gray-600">Meta</span>
+                  </div>
+                </div>
+                
                 <div className="overflow-x-auto">
                   <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                     <div className="h-64">
@@ -1458,10 +1458,6 @@ export default function IndicadorDetalhe({ user }) {
                             tick={{ fontSize: 12, fill: '#6B7280' }}
                           />
                           <Tooltip content={<CustomTooltip />} />
-                          <Legend 
-                            wrapperStyle={{ fontSize: '12px', paddingTop: '15px' }}
-                            iconSize={12}
-                          />
                           <Bar 
                             dataKey="realizadoApresentado" 
                             fill="#3B82F6" 
@@ -1488,6 +1484,19 @@ export default function IndicadorDetalhe({ user }) {
               {/* Gráfico Combinado - Valor Indicador */}
               <div className="bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Indicador (Realizado vs Meta)</h3>
+                
+                {/* ✅ LEGENDA FIXA - Desktop */}
+                <div className="mb-4 flex justify-center space-x-6">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-purple-500 rounded mr-2"></div>
+                    <span className="text-sm text-gray-600">Realizado</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
+                    <span className="text-sm text-gray-600">Meta</span>
+                  </div>
+                </div>
+                
                 <div className="overflow-x-auto">
                   <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
                     <div className="h-64">
@@ -1504,10 +1513,6 @@ export default function IndicadorDetalhe({ user }) {
                             tick={{ fontSize: 12, fill: '#6B7280' }}
                           />
                           <Tooltip content={<CustomTooltip />} />
-                          <Legend 
-                            wrapperStyle={{ fontSize: '12px', paddingTop: '15px' }}
-                            iconSize={12}
-                          />
                           <Bar 
                             dataKey="realizadoIndicador" 
                             fill="#8B5CF6" 
@@ -1542,10 +1547,10 @@ export default function IndicadorDetalhe({ user }) {
                     Período de Referência
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Realizado
+                    Valor Apresentado (Realizado)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Meta
+                    Valor Apresentado (Meta)
                   </th>
                 </tr>
               </thead>
