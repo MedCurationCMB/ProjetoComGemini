@@ -324,17 +324,17 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
   const calculateBarSize = (dataLength, isMobile = false) => {
-    return isMobile ? 35 : 60;
+    return isMobile ? 20 : 30;
   };
 
   // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER - ✅ MODIFICADA: Controla o espaçamento real
   const calculateContainerWidth = (dataLength, isMobile = false) => {
     // ✅ NOVA LÓGICA: Largura baseada no número de barras com espaçamento mínimo
-    const barWidth = isMobile ? 40 : 70; // Largura fixa por barra (inclui espaçamento)
-    const margins = 40;
+    const barWidth = isMobile ? 25 : 35; // Largura fixa por barra (inclui espaçamento)
+    const margins = 20;
     
     // ✅ CHAVE: Container mais estreito força as barras a ficarem mais próximas
-    return Math.max(200, (barWidth * dataLength) + margins);
+    return Math.max(180, (barWidth * dataLength) + margins);
   };
 
   // 9. COMPONENTE DO GRÁFICO DE BARRAS - ✅ MODIFICADO: Foco no barCategoryGap
@@ -398,7 +398,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 <BarChart 
                   data={graficoData} 
                   margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                  barCategoryGap="5%" // ✅ FIXO: 5% em vez de variável
+                  barCategoryGap={0} // ✅ ZERO
                   maxBarSize={calculateBarSize(graficoData.length, isMobile)}
                 >
                   <XAxis 
