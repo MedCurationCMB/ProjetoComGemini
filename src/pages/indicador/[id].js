@@ -1028,7 +1028,7 @@ export default function IndicadorDetalhe({ user }) {
     return kpisHabilitados;
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados DESKTOP com sistema responsivo
+  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados DESKTOP com sistema responsivo MELHORADO
   const renderKPIsHabilitadosDesktop = () => {
     const kpis = calcularKPIs();
     const kpisHabilitados = [];
@@ -1114,43 +1114,135 @@ export default function IndicadorDetalhe({ user }) {
       });
     }
 
-    // ✅ LÓGICA PARA CALCULAR COLUNAS RESPONSIVAS
-    const getGridCols = (count) => {
-      if (count === 1) return "grid-cols-1";
-      if (count === 2) return "grid-cols-2";
-      if (count === 3) return "grid-cols-3";
-      if (count >= 4) return "grid-cols-4";
-      return "grid-cols-1";
+    // ✅ LÓGICA MELHORADA PARA LAYOUT OTIMIZADO
+    const renderKPILayout = () => {
+      const count = kpisHabilitados.length;
+      
+      // ✅ MAPEAMENTO DE CORES
+      const colorClasses = {
+        blue: "border-blue-500",
+        green: "border-green-500",
+        purple: "border-purple-500",
+        yellow: "border-yellow-500",
+        red: "border-red-500",
+        orange: "border-orange-500",
+        indigo: "border-indigo-500",
+        gray: "border-gray-500"
+      };
+
+      // Função para renderizar um KPI individual
+      const renderKPI = (kpi, className = "") => (
+        <div 
+          key={kpi.key} 
+          className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${colorClasses[kpi.color]} ${className}`}
+        >
+          <p className="text-xs font-medium text-gray-600 mb-1">{kpi.title}</p>
+          <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+          <p className="text-xs text-gray-400">{kpi.subtitle}</p>
+        </div>
+      );
+
+      // ✅ CASOS ESPECÍFICOS PARA LAYOUT OTIMIZADO
+      switch (count) {
+        case 1:
+          return (
+            <div className="grid grid-cols-1 gap-4">
+              {renderKPI(kpisHabilitados[0])}
+            </div>
+          );
+          
+        case 2:
+          return (
+            <div className="grid grid-cols-2 gap-4">
+              {kpisHabilitados.map(kpi => renderKPI(kpi))}
+            </div>
+          );
+          
+        case 3:
+          return (
+            <div className="grid grid-cols-3 gap-4">
+              {kpisHabilitados.map(kpi => renderKPI(kpi))}
+            </div>
+          );
+          
+        case 4:
+          return (
+            <div className="grid grid-cols-4 gap-4">
+              {kpisHabilitados.map(kpi => renderKPI(kpi))}
+            </div>
+          );
+          
+        case 5:
+          // ✅ CASO ESPECIAL: 4 na primeira linha + 1 ocupando toda a segunda linha
+          return (
+            <div className="space-y-4">
+              {/* Primeira linha: 4 KPIs */}
+              <div className="grid grid-cols-4 gap-4">
+                {kpisHabilitados.slice(0, 4).map(kpi => renderKPI(kpi))}
+              </div>
+              {/* Segunda linha: 1 KPI ocupando toda a largura */}
+              <div className="grid grid-cols-1 gap-4">
+                {renderKPI(kpisHabilitados[4])}
+              </div>
+            </div>
+          );
+          
+        case 6:
+          // ✅ CASO ESPECIAL: 4 na primeira linha + 2 na segunda linha
+          return (
+            <div className="space-y-4">
+              {/* Primeira linha: 4 KPIs */}
+              <div className="grid grid-cols-4 gap-4">
+                {kpisHabilitados.slice(0, 4).map(kpi => renderKPI(kpi))}
+              </div>
+              {/* Segunda linha: 2 KPIs */}
+              <div className="grid grid-cols-2 gap-4">
+                {kpisHabilitados.slice(4, 6).map(kpi => renderKPI(kpi))}
+              </div>
+            </div>
+          );
+          
+        case 7:
+          // ✅ CASO ESPECIAL: 4 na primeira linha + 3 na segunda linha
+          return (
+            <div className="space-y-4">
+              {/* Primeira linha: 4 KPIs */}
+              <div className="grid grid-cols-4 gap-4">
+                {kpisHabilitados.slice(0, 4).map(kpi => renderKPI(kpi))}
+              </div>
+              {/* Segunda linha: 3 KPIs */}
+              <div className="grid grid-cols-3 gap-4">
+                {kpisHabilitados.slice(4, 7).map(kpi => renderKPI(kpi))}
+              </div>
+            </div>
+          );
+          
+        case 8:
+          // ✅ CASO ESPECIAL: 4 na primeira linha + 4 na segunda linha
+          return (
+            <div className="space-y-4">
+              {/* Primeira linha: 4 KPIs */}
+              <div className="grid grid-cols-4 gap-4">
+                {kpisHabilitados.slice(0, 4).map(kpi => renderKPI(kpi))}
+              </div>
+              {/* Segunda linha: 4 KPIs */}
+              <div className="grid grid-cols-4 gap-4">
+                {kpisHabilitados.slice(4, 8).map(kpi => renderKPI(kpi))}
+              </div>
+            </div>
+          );
+          
+        default:
+          // ✅ FALLBACK: Para mais de 8 KPIs, usar grid padrão de 4 colunas
+          return (
+            <div className="grid grid-cols-4 gap-4">
+              {kpisHabilitados.map(kpi => renderKPI(kpi))}
+            </div>
+          );
+      }
     };
 
-    const gridClass = getGridCols(kpisHabilitados.length);
-
-    // ✅ MAPEAMENTO DE CORES
-    const colorClasses = {
-      blue: "border-blue-500",
-      green: "border-green-500",
-      purple: "border-purple-500",
-      yellow: "border-yellow-500",
-      red: "border-red-500",
-      orange: "border-orange-500",
-      indigo: "border-indigo-500",
-      gray: "border-gray-500"
-    };
-
-    return (
-      <div className={`grid ${gridClass} gap-4`}>
-        {kpisHabilitados.map((kpi) => (
-          <div 
-            key={kpi.key} 
-            className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${colorClasses[kpi.color]}`}
-          >
-            <p className="text-xs font-medium text-gray-600 mb-1">{kpi.title}</p>
-            <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
-            <p className="text-xs text-gray-400">{kpi.subtitle}</p>
-          </div>
-        ))}
-      </div>
-    );
+    return renderKPILayout();
   };
 
   // ✅ NOVA FUNÇÃO: Renderizar seção de configurações
