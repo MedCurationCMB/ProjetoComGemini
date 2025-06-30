@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings } from 'react-icons/fi';
 import { 
   ComposedChart, 
   Bar, 
@@ -47,6 +47,21 @@ export default function IndicadorDetalhe({ user }) {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
+  // ✅ NOVOS ESTADOS PARA CONFIGURAÇÕES
+  const [configuracoes, setConfiguracoes] = useState({
+    soma: false,
+    media: false,
+    desvio_padrao: false,
+    mediana: false,
+    mais_recente: false,
+    minimo: false,
+    maximo: false,
+    contagem_registros: false
+  });
+  const [showConfiguracoes, setShowConfiguracoes] = useState(false);
+  const [atualizandoConfiguracao, setAtualizandoConfiguracao] = useState(false);
+  const [indicadorBaseId, setIndicadorBaseId] = useState(null); // Para armazenar o ID do controle_indicador
+
   // Função para calcular o tamanho ideal das barras
   const calculateBarSize = (dataLength) => {
     // Tamanho fixo baseado na visualização de 7 barras
@@ -79,7 +94,19 @@ export default function IndicadorDetalhe({ user }) {
         mediaMetaApresentado: 0,
         mediaMetaIndicador: 0,
         totalRealizado: 0,
-        totalMeta: 0
+        totalMeta: 0,
+        // ✅ NOVOS KPIs ESTATÍSTICOS
+        desvioPadraoRealizadoApresentado: 0,
+        desvioPadraoRealizadoIndicador: 0,
+        medianaRealizadoApresentado: 0,
+        medianaRealizadoIndicador: 0,
+        minimoRealizadoApresentado: 0,
+        minimoRealizadoIndicador: 0,
+        maximoRealizadoApresentado: 0,
+        maximoRealizadoIndicador: 0,
+        maisRecenteRealizadoApresentado: 0,
+        maisRecenteRealizadoIndicador: 0,
+        contagemRegistros: 0
       };
     }
 
@@ -109,6 +136,29 @@ export default function IndicadorDetalhe({ user }) {
     const mediaMetaApresentado = metas.length > 0 ? somaMetaApresentado / metas.length : 0;
     const mediaMetaIndicador = metas.length > 0 ? somaMetaIndicador / metas.length : 0;
 
+    // ✅ NOVOS CÁLCULOS ESTATÍSTICOS
+    // Desvio Padrão
+    const calcularDesvioPadrao = (valores, media) => {
+      if (valores.length <= 1) return 0;
+      const variancia = valores.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / valores.length;
+      return Math.sqrt(variancia);
+    };
+
+    // Mediana
+    const calcularMediana = (valores) => {
+      if (valores.length === 0) return 0;
+      const sorted = [...valores].sort((a, b) => a - b);
+      const meio = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 
+        ? (sorted[meio - 1] + sorted[meio]) / 2 
+        : sorted[meio];
+    };
+
+    // Mais recente (último por data)
+    const maisRecenteRealizado = realizados.length > 0 
+      ? realizados.sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia))[0]
+      : null;
+
     return {
       // KPIs para Realizado (soma)
       somaRealizadoApresentado,
@@ -122,7 +172,19 @@ export default function IndicadorDetalhe({ user }) {
       mediaMetaApresentado,
       mediaMetaIndicador,
       totalRealizado: realizados.length,
-      totalMeta: metas.length
+      totalMeta: metas.length,
+      // ✅ NOVOS KPIs ESTATÍSTICOS
+      desvioPadraoRealizadoApresentado: calcularDesvioPadrao(valoresRealizadoApresentado, mediaRealizadoApresentado),
+      desvioPadraoRealizadoIndicador: calcularDesvioPadrao(valoresRealizadoIndicador, mediaRealizadoIndicador),
+      medianaRealizadoApresentado: calcularMediana(valoresRealizadoApresentado),
+      medianaRealizadoIndicador: calcularMediana(valoresRealizadoIndicador),
+      minimoRealizadoApresentado: valoresRealizadoApresentado.length > 0 ? Math.min(...valoresRealizadoApresentado) : 0,
+      minimoRealizadoIndicador: valoresRealizadoIndicador.length > 0 ? Math.min(...valoresRealizadoIndicador) : 0,
+      maximoRealizadoApresentado: valoresRealizadoApresentado.length > 0 ? Math.max(...valoresRealizadoApresentado) : 0,
+      maximoRealizadoIndicador: valoresRealizadoIndicador.length > 0 ? Math.max(...valoresRealizadoIndicador) : 0,
+      maisRecenteRealizadoApresentado: maisRecenteRealizado ? parseFloat(maisRecenteRealizado.valor_indicador_apresentado) || 0 : 0,
+      maisRecenteRealizadoIndicador: maisRecenteRealizado ? parseFloat(maisRecenteRealizado.valor_indicador) || 0 : 0,
+      contagemRegistros: indicadores.length
     };
   };
 
@@ -133,6 +195,106 @@ export default function IndicadorDetalhe({ user }) {
       minimumFractionDigits: 0, 
       maximumFractionDigits: 2 
     });
+  };
+
+  // ✅ NOVA FUNÇÃO: Carregar configurações do indicador
+  const carregarConfiguracoes = async (indicadorBaseId) => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracao_pag_indicador_id')
+        .select('*')
+        .eq('indicador_base_id', indicadorBaseId)
+        .single();
+
+      if (error) {
+        // Se não encontrar, criar configuração padrão
+        if (error.code === 'PGRST116') {
+          console.log('Configuração não encontrada, criando padrão...');
+          await criarConfiguracaoPadrao(indicadorBaseId);
+          return;
+        }
+        throw error;
+      }
+
+      // Atualizar estado com as configurações encontradas
+      setConfiguracoes({
+        soma: data.soma || false,
+        media: data.media || false,
+        desvio_padrao: data.desvio_padrao || false,
+        mediana: data.mediana || false,
+        mais_recente: data.mais_recente || false,
+        minimo: data.minimo || false,
+        maximo: data.maximo || false,
+        contagem_registros: data.contagem_registros || false
+      });
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+      toast.error('Erro ao carregar configurações');
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Criar configuração padrão
+  const criarConfiguracaoPadrao = async (indicadorBaseId) => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracao_pag_indicador_id')
+        .insert({
+          indicador_base_id: indicadorBaseId,
+          soma: false,
+          media: false,
+          desvio_padrao: false,
+          mediana: false,
+          mais_recente: false,
+          minimo: false,
+          maximo: false,
+          contagem_registros: false
+        });
+
+      if (error) throw error;
+
+      // Definir configurações padrão
+      setConfiguracoes({
+        soma: false,
+        media: false,
+        desvio_padrao: false,
+        mediana: false,
+        mais_recente: false,
+        minimo: false,
+        maximo: false,
+        contagem_registros: false
+      });
+    } catch (error) {
+      console.error('Erro ao criar configuração padrão:', error);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Atualizar configuração
+  const atualizarConfiguracao = async (campo, valor) => {
+    if (atualizandoConfiguracao) return;
+
+    try {
+      setAtualizandoConfiguracao(true);
+
+      const { data, error } = await supabase
+        .from('configuracao_pag_indicador_id')
+        .update({ [campo]: valor })
+        .eq('indicador_base_id', indicadorBaseId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setConfiguracoes(prev => ({
+        ...prev,
+        [campo]: valor
+      }));
+
+      toast.success(`Configuração ${valor ? 'habilitada' : 'desabilitada'} com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao atualizar configuração:', error);
+      toast.error('Erro ao atualizar configuração');
+    } finally {
+      setAtualizandoConfiguracao(false);
+    }
   };
 
   // Função CORRIGIDA para filtrar por período
@@ -305,7 +467,7 @@ export default function IndicadorDetalhe({ user }) {
     }
   }, [user]);
 
-  // Buscar dados dos indicadores
+  // ✅ MODIFICADO: Buscar dados dos indicadores E carregar configurações
   useEffect(() => {
     const fetchIndicadores = async () => {
       if (!id) return;
@@ -366,6 +528,24 @@ export default function IndicadorDetalhe({ user }) {
             categoria_id: dadosIndicadores[0].categoria_id,
             created_at: dadosIndicadores[0].created_at
           });
+
+          // ✅ NOVO: Buscar o indicador_base_id e carregar configurações
+          // Primeiro, buscar o controle_indicador baseado no id_controleindicador
+          const { data: controleData, error: controleError } = await supabase
+            .from('controle_indicador')
+            .select('id')
+            .eq('id', id)
+            .single();
+
+          if (controleError) {
+            console.error('Erro ao buscar controle_indicador:', controleError);
+            return;
+          }
+
+          if (controleData) {
+            setIndicadorBaseId(controleData.id);
+            await carregarConfiguracoes(controleData.id);
+          }
         }
       } catch (error) {
         console.error('Erro ao buscar indicadores:', error);
@@ -701,6 +881,191 @@ export default function IndicadorDetalhe({ user }) {
       .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
   };
 
+  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados
+  const renderKPIsHabilitados = () => {
+    const kpis = calcularKPIs();
+    const kpisHabilitados = [];
+
+    // Verificar quais KPIs estão habilitados e adicionar ao array
+    if (configuracoes.soma) {
+      kpisHabilitados.push(
+        <div key="soma-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
+          <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
+        </div>,
+        <div key="soma-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.media) {
+      kpisHabilitados.push(
+        <div key="media-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
+          <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
+        </div>,
+        <div key="media-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.desvio_padrao) {
+      kpisHabilitados.push(
+        <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoApresentado)}</p>
+        </div>,
+        <div key="desvio-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.mediana) {
+      kpisHabilitados.push(
+        <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoApresentado)}</p>
+        </div>,
+        <div key="mediana-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.minimo) {
+      kpisHabilitados.push(
+        <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoApresentado)}</p>
+        </div>,
+        <div key="minimo-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.maximo) {
+      kpisHabilitados.push(
+        <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoApresentado)}</p>
+        </div>,
+        <div key="maximo-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.mais_recente) {
+      kpisHabilitados.push(
+        <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Apresentado</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoApresentado)}</p>
+        </div>,
+        <div key="recente-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-400">
+          <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Indicador</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoIndicador)}</p>
+        </div>
+      );
+    }
+
+    if (configuracoes.contagem_registros) {
+      kpisHabilitados.push(
+        <div key="contagem" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-gray-500">
+          <p className="text-xs font-medium text-gray-600 mb-1">Contagem de Registros</p>
+          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.contagemRegistros)}</p>
+        </div>
+      );
+    }
+
+    return kpisHabilitados;
+  };
+
+  // ✅ NOVA FUNÇÃO: Renderizar seção de configurações
+  const renderSecaoConfiguracoes = () => {
+    const opcoes = [
+      { key: 'soma', label: 'Soma' },
+      { key: 'media', label: 'Média' },
+      { key: 'desvio_padrao', label: 'Desvio Padrão' },
+      { key: 'mediana', label: 'Mediana' },
+      { key: 'mais_recente', label: 'Mais Recente' },
+      { key: 'minimo', label: 'Mínimo' },
+      { key: 'maximo', label: 'Máximo' },
+      { key: 'contagem_registros', label: 'Contagem de Registros' }
+    ];
+
+    return (
+      <div className="mb-6">
+        {/* Cabeçalho da seção */}
+        <button
+          onClick={() => setShowConfiguracoes(!showConfiguracoes)}
+          className="w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all duration-200"
+        >
+          <div className="flex items-center">
+            <FiSettings className="w-5 h-5 text-gray-500 mr-3" />
+            <h3 className="text-lg font-semibold text-gray-700">Configurações de Exibição</h3>
+          </div>
+          {showConfiguracoes ? (
+            <FiChevronUp className="w-5 h-5 text-gray-500" />
+          ) : (
+            <FiChevronDown className="w-5 h-5 text-gray-500" />
+          )}
+        </button>
+
+        {/* Conteúdo da seção (colapsado) */}
+        {showConfiguracoes && (
+          <div className="mt-3 p-4 bg-gray-50 rounded-lg border">
+            <p className="text-sm text-gray-600 mb-4">
+              Selecione quais estatísticas devem ser exibidas no resumo dos indicadores:
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {opcoes.map((opcao) => (
+                <label
+                  key={opcao.key}
+                  className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                    configuracoes[opcao.key]
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  } ${atualizandoConfiguracao ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={configuracoes[opcao.key]}
+                    onChange={(e) => atualizarConfiguracao(opcao.key, e.target.checked)}
+                    disabled={atualizandoConfiguracao}
+                    className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="text-sm font-medium">{opcao.label}</span>
+                </label>
+              ))}
+            </div>
+
+            {atualizandoConfiguracao && (
+              <div className="mt-3 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2"></div>
+                <span className="text-sm text-gray-600">Salvando configurações...</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Componente personalizado para Tooltip
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -720,7 +1085,7 @@ export default function IndicadorDetalhe({ user }) {
 
   const dadosGraficoCombinado = prepararDadosGraficoCombinado();
   const dadosTabela = prepararDadosTabela();
-  const kpis = calcularKPIs();
+  const kpisHabilitados = renderKPIsHabilitados();
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -919,39 +1284,18 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* ✅ KPIs MODIFICADOS - Mobile - 4 cards: 2 soma + 2 média */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {/* KPI 1: Realizado - Valor Apresentado (SOMA) */}
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
-                <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Apresentado</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
-              </div>
-              
-              {/* KPI 2: Realizado - Valor Indicador (SOMA) */}
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-400">
-                <p className="text-xs font-medium text-gray-600 mb-1">Realizado - Valor Indicador</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
-              </div>
-              
-              {/* ✅ NOVO KPI 3: Realizado - Valor Apresentado (MÉDIA) */}
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
-                <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Apresentado</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
-              </div>
-              
-              {/* ✅ NOVO KPI 4: Realizado - Valor Indicador (MÉDIA) */}
-              <div className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-400">
-                <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Indicador</p>
-                <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+          {/* ✅ KPIs DINÂMICOS - Mobile - Baseados nas configurações */}
+          {kpisHabilitados.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {kpisHabilitados}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Mobile */}
+          {renderSecaoConfiguracoes()}
 
           {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM LEGENDA FIXA */}
           <div className="mb-6 space-y-6">
@@ -1100,8 +1444,6 @@ export default function IndicadorDetalhe({ user }) {
                 </tbody>
               </table>
             </div>
-            
-            {/* ✅ REMOVIDO: Rodapé com total de períodos */}
           </div>
 
           {/* Botão Marcar como Lido - Mobile - SEMPRE mostrado */}
@@ -1389,39 +1731,22 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* ✅ KPIs MODIFICADOS - Desktop - 4 cards: 2 soma + 2 média */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* KPI 1: Realizado - Valor Apresentado (SOMA) */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
-                <p className="text-sm font-medium text-gray-600">Realizado - Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-500 mt-1">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
-              </div>
-              
-              {/* KPI 2: Realizado - Valor Indicador (SOMA) */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-400">
-                <p className="text-sm font-medium text-gray-600">Realizado - Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-500 mt-1">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
-              </div>
-              
-              {/* ✅ NOVO KPI 3: Realizado - Valor Apresentado (MÉDIA) */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
-                <p className="text-sm font-medium text-gray-600">Média - Valor Apresentado</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
-                <p className="text-xs text-gray-500 mt-1">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
-              </div>
-              
-              {/* ✅ NOVO KPI 4: Realizado - Valor Indicador (MÉDIA) */}
-              <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-400">
-                <p className="text-sm font-medium text-gray-600">Média - Valor Indicador</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
-                <p className="text-xs text-gray-500 mt-1">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
+          {/* ✅ KPIs DINÂMICOS - Desktop - Baseados nas configurações */}
+          {kpisHabilitados.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {kpisHabilitados.map((kpi, index) => (
+                  <div key={index} className={kpi.props.className.replace('text-lg', 'text-2xl').replace('p-3', 'p-4')}>
+                    {kpi.props.children}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Desktop */}
+          {renderSecaoConfiguracoes()}
 
           {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM LEGENDA FIXA */}
           <div className="mb-8">
