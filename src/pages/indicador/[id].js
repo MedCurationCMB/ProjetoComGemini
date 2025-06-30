@@ -870,7 +870,7 @@ export default function IndicadorDetalhe({ user }) {
     return num.toLocaleString('pt-BR');
   };
 
-  // ✅ FUNÇÃO MODIFICADA: Preparar dados para gráfico combinado COM ORDENAÇÃO INVERTIDA
+  // ✅ FUNÇÃO CORRIGIDA: Preparar dados para gráfico combinado - VOLTA À ORDEM CRESCENTE
   const prepararDadosGraficoCombinado = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
@@ -903,12 +903,12 @@ export default function IndicadorDetalhe({ user }) {
       }
     });
     
-    // ✅ ALTERAÇÃO: Converter para array e ordenar por data DECRESCENTE (mais recente primeiro)
+    // ✅ VOLTANDO À ORDEM ORIGINAL: Converter para array e ordenar por data CRESCENTE (mais antigo primeiro)
     return Object.values(dadosAgrupados)
-      .sort((a, b) => new Date(b.periodoCompleto) - new Date(a.periodoCompleto)); // Invertido: b - a
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto)); // ✅ VOLTA: a - b (crescente)
   };
 
-  // ✅ FUNÇÃO NOVA: Preparar dados para tabela MODIFICADA
+  // ✅ FUNÇÃO CORRIGIDA: Preparar dados para tabela - TAMBÉM VOLTA À ORDEM CRESCENTE  
   const prepararDadosTabela = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
@@ -934,9 +934,9 @@ export default function IndicadorDetalhe({ user }) {
       }
     });
     
-    // Converter para array e ordenar por data decrescente
+    // ✅ VOLTANDO À ORDEM ORIGINAL: Converter para array e ordenar por data CRESCENTE
     return Object.values(dadosAgrupados)
-      .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+      .sort((a, b) => new Date(a.periodo_referencia) - new Date(b.periodo_referencia)); // ✅ VOLTA: a - b (crescente)
   };
 
   // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados
