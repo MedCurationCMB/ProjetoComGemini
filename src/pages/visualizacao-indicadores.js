@@ -751,17 +751,19 @@ export default function VisualizacaoIndicadores({ user }) {
             query = query.eq('ler_depois', true);
             break;
           case 'ver_todos':
-            // Aplicar filtros avançados se estiverem ativos
-            if (filtroImportantes) {
-              query = query.eq('importante', true);
-            }
-            if (filtroLerDepois) {
-              query = query.eq('ler_depois', true);
-            }
-            if (filtroArquivados) {
-              query = query.eq('arquivado', true);
-            }
+            // Na aba "Ver Todos", não aplicar filtros automáticos da aba
             break;
+        }
+
+        // APLICAR FILTROS AVANÇADOS EM TODAS AS ABAS (NOVA SEÇÃO)
+        if (filtroImportantes) {
+          query = query.eq('importante', true);
+        }
+        if (filtroLerDepois) {
+          query = query.eq('ler_depois', true);
+        }
+        if (filtroArquivados) {
+          query = query.eq('arquivado', true);
         }
         
         // Aplicar termo de pesquisa se existir
@@ -1062,51 +1064,49 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Ver Todos" */}
-                {activeTab === 'ver_todos' && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Filtros Avançados
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setFiltroImportantes(!filtroImportantes)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroImportantes 
-                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiStar className="w-4 h-4 mr-1" />
-                        Importantes
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroLerDepois 
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiClock className="w-4 h-4 mr-1" />
-                        Ler Depois
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroArquivados(!filtroArquivados)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroArquivados 
-                            ? 'bg-green-100 text-green-800 border border-green-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiArchive className="w-4 h-4 mr-1" />
-                        Arquivados
-                      </button>
-                    </div>
+                {/* Filtros Avançados - AGORA FIXO EM TODAS AS ABAS */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Filtros Avançados
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setFiltroImportantes(!filtroImportantes)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroImportantes 
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiStar className="w-4 h-4 mr-1" />
+                      Importantes
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroLerDepois 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiClock className="w-4 h-4 mr-1" />
+                      Ler Depois
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroArquivados(!filtroArquivados)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroArquivados 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiArchive className="w-4 h-4 mr-1" />
+                      Arquivados
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -1247,51 +1247,49 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Ver Todos" */}
-                {activeTab === 'ver_todos' && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Filtros Avançados
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setFiltroImportantes(!filtroImportantes)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroImportantes 
-                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiStar className="w-4 h-4 mr-1" />
-                        Importantes
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroLerDepois 
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiClock className="w-4 h-4 mr-1" />
-                        Ler Depois
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroArquivados(!filtroArquivados)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroArquivados 
-                            ? 'bg-green-100 text-green-800 border border-green-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiArchive className="w-4 h-4 mr-1" />
-                        Arquivados
-                      </button>
-                    </div>
+                {/* Filtros Avançados - AGORA FIXO EM TODAS AS ABAS */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Filtros Avançados
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setFiltroImportantes(!filtroImportantes)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroImportantes 
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiStar className="w-4 h-4 mr-1" />
+                      Importantes
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroLerDepois 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiClock className="w-4 h-4 mr-1" />
+                      Ler Depois
+                    </button>
+                    
+                    <button
+                      onClick={() => setFiltroArquivados(!filtroArquivados)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroArquivados 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiArchive className="w-4 h-4 mr-1" />
+                      Arquivados
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
