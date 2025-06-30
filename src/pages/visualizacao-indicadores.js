@@ -23,7 +23,8 @@ import {
   FiSettings, 
   FiLogOut,
   FiX,
-  FiCalendar
+  FiCalendar,
+  FiBarChart 
 } from 'react-icons/fi';
 
 export default function VisualizacaoIndicadores({ user }) {
@@ -826,7 +827,7 @@ export default function VisualizacaoIndicadores({ user }) {
   const getSectionTitle = () => {
     switch (activeTab) {
       case 'inicio':
-        return 'Início';
+        return 'Indicadores';  // ✅ MODIFICADO
       case 'importantes':
         return 'Importantes';
       case 'ler_depois':
@@ -834,7 +835,7 @@ export default function VisualizacaoIndicadores({ user }) {
       case 'ver_todos':
         return 'Ver Todos';
       default:
-        return 'Início';
+        return 'Indicadores';  // ✅ MODIFICADO
     }
   };
 
@@ -1314,8 +1315,8 @@ export default function VisualizacaoIndicadores({ user }) {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <FiHome className="mr-3 h-5 w-5" />
-                  Início
+                  <FiBarChart className="mr-3 h-5 w-5" />  {/* ✅ ÍCONE MODIFICADO */}
+                  Indicadores  {/* ✅ TEXTO MODIFICADO */}
                 </button>
 
                 <button
@@ -1647,8 +1648,8 @@ export default function VisualizacaoIndicadores({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <FiHome className="w-5 h-5" />
-            <span className="text-xs font-medium">Início</span>
+            <FiBarChart className="w-5 h-5" />  {/* ✅ ÍCONE MODIFICADO */}
+            <span className="text-xs font-medium">Indicadores</span>  {/* ✅ TEXTO MODIFICADO */}
           </button>
 
           <button
