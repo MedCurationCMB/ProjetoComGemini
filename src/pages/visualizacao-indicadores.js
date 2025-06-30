@@ -213,8 +213,9 @@ export default function VisualizacaoIndicadores({ user }) {
         <div className={needsScroll ? "overflow-x-auto" : ""}>
           <div 
             style={{ 
-              width: needsScroll ? `${totalWidth}px` : '100%',
-              minWidth: needsScroll ? `${totalWidth}px` : 'auto'
+              width: `${totalWidth}px`,        // ✅ SEMPRE largura calculada
+              minWidth: `${totalWidth}px`,     // ✅ SEMPRE largura calculada
+              margin: needsScroll ? '0' : '0 auto'  // ✅ Centrar quando não há scroll
             }}
           >
             <div style={{ height: altura }}>
