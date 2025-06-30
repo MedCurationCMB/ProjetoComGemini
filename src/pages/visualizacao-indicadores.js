@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão sem card de destaque
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com layout KPI responsivo
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -76,6 +76,180 @@ export default function VisualizacaoIndicadores({ user }) {
     const tipoApresentacao = indicador.controle_indicador.tipos_apresentacao?.nome;
     
     return tipoApresentacao === 'Gráfico de Barras';
+  };
+
+  // ✅ NOVA FUNÇÃO: Separar indicadores por tipo
+  const separarIndicadoresPorTipo = (indicadores) => {
+    const kpis = [];
+    const graficos = [];
+    const outros = [];
+
+    indicadores.forEach(indicador => {
+      if (isKpiOrNull(indicador)) {
+        kpis.push(indicador);
+      } else if (isGraficoBarras(indicador)) {
+        graficos.push(indicador);
+      } else {
+        outros.push(indicador);
+      }
+    });
+
+    return { kpis, graficos, outros };
+  };
+
+  // ✅ NOVA FUNÇÃO: Renderizar layout responsivo de KPIs
+  const renderKPILayout = (kpis) => {
+    if (kpis.length === 0) return null;
+
+    const count = kpis.length;
+
+    // Função para renderizar um card KPI individual
+    const renderKPICard = (indicador, className = "") => (
+      <div key={indicador.id} className={className}>
+        <Link href={`/indicador/${indicador.id_controleindicador}`}>
+          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                {indicador.indicador || 'Sem indicador'}
+              </h3>
+              <div className="flex items-center space-x-2">
+                {getStatusIndicators(indicador)}
+                {shouldShowReadLaterIcon(indicador) && (
+                  <FiClock className="w-4 h-4 text-blue-600" />
+                )}
+              </div>
+            </div>
+            
+            {/* Valor KPI */}
+            <div className="mb-4">
+              <div className="text-5xl font-bold text-black">
+                {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+              </div>
+            </div>
+            
+            {/* Tags e data */}
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                {indicador.projeto_id && (
+                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                    {projetos[indicador.projeto_id]}
+                  </span>
+                )}
+                {indicador.categoria_id && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                    {categorias[indicador.categoria_id]}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center text-gray-500 text-xs">
+                <FiCalendar className="w-3 h-3 mr-1" />
+                {formatDate(indicador)}
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
+    );
+
+    // ✅ LÓGICA DE LAYOUT OTIMIZADO BASEADA NA QUANTIDADE
+    switch (count) {
+      case 1:
+        return (
+          <div className="grid grid-cols-1 gap-6 mb-6">
+            {renderKPICard(kpis[0])}
+          </div>
+        );
+        
+      case 2:
+        return (
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
+        
+      case 3:
+        return (
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
+        
+      case 4:
+        return (
+          <div className="grid grid-cols-4 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
+        
+      case 5:
+        // ✅ CASO ESPECIAL: 4 na primeira linha + 1 ocupando toda a segunda linha
+        return (
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 4 KPIs */}
+            <div className="grid grid-cols-4 gap-6">
+              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 1 KPI ocupando toda a largura */}
+            <div className="grid grid-cols-1 gap-6">
+              {renderKPICard(kpis[4])}
+            </div>
+          </div>
+        );
+        
+      case 6:
+        // ✅ CASO ESPECIAL: 4 na primeira linha + 2 na segunda linha
+        return (
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 4 KPIs */}
+            <div className="grid grid-cols-4 gap-6">
+              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 2 KPIs */}
+            <div className="grid grid-cols-2 gap-6">
+              {kpis.slice(4, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+          </div>
+        );
+        
+      case 7:
+        // ✅ CASO ESPECIAL: 4 na primeira linha + 3 na segunda linha
+        return (
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 4 KPIs */}
+            <div className="grid grid-cols-4 gap-6">
+              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(4, 7).map(kpi => renderKPICard(kpi))}
+            </div>
+          </div>
+        );
+        
+      case 8:
+        // ✅ CASO ESPECIAL: 4 na primeira linha + 4 na segunda linha
+        return (
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 4 KPIs */}
+            <div className="grid grid-cols-4 gap-6">
+              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 4 KPIs */}
+            <div className="grid grid-cols-4 gap-6">
+              {kpis.slice(4, 8).map(kpi => renderKPICard(kpi))}
+            </div>
+          </div>
+        );
+        
+      default:
+        // ✅ FALLBACK: Para mais de 8 KPIs, usar grid padrão de 4 colunas
+        return (
+          <div className="grid grid-cols-4 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
+    }
   };
 
   // 5. FUNÇÃO PARA BUSCAR DADOS DO GRÁFICO
@@ -1121,7 +1295,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   {indicadores.length > 0 ? (
                     indicadores.map((indicador, index) => {
                       const isKPI = isKpiOrNull(indicador);
-                      const isGrafico = isGraficoBarras(indicador); // ← ADICIONAR ESTA LINHA
+                      const isGrafico = isGraficoBarras(indicador);
                       
                       return (
                         <div key={indicador.id} className={index > 0 ? "mt-4" : ""}>
@@ -1212,106 +1386,120 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
 
-                {/* Desktop: Grid responsivo para desktop sem card de destaque */}
+                {/* ✅ DESKTOP: Layout com sistema KPI responsivo */}
                 <div className="hidden lg:block">
-                  <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                    {/* Cards regulares - Desktop */}
-                    {indicadores.length > 0 ? (
-                      indicadores.map((indicador) => {
-                        const isKPI = isKpiOrNull(indicador);
-                        const isGrafico = isGraficoBarras(indicador);
-                        
-                        // ✅ SE FOR GRÁFICO DE BARRAS, OCUPA TAMANHO DESTAQUE
-                        const cardSpanClass = isGrafico ? "lg:col-span-2 xl:col-span-3" : "";
-                        
-                        return (
-                          <div key={indicador.id} className={cardSpanClass}>
-                            <Link href={`/indicador/${indicador.id_controleindicador}`}>
-                              <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
-                                <div className="flex justify-between items-start mb-3">
-                                  <h3 className={`font-bold text-gray-900 flex-1 pr-2 ${isGrafico ? 'text-xl' : 'text-lg'}`}>
-                                    {indicador.indicador || 'Sem indicador'}
-                                  </h3>
-                                  <div className="flex items-center space-x-2">
-                                    {getStatusIndicators(indicador)}
-                                    {shouldShowReadLaterIcon(indicador) && (
-                                      <FiClock className="w-4 h-4 text-blue-600" />
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
-                                {(() => {
-                                  if (isKPI) {
-                                    return (
-                                      <div className="mb-4">
-                                        <div className="text-5xl font-bold text-black">
-                                          {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+                  {indicadores.length > 0 ? (
+                    (() => {
+                      // Separar indicadores por tipo
+                      const { kpis, graficos, outros } = separarIndicadoresPorTipo(indicadores);
+                      
+                      return (
+                        <div>
+                          {/* ✅ SEÇÃO DE KPIs COM LAYOUT RESPONSIVO */}
+                          {kpis.length > 0 && renderKPILayout(kpis)}
+                          
+                          {/* ✅ SEÇÃO DE GRÁFICOS DE BARRAS (largura total) */}
+                          {graficos.length > 0 && (
+                            <div className="space-y-6 mb-6">
+                              {graficos.map((indicador) => (
+                                <div key={indicador.id} className="lg:col-span-2 xl:col-span-3">
+                                  <Link href={`/indicador/${indicador.id_controleindicador}`}>
+                                    <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+                                      <div className="flex justify-between items-start mb-3">
+                                        <h3 className="text-xl font-bold text-gray-900 flex-1 pr-2">
+                                          {indicador.indicador || 'Sem indicador'}
+                                        </h3>
+                                        <div className="flex items-center space-x-2">
+                                          {getStatusIndicators(indicador)}
+                                          {shouldShowReadLaterIcon(indicador) && (
+                                            <FiClock className="w-4 h-4 text-blue-600" />
+                                          )}
                                         </div>
                                       </div>
-                                    );
-                                  } else if (isGrafico) {
-                                    return <GraficoBarrasComponent indicador={indicador} isMobile={false} />;
-                                  }
-                                  
-                                  return null;
-                                })()}
-                                
-                                {/* Layout condicional para as tags e data */}
-                                {(isKPI || isGrafico) ? (
-                                  // Para KPI/Gráfico: tags e data na mesma linha
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex flex-wrap gap-2">
-                                      {indicador.projeto_id && (
-                                        <span className={`px-2 py-1 bg-red-100 text-red-800 rounded-full whitespace-nowrap ${isGrafico ? 'text-sm' : 'text-xs'}`}>
-                                          {projetos[indicador.projeto_id]}
-                                        </span>
-                                      )}
-                                      {indicador.categoria_id && (
-                                        <span className={`px-2 py-1 bg-blue-100 text-blue-800 rounded-full whitespace-nowrap ${isGrafico ? 'text-sm' : 'text-xs'}`}>
-                                          {categorias[indicador.categoria_id]}
-                                        </span>
-                                      )}
+                                      
+                                      {/* Gráfico de Barras */}
+                                      <GraficoBarrasComponent indicador={indicador} isMobile={false} />
+                                      
+                                      {/* Tags e data */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex flex-wrap gap-2">
+                                          {indicador.projeto_id && (
+                                            <span className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full whitespace-nowrap">
+                                              {projetos[indicador.projeto_id]}
+                                            </span>
+                                          )}
+                                          {indicador.categoria_id && (
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full whitespace-nowrap">
+                                              {categorias[indicador.categoria_id]}
+                                            </span>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="flex items-center text-gray-500 text-sm">
+                                          <FiCalendar className="w-4 h-4 mr-1" />
+                                          {formatDate(indicador)}
+                                        </div>
+                                      </div>
                                     </div>
-                                    
-                                    <div className={`flex items-center text-gray-500 ${isGrafico ? 'text-sm' : 'text-xs'}`}>
-                                      <FiCalendar className={`mr-1 ${isGrafico ? 'w-4 h-4' : 'w-3 h-3'}`} />
-                                      {formatDate(indicador)}
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* ✅ SEÇÃO DE OUTROS TIPOS (grid normal) */}
+                          {outros.length > 0 && (
+                            <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                              {outros.map((indicador) => (
+                                <div key={indicador.id}>
+                                  <Link href={`/indicador/${indicador.id_controleindicador}`}>
+                                    <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+                                      <div className="flex justify-between items-start mb-3">
+                                        <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+                                          {indicador.indicador || 'Sem indicador'}
+                                        </h3>
+                                        <div className="flex items-center space-x-2">
+                                          {getStatusIndicators(indicador)}
+                                          {shouldShowReadLaterIcon(indicador) && (
+                                            <FiClock className="w-4 h-4 text-blue-600" />
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Layout para outros tipos */}
+                                      <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-2">
+                                          {indicador.projeto_id && (
+                                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                                              {projetos[indicador.projeto_id]}
+                                            </span>
+                                          )}
+                                          {indicador.categoria_id && (
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                                              {categorias[indicador.categoria_id]}
+                                            </span>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-end text-gray-500 text-xs">
+                                          <FiCalendar className="w-3 h-3 mr-1" />
+                                          {formatDate(indicador)}
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  // Para outros tipos: layout original (space-y-2)
-                                  <div className="space-y-2">
-                                    <div className="flex flex-wrap gap-2">
-                                      {indicador.projeto_id && (
-                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
-                                          {projetos[indicador.projeto_id]}
-                                        </span>
-                                      )}
-                                      {indicador.categoria_id && (
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
-                                          {categorias[indicador.categoria_id]}
-                                        </span>
-                                      )}
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-end text-gray-500 text-xs">
-                                      <FiCalendar className="w-3 h-3 mr-1" />
-                                      {formatDate(indicador)}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </Link>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="lg:col-span-2 xl:col-span-3 py-8 text-center text-gray-500">
-                        Nenhum indicador encontrado
-                      </div>
-                    )}
-                  </div>
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="py-8 text-center text-gray-500">
+                      Nenhum indicador encontrado
+                    </div>
+                  )}
                 </div>
               </div>
             )}
