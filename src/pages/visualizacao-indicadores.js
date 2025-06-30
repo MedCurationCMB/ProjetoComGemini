@@ -145,10 +145,10 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // Função para calcular barCategoryGap dinâmico
   const calculateCategoryGap = (dataLength) => {
-    if (dataLength <= 3) return "20%";     // Poucas barras = mais espaço
-    if (dataLength <= 5) return "15%";     // Quantidade média
-    if (dataLength <= 8) return "10%";     // Mais barras = menos espaço
-    if (dataLength <= 12) return "5%";     // Muitas barras
+    if (dataLength <= 3) return "8%";     // Poucas barras = mais espaço
+    if (dataLength <= 5) return "5%";     // Quantidade média
+    if (dataLength <= 8) return "3%";     // Mais barras = menos espaço
+    if (dataLength <= 12) return "1%";     // Muitas barras
     return "2%";                           // Muitas barras = espaço mínimo
   };
 
