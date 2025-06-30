@@ -97,7 +97,7 @@ export default function VisualizacaoIndicadores({ user }) {
     return { kpis, graficos, outros };
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar layout responsivo de KPIs
+  // ✅ NOVA FUNÇÃO: Renderizar layout responsivo de KPIs (LIMITE 3 POR LINHA)
   const renderKPILayout = (kpis) => {
     if (kpis.length === 0) return null;
 
@@ -152,7 +152,7 @@ export default function VisualizacaoIndicadores({ user }) {
       </div>
     );
 
-    // ✅ LÓGICA DE LAYOUT OTIMIZADO BASEADA NA QUANTIDADE
+    // ✅ LÓGICA DE LAYOUT OTIMIZADO BASEADA NA QUANTIDADE (LIMITE 3 POR LINHA)
     switch (count) {
       case 1:
         return (
@@ -176,76 +176,111 @@ export default function VisualizacaoIndicadores({ user }) {
         );
         
       case 4:
+        // ✅ CASO ESPECIAL: 3 na primeira linha + 1 ocupando toda a segunda linha
         return (
-          <div className="grid grid-cols-4 gap-6 mb-6">
-            {kpis.map(kpi => renderKPICard(kpi))}
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 1 KPI ocupando toda a largura */}
+            <div className="grid grid-cols-1 gap-6">
+              {renderKPICard(kpis[3])}
+            </div>
           </div>
         );
         
       case 5:
-        // ✅ CASO ESPECIAL: 4 na primeira linha + 1 ocupando toda a segunda linha
+        // ✅ CASO ESPECIAL: 3 na primeira linha + 2 na segunda linha
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 4 KPIs */}
-            <div className="grid grid-cols-4 gap-6">
-              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 1 KPI ocupando toda a largura */}
-            <div className="grid grid-cols-1 gap-6">
-              {renderKPICard(kpis[4])}
+            {/* Segunda linha: 2 KPIs */}
+            <div className="grid grid-cols-2 gap-6">
+              {kpis.slice(3, 5).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
         
       case 6:
-        // ✅ CASO ESPECIAL: 4 na primeira linha + 2 na segunda linha
+        // ✅ CASO ESPECIAL: 3 na primeira linha + 3 na segunda linha
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 4 KPIs */}
-            <div className="grid grid-cols-4 gap-6">
-              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 2 KPIs */}
-            <div className="grid grid-cols-2 gap-6">
-              {kpis.slice(4, 6).map(kpi => renderKPICard(kpi))}
+            {/* Segunda linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
         
       case 7:
-        // ✅ CASO ESPECIAL: 4 na primeira linha + 3 na segunda linha
+        // ✅ CASO ESPECIAL: 3 na primeira linha + 3 na segunda linha + 1 na terceira linha (largura total)
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 4 KPIs */}
-            <div className="grid grid-cols-4 gap-6">
-              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
             {/* Segunda linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
-              {kpis.slice(4, 7).map(kpi => renderKPICard(kpi))}
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Terceira linha: 1 KPI ocupando toda a largura */}
+            <div className="grid grid-cols-1 gap-6">
+              {renderKPICard(kpis[6])}
             </div>
           </div>
         );
         
       case 8:
-        // ✅ CASO ESPECIAL: 4 na primeira linha + 4 na segunda linha
+        // ✅ CASO ESPECIAL: 3 + 3 + 2 KPIs
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 4 KPIs */}
-            <div className="grid grid-cols-4 gap-6">
-              {kpis.slice(0, 4).map(kpi => renderKPICard(kpi))}
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 4 KPIs */}
-            <div className="grid grid-cols-4 gap-6">
-              {kpis.slice(4, 8).map(kpi => renderKPICard(kpi))}
+            {/* Segunda linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Terceira linha: 2 KPIs */}
+            <div className="grid grid-cols-2 gap-6">
+              {kpis.slice(6, 8).map(kpi => renderKPICard(kpi))}
+            </div>
+          </div>
+        );
+        
+      case 9:
+        // ✅ CASO ESPECIAL: 3 + 3 + 3 KPIs
+        return (
+          <div className="space-y-6 mb-6">
+            {/* Primeira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Segunda linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            {/* Terceira linha: 3 KPIs */}
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(6, 9).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
         
       default:
-        // ✅ FALLBACK: Para mais de 8 KPIs, usar grid padrão de 4 colunas
+        // ✅ FALLBACK: Para mais de 9 KPIs, usar grid padrão de 3 colunas
         return (
-          <div className="grid grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-3 gap-6 mb-6">
             {kpis.map(kpi => renderKPICard(kpi))}
           </div>
         );
