@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com layout KPI responsivo
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com gráfico adaptativo
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -48,6 +48,239 @@ export default function VisualizacaoIndicadores({ user }) {
   // Estados para controlar a navegação
   const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
+
+  // =====================================
+  // FUNÇÕES PARA GRÁFICO ADAPTATIVO
+  // =====================================
+
+  // Função para buscar dados do gráfico
+  const fetchGraficoData = async (idControleindicador) => {
+    try {
+      const { data, error } = await supabase
+        .from('controle_indicador_geral')
+        .select('*')
+        .eq('id_controleindicador', idControleindicador)
+        .not('periodo_referencia', 'is', null)
+        .order('periodo_referencia', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar dados do gráfico:', error);
+      return [];
+    }
+  };
+
+  // Função para formatar data para gráfico (DD-MM-AA)
+  const formatDateGrafico = (dateString) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      
+      return `${day}-${month}-${year}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Função para calcular largura ideal por barra baseada na quantidade
+  const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
+    if (isMobile) {
+      // Mobile: adaptar baseado na quantidade
+      if (dataLength <= 3) return 60;      // Poucas barras = mais largas
+      if (dataLength <= 5) return 45;      // Quantidade média
+      if (dataLength <= 8) return 35;      // Mais barras = mais estreitas
+      return 25;                           // Muitas barras = bem estreitas
+    } else {
+      // Desktop: adaptar baseado na quantidade
+      if (dataLength <= 3) return 80;      // Poucas barras = mais largas
+      if (dataLength <= 5) return 65;      // Quantidade média
+      if (dataLength <= 8) return 50;      // Mais barras = mais estreitas
+      if (dataLength <= 12) return 40;     // Muitas barras
+      return 30;                           // Muitas barras = bem estreitas
+    }
+  };
+
+  // Função para calcular espaçamento entre barras baseado na quantidade
+  const calculateBarSpacing = (dataLength, isMobile = false) => {
+    if (isMobile) {
+      if (dataLength <= 3) return 15;      // Poucas barras = mais espaço
+      if (dataLength <= 5) return 10;      // Quantidade média
+      if (dataLength <= 8) return 5;       // Mais barras = menos espaço
+      return 2;                            // Muitas barras = espaço mínimo
+    } else {
+      if (dataLength <= 3) return 20;      // Poucas barras = mais espaço
+      if (dataLength <= 5) return 15;      // Quantidade média
+      if (dataLength <= 8) return 10;      // Mais barras = menos espaço
+      if (dataLength <= 12) return 5;      // Muitas barras
+      return 2;                            // Muitas barras = espaço mínimo
+    }
+  };
+
+  // Função para calcular se precisa de scroll baseado na tela disponível
+  const calculateNeedsScroll = (dataLength, isMobile = false) => {
+    const maxBarsWithoutScroll = isMobile ? 6 : 10;
+    return dataLength > maxBarsWithoutScroll;
+  };
+
+  // Função para calcular largura total do container
+  const calculateTotalWidth = (dataLength, isMobile = false) => {
+    const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
+    const spacing = calculateBarSpacing(dataLength, isMobile);
+    const margins = 20;
+    
+    // Largura total = (largura da barra + espaçamento) * número de barras + margens
+    const totalWidth = (barWidth + spacing) * dataLength + margins;
+    
+    // Largura mínima baseada na tela
+    const minWidth = isMobile ? 300 : 500;
+    
+    return Math.max(totalWidth, minWidth);
+  };
+
+  // Função para calcular barCategoryGap dinâmico
+  const calculateCategoryGap = (dataLength) => {
+    if (dataLength <= 3) return "20%";     // Poucas barras = mais espaço
+    if (dataLength <= 5) return "15%";     // Quantidade média
+    if (dataLength <= 8) return "10%";     // Mais barras = menos espaço
+    if (dataLength <= 12) return "5%";     // Muitas barras
+    return "2%";                           // Muitas barras = espaço mínimo
+  };
+
+  // =====================================
+  // COMPONENTE DO GRÁFICO ADAPTATIVO
+  // =====================================
+  const GraficoBarrasAdaptativo = ({ indicador, isMobile = false }) => {
+    const [graficoData, setGraficoData] = useState([]);
+    const [loadingGrafico, setLoadingGrafico] = useState(true);
+
+    useEffect(() => {
+      const loadGraficoData = async () => {
+        setLoadingGrafico(true);
+        const data = await fetchGraficoData(indicador.id_controleindicador);
+        
+        // Preparar dados para o gráfico
+        const dadosGrafico = data.map(item => ({
+          periodo: formatDateGrafico(item.periodo_referencia),
+          periodoCompleto: item.periodo_referencia,
+          valorApresentado: parseFloat(item.valor_indicador_apresentado) || 0,
+        })).sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+        
+        setGraficoData(dadosGrafico);
+        setLoadingGrafico(false);
+      };
+
+      loadGraficoData();
+    }, [indicador.id_controleindicador]);
+
+    // Estados de loading e dados vazios
+    if (loadingGrafico) {
+      return (
+        <div className="mb-3 flex justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (graficoData.length === 0) {
+      return (
+        <div className="mb-3 text-center text-gray-500 text-sm">
+          Sem dados para gráfico
+        </div>
+      );
+    }
+
+    // Cálculos adaptativos
+    const dataLength = graficoData.length;
+    const needsScroll = calculateNeedsScroll(dataLength, isMobile);
+    const totalWidth = calculateTotalWidth(dataLength, isMobile);
+    const optimalBarWidth = calculateOptimalBarWidth(dataLength, isMobile);
+    const categoryGap = calculateCategoryGap(dataLength);
+    
+    // Configurações responsivas
+    const altura = isMobile ? 120 : 160;
+    const fontSize = isMobile ? 8 : 10;
+    const labelFontSize = isMobile ? 7 : 9;
+
+    return (
+      <div className="mb-3">
+        {/* Container com scroll condicional */}
+        <div className={needsScroll ? "overflow-x-auto" : ""}>
+          <div 
+            style={{ 
+              width: needsScroll ? `${totalWidth}px` : '100%',
+              minWidth: needsScroll ? `${totalWidth}px` : 'auto'
+            }}
+          >
+            <div style={{ height: altura }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={graficoData} 
+                  margin={{ 
+                    top: 25, 
+                    right: 10, 
+                    left: 10, 
+                    bottom: 5 
+                  }}
+                  barCategoryGap={categoryGap}
+                  maxBarSize={optimalBarWidth}
+                >
+                  <XAxis 
+                    dataKey="periodo" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ 
+                      fontSize: fontSize, 
+                      fill: '#6B7280',
+                      textAnchor: 'middle'
+                    }}
+                    interval={0} // Mostrar todas as labels
+                  />
+                  <Bar 
+                    dataKey="valorApresentado" 
+                    fill="#3B82F6"
+                    radius={[3, 3, 0, 0]}
+                  >
+                    <LabelList 
+                      dataKey="valorApresentado" 
+                      position="top" 
+                      style={{ 
+                        fontSize: `${labelFontSize}px`, 
+                        fill: '#374151',
+                        fontWeight: '500'
+                      }}
+                      formatter={(value) => {
+                        if (value === 0) return '0';
+                        return parseFloat(value).toLocaleString('pt-BR');
+                      }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+        
+        {/* Indicador de scroll (opcional) */}
+        {needsScroll && (
+          <div className="text-center mt-1">
+            <span className="text-xs text-gray-400">
+              ← Deslize para ver mais períodos →
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // =====================================
+  // FUNÇÕES EXISTENTES (mantidas)
+  // =====================================
 
   // 2. FUNÇÃO PARA VERIFICAR SE É TIPO KPI OU NULL
   const isKpiOrNull = (indicador) => {
@@ -285,147 +518,6 @@ export default function VisualizacaoIndicadores({ user }) {
           </div>
         );
     }
-  };
-
-  // 5. FUNÇÃO PARA BUSCAR DADOS DO GRÁFICO
-  const fetchGraficoData = async (idControleindicador) => {
-    try {
-      const { data, error } = await supabase
-        .from('controle_indicador_geral')
-        .select('*')
-        .eq('id_controleindicador', idControleindicador)
-        .not('periodo_referencia', 'is', null)
-        .order('periodo_referencia', { ascending: true }); // Ordenar crescente para gráfico
-      
-      if (error) throw error;
-      
-      return data || [];
-    } catch (error) {
-      console.error('Erro ao buscar dados do gráfico:', error);
-      return [];
-    }
-  };
-
-  // 6. FUNÇÃO PARA FORMATAR DATA PARA GRÁFICO (DD-MM-AA)
-  const formatDateGrafico = (dateString) => {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear().toString().slice(-2);
-      
-      return `${day}-${month}-${year}`;
-    } catch (e) {
-      return '';
-    }
-  };
-
-  // 7. FUNÇÃO PARA CALCULAR TAMANHO DAS BARRAS
-  const calculateBarSize = (dataLength, isMobile = false) => {
-    return isMobile ? 35 : 60;
-  };
-
-  // 8. FUNÇÃO PARA CALCULAR LARGURA DO CONTAINER - ✅ MODIFICADA: Controla o espaçamento real
-  const calculateContainerWidth = (dataLength, isMobile = false) => {
-    // ✅ NOVA LÓGICA: Largura baseada no número de barras com espaçamento mínimo
-    const barWidth = isMobile ? 40 : 70; // Largura fixa por barra (inclui espaçamento)
-    const margins = 40;
-    
-    // ✅ CHAVE: Container mais estreito força as barras a ficarem mais próximas
-    return Math.max(200, (barWidth * dataLength) + margins);
-  };
-
-  // 9. COMPONENTE DO GRÁFICO DE BARRAS - ✅ MODIFICADO: Foco no barCategoryGap
-  const GraficoBarrasComponent = ({ indicador, isMobile = false }) => {
-    const [graficoData, setGraficoData] = useState([]);
-    const [loadingGrafico, setLoadingGrafico] = useState(true);
-
-    useEffect(() => {
-      const loadGraficoData = async () => {
-        setLoadingGrafico(true);
-        const data = await fetchGraficoData(indicador.id_controleindicador);
-        
-        // Preparar dados para o gráfico
-        const dadosGrafico = data.map(item => ({
-          periodo: formatDateGrafico(item.periodo_referencia),
-          periodoCompleto: item.periodo_referencia,
-          valorApresentado: parseFloat(item.valor_indicador_apresentado) || 0,
-        })).sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
-        
-        setGraficoData(dadosGrafico);
-        setLoadingGrafico(false);
-      };
-
-      loadGraficoData();
-    }, [indicador.id_controleindicador]);
-
-    if (loadingGrafico) {
-      return (
-        <div className="mb-3 flex justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-        </div>
-      );
-    }
-
-    if (graficoData.length === 0) {
-      return (
-        <div className="mb-3 text-center text-gray-500 text-sm">
-          Sem dados para gráfico
-        </div>
-      );
-    }
-
-    const altura = isMobile ? 120 : 160;
-    const fontSize = isMobile ? 8 : 10;
-
-    // ✅ LÓGICA ORIGINAL
-    const shouldShowScroll = isMobile 
-      ? graficoData.length > 6
-      : graficoData.length > 7;
-
-    return (
-      <div className="mb-3">
-        <div className="overflow-x-auto">
-          <div style={{ 
-            minWidth: shouldShowScroll ? 
-              calculateContainerWidth(graficoData.length, isMobile) : 
-              '100%' 
-          }}>
-            <div style={{ height: altura }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={graficoData} 
-                  margin={{ top: 20, right: 1, left: 0, bottom: 5 }}
-                  barCategoryGap={0} // ✅ FIXO: 5% em vez de variável
-                  maxBarSize={calculateBarSize(graficoData.length, isMobile)}
-                >
-                  <XAxis 
-                    dataKey="periodo" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: fontSize, fill: '#6B7280' }}
-                  />
-                  <Bar 
-                    dataKey="valorApresentado" 
-                    fill="#3B82F6"
-                    radius={[2, 2, 0, 0]}
-                  >
-                    <LabelList 
-                      dataKey="valorApresentado" 
-                      position="top" 
-                      style={{ fontSize: `${fontSize}px`, fill: '#374151' }}
-                      formatter={(value) => parseFloat(value).toLocaleString('pt-BR')}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   // Função para buscar dados de apresentação
@@ -1359,7 +1451,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                     </div>
                                   );
                                 } else if (isGrafico) {
-                                  return <GraficoBarrasComponent indicador={indicador} isMobile={true} />;
+                                  return <GraficoBarrasAdaptativo indicador={indicador} isMobile={true} />;
                                 }
                                 
                                 return null;
@@ -1452,8 +1544,8 @@ export default function VisualizacaoIndicadores({ user }) {
                                         </div>
                                       </div>
                                       
-                                      {/* Gráfico de Barras */}
-                                      <GraficoBarrasComponent indicador={indicador} isMobile={false} />
+                                      {/* Gráfico de Barras Adaptativo */}
+                                      <GraficoBarrasAdaptativo indicador={indicador} isMobile={false} />
                                       
                                       {/* Tags e data */}
                                       <div className="flex items-center justify-between">
