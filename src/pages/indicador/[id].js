@@ -886,10 +886,10 @@ export default function IndicadorDetalhe({ user }) {
           periodo,
           periodoCompleto,
           // Inicializar valores
-          realizadoApresentado: null,
-          realizadoIndicador: null,
-          metaApresentado: null,
-          metaIndicador: null
+          realizadoApresentado: 0,
+          realizadoIndicador: 0,
+          metaApresentado: 0,
+          metaIndicador: 0
         };
       }
       
@@ -1614,7 +1614,7 @@ export default function IndicadorDetalhe({ user }) {
                         strokeWidth={2}
                         dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
                         name="Meta"
-                        connectNulls={false}
+                        connectNulls={true}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -1668,7 +1668,7 @@ export default function IndicadorDetalhe({ user }) {
                         strokeWidth={2}
                         dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
                         name="Meta"
-                        connectNulls={false}
+                        connectNulls={true}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -2058,7 +2058,7 @@ export default function IndicadorDetalhe({ user }) {
                           strokeWidth={3}
                           dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
                           name="Meta"
-                          connectNulls={false}
+                          connectNulls={true}
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
@@ -2112,7 +2112,7 @@ export default function IndicadorDetalhe({ user }) {
                           strokeWidth={3}
                           dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
                           name="Meta"
-                          connectNulls={false}
+                          connectNulls={true}
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
