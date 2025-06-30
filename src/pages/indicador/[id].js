@@ -1294,9 +1294,6 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Mobile */}
-          {renderSecaoConfiguracoes()}
-
           {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM LEGENDA FIXA */}
           <div className="mb-6 space-y-6">
             {/* Gráfico Combinado - Valor Apresentado */}
@@ -1409,6 +1406,9 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             </div>
           </div>
+
+          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Mobile */}
+          {renderSecaoConfiguracoes()}
 
           {/* ✅ TABELA NOVA - Mobile - SEM coluna Tipo, COM novas colunas */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
@@ -1745,9 +1745,6 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Desktop */}
-          {renderSecaoConfiguracoes()}
-
           {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM LEGENDA FIXA */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1862,6 +1859,9 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             </div>
           </div>
+
+          {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Desktop */}
+          {renderSecaoConfiguracoes()}
 
           {/* ✅ TABELA NOVA - Desktop - SEM coluna Tipo, COM novas colunas */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
