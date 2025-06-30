@@ -939,8 +939,8 @@ export default function IndicadorDetalhe({ user }) {
       .sort((a, b) => new Date(a.periodo_referencia) - new Date(b.periodo_referencia)); // ✅ VOLTA: a - b (crescente)
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados
-  const renderKPIsHabilitados = () => {
+  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados - MOBILE (sem alterações)
+  const renderKPIsHabilitadosMobile = () => {
     const kpis = calcularKPIs();
     const kpisHabilitados = [];
 
@@ -1026,6 +1026,131 @@ export default function IndicadorDetalhe({ user }) {
     }
 
     return kpisHabilitados;
+  };
+
+  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados DESKTOP com sistema responsivo
+  const renderKPIsHabilitadosDesktop = () => {
+    const kpis = calcularKPIs();
+    const kpisHabilitados = [];
+
+    // Verificar quais KPIs estão habilitados e adicionar ao array
+    if (configuracoes.soma) {
+      kpisHabilitados.push({
+        key: "soma-apresentado",
+        color: "blue",
+        title: "Soma - Valor Apresentado",
+        value: formatKPIValue(kpis.somaRealizadoApresentado),
+        subtitle: `Meta Total: ${formatKPIValue(kpis.somaMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.media) {
+      kpisHabilitados.push({
+        key: "media-apresentado",
+        color: "green",
+        title: "Média - Valor Apresentado",
+        value: formatKPIValue(kpis.mediaRealizadoApresentado),
+        subtitle: `Meta Média: ${formatKPIValue(kpis.mediaMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.desvio_padrao) {
+      kpisHabilitados.push({
+        key: "desvio-apresentado",
+        color: "purple",
+        title: "Desvio Padrão - Valor Apresentado",
+        value: formatKPIValue(kpis.desvioPadraoRealizadoApresentado),
+        subtitle: `Meta: ${formatKPIValue(kpis.desvioPadraoMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.mediana) {
+      kpisHabilitados.push({
+        key: "mediana-apresentado",
+        color: "yellow",
+        title: "Mediana - Valor Apresentado",
+        value: formatKPIValue(kpis.medianaRealizadoApresentado),
+        subtitle: `Meta: ${formatKPIValue(kpis.medianaMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.minimo) {
+      kpisHabilitados.push({
+        key: "minimo-apresentado",
+        color: "red",
+        title: "Mínimo - Valor Apresentado",
+        value: formatKPIValue(kpis.minimoRealizadoApresentado),
+        subtitle: `Meta: ${formatKPIValue(kpis.minimoMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.maximo) {
+      kpisHabilitados.push({
+        key: "maximo-apresentado",
+        color: "orange",
+        title: "Máximo - Valor Apresentado",
+        value: formatKPIValue(kpis.maximoRealizadoApresentado),
+        subtitle: `Meta: ${formatKPIValue(kpis.maximoMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.mais_recente) {
+      kpisHabilitados.push({
+        key: "recente-apresentado",
+        color: "indigo",
+        title: "Mais Recente - Valor Apresentado",
+        value: formatKPIValue(kpis.maisRecenteRealizadoApresentado),
+        subtitle: `Meta: ${formatKPIValue(kpis.maisRecenteMetaApresentado)}`
+      });
+    }
+
+    if (configuracoes.contagem_registros) {
+      kpisHabilitados.push({
+        key: "contagem",
+        color: "gray",
+        title: "Contagem de Registros",
+        value: formatKPIValue(kpis.contagemRegistros),
+        subtitle: "Total de períodos"
+      });
+    }
+
+    // ✅ LÓGICA PARA CALCULAR COLUNAS RESPONSIVAS
+    const getGridCols = (count) => {
+      if (count === 1) return "grid-cols-1";
+      if (count === 2) return "grid-cols-2";
+      if (count === 3) return "grid-cols-3";
+      if (count >= 4) return "grid-cols-4";
+      return "grid-cols-1";
+    };
+
+    const gridClass = getGridCols(kpisHabilitados.length);
+
+    // ✅ MAPEAMENTO DE CORES
+    const colorClasses = {
+      blue: "border-blue-500",
+      green: "border-green-500",
+      purple: "border-purple-500",
+      yellow: "border-yellow-500",
+      red: "border-red-500",
+      orange: "border-orange-500",
+      indigo: "border-indigo-500",
+      gray: "border-gray-500"
+    };
+
+    return (
+      <div className={`grid ${gridClass} gap-4`}>
+        {kpisHabilitados.map((kpi) => (
+          <div 
+            key={kpi.key} 
+            className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${colorClasses[kpi.color]}`}
+          >
+            <p className="text-xs font-medium text-gray-600 mb-1">{kpi.title}</p>
+            <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+            <p className="text-xs text-gray-400">{kpi.subtitle}</p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // ✅ NOVA FUNÇÃO: Renderizar seção de configurações
@@ -1119,7 +1244,7 @@ export default function IndicadorDetalhe({ user }) {
 
   const dadosGraficoCombinado = prepararDadosGraficoCombinado();
   const dadosTabela = prepararDadosTabela();
-  const kpisHabilitados = renderKPIsHabilitados();
+  const kpisHabilitadosMobile = renderKPIsHabilitadosMobile();
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -1157,7 +1282,7 @@ export default function IndicadorDetalhe({ user }) {
           background: #c1c1c1;
           border-radius: 3px;
         }
-        
+
         .overflow-x-auto::-webkit-scrollbar-thumb:hover {
           background: #a8a8a8;
         }
@@ -1340,11 +1465,11 @@ export default function IndicadorDetalhe({ user }) {
         {/* Conteúdo da página - Mobile */}
         <div className="max-w-md mx-auto px-4 py-4">
           {/* ✅ KPIs DINÂMICOS - Mobile - Baseados nas configurações */}
-          {kpisHabilitados.length > 0 && (
+          {kpisHabilitadosMobile.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumo dos Indicadores</h3>
               <div className="grid grid-cols-2 gap-3">
-                {kpisHabilitados}
+                {kpisHabilitadosMobile}
               </div>
             </div>
           )}
@@ -1585,7 +1710,7 @@ export default function IndicadorDetalhe({ user }) {
         </div>
       </div>
 
-      {/* DESKTOP: Layout com tabela */}
+      {/* DESKTOP: Layout com tabela e KPIs responsivos */}
       <div className="hidden lg:block">
         {/* Header fixo com título e botão voltar - Desktop */}
         <div className="sticky top-0 bg-white shadow-sm z-10 px-8 py-6 border-b">
@@ -1784,17 +1909,11 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Conteúdo da página - Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
-          {/* ✅ KPIs DINÂMICOS - Desktop - Baseados nas configurações */}
-          {kpisHabilitados.length > 0 && (
+          {/* ✅ KPIs DINÂMICOS RESPONSIVOS - Desktop - Baseados nas configurações */}
+          {renderKPIsHabilitadosDesktop() && (
             <div className="mb-8">
               <h3 className="text-xl font-semibold text-gray-700 mb-6">Resumo dos Indicadores</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {kpisHabilitados.map((kpi, index) => (
-                  <div key={index} className={kpi.props.className.replace('text-lg', 'text-2xl').replace('p-3', 'p-4')}>
-                    {kpi.props.children}
-                  </div>
-                ))}
-              </div>
+              {renderKPIsHabilitadosDesktop()}
             </div>
           )}
 
