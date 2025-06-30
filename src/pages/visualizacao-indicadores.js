@@ -397,7 +397,7 @@ export default function VisualizacaoIndicadores({ user }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={graficoData} 
-                  margin={{ top: 20, right: 2, left: 2, bottom: 5 }}
+                  margin={{ top: 20, right: 1.5, left: 1.5, bottom: 5 }}
                   barCategoryGap={0} // ✅ FIXO: 5% em vez de variável
                   maxBarSize={calculateBarSize(graficoData.length, isMobile)}
                 >
