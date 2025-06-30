@@ -159,6 +159,10 @@ export default function IndicadorDetalhe({ user }) {
       ? realizados.sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia))[0]
       : null;
 
+    const maisRecenteMeta = metas.length > 0 
+      ? metas.sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia))[0]
+      : null;
+
     return {
       // KPIs para Realizado (soma)
       somaRealizadoApresentado,
@@ -184,6 +188,7 @@ export default function IndicadorDetalhe({ user }) {
       maximoRealizadoIndicador: valoresRealizadoIndicador.length > 0 ? Math.max(...valoresRealizadoIndicador) : 0,
       maisRecenteRealizadoApresentado: maisRecenteRealizado ? parseFloat(maisRecenteRealizado.valor_indicador_apresentado) || 0 : 0,
       maisRecenteRealizadoIndicador: maisRecenteRealizado ? parseFloat(maisRecenteRealizado.valor_indicador) || 0 : 0,
+      maisRecenteMetaApresentado: maisRecenteMeta ? parseFloat(maisRecenteMeta.valor_indicador_apresentado) || 0 : 0,
       contagemRegistros: indicadores.length
     };
   };
@@ -912,7 +917,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoApresentado)}</p>
-          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.desvioPadraoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: Não aplicável</p>
         </div>
       );
     }
@@ -922,7 +927,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoApresentado)}</p>
-          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.medianaRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: Não aplicável</p>
         </div>
       );
     }
@@ -932,7 +937,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoApresentado)}</p>
-          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.minimoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: Não aplicável</p>
         </div>
       );
     }
@@ -942,7 +947,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoApresentado)}</p>
-          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maximoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: Não aplicável</p>
         </div>
       );
     }
@@ -952,7 +957,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoApresentado)}</p>
-          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maisRecenteRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maisRecenteMetaApresentado)}</p>
         </div>
       );
     }
