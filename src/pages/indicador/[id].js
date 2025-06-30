@@ -893,11 +893,6 @@ export default function IndicadorDetalhe({ user }) {
           <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
-        </div>,
-        <div key="soma-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoIndicador)}</p>
-          <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaIndicador)}</p>
         </div>
       );
     }
@@ -908,11 +903,6 @@ export default function IndicadorDetalhe({ user }) {
           <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
-        </div>,
-        <div key="media-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoIndicador)}</p>
-          <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaIndicador)}</p>
         </div>
       );
     }
@@ -922,10 +912,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoApresentado)}</p>
-        </div>,
-        <div key="desvio-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.desvioPadraoRealizadoIndicador)}</p>
         </div>
       );
     }
@@ -935,10 +922,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoApresentado)}</p>
-        </div>,
-        <div key="mediana-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.medianaRealizadoIndicador)}</p>
         </div>
       );
     }
@@ -948,10 +932,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoApresentado)}</p>
-        </div>,
-        <div key="minimo-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.minimoRealizadoIndicador)}</p>
         </div>
       );
     }
@@ -961,10 +942,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoApresentado)}</p>
-        </div>,
-        <div key="maximo-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maximoRealizadoIndicador)}</p>
         </div>
       );
     }
@@ -974,10 +952,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Apresentado</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoApresentado)}</p>
-        </div>,
-        <div key="recente-indicador" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-400">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Indicador</p>
-          <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoIndicador)}</p>
+          <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maisRecenteRealizadoIndicador)}</p>
         </div>
       );
     }
@@ -987,6 +962,7 @@ export default function IndicadorDetalhe({ user }) {
         <div key="contagem" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-gray-500">
           <p className="text-xs font-medium text-gray-600 mb-1">Contagem de Registros</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.contagemRegistros)}</p>
+          <p className="text-xs text-gray-400">Total de períodos</p>
         </div>
       );
     }
@@ -1417,13 +1393,13 @@ export default function IndicadorDetalhe({ user }) {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Período
+                      Período de Referência
                     </th>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
-                      Valor Apresentado (Realizado)
+                      Realizado
                     </th>
                     <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor Apresentado (Meta)
+                      Meta
                     </th>
                   </tr>
                 </thead>
