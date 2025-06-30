@@ -1,5 +1,5 @@
 // Arquivo: src/pages/indicador/[id].js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // ✅ ADICIONADO useRef
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -76,6 +76,48 @@ export default function IndicadorDetalhe({ user }) {
     const margins = 40; // Margens totais
     
     return Math.max(300, (barWidth + spacing) * dataLength + margins);
+  };
+
+  // ✅ NOVO COMPONENTE: ScrollableChartContainer
+  const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
+    const scrollRef = useRef(null);
+    const [hasScrolled, setHasScrolled] = useState(false);
+
+    // ✅ Fazer scroll automático para a direita quando o componente monta
+    useEffect(() => {
+      if (scrollRef.current && !hasScrolled && dataLength > (isMobile ? 6 : 7)) {
+        // Pequeno delay para garantir que o conteúdo foi renderizado
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
+            setHasScrolled(true);
+          }
+        }, 100);
+      }
+    }, [dataLength, hasScrolled, isMobile]);
+
+    const shouldShowScroll = isMobile ? dataLength > 6 : dataLength > 7;
+    
+    return (
+      <div 
+        ref={scrollRef}
+        className="overflow-x-auto"
+        style={{
+          // ✅ CSS personalizado para scroll mais suave
+          scrollBehavior: 'smooth',
+          // Esconder scrollbar no webkit
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div style={{ 
+          minWidth: shouldShowScroll ? 
+            calculateContainerWidth(dataLength, isMobile) : 
+            '100%' 
+        }}>
+          {children}
+        </div>
+      </div>
+    );
   };
 
   // ✅ FUNÇÃO MODIFICADA: Calcular KPIs - Realizado (soma + média) + Meta (soma + média)
@@ -828,7 +870,7 @@ export default function IndicadorDetalhe({ user }) {
     return num.toLocaleString('pt-BR');
   };
 
-  // ✅ FUNÇÃO NOVA: Preparar dados para gráfico combinado
+  // ✅ FUNÇÃO MODIFICADA: Preparar dados para gráfico combinado COM ORDENAÇÃO INVERTIDA
   const prepararDadosGraficoCombinado = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
@@ -861,9 +903,9 @@ export default function IndicadorDetalhe({ user }) {
       }
     });
     
-    // Converter para array e ordenar por data
+    // ✅ ALTERAÇÃO: Converter para array e ordenar por data DECRESCENTE (mais recente primeiro)
     return Object.values(dadosAgrupados)
-      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+      .sort((a, b) => new Date(b.periodoCompleto) - new Date(a.periodoCompleto)); // Invertido: b - a
   };
 
   // ✅ FUNÇÃO NOVA: Preparar dados para tabela MODIFICADA
@@ -1100,6 +1142,27 @@ export default function IndicadorDetalhe({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
+      {/* ✅ CSS para melhorar a scrollbar */}
+      <style jsx>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          height: 6px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+      `}</style>
+
       {/* Modal de confirmação para arquivar */}
       {showArchiveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
@@ -1286,7 +1349,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM LEGENDA FIXA */}
+          {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM SCROLL INVERTIDO */}
           <div className="mb-6 space-y-6">
             {/* Gráfico Combinado - Valor Apresentado */}
             <div className="bg-white rounded-lg shadow-md p-4 border">
@@ -1304,43 +1367,42 @@ export default function IndicadorDetalhe({ user }) {
                 </div>
               </div>
               
-              <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
-                  <div className="h-32">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart 
-                        data={dadosGraficoCombinado} 
-                        margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                        barCategoryGap="15%"
-                      >
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 8, fill: '#6B7280' }}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar 
-                          dataKey="realizadoApresentado" 
-                          fill="#3B82F6" 
-                          name="Realizado"
-                          radius={[2, 2, 0, 0]}
-                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="metaApresentado" 
-                          stroke="#10B981" 
-                          strokeWidth={2}
-                          dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
-                          name="Meta"
-                          connectNulls={false}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
+              {/* ✅ NOVO: Usar ScrollableChartContainer */}
+              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
+                <div className="h-32">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart 
+                      data={dadosGraficoCombinado} 
+                      margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+                      barCategoryGap="15%"
+                    >
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 8, fill: '#6B7280' }}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="realizadoApresentado" 
+                        fill="#3B82F6" 
+                        name="Realizado"
+                        radius={[2, 2, 0, 0]}
+                        maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaApresentado" 
+                        stroke="#10B981" 
+                        strokeWidth={2}
+                        dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
+                        name="Meta"
+                        connectNulls={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
-              </div>
+              </ScrollableChartContainer>
             </div>
 
             {/* Gráfico Combinado - Valor Indicador */}
@@ -1359,43 +1421,42 @@ export default function IndicadorDetalhe({ user }) {
                 </div>
               </div>
               
-              <div className="overflow-x-auto">
-                <div style={{ minWidth: dadosGraficoCombinado.length > 6 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
-                  <div className="h-32">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart 
-                        data={dadosGraficoCombinado} 
-                        margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                        barCategoryGap="15%"
-                      >
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 8, fill: '#6B7280' }}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar 
-                          dataKey="realizadoIndicador" 
-                          fill="#8B5CF6" 
-                          name="Realizado"
-                          radius={[2, 2, 0, 0]}
-                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="metaIndicador" 
-                          stroke="#F59E0B" 
-                          strokeWidth={2}
-                          dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
-                          name="Meta"
-                          connectNulls={false}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
+              {/* ✅ NOVO: Usar ScrollableChartContainer */}
+              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
+                <div className="h-32">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart 
+                      data={dadosGraficoCombinado} 
+                      margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
+                      barCategoryGap="15%"
+                    >
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 8, fill: '#6B7280' }}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="realizadoIndicador" 
+                        fill="#8B5CF6" 
+                        name="Realizado"
+                        radius={[2, 2, 0, 0]}
+                        maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaIndicador" 
+                        stroke="#F59E0B" 
+                        strokeWidth={2}
+                        dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                        name="Meta"
+                        connectNulls={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
-              </div>
+              </ScrollableChartContainer>
             </div>
           </div>
 
@@ -1737,7 +1798,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM LEGENDA FIXA */}
+          {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM SCROLL INVERTIDO */}
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gráfico Combinado - Valor Apresentado */}
@@ -1756,43 +1817,42 @@ export default function IndicadorDetalhe({ user }) {
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart 
-                          data={dadosGraficoCombinado} 
-                          margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                          barCategoryGap="12%"
-                        >
-                          <XAxis 
-                            dataKey="periodo" 
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6B7280' }}
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="realizadoApresentado" 
-                            fill="#3B82F6" 
-                            name="Realizado"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="metaApresentado" 
-                            stroke="#10B981" 
-                            strokeWidth={3}
-                            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                            name="Meta"
-                            connectNulls={false}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </div>
+                {/* ✅ NOVO: Usar ScrollableChartContainer */}
+                <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart 
+                        data={dadosGraficoCombinado} 
+                        margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
+                        barCategoryGap="12%"
+                      >
+                        <XAxis 
+                          dataKey="periodo" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#6B7280' }}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar 
+                          dataKey="realizadoApresentado" 
+                          fill="#3B82F6" 
+                          name="Realizado"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="metaApresentado" 
+                          stroke="#10B981" 
+                          strokeWidth={3}
+                          dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                          name="Meta"
+                          connectNulls={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
                   </div>
-                </div>
+                </ScrollableChartContainer>
               </div>
 
               {/* Gráfico Combinado - Valor Indicador */}
@@ -1811,43 +1871,42 @@ export default function IndicadorDetalhe({ user }) {
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <div style={{ minWidth: dadosGraficoCombinado.length > 7 ? calculateContainerWidth(dadosGraficoCombinado.length) : '100%' }}>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart 
-                          data={dadosGraficoCombinado} 
-                          margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                          barCategoryGap="12%"
-                        >
-                          <XAxis 
-                            dataKey="periodo" 
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6B7280' }}
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="realizadoIndicador" 
-                            fill="#8B5CF6" 
-                            name="Realizado"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="metaIndicador" 
-                            stroke="#F59E0B" 
-                            strokeWidth={3}
-                            dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
-                            name="Meta"
-                            connectNulls={false}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </div>
+                {/* ✅ NOVO: Usar ScrollableChartContainer */}
+                <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart 
+                        data={dadosGraficoCombinado} 
+                        margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
+                        barCategoryGap="12%"
+                      >
+                        <XAxis 
+                          dataKey="periodo" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#6B7280' }}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar 
+                          dataKey="realizadoIndicador" 
+                          fill="#8B5CF6" 
+                          name="Realizado"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="metaIndicador" 
+                          stroke="#F59E0B" 
+                          strokeWidth={3}
+                          dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                          name="Meta"
+                          connectNulls={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
                   </div>
-                </div>
+                </ScrollableChartContainer>
               </div>
             </div>
           </div>
