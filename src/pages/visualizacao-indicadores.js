@@ -12,6 +12,7 @@ import {
   FiSearch, 
   FiFilter, 
   FiFolder,
+  FiClock,
   FiMenu, 
   FiHome, 
   FiStar, 
