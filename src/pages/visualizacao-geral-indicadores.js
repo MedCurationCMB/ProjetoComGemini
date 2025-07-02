@@ -72,7 +72,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     categorias: {}
   });
 
-  // ✅ NOVO: Estado para controlar a navegação (fixo em 'controle')
+  // Estado para controlar a navegação (fixo em 'controle')
   const [activeTab] = useState('controle');
 
   // Função utilitária para formatar data local no formato yyyy-mm-dd
@@ -109,7 +109,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     };
   });
 
-  // ✅ NOVAS FUNÇÕES DE NAVEGAÇÃO
+  // FUNÇÕES DE NAVEGAÇÃO
   const handleIndicadoresClick = () => {
     router.push('/visualizacao-indicadores');
   };
@@ -214,7 +214,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     return `Indicadores em atraso com base na data de referência: ${formatarData(dataReferencia)} (${tipoReferencia})`;
   };
 
-  // Função auxiliar para construir query com filtros de projeto e categoria (SEM filtro de tipo)
+  // Função auxiliar para construir query com filtros de projeto e categoria
   const construirQueryComFiltros = (queryBase) => {
     let query = queryBase;
 
@@ -735,7 +735,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile: Header com logo e menu */}
+          {/* Mobile: Header com logo e controles */}
           <div className="lg:hidden">
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
@@ -1222,7 +1222,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="lg:flex lg:space-x-8">
-          {/* ✅ NOVO: Sidebar de navegação - Desktop apenas */}
+          {/* Sidebar de navegação - Desktop apenas */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
@@ -1278,7 +1278,22 @@ export default function VisualizacaoGeralIndicadores({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center mb-6">
+            {/* Mobile: Cabeçalho da seção */}
+            <div className="lg:hidden">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-black">Visualização Geral (Indicadores)</h2>
+              </div>
+              
+              <p className="text-gray-600 text-sm mb-6">
+                {gerarTextoDescritivo()}
+                {hasFiltrosAtivos() && (
+                  <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
+                )}
+              </p>
+            </div>
+
+            {/* Desktop: Cabeçalho da seção */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-black">Visualização Geral (Indicadores)</h1>
                 <p className="text-gray-600 text-sm mt-1">
@@ -1303,21 +1318,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
                 {/* KPI 1: Total de Indicadores */}
-                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+                <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-green-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600">Total de Indicadores</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">
+                      <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpis.totalIndicadores)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiBarChart2 className="h-8 w-8 text-green-500" />
+                      <FiBarChart2 className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
                     </div>
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-500">
                       Realizado: {formatNumber(kpisDetalhados.totalRealizado)} | Meta: {formatNumber(kpisDetalhados.totalMeta)}
                     </p>
@@ -1328,19 +1343,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
 
                 {/* KPI 2: Indicadores Com Valor */}
-                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-blue-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600">Com Valor Definido</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">
+                      <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpis.indicadoresComValor)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiCheckCircle className="h-8 w-8 text-blue-500" />
+                      <FiCheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
                     </div>
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-500">
                       Realizado: {formatNumber(kpisDetalhados.comValorRealizado)} | Meta: {formatNumber(kpisDetalhados.comValorMeta)}
                     </p>
@@ -1351,19 +1366,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                 </div>
 
                 {/* KPI 3: Indicadores Sem Valor */}
-                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+                <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-yellow-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600">Sem Valor Definido</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">
+                      <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpis.indicadoresSemValor)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiAlertTriangle className="h-8 w-8 text-yellow-500" />
+                      <FiAlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-yellow-500" />
                     </div>
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-500">
                       Realizado: {formatNumber(kpisDetalhados.semValorRealizado)} | Meta: {formatNumber(kpisDetalhados.semValorMeta)}
                     </p>
@@ -1376,8 +1391,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             )}
 
             {/* KPIs de Atraso com divisão Meta/Realizado */}
-            <div className="mb-8">
-              <div className="mb-6">
+            <div className="mb-6 lg:mb-8">
+              <div className="mb-4 lg:mb-6">
                 <h2 className="text-xl lg:text-2xl font-bold text-black">Indicadores em Atraso</h2>
                 <p className="text-gray-600 text-sm mt-1">
                   {gerarTextoDescritivoAtraso()}
@@ -1389,21 +1404,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   {/* KPI 1: Todos os Indicadores em Atraso */}
-                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-red-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600">Todos os Indicadores</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisAtraso.todosAtrasados)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiAlertOctagon className="h-8 w-8 text-red-500" />
+                        <FiAlertOctagon className="h-6 w-6 lg:h-8 lg:w-8 text-red-500" />
                       </div>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-500">
                         Realizado: {formatNumber(kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.todosAtrasadosMeta)}
                       </p>
@@ -1414,19 +1429,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   </div>
 
                   {/* KPI 2: Indicadores em Atraso até 7 dias */}
-                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-orange-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600">Até 7 Dias Antes</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisAtraso.atrasadosAte7Dias)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiClock className="h-8 w-8 text-orange-500" />
+                        <FiClock className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
                       </div>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-500">
                         Realizado: {formatNumber(kpisAtrasoDetalhados.ate7DiasRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.ate7DiasMeta)}
                       </p>
@@ -1437,19 +1452,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   </div>
 
                   {/* KPI 3: Indicadores em Atraso até 30 dias */}
-                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-purple-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600">Até 30 Dias Antes</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisAtraso.atrasadosAte30Dias)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiClock className="h-8 w-8 text-purple-500" />
+                        <FiClock className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
                       </div>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-500">
                         Realizado: {formatNumber(kpisAtrasoDetalhados.ate30DiasRealizado)} | Meta: {formatNumber(kpisAtrasoDetalhados.ate30DiasMeta)}
                       </p>
@@ -1463,8 +1478,8 @@ export default function VisualizacaoGeralIndicadores({ user }) {
             </div>
 
             {/* Total Geral com divisão Meta/Realizado */}
-            <div className="mb-8">
-              <div className="mb-6">
+            <div className="mb-6 lg:mb-8">
+              <div className="mb-4 lg:mb-6">
                 <h2 className="text-xl lg:text-2xl font-bold text-black">Total Geral dos Indicadores</h2>
                 <p className="text-gray-600 text-sm mt-1">
                   Visão consolidada de todos os indicadores do sistema
@@ -1476,21 +1491,21 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                   {/* KPI 1: Total Geral (incluindo atrasados) */}
-                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-indigo-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600">Total Geral (incluindo atrasados)</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpis.totalIndicadores + kpisAtraso.todosAtrasados)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiBarChart2 className="h-8 w-8 text-indigo-500" />
+                        <FiBarChart2 className="h-6 w-6 lg:h-8 lg:w-8 text-indigo-500" />
                       </div>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-500">
                         Realizado: {formatNumber(kpisDetalhados.totalRealizado + kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisDetalhados.totalMeta + kpisAtrasoDetalhados.todosAtrasadosMeta)}
                       </p>
@@ -1508,19 +1523,19 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   </div>
 
                   {/* KPI 2: Pendentes */}
-                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-amber-500">
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-amber-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600">Pendentes</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpis.indicadoresSemValor + kpisAtraso.todosAtrasados)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiAlertTriangle className="h-8 w-8 text-amber-500" />
+                        <FiAlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-amber-500" />
                       </div>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-500">
                         Realizado: {formatNumber(kpisDetalhados.semValorRealizado + kpisAtrasoDetalhados.todosAtrasadosRealizado)} | Meta: {formatNumber(kpisDetalhados.semValorMeta + kpisAtrasoDetalhados.todosAtrasadosMeta)}
                       </p>
@@ -1540,14 +1555,272 @@ export default function VisualizacaoGeralIndicadores({ user }) {
               )}
             </div>
             
-            {/* Seção das duas tabelas lado a lado */}
+            {/* Seção das tabelas */}
             {!loading && (
-              <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Tabela de Projetos */}
-                <div className="bg-white rounded-lg shadow-md p-6">
+              <>
+                {/* Mobile: Tabelas empilhadas */}
+                <div className="lg:hidden space-y-6">
+                  {/* Tabela de Projetos - Mobile */}
+                  <div className="bg-white rounded-lg shadow-md p-4">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FiTable className="h-5 w-5 mr-2 text-blue-500" />
+                      Projetos com Indicadores em Atraso
+                      {hasFiltrosAtivos() && (
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Filtrado
+                        </span>
+                      )}
+                    </h2>
+                    
+                    {loadingTabelas ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      </div>
+                    ) : tabelaProjetos.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Nenhum projeto com indicadores em atraso</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Projeto
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Realizado
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Meta
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {tabelaProjetos.map((item, index) => (
+                              <tr key={item.projeto_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {item.nome_projeto}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {formatNumber(item.realizado)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {formatNumber(item.meta)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tabela de Categorias - Mobile */}
+                  <div className="bg-white rounded-lg shadow-md p-4">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FiTable className="h-5 w-5 mr-2 text-purple-500" />
+                      Categorias com Indicadores em Atraso
+                      {hasFiltrosAtivos() && (
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Filtrado
+                        </span>
+                      )}
+                    </h2>
+                    
+                    {loadingTabelas ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+                      </div>
+                    ) : tabelaCategorias.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Nenhuma categoria com indicadores em atraso</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Categoria
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Realizado
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Meta
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {tabelaCategorias.map((item, index) => (
+                              <tr key={item.categoria_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {item.nome_categoria}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {formatNumber(item.realizado)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {formatNumber(item.meta)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Desktop: Tabelas lado a lado */}
+                <div className="hidden lg:grid lg:grid-cols-2 mt-8 gap-6">
+                  {/* Tabela de Projetos - Desktop */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FiTable className="h-5 w-5 mr-2 text-blue-500" />
+                      Projetos com Indicadores em Atraso
+                      {hasFiltrosAtivos() && (
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Filtrado
+                        </span>
+                      )}
+                    </h2>
+                    
+                    {loadingTabelas ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      </div>
+                    ) : tabelaProjetos.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Nenhum projeto com indicadores em atraso</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Projeto
+                              </th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Realizado
+                              </th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Meta
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {tabelaProjetos.map((item, index) => (
+                              <tr key={item.projeto_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {item.nome_projeto}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                    {formatNumber(item.realizado)}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    {formatNumber(item.meta)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tabela de Categorias - Desktop */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FiTable className="h-5 w-5 mr-2 text-purple-500" />
+                      Categorias com Indicadores em Atraso
+                      {hasFiltrosAtivos() && (
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Filtrado
+                        </span>
+                      )}
+                    </h2>
+                    
+                    {loadingTabelas ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+                      </div>
+                    ) : tabelaCategorias.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Nenhuma categoria com indicadores em atraso</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Categoria
+                              </th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Realizado
+                              </th>
+                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Meta
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {tabelaCategorias.map((item, index) => (
+                              <tr key={item.categoria_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {item.nome_categoria}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                    {formatNumber(item.realizado)}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    {formatNumber(item.meta)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tabela de Projetos x Categorias - Mobile e Desktop */}
+                <div className="mt-6 lg:mt-8 bg-white rounded-lg shadow-md p-4 lg:p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FiTable className="h-5 w-5 mr-2 text-blue-500" />
-                    Projetos com Indicadores em Atraso
+                    <FiTable className="h-5 w-5 mr-2 text-green-500" />
+                    Detalhamento de Indicadores em Atraso por Projeto e Categoria
                     {hasFiltrosAtivos() && (
                       <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                         Filtrado
@@ -1557,107 +1830,52 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   
                   {loadingTabelas ? (
                     <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
                     </div>
-                  ) : tabelaProjetos.length === 0 ? (
+                  ) : tabelaProjetosCategoria.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>Nenhum projeto com indicadores em atraso</p>
+                      <p>Nenhum indicador em atraso encontrado</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Projeto
                             </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Categoria
+                            </th>
+                            <th className="px-4 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Realizado
                             </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-4 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Meta
                             </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {tabelaProjetos.map((item, index) => (
-                            <tr key={item.projeto_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                          {tabelaProjetosCategoria.map((item, index) => (
+                            <tr key={`${item.projeto_id}_${item.categoria_id}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">
                                   {item.nome_projeto}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                  {formatNumber(item.realizado)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                  {formatNumber(item.meta)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* Tabela de Categorias */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FiTable className="h-5 w-5 mr-2 text-purple-500" />
-                    Categorias com Indicadores em Atraso
-                    {hasFiltrosAtivos() && (
-                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        Filtrado
-                      </span>
-                    )}
-                  </h2>
-                  
-                  {loadingTabelas ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
-                    </div>
-                  ) : tabelaCategorias.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>Nenhuma categoria com indicadores em atraso</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Categoria
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Realizado
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Meta
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {tabelaCategorias.map((item, index) => (
-                            <tr key={item.categoria_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
+                              <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
                                   {item.nome_categoria}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                              <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-center">
+                                <span className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-blue-100 text-blue-800">
                                   {formatNumber(item.realizado)}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-center">
+                                <span className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-green-100 text-green-800">
                                   {formatNumber(item.meta)}
                                 </span>
                               </td>
@@ -1668,84 +1886,13 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Tabela de Projetos x Categorias */}
-            <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <FiTable className="h-5 w-5 mr-2 text-green-500" />
-                Detalhamento de Indicadores em Atraso por Projeto e Categoria
-                {hasFiltrosAtivos() && (
-                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    Filtrado
-                  </span>
-                )}
-              </h2>
-              
-              {loadingTabelas ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-                </div>
-              ) : tabelaProjetosCategoria.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <FiTable className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Nenhum indicador em atraso encontrado</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Projeto
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Categoria
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Realizado
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Meta
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {tabelaProjetosCategoria.map((item, index) => (
-                        <tr key={`${item.projeto_id}_${item.categoria_id}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {item.nome_projeto}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {item.nome_categoria}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                              {formatNumber(item.realizado)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                              {formatNumber(item.meta)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* ✅ NOVO: Barra de navegação inferior - Mobile apenas */}
+      {/* Barra de navegação inferior - Mobile apenas */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
