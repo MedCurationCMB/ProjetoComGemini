@@ -1,5 +1,5 @@
 // Arquivo: src/pages/indicador/[id].js
-import { useState, useEffect, useRef } from 'react'; // ✅ ADICIONADO useRef
+import { useState, useEffect, useRef, useMemo } from 'react'; // ✅ ADICIONADO useRef
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -168,7 +168,7 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer sem position absolute problemático
+  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer SEM a legenda de scroll
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -219,21 +219,9 @@ export default function IndicadorDetalhe({ user }) {
           }}>
             {children}
           </div>
-          
-          {/* ✅ CORRIGIDO: Indicador de scroll FORA do container com overflow */}
         </div>
         
-        {/* ✅ MOVIDO PARA FORA: Indicador de scroll agora está no container pai */}
-        {needsScroll && (
-          <div className="text-center mt-1 w-full">
-            <span className="text-xs text-gray-400">
-              ← Deslize para ver mais períodos →
-            </span>
-            <div className="text-xs text-gray-300 mt-1">
-              Mostrando {visibleBars} de {dataLength} períodos
-            </div>
-          </div>
-        )}
+        {/* ✅ REMOVIDO: Indicador de scroll desnecessário */}
       </div>
     );
   };
@@ -1433,9 +1421,10 @@ export default function IndicadorDetalhe({ user }) {
     return null;
   };
 
-  const dadosGraficoCombinado = prepararDadosGraficoCombinado();
-  const dadosTabela = prepararDadosTabela();
-  const kpisHabilitadosMobile = renderKPIsHabilitadosMobile();
+  // ✅ DEPOIS (não causa reload):
+  const dadosGraficoCombinado = useMemo(() => prepararDadosGraficoCombinado(), [indicadores]);
+  const dadosTabela = useMemo(() => prepararDadosTabela(), [indicadores]);
+  const kpisHabilitadosMobile = useMemo(() => renderKPIsHabilitadosMobile(), [configuracoes, indicadores]);
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
