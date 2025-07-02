@@ -12,8 +12,12 @@ import {
   FiSettings,
   FiLogOut,
   FiFilter,
-  FiX
+  FiX,
+  FiBarChart,
+  FiStar,
+  FiClipboard
 } from 'react-icons/fi';
+import { TfiPencil } from 'react-icons/tfi';
 
 export default function CopiaControleIndicadorGeral({ user }) {
   const router = useRouter();
@@ -40,6 +44,22 @@ export default function CopiaControleIndicadorGeral({ user }) {
       data_fim: formatarDataLocal(dataFim)
     };
   });
+
+  // ✅ NOVO: Estado para controlar a navegação (fixo em 'registros')
+  const [activeTab] = useState('registros');
+
+  // ✅ NOVAS FUNÇÕES DE NAVEGAÇÃO
+  const handleIndicadoresClick = () => {
+    router.push('/visualizacao-indicadores');
+  };
+
+  const handleImportantesClick = () => {
+    router.push('/visualizacao-indicadores-importantes');
+  };
+
+  const handleControleClick = () => {
+    router.push('/visualizacao-geral-indicadores');
+  };
 
   // Função para fazer logout
   const handleLogout = async () => {
@@ -180,7 +200,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Cópia - Controle de Indicadores Geral</title>
+        <title>Controle de Indicadores Geral</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -192,7 +212,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
-                fallbackText="Controle de Indicadores"
+                fallbackText="Registros"
                 showFallback={true}
               />
               
@@ -397,7 +417,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
-                fallbackText="Controle de Indicadores"
+                fallbackText="Registros"
                 showFallback={true}
               />
               
@@ -600,131 +620,245 @@ export default function CopiaControleIndicadorGeral({ user }) {
         </div>
       </div>
 
-      {/* Conteúdo principal */}
+      {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-black">Cópia - Controle de Indicadores Geral</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              {gerarTextoDescritivo()}
-              {hasFiltrosAtivos() && (
-                <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
-              )}
-            </p>
-          </div>
-          
-          <div className="flex space-x-4">
-            <Link 
-              href="/controle-indicador-geral" 
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Versão Completa
-            </Link>
-            
-            <Link 
-              href="/welcome" 
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Voltar
-            </Link>
-          </div>
-        </div>
+        <div className="lg:flex lg:space-x-8">
+          {/* ✅ NOVO: Sidebar de navegação - Desktop apenas */}
+          <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <nav className="space-y-2">
+                <button
+                  onClick={handleIndicadoresClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'inicio'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiBarChart className="mr-3 h-5 w-5" />
+                  Indicadores
+                </button>
 
-        {/* Sistema de Abas */}
-        <div className="bg-white rounded-lg shadow-md mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-              {/* Aba: Todos */}
-              <button
-                onClick={() => setAbaAtiva('todos')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  abaAtiva === 'todos'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                📊 Todos os Indicadores
-                {abaAtiva === 'todos' && (
-                  <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
-                    Ativo
-                  </span>
-                )}
-              </button>
+                <button
+                  onClick={handleImportantesClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'importantes'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiStar className="mr-3 h-5 w-5" />
+                  Importantes
+                </button>
 
-              {/* Aba: Realizado */}
-              <button
-                onClick={() => setAbaAtiva('realizado')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  abaAtiva === 'realizado'
-                    ? 'border-green-500 text-green-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                ✅ Realizado
-                {abaAtiva === 'realizado' && (
-                  <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
-                    Ativo
-                  </span>
-                )}
-              </button>
+                <button
+                  onClick={handleControleClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'controle'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiClipboard className="mr-3 h-5 w-5" />
+                  Controle
+                </button>
 
-              {/* Aba: Meta */}
-              <button
-                onClick={() => setAbaAtiva('meta')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                  abaAtiva === 'meta'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🎯 Meta
-                {abaAtiva === 'meta' && (
-                  <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs">
-                    Ativo
-                  </span>
-                )}
-              </button>
-            </nav>
+                <button
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'registros'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <TfiPencil className="mr-3 h-5 w-5" />
+                  Registros
+                </button>
+              </nav>
+            </div>
           </div>
 
-          {/* Conteúdo da Aba Ativa */}
-          <div className="p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                {getTituloAba()}
-              </h2>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  {abaAtiva === 'todos' && (
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+          {/* Conteúdo principal */}
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
+                <p className="text-gray-600 text-sm mt-1">
+                  {gerarTextoDescritivo()}
+                  {hasFiltrosAtivos() && (
+                    <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
                   )}
-                  {abaAtiva === 'realizado' && (
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                  )}
-                  {abaAtiva === 'meta' && (
-                    <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-                  )}
-                  <span className="text-sm text-gray-600">
-                    {abaAtiva === 'todos' && 'Mostrando todos os tipos de indicadores'}
-                    {abaAtiva === 'realizado' && 'Filtrando apenas indicadores do tipo "Realizado"'}
-                    {abaAtiva === 'meta' && 'Filtrando apenas indicadores do tipo "Meta"'}
-                  </span>
-                </div>
+                </p>
+              </div>
+              
+              <div className="flex space-x-4">
+                <Link 
+                  href="/controle-indicador-geral" 
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Versão Completa
+                </Link>
+                
+                <Link 
+                  href="/welcome" 
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  Voltar
+                </Link>
               </div>
             </div>
 
-            {/* Componente da Tabela Simplificada com filtros */}
-            <CopiaControleIndicadorGeralTable 
-              user={user} 
-              filtroTipoIndicador={abaAtiva}
-              filtroValorPendente={filtroValorPendente}
-              setFiltroValorPendente={setFiltroValorPendente}
-              filtrosPrazo={filtrosPrazo}
-              setFiltrosPrazo={setFiltrosPrazo}
-            />
+            {/* Sistema de Abas */}
+            <div className="bg-white rounded-lg shadow-md mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                  {/* Aba: Todos */}
+                  <button
+                    onClick={() => setAbaAtiva('todos')}
+                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                      abaAtiva === 'todos'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    📊 Todos os Indicadores
+                    {abaAtiva === 'todos' && (
+                      <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
+                        Ativo
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Aba: Realizado */}
+                  <button
+                    onClick={() => setAbaAtiva('realizado')}
+                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                      abaAtiva === 'realizado'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    ✅ Realizado
+                    {abaAtiva === 'realizado' && (
+                      <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
+                        Ativo
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Aba: Meta */}
+                  <button
+                    onClick={() => setAbaAtiva('meta')}
+                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                      abaAtiva === 'meta'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    🎯 Meta
+                    {abaAtiva === 'meta' && (
+                      <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs">
+                        Ativo
+                      </span>
+                    )}
+                  </button>
+                </nav>
+              </div>
+
+              {/* Conteúdo da Aba Ativa */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                    {getTituloAba()}
+                  </h2>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      {abaAtiva === 'todos' && (
+                        <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                      )}
+                      {abaAtiva === 'realizado' && (
+                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      )}
+                      {abaAtiva === 'meta' && (
+                        <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {abaAtiva === 'todos' && 'Mostrando todos os tipos de indicadores'}
+                        {abaAtiva === 'realizado' && 'Filtrando apenas indicadores do tipo "Realizado"'}
+                        {abaAtiva === 'meta' && 'Filtrando apenas indicadores do tipo "Meta"'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Componente da Tabela Simplificada com filtros */}
+                <CopiaControleIndicadorGeralTable 
+                  user={user} 
+                  filtroTipoIndicador={abaAtiva}
+                  filtroValorPendente={filtroValorPendente}
+                  setFiltroValorPendente={setFiltroValorPendente}
+                  filtrosPrazo={filtrosPrazo}
+                  setFiltrosPrazo={setFiltrosPrazo}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ✅ NOVO: Barra de navegação inferior - Mobile apenas */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
+        <div className="flex justify-around">
+          <button
+            onClick={handleIndicadoresClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeTab === 'inicio'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiBarChart className="w-5 h-5" />
+            <span className="text-xs font-medium">Indicadores</span>
+          </button>
+
+          <button
+            onClick={handleImportantesClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeTab === 'importantes'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiStar className="w-5 h-5" />
+            <span className="text-xs font-medium">Importantes</span>
+          </button>
+
+          <button
+            onClick={handleControleClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeTab === 'controle'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiClipboard className="w-5 h-5" />
+            <span className="text-xs font-medium">Controle</span>
+          </button>
+
+          <button
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeTab === 'registros'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <TfiPencil className="w-5 h-5" />
+            <span className="text-xs font-medium">Registros</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Espaçamento inferior para mobile */}
+      <div className="lg:hidden pb-16"></div>
 
       {/* Overlay para fechar menus quando clicar fora */}
       {showMenu && (
