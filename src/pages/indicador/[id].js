@@ -167,7 +167,7 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer com limite de 7 barras
+  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer centralizado
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -189,29 +189,31 @@ export default function IndicadorDetalhe({ user }) {
     }, [needsScroll, hasScrolled]);
     
     return (
-      <div 
-        ref={scrollRef}
-        className={needsScroll ? "overflow-x-auto" : ""}
-        style={{
-          // ✅ CSS personalizado para scroll mais suave
-          scrollBehavior: 'smooth',
-          WebkitOverflowScrolling: 'touch',
-          // ✅ Largura fixa do container
-          width: `${width}px`,
-          maxWidth: '100%'
-        }}
-      >
-        <div style={{ 
-          width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-          minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-          margin: needsScroll ? '0' : '0 auto'
-        }}>
-          {children}
+      <div className="w-full flex justify-center">
+        <div 
+          ref={scrollRef}
+          className={needsScroll ? "overflow-x-auto" : ""}
+          style={{
+            // ✅ CSS personalizado para scroll mais suave
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+            // ✅ Largura do container de scroll
+            width: needsScroll ? `${width}px` : 'auto',
+            maxWidth: '100%'
+          }}
+        >
+          <div style={{ 
+            width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            // ✅ REMOVIDO: margin: needsScroll ? '0' : '0 auto' (já centralizado pelo flex pai)
+          }}>
+            {children}
+          </div>
         </div>
         
-        {/* ✅ Indicador de scroll mais informativo */}
+        {/* ✅ Indicador de scroll centralizado */}
         {needsScroll && (
-          <div className="text-center mt-1">
+          <div className="w-full text-center mt-1">
             <span className="text-xs text-gray-400">
               ← Deslize para ver mais períodos →
             </span>
