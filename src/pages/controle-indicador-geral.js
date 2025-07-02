@@ -15,7 +15,8 @@ import {
   FiX,
   FiBarChart,
   FiStar,
-  FiClipboard
+  FiClipboard,
+  FiSearch
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -25,6 +26,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // ✅ NOVO: Termo de busca
   const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
     const hoje = new Date();
     const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
@@ -168,6 +170,10 @@ export default function CopiaControleIndicadorGeral({ user }) {
     if (filtroValorPendente) {
       textoPeriodo += ' • Apenas sem valor apresentado';
     }
+    
+    if (searchTerm) {
+      textoPeriodo += ` • Busca: "${searchTerm}"`;
+    }
 
     return textoBase + textoPeriodo;
   };
@@ -175,6 +181,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
   // Verificar se há filtros ativos
   const hasFiltrosAtivos = () => {
     return filtroValorPendente || 
+           searchTerm.trim() !== '' ||
            filtrosPrazo.periodo !== '30dias' ||
            filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
            filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
@@ -189,6 +196,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
       data_fim: periodoPadrao.dataFim
     });
     setFiltroValorPendente(false);
+    setSearchTerm(''); // ✅ NOVO: Limpar busca
     setShowFilters(false);
   };
 
@@ -207,8 +215,9 @@ export default function CopiaControleIndicadorGeral({ user }) {
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile: Header com logo e menu */}
+          {/* ✅ MOBILE: Header similar ao visualizacao-indicadores */}
           <div className="lg:hidden">
+            {/* Primeira linha: Logo e Menu */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
@@ -216,69 +225,81 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 showFallback={true}
               />
               
-              {/* Controles à direita - Mobile */}
-              <div className="flex items-center space-x-3">
-                {/* Botão de filtro */}
+              {/* Menu hambúrguer */}
+              <div className="relative">
                 <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`p-3 rounded-lg transition-colors ${
-                    showFilters || hasFiltrosAtivos() 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 hover:bg-gray-100 rounded-md"
                 >
-                  <FiFilter className="w-5 h-5" />
+                  <FiMenu className="w-6 h-6 text-gray-600" />
                 </button>
-
-                {/* Menu hambúrguer */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowMenu(!showMenu)}
-                    className="p-2 hover:bg-gray-100 rounded-md"
-                  >
-                    <FiMenu className="w-6 h-6 text-gray-600" />
-                  </button>
-                  
-                  {/* Dropdown do menu */}
-                  {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          // TODO: Implementar perfil
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiUser className="mr-3 h-4 w-4" />
-                        Perfil
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          // TODO: Implementar configurações
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiSettings className="mr-3 h-4 w-4" />
-                        Configurações
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleLogout();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
-                      >
-                        <FiLogOut className="mr-3 h-4 w-4" />
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
+                
+                {/* Dropdown do menu */}
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        // TODO: Implementar perfil
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        // TODO: Implementar configurações
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                    >
+                      <FiLogOut className="mr-3 h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+            
+            {/* ✅ NOVA Segunda linha: Busca e Filtro */}
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                  placeholder="Buscar indicadores..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-3 rounded-lg transition-colors ${
+                  showFilters || hasFiltrosAtivos() 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FiFilter className="w-5 h-5" />
+              </button>
+            </div>
 
-            {/* Filtros Mobile */}
+            {/* ✅ MOBILE: Filtros melhorados */}
             {showFilters && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-3">
@@ -412,14 +433,31 @@ export default function CopiaControleIndicadorGeral({ user }) {
             )}
           </div>
 
-          {/* Desktop: Header */}
+          {/* ✅ DESKTOP: Header melhorado com busca */}
           <div className="hidden lg:block">
+            {/* Primeira linha: Logo, Busca e Menu */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
                 fallbackText="Registros"
                 showFallback={true}
               />
+              
+              {/* ✅ NOVA: Barra de busca - Desktop */}
+              <div className="flex-1 max-w-md lg:max-w-lg mx-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                    placeholder="Buscar indicadores..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
               
               {/* Controles à direita - Desktop */}
               <div className="flex items-center space-x-3">
@@ -679,94 +717,191 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
-                <p className="text-gray-600 text-sm mt-1">
-                  {gerarTextoDescritivo()}
-                  {hasFiltrosAtivos() && (
-                    <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
-                  )}
-                </p>
+            {/* ✅ MOBILE: Cabeçalho da seção */}
+            <div className="lg:hidden">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-black">Controle de Indicadores Geral</h2>
               </div>
               
-              <div className="flex space-x-4">
-                <Link 
-                  href="/controle-indicador-geral" 
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Versão Completa
-                </Link>
+              <p className="text-gray-600 text-sm mb-6">{gerarTextoDescritivo()}</p>
+            </div>
+
+            {/* ✅ DESKTOP: Cabeçalho da seção */}
+            <div className="hidden lg:block">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
+                  <p className="text-gray-600 text-sm mt-1">
+                    {gerarTextoDescritivo()}
+                    {hasFiltrosAtivos() && (
+                      <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
+                    )}
+                  </p>
+                </div>
                 
-                <Link 
-                  href="/welcome" 
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Voltar
-                </Link>
+                <div className="flex space-x-4">
+                  <Link 
+                    href="/controle-indicador-geral" 
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Versão Completa
+                  </Link>
+                  
+                  <Link 
+                    href="/welcome" 
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Voltar
+                  </Link>
+                </div>
               </div>
             </div>
 
             {/* Sistema de Abas */}
             <div className="bg-white rounded-lg shadow-md mb-6">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-                  {/* Aba: Todos */}
-                  <button
-                    onClick={() => setAbaAtiva('todos')}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                      abaAtiva === 'todos'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    📊 Todos os Indicadores
-                    {abaAtiva === 'todos' && (
-                      <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
-                        Ativo
-                      </span>
-                    )}
-                  </button>
+                {/* ✅ MOBILE: Navegação por abas horizontal com scroll */}
+                <div className="lg:hidden">
+                  <div className="overflow-x-auto">
+                    <nav className="-mb-px flex space-x-6 px-4" aria-label="Tabs">
+                      {/* Aba: Todos */}
+                      <button
+                        onClick={() => setAbaAtiva('todos')}
+                        className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
+                          abaAtiva === 'todos'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        📊 Todos
+                        {abaAtiva === 'todos' && (
+                          <span className="ml-1 bg-blue-100 text-blue-600 px-1 py-0.5 rounded-full text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
 
-                  {/* Aba: Realizado */}
-                  <button
-                    onClick={() => setAbaAtiva('realizado')}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                      abaAtiva === 'realizado'
-                        ? 'border-green-500 text-green-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    ✅ Realizado
-                    {abaAtiva === 'realizado' && (
-                      <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
-                        Ativo
-                      </span>
-                    )}
-                  </button>
+                      {/* Aba: Realizado */}
+                      <button
+                        onClick={() => setAbaAtiva('realizado')}
+                        className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
+                          abaAtiva === 'realizado'
+                            ? 'border-green-500 text-green-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        ✅ Realizado
+                        {abaAtiva === 'realizado' && (
+                          <span className="ml-1 bg-green-100 text-green-600 px-1 py-0.5 rounded-full text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
 
-                  {/* Aba: Meta */}
-                  <button
-                    onClick={() => setAbaAtiva('meta')}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                      abaAtiva === 'meta'
-                        ? 'border-orange-500 text-orange-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    🎯 Meta
-                    {abaAtiva === 'meta' && (
-                      <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs">
-                        Ativo
-                      </span>
-                    )}
-                  </button>
-                </nav>
+                      {/* Aba: Meta */}
+                      <button
+                        onClick={() => setAbaAtiva('meta')}
+                        className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
+                          abaAtiva === 'meta'
+                            ? 'border-orange-500 text-orange-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        🎯 Meta
+                        {abaAtiva === 'meta' && (
+                          <span className="ml-1 bg-orange-100 text-orange-600 px-1 py-0.5 rounded-full text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+
+                {/* ✅ DESKTOP: Navegação por abas normal */}
+                <div className="hidden lg:block">
+                  <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    {/* Aba: Todos */}
+                    <button
+                      onClick={() => setAbaAtiva('todos')}
+                      className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                        abaAtiva === 'todos'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📊 Todos os Indicadores
+                      {abaAtiva === 'todos' && (
+                        <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
+                          Ativo
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Aba: Realizado */}
+                    <button
+                      onClick={() => setAbaAtiva('realizado')}
+                      className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                        abaAtiva === 'realizado'
+                          ? 'border-green-500 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      ✅ Realizado
+                      {abaAtiva === 'realizado' && (
+                        <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
+                          Ativo
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Aba: Meta */}
+                    <button
+                      onClick={() => setAbaAtiva('meta')}
+                      className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                        abaAtiva === 'meta'
+                          ? 'border-orange-500 text-orange-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      🎯 Meta
+                      {abaAtiva === 'meta' && (
+                        <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs">
+                          Ativo
+                        </span>
+                      )}
+                    </button>
+                  </nav>
+                </div>
               </div>
 
               {/* Conteúdo da Aba Ativa */}
-              <div className="p-6">
-                <div className="mb-4">
+              <div className="p-4 lg:p-6">
+                {/* ✅ MOBILE: Cabeçalho de aba compacto */}
+                <div className="lg:hidden mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                    {getTituloAba()}
+                  </h2>
+                  <div className="flex items-center">
+                    {abaAtiva === 'todos' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    )}
+                    {abaAtiva === 'realizado' && (
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    )}
+                    {abaAtiva === 'meta' && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                    )}
+                    <span className="text-sm text-gray-600">
+                      {abaAtiva === 'todos' && 'Todos os tipos'}
+                      {abaAtiva === 'realizado' && 'Tipo "Realizado"'}
+                      {abaAtiva === 'meta' && 'Tipo "Meta"'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ✅ DESKTOP: Cabeçalho de aba completo */}
+                <div className="hidden lg:block mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">
                     {getTituloAba()}
                   </h2>
@@ -790,7 +925,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   </div>
                 </div>
 
-                {/* Componente da Tabela Simplificada com filtros */}
+                {/* ✅ COMPONENTE DA TABELA: Passando searchTerm como filtro */}
                 <CopiaControleIndicadorGeralTable 
                   user={user} 
                   filtroTipoIndicador={abaAtiva}
@@ -798,6 +933,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   setFiltroValorPendente={setFiltroValorPendente}
                   filtrosPrazo={filtrosPrazo}
                   setFiltrosPrazo={setFiltrosPrazo}
+                  searchTerm={searchTerm} // ✅ NOVO: Passar termo de busca
                 />
               </div>
             </div>
