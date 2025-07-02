@@ -12,12 +12,11 @@ import {
   FiSearch, 
   FiFilter, 
   FiFolder,
-  FiClock,
   FiMenu, 
   FiHome, 
   FiStar, 
-  FiClipboard, // ✅ NOVO ÍCONE PARA CONTROLE
-  FiGrid,
+  FiClock, // ✅ MANTIDO para filtros avançados
+  FiClipboard, // ✅ ÍCONE PARA CONTROLE
   FiEye, 
   FiEyeOff, 
   FiUser, 
@@ -27,6 +26,7 @@ import {
   FiCalendar,
   FiBarChart 
 } from 'react-icons/fi';
+import { TfiPencil } from 'react-icons/tfi'; // ✅ NOVO ÍCONE PARA REGISTROS
 
 export default function VisualizacaoIndicadores({ user }) {
   const router = useRouter();
@@ -42,13 +42,13 @@ export default function VisualizacaoIndicadores({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
-  // Estados para filtros avançados
+  // ✅ ESTADOS PARA FILTROS AVANÇADOS - com filtroLerDepois mantido
   const [filtroImportantes, setFiltroImportantes] = useState(false);
-  const [filtroLerDepois, setFiltroLerDepois] = useState(false); // ✅ ADICIONAR ESTA LINHA
+  const [filtroLerDepois, setFiltroLerDepois] = useState(false); // ✅ MANTIDO
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
-  // Estados para controlar a navegação - ✅ MODIFICADO: substituído 'ler_depois' por 'controle'
-  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'controle', 'ver_todos'
+  // ✅ MODIFICADO: Estados para controlar a navegação - substituído 'ver_todos' por 'registros'
+  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'controle', 'registros'
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
 
   // =====================================
@@ -350,6 +350,9 @@ export default function VisualizacaoIndicadores({ user }) {
               </h3>
               <div className="flex items-center space-x-2">
                 {getStatusIndicators(indicador)}
+                {shouldShowReadLaterIcon(indicador) && (
+                  <FiClock className="w-4 h-4 text-blue-600" />
+                )}
               </div>
             </div>
             
@@ -586,9 +589,14 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Navegar para página de controle
+  // ✅ FUNÇÃO: Navegar para página de controle
   const handleControleClick = () => {
     router.push('/visualizacao-geral-indicadores');
+  };
+
+  // ✅ NOVA FUNÇÃO: Navegar para página de registros
+  const handleRegistrosClick = () => {
+    router.push('/controle-indicador-geral');
   };
 
   // Carregar categorias, projetos e projetos vinculados
@@ -700,7 +708,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar indicadores com base nos filtros e navegação (removido filtro ler_depois)
+  // ✅ MODIFICADO: Buscar indicadores com base nos filtros e navegação (incluindo filtroLerDepois)
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
@@ -739,7 +747,7 @@ export default function VisualizacaoIndicadores({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // ✅ MODIFICADO: Aplicar filtros baseados na aba ativa (removido ler_depois)
+        // ✅ MODIFICADO: Aplicar filtros baseados na aba ativa (alterado ver_todos para registros)
         switch (activeTab) {
           case 'inicio':
             if (!showAllContent) {
@@ -751,19 +759,19 @@ export default function VisualizacaoIndicadores({ user }) {
           case 'importantes':
             query = query.eq('importante', true);
             break;
-          case 'controle': // ✅ NOVA ABA: redireciona para outra página, mas mantemos a lógica
+          case 'controle': // ✅ ABA: redireciona para outra página, mas mantemos a lógica
             // Na aba "Controle", não aplicar filtros específicos (ou redirecionar)
             break;
-          case 'ver_todos':
-            // Na aba "Ver Todos", não aplicar filtros automáticos da aba
+          case 'registros': // ✅ NOVO: substituiu ver_todos
+            // Na aba "Registros", não aplicar filtros automáticos da aba
             break;
         }
 
-        // ✅ MODIFICADO: APLICAR FILTROS AVANÇADOS EM TODAS AS ABAS (removido filtroLerDepois)
+        // ✅ APLICAR FILTROS AVANÇADOS EM TODAS AS ABAS (incluindo filtroLerDepois)
         if (filtroImportantes) {
           query = query.eq('importante', true);
         }
-        if (filtroLerDepois) { // ✅ ADICIONAR ESTE BLOCO
+        if (filtroLerDepois) { // ✅ MANTIDO
           query = query.eq('ler_depois', true);
         }
         if (filtroArquivados) {
@@ -811,32 +819,32 @@ export default function VisualizacaoIndicadores({ user }) {
     if (user && projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
       fetchIndicadores();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]); // ✅ ADICIONAR filtroLerDepois
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]); // ✅ INCLUÍDO: filtroLerDepois
 
-  // ✅ MODIFICADO: Limpar filtros (removido filtroLerDepois)
+  // ✅ MODIFICADO: Limpar filtros (incluindo filtroLerDepois)
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
     setFiltroImportantes(false);
-    setFiltroLerDepois(false); // ✅ ADICIONAR ESTA LINHA
+    setFiltroLerDepois(false); // ✅ MANTIDO
     setFiltroArquivados(false);
     setShowFilters(false);
   };
 
-  // ✅ MODIFICADO: Verificar se há filtros ativos (removido filtroLerDepois)
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados; // ✅ ADICIONAR filtroLerDepois
+  // ✅ MODIFICADO: Verificar se há filtros ativos (incluindo filtroLerDepois)
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados;
 
-  // ✅ MODIFICADO: Obter título da seção (alterado ler_depois para controle)
+  // ✅ MODIFICADO: Obter título da seção (alterado ver_todos para registros)
   const getSectionTitle = () => {
     switch (activeTab) {
       case 'inicio':
         return 'Indicadores';
       case 'importantes':
         return 'Importantes';
-      case 'controle': // ✅ MODIFICADO
+      case 'controle':
         return 'Controle';
-      case 'ver_todos':
-        return 'Ver Todos';
+      case 'registros': // ✅ MODIFICADO
+        return 'Registros';
       default:
         return 'Indicadores';
     }
@@ -854,7 +862,7 @@ export default function VisualizacaoIndicadores({ user }) {
     return `${indicadores.length} indicadores encontrados`;
   };
 
-  // ✅ MODIFICADO: Obter indicadores de status do indicador (removida lógica de ler_depois)
+  // ✅ MODIFICADO: Obter indicadores de status do indicador (mantida lógica de ler_depois)
   const getStatusIndicators = (indicador) => {
     const indicators = [];
     
@@ -882,6 +890,11 @@ export default function VisualizacaoIndicadores({ user }) {
     return indicators;
   };
 
+  // ✅ MANTIDA: Função para verificar se deve mostrar ícone de ler depois
+  const shouldShowReadLaterIcon = (indicador) => {
+    return indicador.ler_depois;
+  };
+
   // ALTERAÇÃO: Formatar data - priorizar periodo_referencia, fallback para created_at
   const formatDate = (indicador) => {
     // Priorizar periodo_referencia se existir, caso contrário usar created_at
@@ -900,21 +913,6 @@ export default function VisualizacaoIndicadores({ user }) {
       return '';
     }
   };
-
-  // Componente customizado para ícone de grade
-  const GridIcon = () => (
-    <div className="w-5 h-5 grid grid-cols-3 gap-0.5">
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-    </div>
-  );
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -1015,7 +1013,7 @@ export default function VisualizacaoIndicadores({ user }) {
               </button>
             </div>
             
-            {/* ✅ MODIFICADO: Terceira linha: Filtros (removido filtroLerDepois) */}
+            {/* ✅ Terceira linha: Filtros (incluindo filtroLerDepois) */}
             {showFilters && (
               <div className="mt-4 space-y-3">
                 {/* Linha com os selects básicos */}
@@ -1063,7 +1061,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ MODIFICADO: Filtros Avançados (removido Ler Depois) */}
+                {/* ✅ Filtros Avançados (incluindo Ler Depois) */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
@@ -1080,7 +1078,8 @@ export default function VisualizacaoIndicadores({ user }) {
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
                     </button>
-
+                    
+                    {/* ✅ MANTIDO: Filtro Ler Depois */}
                     <button
                       onClick={() => setFiltroLerDepois(!filtroLerDepois)}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -1198,7 +1197,7 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             </div>
             
-            {/* ✅ MODIFICADO: Segunda linha: Filtros (removido filtroLerDepois) */}
+            {/* ✅ Segunda linha: Filtros (incluindo filtroLerDepois) */}
             {showFilters && (
               <div className="space-y-3">
                 {/* Linha com os selects básicos */}
@@ -1246,7 +1245,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ MODIFICADO: Filtros Avançados (removido Ler Depois) */}
+                {/* ✅ Filtros Avançados (incluindo Ler Depois) */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
@@ -1263,7 +1262,8 @@ export default function VisualizacaoIndicadores({ user }) {
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
                     </button>
-
+                    
+                    {/* ✅ MANTIDO: Filtro Ler Depois */}
                     <button
                       onClick={() => setFiltroLerDepois(!filtroLerDepois)}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -1298,7 +1298,7 @@ export default function VisualizacaoIndicadores({ user }) {
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="lg:flex lg:space-x-8">
-          {/* ✅ MODIFICADO: Sidebar de navegação - Desktop apenas (substituído Ler Depois por Controle) */}
+          {/* ✅ MODIFICADO: Sidebar de navegação - Desktop apenas (substituído Ver Todos por Registros) */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
@@ -1329,7 +1329,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   Importantes
                 </button>
 
-                {/* ✅ MODIFICADO: Substituído Ler Depois por Controle */}
                 <button
                   onClick={handleControleClick}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -1342,16 +1341,17 @@ export default function VisualizacaoIndicadores({ user }) {
                   Controle
                 </button>
 
+                {/* ✅ MODIFICADO: Substituído Ver Todos por Registros */}
                 <button
-                  onClick={() => setActiveTab('ver_todos')}
+                  onClick={handleRegistrosClick}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'ver_todos'
+                    activeTab === 'registros'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <GridIcon />
-                  <span className="ml-3">Ver Todos</span>
+                  <TfiPencil className="mr-3 h-5 w-5" />
+                  Registros
                 </button>
               </nav>
             </div>
@@ -1433,6 +1433,9 @@ export default function VisualizacaoIndicadores({ user }) {
                                 </h3>
                                 <div className="flex items-center space-x-2">
                                   {getStatusIndicators(indicador)}
+                                  {shouldShowReadLaterIcon(indicador) && (
+                                    <FiClock className="w-4 h-4 text-blue-600" />
+                                  )}
                                 </div>
                               </div>
                               
@@ -1534,6 +1537,9 @@ export default function VisualizacaoIndicadores({ user }) {
                                         </h3>
                                         <div className="flex items-center space-x-2">
                                           {getStatusIndicators(indicador)}
+                                          {shouldShowReadLaterIcon(indicador) && (
+                                            <FiClock className="w-4 h-4 text-blue-600" />
+                                          )}
                                         </div>
                                       </div>
                                       
@@ -1580,6 +1586,9 @@ export default function VisualizacaoIndicadores({ user }) {
                                         </h3>
                                         <div className="flex items-center space-x-2">
                                           {getStatusIndicators(indicador)}
+                                          {shouldShowReadLaterIcon(indicador) && (
+                                            <FiClock className="w-4 h-4 text-blue-600" />
+                                          )}
                                         </div>
                                       </div>
                                       
@@ -1624,7 +1633,7 @@ export default function VisualizacaoIndicadores({ user }) {
         </div>
       </div>
 
-      {/* ✅ MODIFICADO: Barra de navegação inferior - Mobile apenas (substituído Ler Depois por Controle) */}
+      {/* ✅ MODIFICADO: Barra de navegação inferior - Mobile apenas (substituído Ver Todos por Registros) */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
@@ -1654,7 +1663,6 @@ export default function VisualizacaoIndicadores({ user }) {
             <span className="text-xs font-medium">Importantes</span>
           </button>
 
-          {/* ✅ MODIFICADO: Substituído Ler Depois por Controle */}
           <button
             onClick={handleControleClick}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
@@ -1667,16 +1675,17 @@ export default function VisualizacaoIndicadores({ user }) {
             <span className="text-xs font-medium">Controle</span>
           </button>
 
+          {/* ✅ MODIFICADO: Substituído Ver Todos por Registros */}
           <button
-            onClick={() => setActiveTab('ver_todos')}
+            onClick={handleRegistrosClick}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'ver_todos'
+              activeTab === 'registros'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
-            <GridIcon />
-            <span className="text-xs font-medium">Ver Todos</span>
+            <TfiPencil className="w-5 h-5" />
+            <span className="text-xs font-medium">Registros</span>
           </button>
         </div>
       </div>
