@@ -492,72 +492,72 @@ const CopiaControleIndicadorGeralTable = ({
     <div>
       {/* Estatísticas da aba ativa com estilo moderno */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
                 <span className="text-white text-sm font-bold">📊</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-blue-900">Total</p>
-              <p className="text-lg font-semibold text-blue-700">{estatisticas.total}</p>
+              <p className="text-sm font-medium" style={{ color: '#012060' }}>Total</p>
+              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.total}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
                 <FiCheck className="w-4 h-4 text-white" />
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-green-900">Com Documento</p>
-              <p className="text-lg font-semibold text-green-700">{estatisticas.comDocumento}</p>
+              <p className="text-sm font-medium" style={{ color: '#012060' }}>Com Documento</p>
+              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.comDocumento}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
                 <FiX className="w-4 h-4 text-white" />
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-yellow-900">Sem Documento</p>
-              <p className="text-lg font-semibold text-yellow-700">{estatisticas.semDocumento}</p>
+              <p className="text-sm font-medium" style={{ color: '#012060' }}>Sem Documento</p>
+              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.semDocumento}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
                 <span className="text-white text-xs font-bold">!</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-purple-900">Obrigatórios</p>
-              <p className="text-lg font-semibold text-purple-700">{estatisticas.obrigatorios}</p>
+              <p className="text-sm font-medium" style={{ color: '#012060' }}>Obrigatórios</p>
+              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.obrigatorios}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
                 <span className="text-white text-xs font-bold">?</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-900">Sem Valor</p>
-              <p className="text-lg font-semibold text-red-700">{estatisticas.semValor}</p>
+              <p className="text-sm font-medium" style={{ color: '#012060' }}>Sem Valor</p>
+              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.semValor}</p>
             </div>
           </div>
         </div>
