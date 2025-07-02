@@ -41,8 +41,9 @@ export default function VisualizacaoIndicadores({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
-  // Estados para filtros avançados - ✅ REMOVIDO filtroLerDepois
+  // Estados para filtros avançados
   const [filtroImportantes, setFiltroImportantes] = useState(false);
+  const [filtroLerDepois, setFiltroLerDepois] = useState(false); // ✅ ADICIONAR ESTA LINHA
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
   // Estados para controlar a navegação - ✅ MODIFICADO: substituído 'ler_depois' por 'controle'
@@ -761,6 +762,9 @@ export default function VisualizacaoIndicadores({ user }) {
         if (filtroImportantes) {
           query = query.eq('importante', true);
         }
+        if (filtroLerDepois) { // ✅ ADICIONAR ESTE BLOCO
+          query = query.eq('ler_depois', true);
+        }
         if (filtroArquivados) {
           query = query.eq('arquivado', true);
         }
@@ -806,19 +810,20 @@ export default function VisualizacaoIndicadores({ user }) {
     if (user && projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
       fetchIndicadores();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroArquivados, projetosVinculados]); // ✅ REMOVIDO: filtroLerDepois
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]); // ✅ ADICIONAR filtroLerDepois
 
   // ✅ MODIFICADO: Limpar filtros (removido filtroLerDepois)
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
     setFiltroImportantes(false);
+    setFiltroLerDepois(false); // ✅ ADICIONAR ESTA LINHA
     setFiltroArquivados(false);
     setShowFilters(false);
   };
 
   // ✅ MODIFICADO: Verificar se há filtros ativos (removido filtroLerDepois)
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroArquivados;
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados; // ✅ ADICIONAR filtroLerDepois
 
   // ✅ MODIFICADO: Obter título da seção (alterado ler_depois para controle)
   const getSectionTitle = () => {
@@ -1074,6 +1079,18 @@ export default function VisualizacaoIndicadores({ user }) {
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
                     </button>
+
+                    <button
+                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroLerDepois 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiClock className="w-4 h-4 mr-1" />
+                      Ler Depois
+                    </button>
                     
                     <button
                       onClick={() => setFiltroArquivados(!filtroArquivados)}
@@ -1244,6 +1261,18 @@ export default function VisualizacaoIndicadores({ user }) {
                     >
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
+                    </button>
+
+                    <button
+                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                        filtroLerDepois 
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <FiClock className="w-4 h-4 mr-1" />
+                      Ler Depois
                     </button>
                     
                     <button
