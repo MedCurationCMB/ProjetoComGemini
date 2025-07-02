@@ -1028,7 +1028,7 @@ export default function IndicadorDetalhe({ user }) {
     return kpisHabilitados;
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados DESKTOP com sistema responsivo MELHORADO
+  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados DESKTOP com cor azul uniforme
   const renderKPIsHabilitadosDesktop = () => {
     const kpis = calcularKPIs();
     const kpisHabilitados = [];
@@ -1037,7 +1037,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.soma) {
       kpisHabilitados.push({
         key: "soma-apresentado",
-        color: "blue",
         title: "Soma - Valor Indicador",
         value: formatKPIValue(kpis.somaRealizadoApresentado),
         subtitle: `Meta Total: ${formatKPIValue(kpis.somaMetaApresentado)}`
@@ -1047,7 +1046,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.media) {
       kpisHabilitados.push({
         key: "media-apresentado",
-        color: "green",
         title: "Média - Valor Indicador",
         value: formatKPIValue(kpis.mediaRealizadoApresentado),
         subtitle: `Meta Média: ${formatKPIValue(kpis.mediaMetaApresentado)}`
@@ -1057,7 +1055,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.desvio_padrao) {
       kpisHabilitados.push({
         key: "desvio-apresentado",
-        color: "purple",
         title: "Desvio Padrão - Valor Indicador",
         value: formatKPIValue(kpis.desvioPadraoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.desvioPadraoMetaApresentado)}`
@@ -1067,7 +1064,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.mediana) {
       kpisHabilitados.push({
         key: "mediana-apresentado",
-        color: "yellow",
         title: "Mediana - Valor Indicador",
         value: formatKPIValue(kpis.medianaRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.medianaMetaApresentado)}`
@@ -1077,7 +1073,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.minimo) {
       kpisHabilitados.push({
         key: "minimo-apresentado",
-        color: "red",
         title: "Mínimo - Valor Indicador",
         value: formatKPIValue(kpis.minimoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.minimoMetaApresentado)}`
@@ -1087,7 +1082,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.maximo) {
       kpisHabilitados.push({
         key: "maximo-apresentado",
-        color: "orange",
         title: "Máximo - Valor Indicador",
         value: formatKPIValue(kpis.maximoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.maximoMetaApresentado)}`
@@ -1097,7 +1091,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.mais_recente) {
       kpisHabilitados.push({
         key: "recente-apresentado",
-        color: "indigo",
         title: "Mais Recente - Valor Indicador",
         value: formatKPIValue(kpis.maisRecenteRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.maisRecenteMetaApresentado)}`
@@ -1107,7 +1100,6 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.contagem_registros) {
       kpisHabilitados.push({
         key: "contagem",
-        color: "gray",
         title: "Contagem de Registros",
         value: formatKPIValue(kpis.contagemRegistros),
         subtitle: "Total de períodos"
@@ -1117,24 +1109,13 @@ export default function IndicadorDetalhe({ user }) {
     // ✅ LÓGICA MELHORADA PARA LAYOUT OTIMIZADO
     const renderKPILayout = () => {
       const count = kpisHabilitados.length;
-      
-      // ✅ MAPEAMENTO DE CORES
-      const colorClasses = {
-        blue: "border-blue-500",
-        green: "border-green-500",
-        purple: "border-purple-500",
-        yellow: "border-yellow-500",
-        red: "border-red-500",
-        orange: "border-orange-500",
-        indigo: "border-indigo-500",
-        gray: "border-gray-500"
-      };
 
-      // Função para renderizar um KPI individual
+      // Função para renderizar um KPI individual com cor azul uniforme
       const renderKPI = (kpi, className = "") => (
         <div 
           key={kpi.key} 
-          className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${colorClasses[kpi.color]} ${className}`}
+          className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${className}`}
+          style={{ borderLeftColor: '#012060' }}
         >
           <p className="text-xs font-medium text-gray-600 mb-1">{kpi.title}</p>
           <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
