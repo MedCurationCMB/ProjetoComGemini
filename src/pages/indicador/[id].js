@@ -168,7 +168,7 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer com centralização adequada
+  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer sem position absolute problemático
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -191,12 +191,12 @@ export default function IndicadorDetalhe({ user }) {
     
     return (
       <div 
-        className={`${needsScroll ? "" : ""} flex justify-center`}
+        className="flex justify-center"
         style={{
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
-          // ✅ Remover largura fixa do container - deixar 100%
+          // ✅ Largura 100% para centralização
           width: '100%',
           maxWidth: '100%'
         }}
@@ -219,11 +219,13 @@ export default function IndicadorDetalhe({ user }) {
           }}>
             {children}
           </div>
+          
+          {/* ✅ CORRIGIDO: Indicador de scroll FORA do container com overflow */}
         </div>
         
-        {/* ✅ Indicador de scroll mais informativo */}
+        {/* ✅ MOVIDO PARA FORA: Indicador de scroll agora está no container pai */}
         {needsScroll && (
-          <div className="absolute bottom-0 left-0 right-0 text-center mt-1">
+          <div className="text-center mt-1 w-full">
             <span className="text-xs text-gray-400">
               ← Deslize para ver mais períodos →
             </span>
