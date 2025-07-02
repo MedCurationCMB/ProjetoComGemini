@@ -23,6 +23,9 @@ const MAX_CHART_WIDTH = {
   desktop: 1000  // Máximo 1000px no desktop
 };
 
+// ✅ CONFIGURAÇÃO BASEADA EM 7 BARRAS COMO REFERÊNCIA MÁXIMA
+const MAX_VISIBLE_BARS = 7;
+
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
   const { id } = router.query; // Este é o id_controleindicador
@@ -74,85 +77,103 @@ export default function IndicadorDetalhe({ user }) {
 
   // Função para calcular largura ideal por barra baseada na quantidade
   const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
+    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
     if (isMobile) {
-      // Mobile: adaptar baseado na quantidade
-      if (dataLength <= 3) return 60;      // Poucas barras = mais largas
-      if (dataLength <= 5) return 45;      // Quantidade média
-      if (dataLength <= 8) return 35;      // Mais barras = mais estreitas
-      return 25;                           // Muitas barras = bem estreitas
+      // Mobile: adaptar baseado na quantidade (máximo 7)
+      if (effectiveDataLength <= 3) return 60;      // Poucas barras = mais largas
+      if (effectiveDataLength <= 5) return 45;      // Quantidade média
+      if (effectiveDataLength <= 7) return 35;      // 7 barras = tamanho padrão
+      return 35;                                     // Sempre 35 para mobile quando > 7
     } else {
-      // Desktop: adaptar baseado na quantidade
-      if (dataLength <= 3) return 80;      // Poucas barras = mais largas
-      if (dataLength <= 5) return 65;      // Quantidade média
-      if (dataLength <= 8) return 50;      // Mais barras = mais estreitas
-      if (dataLength <= 12) return 40;     // Muitas barras
-      return 30;                           // Muitas barras = bem estreitas
+      // Desktop: adaptar baseado na quantidade (máximo 7)
+      if (effectiveDataLength <= 3) return 80;      // Poucas barras = mais largas
+      if (effectiveDataLength <= 5) return 65;      // Quantidade média
+      if (effectiveDataLength <= 7) return 50;      // 7 barras = tamanho padrão
+      return 50;                                     // Sempre 50 para desktop quando > 7
     }
   };
 
   // Função para calcular espaçamento entre barras baseado na quantidade
   const calculateBarSpacing = (dataLength, isMobile = false) => {
+    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
     if (isMobile) {
-      if (dataLength <= 3) return 15;      // Poucas barras = mais espaço
-      if (dataLength <= 5) return 10;      // Quantidade média
-      if (dataLength <= 8) return 5;       // Mais barras = menos espaço
-      return 2;                            // Muitas barras = espaço mínimo
+      if (effectiveDataLength <= 3) return 15;      // Poucas barras = mais espaço
+      if (effectiveDataLength <= 5) return 10;      // Quantidade média
+      if (effectiveDataLength <= 7) return 5;       // 7 barras = espaçamento padrão
+      return 5;                                      // Sempre 5 para mobile quando > 7
     } else {
-      if (dataLength <= 3) return 20;      // Poucas barras = mais espaço
-      if (dataLength <= 5) return 15;      // Quantidade média
-      if (dataLength <= 8) return 10;      // Mais barras = menos espaço
-      if (dataLength <= 12) return 5;      // Muitas barras
-      return 2;                            // Muitas barras = espaço mínimo
+      if (effectiveDataLength <= 3) return 20;      // Poucas barras = mais espaço
+      if (effectiveDataLength <= 5) return 15;      // Quantidade média
+      if (effectiveDataLength <= 7) return 10;      // 7 barras = espaçamento padrão
+      return 10;                                     // Sempre 10 para desktop quando > 7
     }
   };
 
   // Função para calcular se precisa de scroll baseado na tela disponível
   const calculateNeedsScroll = (dataLength, isMobile = false) => {
-    const { needsScroll } = calculateTotalWidth(dataLength, isMobile);
-    return needsScroll;
+    return dataLength > MAX_VISIBLE_BARS;
   };
 
   // Função para calcular largura total do container
   const calculateTotalWidth = (dataLength, isMobile = false) => {
-    const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
-    const spacing = calculateBarSpacing(dataLength, isMobile);
-    const margins = 20;
-    
-    // Largura total calculada baseada nos dados
-    const calculatedWidth = (barWidth + spacing) * dataLength + margins;
-    
-    // Largura mínima baseada na tela
-    const minWidth = isMobile ? 300 : 500;
-    
-    // ✅ NOVO: Aplicar limite máximo
-    const maxWidth = isMobile ? MAX_CHART_WIDTH.mobile : MAX_CHART_WIDTH.desktop;
-    
-    // Retornar a menor entre: calculada ou máxima (mas respeitando o mínimo)
-    const finalWidth = Math.max(minWidth, Math.min(calculatedWidth, maxWidth));
-    
-    return {
-      width: finalWidth,
-      needsScroll: calculatedWidth > maxWidth,
-      calculatedWidth: calculatedWidth
-    };
+    // Se temos 7 ou menos barras, calcular normalmente
+    if (dataLength <= MAX_VISIBLE_BARS) {
+      const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
+      const spacing = calculateBarSpacing(dataLength, isMobile);
+      const margins = 20;
+      
+      const calculatedWidth = (barWidth + spacing) * dataLength + margins;
+      const minWidth = isMobile ? 300 : 500;
+      
+      return {
+        width: Math.max(calculatedWidth, minWidth),
+        needsScroll: false,
+        calculatedWidth: calculatedWidth,
+        visibleBars: dataLength
+      };
+    } 
+    // Se temos mais de 7 barras, usar largura fixa baseada em 7 barras
+    else {
+      const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
+      const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
+      const margins = 20;
+      
+      // Largura do container fixo (baseado em 7 barras)
+      const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
+      
+      // Largura total do conteúdo (todas as barras)
+      const totalContentWidth = (barWidth + spacing) * dataLength + margins;
+      
+      return {
+        width: containerWidth,           // Container sempre do tamanho de 7 barras
+        needsScroll: true,              // Sempre precisa de scroll quando > 7
+        calculatedWidth: totalContentWidth,  // Largura real do conteúdo
+        visibleBars: MAX_VISIBLE_BARS
+      };
+    }
   };
 
-  // Função para calcular barCategoryGap dinâmico
+  // ✅ FUNÇÃO MODIFICADA: Gap baseado no efetivo número de barras visíveis
   const calculateCategoryGap = (dataLength) => {
-    if (dataLength <= 3) return "8%";     // Poucas barras = mais espaço
-    if (dataLength <= 5) return "5%";     // Quantidade média
-    if (dataLength <= 8) return "3%";     // Mais barras = menos espaço
-    if (dataLength <= 12) return "1%";    // Muitas barras
-    return "2%";                          // Muitas barras = espaço mínimo
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
+    if (effectiveDataLength <= 3) return "8%";     // Poucas barras = mais espaço
+    if (effectiveDataLength <= 5) return "5%";     // Quantidade média
+    if (effectiveDataLength <= 7) return "3%";     // 7 barras = espaçamento padrão
+    return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer com limite máximo
+  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer com limite de 7 barras
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
 
-    // ✅ USAR NOVA FUNÇÃO que considera limite máximo
-    const { width, needsScroll, calculatedWidth } = calculateTotalWidth(dataLength, isMobile);
+    // ✅ USAR NOVA FUNÇÃO baseada em 7 barras
+    const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
 
     // ✅ Fazer scroll automático para a direita quando há scroll
     useEffect(() => {
@@ -175,6 +196,9 @@ export default function IndicadorDetalhe({ user }) {
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
+          // ✅ Largura fixa do container
+          width: `${width}px`,
+          maxWidth: '100%'
         }}
       >
         <div style={{ 
@@ -192,7 +216,7 @@ export default function IndicadorDetalhe({ user }) {
               ← Deslize para ver mais períodos →
             </span>
             <div className="text-xs text-gray-300 mt-1">
-              {dataLength} períodos • Máx. {isMobile ? MAX_CHART_WIDTH.mobile : MAX_CHART_WIDTH.desktop}px
+              Mostrando {visibleBars} de {dataLength} períodos
             </div>
           </div>
         )}
