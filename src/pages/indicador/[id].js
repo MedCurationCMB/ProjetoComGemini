@@ -948,7 +948,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.soma) {
       kpisHabilitados.push(
         <div key="soma-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
         </div>
@@ -958,7 +958,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.media) {
       kpisHabilitados.push(
         <div key="media-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
         </div>
@@ -968,7 +968,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.desvio_padrao) {
       kpisHabilitados.push(
         <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.desvioPadraoMetaApresentado)}</p>
         </div>
@@ -978,7 +978,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.mediana) {
       kpisHabilitados.push(
         <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.medianaMetaApresentado)}</p>
         </div>
@@ -988,7 +988,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.minimo) {
       kpisHabilitados.push(
         <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.minimoMetaApresentado)}</p>
         </div>
@@ -998,7 +998,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.maximo) {
       kpisHabilitados.push(
         <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maximoMetaApresentado)}</p>
         </div>
@@ -1008,7 +1008,7 @@ export default function IndicadorDetalhe({ user }) {
     if (configuracoes.mais_recente) {
       kpisHabilitados.push(
         <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-500">
-          <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Apresentado</p>
+          <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maisRecenteMetaApresentado)}</p>
         </div>
@@ -1038,7 +1038,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "soma-apresentado",
         color: "blue",
-        title: "Soma - Valor Apresentado",
+        title: "Soma - Valor Indicador",
         value: formatKPIValue(kpis.somaRealizadoApresentado),
         subtitle: `Meta Total: ${formatKPIValue(kpis.somaMetaApresentado)}`
       });
@@ -1048,7 +1048,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "media-apresentado",
         color: "green",
-        title: "Média - Valor Apresentado",
+        title: "Média - Valor Indicador",
         value: formatKPIValue(kpis.mediaRealizadoApresentado),
         subtitle: `Meta Média: ${formatKPIValue(kpis.mediaMetaApresentado)}`
       });
@@ -1058,7 +1058,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "desvio-apresentado",
         color: "purple",
-        title: "Desvio Padrão - Valor Apresentado",
+        title: "Desvio Padrão - Valor Indicador",
         value: formatKPIValue(kpis.desvioPadraoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.desvioPadraoMetaApresentado)}`
       });
@@ -1068,7 +1068,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "mediana-apresentado",
         color: "yellow",
-        title: "Mediana - Valor Apresentado",
+        title: "Mediana - Valor Indicador",
         value: formatKPIValue(kpis.medianaRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.medianaMetaApresentado)}`
       });
@@ -1078,7 +1078,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "minimo-apresentado",
         color: "red",
-        title: "Mínimo - Valor Apresentado",
+        title: "Mínimo - Valor Indicador",
         value: formatKPIValue(kpis.minimoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.minimoMetaApresentado)}`
       });
@@ -1088,7 +1088,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "maximo-apresentado",
         color: "orange",
-        title: "Máximo - Valor Apresentado",
+        title: "Máximo - Valor Indicador",
         value: formatKPIValue(kpis.maximoRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.maximoMetaApresentado)}`
       });
@@ -1098,7 +1098,7 @@ export default function IndicadorDetalhe({ user }) {
       kpisHabilitados.push({
         key: "recente-apresentado",
         color: "indigo",
-        title: "Mais Recente - Valor Apresentado",
+        title: "Mais Recente - Valor Indicador",
         value: formatKPIValue(kpis.maisRecenteRealizadoApresentado),
         subtitle: `Meta: ${formatKPIValue(kpis.maisRecenteMetaApresentado)}`
       });
@@ -1569,7 +1569,7 @@ export default function IndicadorDetalhe({ user }) {
           {/* ✅ GRÁFICO ÚNICO - Mobile - Valor Apresentado */}
           <div className="mb-6">
             <div className="bg-white rounded-lg shadow-md p-4 border">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado (Realizado vs Meta)</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Indicador (Realizado vs Meta)</h3>
               
               {/* ✅ LEGENDA FIXA - Mobile - Meta agora é cinza */}
               <div className="mb-3 flex justify-center space-x-4">
@@ -1958,7 +1958,7 @@ export default function IndicadorDetalhe({ user }) {
           <div className="mb-8">
             <div className="flex justify-center">
               <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Apresentado (Realizado vs Meta)</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Indicador (Realizado vs Meta)</h3>
                 
                 {/* ✅ LEGENDA FIXA - Desktop - Meta agora é cinza */}
                 <div className="mb-4 flex justify-center space-x-6">
