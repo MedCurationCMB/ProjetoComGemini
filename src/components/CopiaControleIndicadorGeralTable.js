@@ -929,8 +929,8 @@ const CopiaControleIndicadorGeralTable = ({
                 Você pode atualizar múltiplos indicadores de duas formas diferentes:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1">
-                <li>• <strong>Atualização via Planilha (🟠 Laranja):</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
-                <li>• <strong>Atualização Inline (🟣 Roxo):</strong> Edite diretamente na interface, todos os registros visíveis</li>
+                <li>• <strong>Atualização via Planilha:</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
+                <li>• <strong>Atualização Inline:</strong> Edite diretamente na interface, todos os registros visíveis</li>
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
                 <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
