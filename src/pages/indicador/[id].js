@@ -17,6 +17,12 @@ import {
   Tooltip
 } from 'recharts';
 
+// ✅ NOVA CONFIGURAÇÃO: Definir limites máximos
+const MAX_CHART_WIDTH = {
+  mobile: 600,   // Máximo 600px no mobile
+  desktop: 1000  // Máximo 1000px no desktop
+};
+
 export default function IndicadorDetalhe({ user }) {
   const router = useRouter();
   const { id } = router.query; // Este é o id_controleindicador
@@ -102,8 +108,8 @@ export default function IndicadorDetalhe({ user }) {
 
   // Função para calcular se precisa de scroll baseado na tela disponível
   const calculateNeedsScroll = (dataLength, isMobile = false) => {
-    const maxBarsWithoutScroll = isMobile ? 6 : 10;
-    return dataLength > maxBarsWithoutScroll;
+    const { needsScroll } = calculateTotalWidth(dataLength, isMobile);
+    return needsScroll;
   };
 
   // Função para calcular largura total do container
@@ -112,13 +118,23 @@ export default function IndicadorDetalhe({ user }) {
     const spacing = calculateBarSpacing(dataLength, isMobile);
     const margins = 20;
     
-    // Largura total = (largura da barra + espaçamento) * número de barras + margens
-    const totalWidth = (barWidth + spacing) * dataLength + margins;
+    // Largura total calculada baseada nos dados
+    const calculatedWidth = (barWidth + spacing) * dataLength + margins;
     
     // Largura mínima baseada na tela
     const minWidth = isMobile ? 300 : 500;
     
-    return Math.max(totalWidth, minWidth);
+    // ✅ NOVO: Aplicar limite máximo
+    const maxWidth = isMobile ? MAX_CHART_WIDTH.mobile : MAX_CHART_WIDTH.desktop;
+    
+    // Retornar a menor entre: calculada ou máxima (mas respeitando o mínimo)
+    const finalWidth = Math.max(minWidth, Math.min(calculatedWidth, maxWidth));
+    
+    return {
+      width: finalWidth,
+      needsScroll: calculatedWidth > maxWidth,
+      calculatedWidth: calculatedWidth
+    };
   };
 
   // Função para calcular barCategoryGap dinâmico
@@ -126,18 +142,21 @@ export default function IndicadorDetalhe({ user }) {
     if (dataLength <= 3) return "8%";     // Poucas barras = mais espaço
     if (dataLength <= 5) return "5%";     // Quantidade média
     if (dataLength <= 8) return "3%";     // Mais barras = menos espaço
-    if (dataLength <= 12) return "1%";     // Muitas barras
-    return "2%";                           // Muitas barras = espaço mínimo
+    if (dataLength <= 12) return "1%";    // Muitas barras
+    return "2%";                          // Muitas barras = espaço mínimo
   };
 
-  // ✅ NOVO COMPONENTE: ScrollableChartContainer
+  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer com limite máximo
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
 
-    // ✅ Fazer scroll automático para a direita quando o componente monta
+    // ✅ USAR NOVA FUNÇÃO que considera limite máximo
+    const { width, needsScroll, calculatedWidth } = calculateTotalWidth(dataLength, isMobile);
+
+    // ✅ Fazer scroll automático para a direita quando há scroll
     useEffect(() => {
-      if (scrollRef.current && !hasScrolled && dataLength > (isMobile ? 6 : 10)) {
+      if (scrollRef.current && !hasScrolled && needsScroll) {
         // Pequeno delay para garantir que o conteúdo foi renderizado
         setTimeout(() => {
           if (scrollRef.current) {
@@ -146,29 +165,37 @@ export default function IndicadorDetalhe({ user }) {
           }
         }, 100);
       }
-    }, [dataLength, hasScrolled, isMobile]);
-
-    const shouldShowScroll = isMobile ? dataLength > 6 : dataLength > 10;
-    const totalWidth = calculateTotalWidth(dataLength, isMobile);
+    }, [needsScroll, hasScrolled]);
     
     return (
       <div 
         ref={scrollRef}
-        className={shouldShowScroll ? "overflow-x-auto" : ""}
+        className={needsScroll ? "overflow-x-auto" : ""}
         style={{
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
-          // Esconder scrollbar no webkit
           WebkitOverflowScrolling: 'touch',
         }}
       >
         <div style={{ 
-          width: shouldShowScroll ? `${totalWidth}px` : '100%',
-          minWidth: shouldShowScroll ? `${totalWidth}px` : '100%',
-          margin: shouldShowScroll ? '0' : '0 auto'
+          width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+          minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+          margin: needsScroll ? '0' : '0 auto'
         }}>
           {children}
         </div>
+        
+        {/* ✅ Indicador de scroll mais informativo */}
+        {needsScroll && (
+          <div className="text-center mt-1">
+            <span className="text-xs text-gray-400">
+              ← Deslize para ver mais períodos →
+            </span>
+            <div className="text-xs text-gray-300 mt-1">
+              {dataLength} períodos • Máx. {isMobile ? MAX_CHART_WIDTH.mobile : MAX_CHART_WIDTH.desktop}px
+            </div>
+          </div>
+        )}
       </div>
     );
   };
