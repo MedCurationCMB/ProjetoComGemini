@@ -577,9 +577,9 @@ const CopiaControleIndicadorGeralTable = ({
             className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                : 'text-white hover:opacity-90'  // ← NOVA LINHA
             }`}
-            title={controles.length === 0 ? 'Nenhum registro disponível para atualização' : 'Atualizar informações em massa via Excel'}
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
           >
             <FiRefreshCw className="mr-2" />
             Atualizar Informações em Massa (Planilha)
@@ -592,9 +592,9 @@ const CopiaControleIndicadorGeralTable = ({
             className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'bg-purple-600 hover:bg-purple-700 text-white'
+                : 'text-white hover:opacity-90'  // ← NOVA LINHA
             }`}
-            title={controles.length === 0 ? 'Nenhum registro disponível para edição' : 'Editar múltiplos registros ao mesmo tempo'}
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
           >
             <FiEdit className="mr-2" />
             Atualizar Informações em Massa
@@ -603,7 +603,8 @@ const CopiaControleIndicadorGeralTable = ({
           {/* Botão Adicionar Linha de Indicador Geral */}
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            className="flex items-center text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"  // ← LINHA ALTERADA
+            style={{ backgroundColor: '#012060' }}  // ← NOVA LINHA
           >
             <FiPlus className="mr-2" />
             Adicionar Linha de Indicador Geral
@@ -616,9 +617,9 @@ const CopiaControleIndicadorGeralTable = ({
             className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                : 'text-white hover:opacity-90'  // ← NOVA LINHA
             }`}
-            title={controles.length === 0 ? 'Nenhum registro disponível' : 'Preencher automaticamente períodos de referência vazios baseado na recorrência'}
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
           >
             <FiCalendar className="mr-2" />
             Preencher Automático Período de Referência
