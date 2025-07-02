@@ -1566,25 +1566,24 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICOS COMBINADOS - Mobile - COM SCROLL INVERTIDO */}
-          <div className="mb-6 space-y-6">
-            {/* Gráfico Combinado - Valor Apresentado */}
+          {/* ✅ GRÁFICO ÚNICO - Mobile - Valor Apresentado */}
+          <div className="mb-6">
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Apresentado (Realizado vs Meta)</h3>
               
-              {/* ✅ LEGENDA FIXA - Mobile */}
+              {/* ✅ LEGENDA FIXA - Mobile - Meta agora é cinza */}
               <div className="mb-3 flex justify-center space-x-4">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
                   <span className="text-xs text-gray-600">Realizado</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded mr-2"></div>
+                  <div className="w-3 h-3 bg-gray-500 rounded mr-2"></div>
                   <span className="text-xs text-gray-600">Meta</span>
                 </div>
               </div>
               
-              {/* ✅ NOVO: Usar ScrollableChartContainer */}
+              {/* ✅ ScrollableChartContainer */}
               <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
                 <div className="h-32">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1610,63 +1609,9 @@ export default function IndicadorDetalhe({ user }) {
                       <Line 
                         type="monotone" 
                         dataKey="metaApresentado" 
-                        stroke="#10B981" 
+                        stroke="#6B7280" 
                         strokeWidth={2}
-                        dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
-                        name="Meta"
-                        connectNulls={true}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </ScrollableChartContainer>
-            </div>
-
-            {/* Gráfico Combinado - Valor Indicador */}
-            <div className="bg-white rounded-lg shadow-md p-4 border">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Indicador (Realizado vs Meta)</h3>
-              
-              {/* ✅ LEGENDA FIXA - Mobile */}
-              <div className="mb-3 flex justify-center space-x-4">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-purple-500 rounded mr-2"></div>
-                  <span className="text-xs text-gray-600">Realizado</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
-                  <span className="text-xs text-gray-600">Meta</span>
-                </div>
-              </div>
-              
-              {/* ✅ NOVO: Usar ScrollableChartContainer */}
-              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
-                <div className="h-32">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart 
-                      data={dadosGraficoCombinado} 
-                      margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                      barCategoryGap="15%"
-                    >
-                      <XAxis 
-                        dataKey="periodo" 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 8, fill: '#6B7280' }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar 
-                        dataKey="realizadoIndicador" 
-                        fill="#8B5CF6" 
-                        name="Realizado"
-                        radius={[2, 2, 0, 0]}
-                        maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="metaIndicador" 
-                        stroke="#F59E0B" 
-                        strokeWidth={2}
-                        dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                        dot={{ fill: '#6B7280', strokeWidth: 2, r: 3 }}
                         name="Meta"
                         connectNulls={true}
                       />
@@ -2009,26 +1954,25 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICOS COMBINADOS - Desktop - COM SCROLL INVERTIDO */}
+          {/* ✅ GRÁFICO ÚNICO - Desktop - Valor Apresentado */}
           <div className="mb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico Combinado - Valor Apresentado */}
-              <div className="bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Apresentado (Realizado vs Meta)</h3>
+            <div className="flex justify-center">
+              <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6 border">
+                <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Apresentado (Realizado vs Meta)</h3>
                 
-                {/* ✅ LEGENDA FIXA - Desktop */}
+                {/* ✅ LEGENDA FIXA - Desktop - Meta agora é cinza */}
                 <div className="mb-4 flex justify-center space-x-6">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
                     <span className="text-sm text-gray-600">Realizado</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                    <div className="w-4 h-4 bg-gray-500 rounded mr-2"></div>
                     <span className="text-sm text-gray-600">Meta</span>
                   </div>
                 </div>
                 
-                {/* ✅ NOVO: Usar ScrollableChartContainer */}
+                {/* ✅ ScrollableChartContainer */}
                 <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -2054,63 +1998,9 @@ export default function IndicadorDetalhe({ user }) {
                         <Line 
                           type="monotone" 
                           dataKey="metaApresentado" 
-                          stroke="#10B981" 
+                          stroke="#6B7280" 
                           strokeWidth={3}
-                          dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                          name="Meta"
-                          connectNulls={true}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                </ScrollableChartContainer>
-              </div>
-
-              {/* Gráfico Combinado - Valor Indicador */}
-              <div className="bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Valor Indicador (Realizado vs Meta)</h3>
-                
-                {/* ✅ LEGENDA FIXA - Desktop */}
-                <div className="mb-4 flex justify-center space-x-6">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-purple-500 rounded mr-2"></div>
-                    <span className="text-sm text-gray-600">Realizado</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
-                    <span className="text-sm text-gray-600">Meta</span>
-                  </div>
-                </div>
-                
-                {/* ✅ NOVO: Usar ScrollableChartContainer */}
-                <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart 
-                        data={dadosGraficoCombinado} 
-                        margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                        barCategoryGap="12%"
-                      >
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fill: '#6B7280' }}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar 
-                          dataKey="realizadoIndicador" 
-                          fill="#8B5CF6" 
-                          name="Realizado"
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="metaIndicador" 
-                          stroke="#F59E0B" 
-                          strokeWidth={3}
-                          dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                          dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}
                           name="Meta"
                           connectNulls={true}
                         />
