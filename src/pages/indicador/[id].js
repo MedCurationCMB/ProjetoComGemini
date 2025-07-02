@@ -118,16 +118,17 @@ export default function IndicadorDetalhe({ user }) {
     return dataLength > MAX_VISIBLE_BARS;
   };
 
-  // Função para calcular largura total do container
+  // ✅ FUNÇÃO CORRIGIDA: Calcular largura total com melhor centralização
   const calculateTotalWidth = (dataLength, isMobile = false) => {
     // Se temos 7 ou menos barras, calcular normalmente
     if (dataLength <= MAX_VISIBLE_BARS) {
       const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
       const spacing = calculateBarSpacing(dataLength, isMobile);
-      const margins = 20;
+      const margins = 40; // ✅ Aumentar margem para melhor espaçamento
       
       const calculatedWidth = (barWidth + spacing) * dataLength + margins;
-      const minWidth = isMobile ? 300 : 500;
+      // ✅ Definir larguras mínimas mais adequadas
+      const minWidth = isMobile ? 320 : 400;
       
       return {
         width: Math.max(calculatedWidth, minWidth),
@@ -140,7 +141,7 @@ export default function IndicadorDetalhe({ user }) {
     else {
       const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
       const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
-      const margins = 20;
+      const margins = 40; // ✅ Aumentar margem
       
       // Largura do container fixo (baseado em 7 barras)
       const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
@@ -167,7 +168,7 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE MODIFICADO: ScrollableChartContainer com limite de 7 barras
+  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer com centralização adequada
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -190,28 +191,39 @@ export default function IndicadorDetalhe({ user }) {
     
     return (
       <div 
-        ref={scrollRef}
-        className={needsScroll ? "overflow-x-auto" : ""}
+        className={`${needsScroll ? "" : ""} flex justify-center`}
         style={{
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
-          // ✅ Largura fixa do container
-          width: `${width}px`,
+          // ✅ Remover largura fixa do container - deixar 100%
+          width: '100%',
           maxWidth: '100%'
         }}
       >
-        <div style={{ 
-          width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-          minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-          margin: needsScroll ? '0' : '0 auto'
-        }}>
-          {children}
+        <div 
+          ref={scrollRef}
+          className={needsScroll ? "overflow-x-auto" : ""}
+          style={{
+            // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
+            width: needsScroll ? `${width}px` : 'auto',
+            maxWidth: needsScroll ? `${width}px` : '100%',
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div style={{ 
+            width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            margin: '0 auto' // ✅ SEMPRE centralizar o conteúdo
+          }}>
+            {children}
+          </div>
         </div>
         
         {/* ✅ Indicador de scroll mais informativo */}
         {needsScroll && (
-          <div className="text-center mt-1">
+          <div className="absolute bottom-0 left-0 right-0 text-center mt-1">
             <span className="text-xs text-gray-400">
               ← Deslize para ver mais períodos →
             </span>
@@ -1719,15 +1731,6 @@ export default function IndicadorDetalhe({ user }) {
                   </ResponsiveContainer>
                 </div>
               </ScrollableChartContainer>
-              
-              {/* Indicador de scroll - Mobile */}
-              {calculateNeedsScroll(dadosGraficoCombinado.length, true) && (
-                <div className="text-center mt-1">
-                  <span className="text-xs text-gray-400">
-                    ← Deslize para ver mais períodos →
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -2063,85 +2066,74 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICO ÚNICO COM CONFIGURAÇÕES ADAPTATIVAS - Desktop */}
+          {/* ✅ GRÁFICO ÚNICO COM CONFIGURAÇÕES ADAPTATIVAS E CENTRALIZAÇÃO CORRIGIDA - Desktop */}
           <div className="mb-8">
-            <div className="flex justify-center">
-              <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6 border">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Indicador (Realizado vs Meta)</h3>
-                
-                {/* ✅ LEGENDA FIXA - Desktop */}
-                <div className="mb-4 flex justify-center space-x-6">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-                    <span className="text-sm text-gray-600">Realizado</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-gray-500 rounded mr-2"></div>
-                    <span className="text-sm text-gray-600">Meta</span>
-                  </div>
+            <div className="bg-white rounded-lg shadow-md p-6 border">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Indicador (Realizado vs Meta)</h3>
+              
+              {/* ✅ LEGENDA FIXA - Desktop */}
+              <div className="mb-4 flex justify-center space-x-6">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
+                  <span className="text-sm text-gray-600">Realizado</span>
                 </div>
-                
-                {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS - Desktop */}
-                <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
-                  <div style={{ height: 160 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart 
-                        data={dadosGraficoCombinado} 
-                        margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
-                        barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
-                      >
-                        <XAxis 
-                          dataKey="periodo" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 10, fill: '#6B7280', textAnchor: 'middle' }}
-                          interval={0}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar 
-                          dataKey="realizadoApresentado" 
-                          fill="#3B82F6" 
-                          name="Realizado"
-                          radius={[3, 3, 0, 0]}
-                          maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, false)}
-                        >
-                          <LabelList 
-                            dataKey="realizadoApresentado" 
-                            position="top" 
-                            style={{ 
-                              fontSize: '9px', 
-                              fill: '#374151',
-                              fontWeight: '500'
-                            }}
-                            formatter={(value) => {
-                              if (value === 0) return '0';
-                              return parseFloat(value).toLocaleString('pt-BR');
-                            }}
-                          />
-                        </Bar>
-                        <Line 
-                          type="monotone" 
-                          dataKey="metaApresentado" 
-                          stroke="#6B7280" 
-                          strokeWidth={3}
-                          dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}
-                          name="Meta"
-                          connectNulls={true}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                </ScrollableChartContainer>
-                
-                {/* Indicador de scroll - Desktop */}
-                {calculateNeedsScroll(dadosGraficoCombinado.length, false) && (
-                  <div className="text-center mt-1">
-                    <span className="text-xs text-gray-400">
-                      ← Deslize para ver mais períodos →
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-gray-500 rounded mr-2"></div>
+                  <span className="text-sm text-gray-600">Meta</span>
+                </div>
               </div>
+              
+              {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS E CENTRALIZAÇÃO CORRIGIDA - Desktop */}
+              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
+                <div style={{ height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart 
+                      data={dadosGraficoCombinado} 
+                      margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
+                      barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
+                    >
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#6B7280', textAnchor: 'middle' }}
+                        interval={0}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="realizadoApresentado" 
+                        fill="#3B82F6" 
+                        name="Realizado"
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, false)}
+                      >
+                        <LabelList 
+                          dataKey="realizadoApresentado" 
+                          position="top" 
+                          style={{ 
+                            fontSize: '9px', 
+                            fill: '#374151',
+                            fontWeight: '500'
+                          }}
+                          formatter={(value) => {
+                            if (value === 0) return '0';
+                            return parseFloat(value).toLocaleString('pt-BR');
+                          }}
+                        />
+                      </Bar>
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaApresentado" 
+                        stroke="#6B7280" 
+                        strokeWidth={3}
+                        dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}
+                        name="Meta"
+                        connectNulls={true}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </ScrollableChartContainer>
             </div>
           </div>
 
