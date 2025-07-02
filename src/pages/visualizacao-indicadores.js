@@ -599,6 +599,11 @@ export default function VisualizacaoIndicadores({ user }) {
     router.push('/controle-indicador-geral');
   };
 
+  // 1. ADICIONAR nova função de navegação (após handleRegistrosClick):
+  const handleImportantesClick = () => {
+    router.push('/visualizacao-indicadores-importantes');
+  };
+
   // Carregar categorias, projetos e projetos vinculados
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
@@ -1318,7 +1323,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 </button>
 
                 <button
-                  onClick={() => setActiveTab('importantes')}
+                  onClick={handleImportantesClick} // ✅ MODIFICADO: era setActiveTab('importantes')
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'importantes'
                       ? 'bg-blue-100 text-blue-700'
@@ -1652,7 +1657,7 @@ export default function VisualizacaoIndicadores({ user }) {
           </button>
 
           <button
-            onClick={() => setActiveTab('importantes')}
+            onClick={handleImportantesClick} // ✅ MODIFICADO: era setActiveTab('importantes')
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'importantes'
                 ? 'text-blue-600'
