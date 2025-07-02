@@ -62,20 +62,72 @@ export default function IndicadorDetalhe({ user }) {
   const [atualizandoConfiguracao, setAtualizandoConfiguracao] = useState(false);
   const [indicadorBaseId, setIndicadorBaseId] = useState(null); // Para armazenar o ID do controle_indicador
 
-  // Função para calcular o tamanho ideal das barras
-  const calculateBarSize = (dataLength) => {
-    // Tamanho fixo baseado na visualização de 7 barras
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    return isMobile ? 35 : 50; // Tamanho fixo
+  // =====================================
+  // FUNÇÕES PARA GRÁFICO ADAPTATIVO
+  // =====================================
+
+  // Função para calcular largura ideal por barra baseada na quantidade
+  const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
+    if (isMobile) {
+      // Mobile: adaptar baseado na quantidade
+      if (dataLength <= 3) return 60;      // Poucas barras = mais largas
+      if (dataLength <= 5) return 45;      // Quantidade média
+      if (dataLength <= 8) return 35;      // Mais barras = mais estreitas
+      return 25;                           // Muitas barras = bem estreitas
+    } else {
+      // Desktop: adaptar baseado na quantidade
+      if (dataLength <= 3) return 80;      // Poucas barras = mais largas
+      if (dataLength <= 5) return 65;      // Quantidade média
+      if (dataLength <= 8) return 50;      // Mais barras = mais estreitas
+      if (dataLength <= 12) return 40;     // Muitas barras
+      return 30;                           // Muitas barras = bem estreitas
+    }
   };
 
-  // Função para calcular largura do container quando há muitos dados
-  const calculateContainerWidth = (dataLength) => {
-    const barWidth = calculateBarSize(dataLength);
-    const spacing = 15; // Espaçamento entre barras
-    const margins = 40; // Margens totais
+  // Função para calcular espaçamento entre barras baseado na quantidade
+  const calculateBarSpacing = (dataLength, isMobile = false) => {
+    if (isMobile) {
+      if (dataLength <= 3) return 15;      // Poucas barras = mais espaço
+      if (dataLength <= 5) return 10;      // Quantidade média
+      if (dataLength <= 8) return 5;       // Mais barras = menos espaço
+      return 2;                            // Muitas barras = espaço mínimo
+    } else {
+      if (dataLength <= 3) return 20;      // Poucas barras = mais espaço
+      if (dataLength <= 5) return 15;      // Quantidade média
+      if (dataLength <= 8) return 10;      // Mais barras = menos espaço
+      if (dataLength <= 12) return 5;      // Muitas barras
+      return 2;                            // Muitas barras = espaço mínimo
+    }
+  };
+
+  // Função para calcular se precisa de scroll baseado na tela disponível
+  const calculateNeedsScroll = (dataLength, isMobile = false) => {
+    const maxBarsWithoutScroll = isMobile ? 6 : 10;
+    return dataLength > maxBarsWithoutScroll;
+  };
+
+  // Função para calcular largura total do container
+  const calculateTotalWidth = (dataLength, isMobile = false) => {
+    const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
+    const spacing = calculateBarSpacing(dataLength, isMobile);
+    const margins = 20;
     
-    return Math.max(300, (barWidth + spacing) * dataLength + margins);
+    // Largura total = (largura da barra + espaçamento) * número de barras + margens
+    const totalWidth = (barWidth + spacing) * dataLength + margins;
+    
+    // Largura mínima baseada na tela
+    const minWidth = isMobile ? 300 : 500;
+    
+    return Math.max(totalWidth, minWidth);
+  };
+
+  // Função para calcular barCategoryGap dinâmico
+  const calculateCategoryGap = (dataLength) => {
+    if (dataLength <= 3) return "8%";     // Poucas barras = mais espaço
+    if (dataLength <= 5) return "5%";     // Quantidade média
+    if (dataLength <= 8) return "3%";     // Mais barras = menos espaço
+    if (dataLength <= 12) return "1%";     // Muitas barras
+    return "2%";                           // Muitas barras = espaço mínimo
   };
 
   // ✅ NOVO COMPONENTE: ScrollableChartContainer
@@ -85,7 +137,7 @@ export default function IndicadorDetalhe({ user }) {
 
     // ✅ Fazer scroll automático para a direita quando o componente monta
     useEffect(() => {
-      if (scrollRef.current && !hasScrolled && dataLength > (isMobile ? 6 : 7)) {
+      if (scrollRef.current && !hasScrolled && dataLength > (isMobile ? 6 : 10)) {
         // Pequeno delay para garantir que o conteúdo foi renderizado
         setTimeout(() => {
           if (scrollRef.current) {
@@ -96,12 +148,13 @@ export default function IndicadorDetalhe({ user }) {
       }
     }, [dataLength, hasScrolled, isMobile]);
 
-    const shouldShowScroll = isMobile ? dataLength > 6 : dataLength > 7;
+    const shouldShowScroll = isMobile ? dataLength > 6 : dataLength > 10;
+    const totalWidth = calculateTotalWidth(dataLength, isMobile);
     
     return (
       <div 
         ref={scrollRef}
-        className="overflow-x-auto"
+        className={shouldShowScroll ? "overflow-x-auto" : ""}
         style={{
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
@@ -110,9 +163,9 @@ export default function IndicadorDetalhe({ user }) {
         }}
       >
         <div style={{ 
-          minWidth: shouldShowScroll ? 
-            calculateContainerWidth(dataLength, isMobile) : 
-            '100%' 
+          width: shouldShowScroll ? `${totalWidth}px` : '100%',
+          minWidth: shouldShowScroll ? `${totalWidth}px` : '100%',
+          margin: shouldShowScroll ? '0' : '0 auto'
         }}>
           {children}
         </div>
@@ -870,7 +923,7 @@ export default function IndicadorDetalhe({ user }) {
     return num.toLocaleString('pt-BR');
   };
 
-  // ✅ FUNÇÃO CORRIGIDA: Preparar dados para gráfico combinado - VOLTA À ORDEM CRESCENTE
+  // ✅ FUNÇÃO MODIFICADA: Preparar dados para gráfico combinado com configurações adaptativas
   const prepararDadosGraficoCombinado = () => {
     if (!indicadores || indicadores.length === 0) return [];
     
@@ -903,9 +956,9 @@ export default function IndicadorDetalhe({ user }) {
       }
     });
     
-    // ✅ VOLTANDO À ORDEM ORIGINAL: Converter para array e ordenar por data CRESCENTE (mais antigo primeiro)
+    // Converter para array e ordenar por data CRESCENTE (mais antigo primeiro)
     return Object.values(dadosAgrupados)
-      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto)); // ✅ VOLTA: a - b (crescente)
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
   };
 
   // ✅ FUNÇÃO CORRIGIDA: Preparar dados para tabela - TAMBÉM VOLTA À ORDEM CRESCENTE  
@@ -934,9 +987,9 @@ export default function IndicadorDetalhe({ user }) {
       }
     });
     
-    // ✅ VOLTANDO À ORDEM ORIGINAL: Converter para array e ordenar por data CRESCENTE
+    // Converter para array e ordenar por data CRESCENTE
     return Object.values(dadosAgrupados)
-      .sort((a, b) => new Date(a.periodo_referencia) - new Date(b.periodo_referencia)); // ✅ VOLTA: a - b (crescente)
+      .sort((a, b) => new Date(a.periodo_referencia) - new Date(b.periodo_referencia));
   };
 
   // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados - MOBILE (sem alterações)
@@ -1547,12 +1600,12 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICO ÚNICO - Mobile - Valor Apresentado */}
+          {/* ✅ GRÁFICO ÚNICO COM CONFIGURAÇÕES ADAPTATIVAS - Mobile */}
           <div className="mb-6">
             <div className="bg-white rounded-lg shadow-md p-4 border">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Valor Indicador (Realizado vs Meta)</h3>
               
-              {/* ✅ LEGENDA FIXA - Mobile - Meta agora é cinza */}
+              {/* ✅ LEGENDA FIXA - Mobile */}
               <div className="mb-3 flex justify-center space-x-4">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
@@ -1564,29 +1617,44 @@ export default function IndicadorDetalhe({ user }) {
                 </div>
               </div>
               
-              {/* ✅ ScrollableChartContainer */}
+              {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS - Mobile */}
               <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
-                <div className="h-32">
+                <div style={{ height: 120 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart 
                       data={dadosGraficoCombinado} 
-                      margin={{ top: 20, right: 5, left: 5, bottom: 5 }}
-                      barCategoryGap="15%"
+                      margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
+                      barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
                     >
                       <XAxis 
                         dataKey="periodo" 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 8, fill: '#6B7280' }}
+                        tick={{ fontSize: 8, fill: '#6B7280', textAnchor: 'middle' }}
+                        interval={0}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar 
                         dataKey="realizadoApresentado" 
                         fill="#3B82F6" 
                         name="Realizado"
-                        radius={[2, 2, 0, 0]}
-                        maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                      />
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, true)}
+                      >
+                        <LabelList 
+                          dataKey="realizadoApresentado" 
+                          position="top" 
+                          style={{ 
+                            fontSize: '7px', 
+                            fill: '#374151',
+                            fontWeight: '500'
+                          }}
+                          formatter={(value) => {
+                            if (value === 0) return '0';
+                            return parseFloat(value).toLocaleString('pt-BR');
+                          }}
+                        />
+                      </Bar>
                       <Line 
                         type="monotone" 
                         dataKey="metaApresentado" 
@@ -1600,13 +1668,22 @@ export default function IndicadorDetalhe({ user }) {
                   </ResponsiveContainer>
                 </div>
               </ScrollableChartContainer>
+              
+              {/* Indicador de scroll - Mobile */}
+              {calculateNeedsScroll(dadosGraficoCombinado.length, true) && (
+                <div className="text-center mt-1">
+                  <span className="text-xs text-gray-400">
+                    ← Deslize para ver mais períodos →
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Mobile */}
           {renderSecaoConfiguracoes()}
 
-          {/* ✅ TABELA NOVA - Mobile - SEM coluna Tipo, COM novas colunas */}
+          {/* ✅ TABELA NOVA - Mobile */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -1642,7 +1719,7 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           </div>
 
-          {/* Botão Marcar como Lido - Mobile - SEMPRE mostrado */}
+          {/* Botão Marcar como Lido - Mobile */}
           <div className="mt-4 mb-4">
             <button
               onClick={toggleLidoTodos}
@@ -1935,13 +2012,13 @@ export default function IndicadorDetalhe({ user }) {
             </div>
           )}
 
-          {/* ✅ GRÁFICO ÚNICO - Desktop - Valor Apresentado */}
+          {/* ✅ GRÁFICO ÚNICO COM CONFIGURAÇÕES ADAPTATIVAS - Desktop */}
           <div className="mb-8">
             <div className="flex justify-center">
               <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6 border">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Valor Indicador (Realizado vs Meta)</h3>
                 
-                {/* ✅ LEGENDA FIXA - Desktop - Meta agora é cinza */}
+                {/* ✅ LEGENDA FIXA - Desktop */}
                 <div className="mb-4 flex justify-center space-x-6">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
@@ -1953,29 +2030,44 @@ export default function IndicadorDetalhe({ user }) {
                   </div>
                 </div>
                 
-                {/* ✅ ScrollableChartContainer */}
+                {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS - Desktop */}
                 <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
-                  <div className="h-64">
+                  <div style={{ height: 160 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart 
                         data={dadosGraficoCombinado} 
-                        margin={{ top: 30, right: 5, left: 5, bottom: 5 }}
-                        barCategoryGap="12%"
+                        margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
+                        barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
                       >
                         <XAxis 
                           dataKey="periodo" 
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 12, fill: '#6B7280' }}
+                          tick={{ fontSize: 10, fill: '#6B7280', textAnchor: 'middle' }}
+                          interval={0}
                         />
                         <Tooltip content={<CustomTooltip />} />
                         <Bar 
                           dataKey="realizadoApresentado" 
                           fill="#3B82F6" 
                           name="Realizado"
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={calculateBarSize(dadosGraficoCombinado.length)}
-                        />
+                          radius={[3, 3, 0, 0]}
+                          maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, false)}
+                        >
+                          <LabelList 
+                            dataKey="realizadoApresentado" 
+                            position="top" 
+                            style={{ 
+                              fontSize: '9px', 
+                              fill: '#374151',
+                              fontWeight: '500'
+                            }}
+                            formatter={(value) => {
+                              if (value === 0) return '0';
+                              return parseFloat(value).toLocaleString('pt-BR');
+                            }}
+                          />
+                        </Bar>
                         <Line 
                           type="monotone" 
                           dataKey="metaApresentado" 
@@ -1989,6 +2081,15 @@ export default function IndicadorDetalhe({ user }) {
                     </ResponsiveContainer>
                   </div>
                 </ScrollableChartContainer>
+                
+                {/* Indicador de scroll - Desktop */}
+                {calculateNeedsScroll(dadosGraficoCombinado.length, false) && (
+                  <div className="text-center mt-1">
+                    <span className="text-xs text-gray-400">
+                      ← Deslize para ver mais períodos →
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1996,7 +2097,7 @@ export default function IndicadorDetalhe({ user }) {
           {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Desktop */}
           {renderSecaoConfiguracoes()}
 
-          {/* ✅ TABELA NOVA - Desktop - SEM coluna Tipo, COM novas colunas */}
+          {/* ✅ TABELA NOVA - Desktop */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -2036,7 +2137,7 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
-          {/* Botão Marcar como Lido - Desktop - SEMPRE mostrado */}
+          {/* Botão Marcar como Lido - Desktop */}
           <div className="mt-6 flex justify-end">
             <button
               onClick={toggleLidoTodos}
