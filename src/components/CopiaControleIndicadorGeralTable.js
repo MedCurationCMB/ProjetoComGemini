@@ -442,20 +442,6 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Preenchimento automático concluído!');
   };
 
-  // Obter estatísticas dos indicadores para a aba ativa
-  const getEstatisticasAba = () => {
-    const total = controles.length;
-    const comDocumento = controles.filter(item => item.tem_documento).length;
-    const semDocumento = total - comDocumento;
-    const obrigatorios = controles.filter(item => item.obrigatorio).length;
-    const comValor = controles.filter(item => item.valor_indicador_apresentado !== null && item.valor_indicador_apresentado !== '').length;
-    const semValor = total - comValor;
-    
-    return { total, comDocumento, semDocumento, obrigatorios, comValor, semValor };
-  };
-
-  const estatisticas = getEstatisticasAba();
-
   // Componente para exibir o ícone de ordenação
   const OrdenacaoIcon = ({ campo }) => {
     if (ordenacao.campo !== campo) return null;
@@ -490,78 +476,6 @@ const CopiaControleIndicadorGeralTable = ({
 
   return (
     <div>
-      {/* Estatísticas da aba ativa com estilo moderno */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
-                <span className="text-white text-sm font-bold">📊</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium" style={{ color: '#012060' }}>Total</p>
-              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.total}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
-                <FiCheck className="w-4 h-4 text-white" />
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium" style={{ color: '#012060' }}>Com Documento</p>
-              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.comDocumento}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
-                <FiX className="w-4 h-4 text-white" />
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium" style={{ color: '#012060' }}>Sem Documento</p>
-              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.semDocumento}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
-                <span className="text-white text-xs font-bold">!</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium" style={{ color: '#012060' }}>Obrigatórios</p>
-              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.obrigatorios}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4" style={{ borderLeftColor: '#012060' }}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#012060' }}>
-                <span className="text-white text-xs font-bold">?</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium" style={{ color: '#012060' }}>Sem Valor</p>
-              <p className="text-lg font-semibold" style={{ color: '#012060' }}>{estatisticas.semValor}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Botões de Ação em estilo moderno */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
