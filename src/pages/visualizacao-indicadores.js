@@ -7,8 +7,9 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
 import { 
-  BarChart, 
+  ComposedChart, 
   Bar, 
+  Line, 
   XAxis, 
   ResponsiveContainer, 
   LabelList,
@@ -59,43 +60,64 @@ export default function VisualizacaoIndicadores({ user }) {
   const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
 
   // =====================================
-  // FUNÇÕES PARA GRÁFICO SIMPLIFICADO (APENAS REALIZADO, 7 MAIS RECENTES)
+  // FUNÇÕES PARA GRÁFICO ADAPTATIVO REALIZADO VS META
   // =====================================
 
-  // ✅ NOVA FUNÇÃO: Buscar dados do gráfico somente Realizado
-  const fetchGraficoRealizado = async (idControleindicador) => {
+  // ✅ NOVA FUNÇÃO: Buscar dados do gráfico com separação Realizado vs Meta
+  const fetchGraficoRealizadoMeta = async (idControleindicador) => {
     try {
       const { data, error } = await supabase
         .from('controle_indicador_geral')
         .select('*')
         .eq('id_controleindicador', idControleindicador)
-        .eq('tipo_indicador', 1) // ✅ APENAS REALIZADO
         .not('periodo_referencia', 'is', null)
-        .order('periodo_referencia', { ascending: false }); // ✅ MAIS RECENTES PRIMEIRO
+        .order('periodo_referencia', { ascending: true });
       
       if (error) throw error;
       
-      // ✅ PEGAR APENAS OS 7 MAIS RECENTES
-      return (data || []).slice(0, 7);
+      return data || [];
     } catch (error) {
       console.error('Erro ao buscar dados do gráfico:', error);
       return [];
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Preparar dados para gráfico simples (apenas Realizado)
-  const prepararDadosGraficoSimples = (dadosIndicadores) => {
+  // ✅ NOVA FUNÇÃO: Preparar dados para gráfico combinado Realizado vs Meta
+  const prepararDadosGraficoCombinado = (dadosIndicadores) => {
     if (!dadosIndicadores || dadosIndicadores.length === 0) return [];
     
-    // ✅ MAPEAR DIRETAMENTE (já são apenas os 7 mais recentes do tipo Realizado)
-    const dadosGrafico = dadosIndicadores.map(indicador => ({
-      periodo: formatDateGrafico(indicador.periodo_referencia),
-      periodoCompleto: indicador.periodo_referencia,
-      valorApresentado: parseFloat(indicador.valor_indicador_apresentado) || 0,
-    }));
+    // Agrupar por período de referência
+    const dadosAgrupados = {};
     
-    // ✅ ORDENAR CRESCENTE PARA EXIBIÇÃO (mais antigo primeiro no gráfico)
-    return dadosGrafico.sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+    dadosIndicadores.forEach(indicador => {
+      const periodo = formatDateGrafico(indicador.periodo_referencia);
+      const periodoCompleto = indicador.periodo_referencia;
+      
+      if (!dadosAgrupados[periodo]) {
+        dadosAgrupados[periodo] = {
+          periodo,
+          periodoCompleto,
+          // Inicializar valores
+          realizadoApresentado: 0,
+          realizadoIndicador: 0,
+          metaApresentado: 0,
+          metaIndicador: 0
+        };
+      }
+      
+      // Preencher baseado no tipo_indicador
+      if (indicador.tipo_indicador === 1) { // Realizado
+        dadosAgrupados[periodo].realizadoApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
+      } else if (indicador.tipo_indicador === 2) { // Meta
+        dadosAgrupados[periodo].metaApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].metaIndicador = parseFloat(indicador.valor_indicador) || 0;
+      }
+    });
+    
+    // Converter para array e ordenar por data CRESCENTE (mais antigo primeiro)
+    return Object.values(dadosAgrupados)
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
   };
 
   // Função para formatar data para gráfico (DD-MM-AA)
@@ -114,29 +136,142 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ FUNÇÕES SIMPLIFICADAS: Para gráfico fixo de até 7 barras (sem scroll)
+  // ✅ CONFIGURAÇÃO BASEADA EM 7 BARRAS COMO REFERÊNCIA MÁXIMA (igual à página indicador)
+  const MAX_VISIBLE_BARS = 7;
+
+  // Função para calcular largura ideal por barra baseada na quantidade
   const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
+    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
     if (isMobile) {
       // Mobile: adaptar baseado na quantidade (máximo 7)
-      if (dataLength <= 3) return 60;      // Poucas barras = mais largas
-      if (dataLength <= 5) return 45;      // Quantidade média
-      return 35;                           // 6-7 barras = padrão
+      if (effectiveDataLength <= 3) return 60;      // Poucas barras = mais largas
+      if (effectiveDataLength <= 5) return 45;      // Quantidade média
+      if (effectiveDataLength <= 7) return 35;      // 7 barras = tamanho padrão
+      return 35;                                     // Sempre 35 para mobile quando > 7
     } else {
       // Desktop: adaptar baseado na quantidade (máximo 7)
-      if (dataLength <= 3) return 80;      // Poucas barras = mais largas
-      if (dataLength <= 5) return 65;      // Quantidade média
-      return 50;                           // 6-7 barras = padrão
+      if (effectiveDataLength <= 3) return 80;      // Poucas barras = mais largas
+      if (effectiveDataLength <= 5) return 65;      // Quantidade média
+      if (effectiveDataLength <= 7) return 50;      // 7 barras = tamanho padrão
+      return 50;                                     // Sempre 50 para desktop quando > 7
     }
   };
 
-  // ✅ FUNÇÃO SIMPLIFICADA: Gap baseado na quantidade (sem scroll)
-  const calculateCategoryGap = (dataLength) => {
-    if (dataLength <= 3) return "8%";     // Poucas barras = mais espaço
-    if (dataLength <= 5) return "5%";     // Quantidade média
-    return "3%";                          // 6-7 barras = espaçamento padrão
+  // Função para calcular espaçamento entre barras baseado na quantidade
+  const calculateBarSpacing = (dataLength, isMobile = false) => {
+    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
+    if (isMobile) {
+      if (effectiveDataLength <= 3) return 15;      // Poucas barras = mais espaço
+      if (effectiveDataLength <= 5) return 10;      // Quantidade média
+      if (effectiveDataLength <= 7) return 5;       // 7 barras = espaçamento padrão
+      return 5;                                      // Sempre 5 para mobile quando > 7
+    } else {
+      if (effectiveDataLength <= 3) return 20;      // Poucas barras = mais espaço
+      if (effectiveDataLength <= 5) return 15;      // Quantidade média
+      if (effectiveDataLength <= 7) return 10;      // 7 barras = espaçamento padrão
+      return 10;                                     // Sempre 10 para desktop quando > 7
+    }
   };
 
-  // ✅ COMPONENTE PERSONALIZADO PARA TOOLTIP SIMPLES
+  // Função para calcular se precisa de scroll baseado na tela disponível
+  const calculateNeedsScroll = (dataLength, isMobile = false) => {
+    return dataLength > MAX_VISIBLE_BARS;
+  };
+
+  // ✅ FUNÇÃO CORRIGIDA: Calcular largura total com melhor centralização
+  const calculateTotalWidth = (dataLength, isMobile = false) => {
+    // Se temos 7 ou menos barras, calcular normalmente
+    if (dataLength <= MAX_VISIBLE_BARS) {
+      const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
+      const spacing = calculateBarSpacing(dataLength, isMobile);
+      const margins = 40; // ✅ Aumentar margem para melhor espaçamento
+      
+      const calculatedWidth = (barWidth + spacing) * dataLength + margins;
+      // ✅ Definir larguras mínimas mais adequadas
+      const minWidth = isMobile ? 320 : 400;
+      
+      return {
+        width: Math.max(calculatedWidth, minWidth),
+        needsScroll: false,
+        calculatedWidth: calculatedWidth,
+        visibleBars: dataLength
+      };
+    } 
+    // Se temos mais de 7 barras, usar largura fixa baseada em 7 barras
+    else {
+      const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
+      const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
+      const margins = 40; // ✅ Aumentar margem
+      
+      // Largura do container fixo (baseado em 7 barras)
+      const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
+      
+      // Largura total do conteúdo (todas as barras)
+      const totalContentWidth = (barWidth + spacing) * dataLength + margins;
+      
+      return {
+        width: containerWidth,           // Container sempre do tamanho de 7 barras
+        needsScroll: true,              // Sempre precisa de scroll quando > 7
+        calculatedWidth: totalContentWidth,  // Largura real do conteúdo
+        visibleBars: MAX_VISIBLE_BARS
+      };
+    }
+  };
+
+  // ✅ FUNÇÃO MODIFICADA: Gap baseado no efetivo número de barras visíveis
+  const calculateCategoryGap = (dataLength) => {
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
+    if (effectiveDataLength <= 3) return "8%";     // Poucas barras = mais espaço
+    if (effectiveDataLength <= 5) return "5%";     // Quantidade média
+    if (effectiveDataLength <= 7) return "3%";     // 7 barras = espaçamento padrão
+    return "3%";                                    // Sempre 3% quando > 7
+  };
+
+  // ✅ COMPONENTE SCROLLABLE CHART CONTAINER (igual à página indicador)
+  const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
+    // ✅ USAR NOVA FUNÇÃO baseada em 7 barras
+    const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
+    
+    return (
+      <div 
+        className="flex justify-center"
+        style={{
+          // ✅ CSS personalizado para scroll mais suave
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch',
+          // ✅ Largura 100% para centralização
+          width: '100%',
+          maxWidth: '100%'
+        }}
+      >
+        <div 
+          className={needsScroll ? "overflow-x-auto" : ""}
+          style={{
+            // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
+            width: needsScroll ? `${width}px` : 'auto',
+            maxWidth: needsScroll ? `${width}px` : '100%',
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div style={{ 
+            width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            margin: '0 auto' // ✅ SEMPRE centralizar o conteúdo
+          }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ✅ COMPONENTE PERSONALIZADO PARA TOOLTIP (igual à página indicador)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -154,7 +289,7 @@ export default function VisualizacaoIndicadores({ user }) {
   };
 
   // =====================================
-  // COMPONENTE DO GRÁFICO SIMPLIFICADO (SEM SCROLL, APENAS REALIZADO)
+  // COMPONENTE DO GRÁFICO ADAPTATIVO REALIZADO VS META
   // =====================================
   const GraficoBarrasAdaptativo = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
@@ -163,12 +298,12 @@ export default function VisualizacaoIndicadores({ user }) {
     useEffect(() => {
       const loadGraficoData = async () => {
         setLoadingGrafico(true);
-        const data = await fetchGraficoRealizado(indicador.id_controleindicador);
+        const data = await fetchGraficoRealizadoMeta(indicador.id_controleindicador);
         
-        // ✅ NOVA LÓGICA: Preparar dados simples (apenas Realizado, 7 mais recentes)
-        const dadosSimples = prepararDadosGraficoSimples(data);
+        // ✅ NOVA LÓGICA: Preparar dados combinados (Realizado vs Meta)
+        const dadosCombinados = prepararDadosGraficoCombinado(data);
         
-        setGraficoData(dadosSimples);
+        setGraficoData(dadosCombinados);
         setLoadingGrafico(false);
       };
 
@@ -204,57 +339,82 @@ export default function VisualizacaoIndicadores({ user }) {
 
     return (
       <div className="mb-3">
-        {/* ✅ GRÁFICO SIMPLES SEM SCROLL (ResponsiveContainer normal) */}
-        <div style={{ height: altura }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={graficoData} 
-              margin={{ 
-                top: 25, 
-                right: 10, 
-                left: 10, 
-                bottom: 5 
-              }}
-              barCategoryGap={categoryGap}
-              maxBarSize={optimalBarWidth}
-            >
-              <XAxis 
-                dataKey="periodo" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ 
-                  fontSize: fontSize, 
-                  fill: '#6B7280',
-                  textAnchor: 'middle'
-                }}
-                interval={0} // Mostrar todas as labels
-              />
-              <Tooltip content={<CustomTooltip />} />
-              
-              {/* ✅ APENAS BARRA PARA REALIZADO (sem linha de Meta) */}
-              <Bar 
-                dataKey="valorApresentado" 
-                fill="#3B82F6" 
-                name="Realizado"
-                radius={[3, 3, 0, 0]}
-              >
-                <LabelList 
-                  dataKey="valorApresentado" 
-                  position="top" 
-                  style={{ 
-                    fontSize: `${labelFontSize}px`, 
-                    fill: '#374151',
-                    fontWeight: '500'
-                  }}
-                  formatter={(value) => {
-                    if (value === 0) return '0';
-                    return parseFloat(value).toLocaleString('pt-BR');
-                  }}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        {/* ✅ NOVA LEGENDA FIXA - igual à página indicador */}
+        <div className={`${isMobile ? 'mb-2' : 'mb-3'} flex justify-center space-x-4`}>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+            <span className="text-xs text-gray-600">Realizado</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-gray-500 rounded mr-2"></div>
+            <span className="text-xs text-gray-600">Meta</span>
+          </div>
         </div>
+
+        {/* Container com scroll condicional usando a mesma lógica da página indicador */}
+        <ScrollableChartContainer dataLength={dataLength} isMobile={isMobile}>
+          <div style={{ height: altura }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart 
+                data={graficoData} 
+                margin={{ 
+                  top: 25, 
+                  right: 10, 
+                  left: 10, 
+                  bottom: 5 
+                }}
+                barCategoryGap={categoryGap}
+              >
+                <XAxis 
+                  dataKey="periodo" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ 
+                    fontSize: fontSize, 
+                    fill: '#6B7280',
+                    textAnchor: 'middle'
+                  }}
+                  interval={0} // Mostrar todas as labels
+                />
+                <Tooltip content={<CustomTooltip />} />
+                
+                {/* ✅ BARRA PARA REALIZADO */}
+                <Bar 
+                  dataKey="realizadoApresentado" 
+                  fill="#3B82F6" 
+                  name="Realizado"
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={optimalBarWidth}
+                >
+                  <LabelList 
+                    dataKey="realizadoApresentado" 
+                    position="top" 
+                    style={{ 
+                      fontSize: `${labelFontSize}px`, 
+                      fill: '#374151',
+                      fontWeight: '500'
+                    }}
+                    formatter={(value) => {
+                      if (value === 0) return '0';
+                      return parseFloat(value).toLocaleString('pt-BR');
+                    }}
+                  />
+                </Bar>
+                
+                {/* ✅ LINHA PARA META */}
+                <Line 
+                  type="monotone" 
+                  dataKey="metaApresentado" 
+                  stroke="#6B7280" 
+                  strokeWidth={isMobile ? 2 : 3}
+                  dot={{ fill: '#6B7280', strokeWidth: 2, r: isMobile ? 3 : 4 }}
+                  name="Meta"
+                  connectNulls={true}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </ScrollableChartContainer>
       </div>
     );
   };
@@ -909,6 +1069,27 @@ export default function VisualizacaoIndicadores({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
+      {/* ✅ CSS para melhorar a scrollbar */}
+      <style jsx>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          height: 6px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+      `}</style>
+
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -1526,7 +1707,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                         </div>
                                       </div>
                                       
-                                      {/* ✅ Gráfico de Barras Simplificado (apenas Realizado, 7 mais recentes, sem scroll) */}
+                                      {/* ✅ Gráfico de Barras Adaptativo com Realizado vs Meta */}
                                       <GraficoBarrasAdaptativo indicador={indicador} isMobile={false} />
                                       
                                       {/* Tags e data */}
