@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo } from 'react-icons/fi';
 import { 
   ComposedChart, 
   Bar, 
@@ -1332,29 +1332,71 @@ export default function IndicadorDetalhe({ user }) {
     return renderKPILayout();
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar seção de configurações
-  const renderSecaoConfiguracoes = () => {
+  // ✅ NOVA FUNÇÃO: Renderizar seção de informações com valores dinâmicos
+  const renderSecaoInformacoes = () => {
+    const kpis = calcularKPIs(); // Obter os valores calculados
+    
     const opcoes = [
-      { key: 'soma', label: 'Soma' },
-      { key: 'media', label: 'Média' },
-      { key: 'desvio_padrao', label: 'Desvio Padrão' },
-      { key: 'mediana', label: 'Mediana' },
-      { key: 'mais_recente', label: 'Mais Recente' },
-      { key: 'minimo', label: 'Mínimo' },
-      { key: 'maximo', label: 'Máximo' },
-      { key: 'contagem_registros', label: 'Contagem de Registros' }
+      { 
+        key: 'soma', 
+        label: 'Soma',
+        valorRealizado: formatKPIValue(kpis.somaRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.somaMetaApresentado)
+      },
+      { 
+        key: 'media', 
+        label: 'Média',
+        valorRealizado: formatKPIValue(kpis.mediaRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.mediaMetaApresentado)
+      },
+      { 
+        key: 'desvio_padrao', 
+        label: 'Desvio Padrão',
+        valorRealizado: formatKPIValue(kpis.desvioPadraoRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.desvioPadraoMetaApresentado)
+      },
+      { 
+        key: 'mediana', 
+        label: 'Mediana',
+        valorRealizado: formatKPIValue(kpis.medianaRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.medianaMetaApresentado)
+      },
+      { 
+        key: 'mais_recente', 
+        label: 'Mais Recente',
+        valorRealizado: formatKPIValue(kpis.maisRecenteRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.maisRecenteMetaApresentado)
+      },
+      { 
+        key: 'minimo', 
+        label: 'Mínimo',
+        valorRealizado: formatKPIValue(kpis.minimoRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.minimoMetaApresentado)
+      },
+      { 
+        key: 'maximo', 
+        label: 'Máximo',
+        valorRealizado: formatKPIValue(kpis.maximoRealizadoApresentado),
+        valorMeta: formatKPIValue(kpis.maximoMetaApresentado)
+      },
+      { 
+        key: 'contagem_registros', 
+        label: 'Contagem de Registros',
+        valorRealizado: formatKPIValue(kpis.contagemRegistros),
+        valorMeta: 'Total de períodos' // Para este não há meta
+      }
     ];
 
     return (
       <div className="mb-6">
-        {/* Cabeçalho da seção */}
+        {/* ✅ CABEÇALHO MODIFICADO: Novo nome e ícone */}
         <button
           onClick={() => setShowConfiguracoes(!showConfiguracoes)}
           className="w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all duration-200"
         >
           <div className="flex items-center">
-            <FiSettings className="w-5 h-5 text-gray-500 mr-3" />
-            <h3 className="text-lg font-semibold text-gray-700">Configurações de Exibição</h3>
+            <FiInfo className="w-5 h-5 text-gray-500 mr-3" /> {/* ✅ NOVO ÍCONE */}
+            <h3 className="text-lg font-semibold text-gray-700">Informações</h3> {/* ✅ NOVO NOME */}
           </div>
           {showConfiguracoes ? (
             <FiChevronUp className="w-5 h-5 text-gray-500" />
@@ -1374,20 +1416,30 @@ export default function IndicadorDetalhe({ user }) {
               {opcoes.map((opcao) => (
                 <label
                   key={opcao.key}
-                  className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                     configuracoes[opcao.key]
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                   } ${atualizandoConfiguracao ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
+                  {/* ✅ NOVO LAYOUT: Texto à esquerda */}
+                  <div className="flex-1 mr-3">
+                    <span className="text-sm font-medium block">
+                      {opcao.key === 'contagem_registros' 
+                        ? `${opcao.label}: ${opcao.valorRealizado}`
+                        : `${opcao.label}: ${opcao.valorRealizado} (${opcao.valorMeta} Meta)`
+                      }
+                    </span>
+                  </div>
+                  
+                  {/* ✅ NOVO LAYOUT: Checkbox à direita */}
                   <input
                     type="checkbox"
                     checked={configuracoes[opcao.key]}
                     onChange={(e) => atualizarConfiguracao(opcao.key, e.target.checked)}
                     disabled={atualizandoConfiguracao}
-                    className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                   />
-                  <span className="text-sm font-medium">{opcao.label}</span>
                 </label>
               ))}
             </div>
@@ -1726,7 +1778,7 @@ export default function IndicadorDetalhe({ user }) {
           </div>
 
           {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Mobile */}
-          {renderSecaoConfiguracoes()}
+          {renderSecaoInformacoes()}
 
           {/* ✅ TABELA NOVA - Mobile */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden border">
@@ -2129,7 +2181,7 @@ export default function IndicadorDetalhe({ user }) {
           </div>
 
           {/* ✅ SEÇÃO DE CONFIGURAÇÕES - Desktop */}
-          {renderSecaoConfiguracoes()}
+          {renderSecaoInformacoes()}
 
           {/* ✅ TABELA NOVA - Desktop */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
