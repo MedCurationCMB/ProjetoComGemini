@@ -120,20 +120,23 @@ export default function IndicadorDetalhe({ user }) {
 
   // ✅ FUNÇÃO CORRIGIDA: Calcular largura total com melhor centralização
   const calculateTotalWidth = (dataLength, isMobile = false) => {
-    // Se temos 7 ou menos barras, calcular normalmente
+    // Se temos 7 ou menos barras, calcular normalmente e centralizar
     if (dataLength <= MAX_VISIBLE_BARS) {
       const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
       const spacing = calculateBarSpacing(dataLength, isMobile);
-      const margins = 40; // ✅ Aumentar margem para melhor espaçamento
+      const margins = 80; // ✅ Margem aumentada para melhor centralização
       
       const calculatedWidth = (barWidth + spacing) * dataLength + margins;
-      // ✅ Definir larguras mínimas mais adequadas
-      const minWidth = isMobile ? 320 : 400;
+      // ✅ Larguras mínimas mais adequadas para centralização
+      const minWidth = isMobile ? 280 : 350;
+      const maxWidth = isMobile ? 500 : 700; // ✅ Limite máximo para evitar gráficos muito largos
+      
+      const finalWidth = Math.max(Math.min(calculatedWidth, maxWidth), minWidth);
       
       return {
-        width: Math.max(calculatedWidth, minWidth),
+        width: finalWidth,
         needsScroll: false,
-        calculatedWidth: calculatedWidth,
+        calculatedWidth: finalWidth,
         visibleBars: dataLength
       };
     } 
@@ -141,7 +144,7 @@ export default function IndicadorDetalhe({ user }) {
     else {
       const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
       const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
-      const margins = 40; // ✅ Aumentar margem
+      const margins = 80; // ✅ Margem aumentada
       
       // Largura do container fixo (baseado em 7 barras)
       const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
@@ -168,7 +171,7 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer SEM a legenda de scroll
+  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer SEM a legenda e COM centralização corrigida
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -191,23 +194,20 @@ export default function IndicadorDetalhe({ user }) {
     
     return (
       <div 
-        className="flex justify-center"
+        className="flex justify-center w-full"
         style={{
           // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
-          // ✅ Largura 100% para centralização
-          width: '100%',
-          maxWidth: '100%'
         }}
       >
         <div 
           ref={scrollRef}
-          className={needsScroll ? "overflow-x-auto" : ""}
+          className={needsScroll ? "overflow-x-auto" : "flex justify-center w-full"}
           style={{
-            // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
-            width: needsScroll ? `${width}px` : 'auto',
-            maxWidth: needsScroll ? `${width}px` : '100%',
+            // ✅ CORRIGIDO: Centralização adequada - largura baseada no conteúdo, não na tela
+            width: needsScroll ? '100%' : 'auto',
+            maxWidth: '100%',
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch',
           }}
@@ -215,13 +215,15 @@ export default function IndicadorDetalhe({ user }) {
           <div style={{ 
             width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
             minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-            margin: '0 auto' // ✅ SEMPRE centralizar o conteúdo
+            margin: '0 auto', // ✅ SEMPRE centralizar o conteúdo
+            display: 'flex',
+            justifyContent: 'center'
           }}>
             {children}
           </div>
         </div>
         
-        {/* ✅ REMOVIDO: Indicador de scroll desnecessário */}
+        {/* ✅ REMOVIDO COMPLETAMENTE: Indicador de scroll desnecessário */}
       </div>
     );
   };
