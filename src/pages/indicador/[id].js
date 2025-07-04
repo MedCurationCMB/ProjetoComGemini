@@ -1045,7 +1045,7 @@ export default function IndicadorDetalhe({ user }) {
       .sort((a, b) => new Date(a.periodo_referencia) - new Date(b.periodo_referencia));
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar KPIs habilitados - MOBILE (sem alterações)
+  // ✅ NOVA FUNÇÃO: KPIs mobile com cor azul escuro uniforme
   const renderKPIsHabilitadosMobile = () => {
     const kpis = calcularKPIs();
     const kpisHabilitados = [];
@@ -1053,7 +1053,7 @@ export default function IndicadorDetalhe({ user }) {
     // Verificar quais KPIs estão habilitados e adicionar ao array
     if (configuracoes.soma) {
       kpisHabilitados.push(
-        <div key="soma-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-blue-500">
+        <div key="soma-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Soma - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.somaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Total: {formatKPIValue(kpis.somaMetaApresentado)}</p>
@@ -1063,7 +1063,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.media) {
       kpisHabilitados.push(
-        <div key="media-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-green-500">
+        <div key="media-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Média - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.mediaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta Média: {formatKPIValue(kpis.mediaMetaApresentado)}</p>
@@ -1073,7 +1073,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.desvio_padrao) {
       kpisHabilitados.push(
-        <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-purple-500">
+        <div key="desvio-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Desvio Padrão - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.desvioPadraoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.desvioPadraoMetaApresentado)}</p>
@@ -1083,7 +1083,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.mediana) {
       kpisHabilitados.push(
-        <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-yellow-500">
+        <div key="mediana-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Mediana - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.medianaRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.medianaMetaApresentado)}</p>
@@ -1093,7 +1093,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.minimo) {
       kpisHabilitados.push(
-        <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-red-500">
+        <div key="minimo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Mínimo - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.minimoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.minimoMetaApresentado)}</p>
@@ -1103,7 +1103,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.maximo) {
       kpisHabilitados.push(
-        <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500">
+        <div key="maximo-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Máximo - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maximoRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maximoMetaApresentado)}</p>
@@ -1113,7 +1113,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.mais_recente) {
       kpisHabilitados.push(
-        <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-indigo-500">
+        <div key="recente-apresentado" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Mais Recente - Valor Indicador</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.maisRecenteRealizadoApresentado)}</p>
           <p className="text-xs text-gray-400">Meta: {formatKPIValue(kpis.maisRecenteMetaApresentado)}</p>
@@ -1123,7 +1123,7 @@ export default function IndicadorDetalhe({ user }) {
 
     if (configuracoes.contagem_registros) {
       kpisHabilitados.push(
-        <div key="contagem" className="bg-white rounded-lg shadow-md p-3 border-l-4 border-gray-500">
+        <div key="contagem" className="bg-white rounded-lg shadow-md p-3 border-l-4" style={{ borderLeftColor: '#012060' }}>
           <p className="text-xs font-medium text-gray-600 mb-1">Contagem de Registros</p>
           <p className="text-lg font-bold text-gray-900">{formatKPIValue(kpis.contagemRegistros)}</p>
           <p className="text-xs text-gray-400">Total de períodos</p>
