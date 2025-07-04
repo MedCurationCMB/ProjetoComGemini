@@ -1,5 +1,5 @@
 // Arquivo: src/pages/visualizacao-indicadores.js - Versão com gráfico adaptativo
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -234,8 +234,25 @@ export default function VisualizacaoIndicadores({ user }) {
 
   // ✅ COMPONENTE SCROLLABLE CHART CONTAINER (igual à página indicador)
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
+    // ✅ ADICIONAR: useRef e estado para controle de scroll
+    const scrollRef = useRef(null);
+    const [hasScrolled, setHasScrolled] = useState(false);
+
     // ✅ USAR NOVA FUNÇÃO baseada em 7 barras
     const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
+
+    // ✅ ADICIONAR: Fazer scroll automático para a direita quando há scroll
+    useEffect(() => {
+      if (scrollRef.current && !hasScrolled && needsScroll) {
+        // Pequeno delay para garantir que o conteúdo foi renderizado
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
+            setHasScrolled(true);
+          }
+        }, 100);
+      }
+    }, [needsScroll, hasScrolled]);
     
     return (
       <div 
@@ -250,6 +267,7 @@ export default function VisualizacaoIndicadores({ user }) {
         }}
       >
         <div 
+          ref={scrollRef} // ✅ ADICIONAR: ref para controlar o scroll
           className={needsScroll ? "overflow-x-auto" : ""}
           style={{
             // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
