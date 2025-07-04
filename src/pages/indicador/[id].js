@@ -118,35 +118,22 @@ export default function IndicadorDetalhe({ user }) {
     return dataLength > MAX_VISIBLE_BARS;
   };
 
-  // ✅ FUNÇÃO CORRIGIDA: Calcular largura total SEM referência ao window
+  // ✅ FUNÇÃO CORRIGIDA: Calcular largura total com melhor centralização
   const calculateTotalWidth = (dataLength, isMobile = false) => {
-    // Se não há dados, retornar valores padrão
-    if (!dataLength || dataLength === 0) {
-      return {
-        width: isMobile ? 320 : 500,
-        needsScroll: false,
-        calculatedWidth: isMobile ? 320 : 500,
-        visibleBars: 0
-      };
-    }
-
-    // Se temos 7 ou menos barras, calcular normalmente e centralizar
+    // Se temos 7 ou menos barras, calcular normalmente
     if (dataLength <= MAX_VISIBLE_BARS) {
       const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
       const spacing = calculateBarSpacing(dataLength, isMobile);
-      const margins = 80; // Margem para melhor centralização
+      const margins = 40; // ✅ Aumentar margem para melhor espaçamento
       
       const calculatedWidth = (barWidth + spacing) * dataLength + margins;
-      // Larguras mínimas mais adequadas para centralização
-      const minWidth = isMobile ? 280 : 350;
-      const maxWidth = isMobile ? 500 : 700; // Limite máximo para evitar gráficos muito largos
-      
-      const finalWidth = Math.max(Math.min(calculatedWidth, maxWidth), minWidth);
+      // ✅ Definir larguras mínimas mais adequadas
+      const minWidth = isMobile ? 320 : 400;
       
       return {
-        width: finalWidth,
+        width: Math.max(calculatedWidth, minWidth),
         needsScroll: false,
-        calculatedWidth: finalWidth,
+        calculatedWidth: calculatedWidth,
         visibleBars: dataLength
       };
     } 
@@ -154,7 +141,7 @@ export default function IndicadorDetalhe({ user }) {
     else {
       const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
       const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
-      const margins = 80;
+      const margins = 40; // ✅ Aumentar margem
       
       // Largura do container fixo (baseado em 7 barras)
       const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
@@ -181,23 +168,18 @@ export default function IndicadorDetalhe({ user }) {
     return "3%";                                    // Sempre 3% quando > 7
   };
 
-  // ✅ COMPONENTE COMPLETAMENTE REESCRITO: ScrollableChartContainer
+  // ✅ COMPONENTE CORRIGIDO: ScrollableChartContainer SEM a legenda de scroll
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
-    const [isClient, setIsClient] = useState(false);
 
-    // ✅ GARANTIR QUE ESTÁ NO LADO DO CLIENTE
+    // ✅ USAR NOVA FUNÇÃO baseada em 7 barras
+    const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
+
+    // ✅ Fazer scroll automático para a direita quando há scroll
     useEffect(() => {
-      setIsClient(true);
-    }, []);
-
-    // ✅ USAR FUNÇÃO CORRIGIDA
-    const { width, needsScroll, calculatedWidth } = calculateTotalWidth(dataLength, isMobile);
-
-    // ✅ Fazer scroll automático para a direita quando há scroll (apenas no cliente)
-    useEffect(() => {
-      if (isClient && scrollRef.current && !hasScrolled && needsScroll) {
+      if (scrollRef.current && !hasScrolled && needsScroll) {
+        // Pequeno delay para garantir que o conteúdo foi renderizado
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollLeft = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
@@ -205,123 +187,42 @@ export default function IndicadorDetalhe({ user }) {
           }
         }, 100);
       }
-    }, [needsScroll, hasScrolled, isClient]);
-
-    // ✅ SE NÃO HÁ DADOS, MOSTRAR MENSAGEM
-    if (!dataLength || dataLength === 0) {
-      return (
-        <div className="flex justify-center items-center h-32 text-gray-500">
-          <span className="text-sm">Nenhum dado disponível para exibir</span>
-        </div>
-      );
-    }
-
-    // ✅ AGUARDAR HIDRATAÇÃO NO CLIENTE
-    if (!isClient) {
-      return (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-pulse bg-gray-200 h-20 w-full rounded"></div>
-        </div>
-      );
-    }
+    }, [needsScroll, hasScrolled]);
     
     return (
-      <div className="w-full flex justify-center">
+      <div 
+        className="flex justify-center"
+        style={{
+          // ✅ CSS personalizado para scroll mais suave
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch',
+          // ✅ Largura 100% para centralização
+          width: '100%',
+          maxWidth: '100%'
+        }}
+      >
         <div 
           ref={scrollRef}
           className={needsScroll ? "overflow-x-auto" : ""}
           style={{
-            width: needsScroll ? '100%' : 'auto',
-            maxWidth: '100%',
+            // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
+            width: needsScroll ? `${width}px` : 'auto',
+            maxWidth: needsScroll ? `${width}px` : '100%',
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div 
-            style={{ 
-              width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-              minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-              margin: '0 auto',
-              display: 'flex',
-              justifyContent: 'center'
-            }}
-          >
+          <div style={{ 
+            width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            margin: '0 auto' // ✅ SEMPRE centralizar o conteúdo
+          }}>
             {children}
           </div>
         </div>
+        
+        {/* ✅ REMOVIDO: Indicador de scroll desnecessário */}
       </div>
-    );
-  };
-
-  // ✅ ADIÇÃO: Verificação de dados antes de renderizar o gráfico
-  const renderChartWithFallback = (dadosGraficoCombinado, isMobile = false) => {
-    // Verificar se há dados válidos
-    if (!dadosGraficoCombinado || dadosGraficoCombinado.length === 0) {
-      return (
-        <div className="flex justify-center items-center h-32 text-gray-500 bg-gray-50 rounded">
-          <div className="text-center">
-            <span className="text-sm">📊 Nenhum dado disponível</span>
-            <p className="text-xs mt-1">Verifique os filtros ou aguarde o carregamento dos dados</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Log para debug
-    console.log('Dados do gráfico:', dadosGraficoCombinado);
-    console.log('Quantidade de períodos:', dadosGraficoCombinado.length);
-
-    return (
-      <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={isMobile}>
-        <div style={{ height: isMobile ? 120 : 160 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart 
-              data={dadosGraficoCombinado} 
-              margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
-              barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
-            >
-              <XAxis 
-                dataKey="periodo" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: isMobile ? 8 : 10, fill: '#6B7280', textAnchor: 'middle' }}
-                interval={0}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="realizadoApresentado" 
-                fill="#3B82F6" 
-                name="Realizado"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, isMobile)}
-              >
-                <LabelList 
-                  dataKey="realizadoApresentado" 
-                  position="top" 
-                  style={{ 
-                    fontSize: isMobile ? '7px' : '9px', 
-                    fill: '#374151',
-                    fontWeight: '500'
-                  }}
-                  formatter={(value) => {
-                    if (value === 0) return '0';
-                    return parseFloat(value).toLocaleString('pt-BR');
-                  }}
-                />
-              </Bar>
-              <Line 
-                type="monotone" 
-                dataKey="metaApresentado" 
-                stroke="#6B7280" 
-                strokeWidth={isMobile ? 2 : 3}
-                dot={{ fill: '#6B7280', strokeWidth: 2, r: isMobile ? 3 : 4 }}
-                name="Meta"
-                connectNulls={true}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </ScrollableChartContainer>
     );
   };
 
@@ -1770,8 +1671,57 @@ export default function IndicadorDetalhe({ user }) {
                 </div>
               </div>
               
-              {/* ✅ GRÁFICO COM FUNÇÃO CORRIGIDA - Mobile */}
-              {renderChartWithFallback(dadosGraficoCombinado, true)}
+              {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS - Mobile */}
+              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={true}>
+                <div style={{ height: 120 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart 
+                      data={dadosGraficoCombinado} 
+                      margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
+                      barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
+                    >
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 8, fill: '#6B7280', textAnchor: 'middle' }}
+                        interval={0}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="realizadoApresentado" 
+                        fill="#3B82F6" 
+                        name="Realizado"
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, true)}
+                      >
+                        <LabelList 
+                          dataKey="realizadoApresentado" 
+                          position="top" 
+                          style={{ 
+                            fontSize: '7px', 
+                            fill: '#374151',
+                            fontWeight: '500'
+                          }}
+                          formatter={(value) => {
+                            if (value === 0) return '0';
+                            return parseFloat(value).toLocaleString('pt-BR');
+                          }}
+                        />
+                      </Bar>
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaApresentado" 
+                        stroke="#6B7280" 
+                        strokeWidth={2}
+                        dot={{ fill: '#6B7280', strokeWidth: 2, r: 3 }}
+                        name="Meta"
+                        connectNulls={true}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </ScrollableChartContainer>
             </div>
           </div>
 
@@ -2124,8 +2074,57 @@ export default function IndicadorDetalhe({ user }) {
                 </div>
               </div>
               
-              {/* ✅ GRÁFICO COM FUNÇÃO CORRIGIDA - Desktop */}
-              {renderChartWithFallback(dadosGraficoCombinado, false)}
+              {/* ✅ GRÁFICO COM CONFIGURAÇÕES ADAPTATIVAS E CENTRALIZAÇÃO CORRIGIDA - Desktop */}
+              <ScrollableChartContainer dataLength={dadosGraficoCombinado.length} isMobile={false}>
+                <div style={{ height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart 
+                      data={dadosGraficoCombinado} 
+                      margin={{ top: 25, right: 10, left: 10, bottom: 5 }}
+                      barCategoryGap={calculateCategoryGap(dadosGraficoCombinado.length)}
+                    >
+                      <XAxis 
+                        dataKey="periodo" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#6B7280', textAnchor: 'middle' }}
+                        interval={0}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="realizadoApresentado" 
+                        fill="#3B82F6" 
+                        name="Realizado"
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={calculateOptimalBarWidth(dadosGraficoCombinado.length, false)}
+                      >
+                        <LabelList 
+                          dataKey="realizadoApresentado" 
+                          position="top" 
+                          style={{ 
+                            fontSize: '9px', 
+                            fill: '#374151',
+                            fontWeight: '500'
+                          }}
+                          formatter={(value) => {
+                            if (value === 0) return '0';
+                            return parseFloat(value).toLocaleString('pt-BR');
+                          }}
+                        />
+                      </Bar>
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaApresentado" 
+                        stroke="#6B7280" 
+                        strokeWidth={3}
+                        dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}
+                        name="Meta"
+                        connectNulls={true}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </ScrollableChartContainer>
             </div>
           </div>
 
