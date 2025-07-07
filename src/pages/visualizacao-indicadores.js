@@ -749,6 +749,10 @@ export default function VisualizacaoIndicadores({ user }) {
     router.push('/cadastros');
   };
 
+  const handleInicioClick = () => {
+    router.push('/visualizacao-indicadores');
+  };
+
   // ✅ FUNÇÃO: Navegar para página de controle
   const handleControleClick = () => {
     router.push('/visualizacao-geral-indicadores');
@@ -1140,6 +1144,16 @@ export default function VisualizacaoIndicadores({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        handleInicioClick();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                    >
+                      <FiHome className="mr-3 h-4 w-4" />
+                      Início
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                         // TODO: Implementar perfil
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
@@ -1347,6 +1361,16 @@ export default function VisualizacaoIndicadores({ user }) {
                   {/* Dropdown do menu */}
                   {showMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleInicioClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      >
+                        <FiHome className="mr-3 h-4 w-4" />
+                        Início
+                      </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
