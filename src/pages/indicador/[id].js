@@ -1602,6 +1602,8 @@ export default function IndicadorDetalhe({ user }) {
         </div>
       )}
 
+      console.log('IndicadorAnalysisDialog:', IndicadorAnalysisDialog);
+
       {/* ✅ MODAL DE ANÁLISE IA */}
       {showAnalysisDialog && (
         <IndicadorAnalysisDialog
