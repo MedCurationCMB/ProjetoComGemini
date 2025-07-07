@@ -2,14 +2,28 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
-import Navbar from "../components/Navbar";
 import { supabase } from "../utils/supabaseClient";
 import { isUserAdmin } from "../utils/userUtils";
-import { FiEdit, FiSave, FiX, FiPlus } from "react-icons/fi";
+import LogoDisplay from "../components/LogoDisplay";
+import { 
+  FiEdit, 
+  FiSave, 
+  FiX, 
+  FiPlus,
+  FiMenu,
+  FiUser,
+  FiSettings,
+  FiLogOut,
+  FiBarChart,
+  FiStar,
+  FiClipboard
+} from "react-icons/fi";
+import { TfiPencil } from "react-icons/tfi";
 
 export default function Cadastros({ user }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('projetos');
+  const [showMenu, setShowMenu] = useState(false);
   
   // Estados para todos os dados
   const [projetos, setProjetos] = useState([]);
@@ -42,6 +56,9 @@ export default function Cadastros({ user }) {
   const [editandoApresentacao, setEditandoApresentacao] = useState(null);
   const [nomeApresentacaoEditado, setNomeApresentacaoEditado] = useState('');
   const [salvandoApresentacao, setSalvandoApresentacao] = useState(false);
+
+  // Estado para controlar a navegação (fixo em 'configuracoes')
+  const [activeNavTab] = useState('configuracoes');
 
   // Configuração das abas
   const tabsConfig = {
@@ -94,6 +111,35 @@ export default function Cadastros({ user }) {
       artigo: 'um',
       hasApresentacao: false,
       hasTexto: true
+    }
+  };
+
+  // FUNÇÕES DE NAVEGAÇÃO
+  const handleIndicadoresClick = () => {
+    router.push('/visualizacao-indicadores');
+  };
+
+  const handleImportantesClick = () => {
+    router.push('/visualizacao-indicadores-importantes');
+  };
+
+  const handleControleClick = () => {
+    router.push('/visualizacao-geral-indicadores');
+  };
+
+  const handleRegistrosClick = () => {
+    router.push('/controle-indicador-geral');
+  };
+
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success('Logout realizado com sucesso!');
+      router.push('/login');
+    } catch (error) {
+      toast.error(error.message || 'Erro ao fazer logout');
     }
   };
 
@@ -492,22 +538,75 @@ export default function Cadastros({ user }) {
   // Se não há abas visíveis para o usuário
   if (abasVisiveis.length === 0) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Head>
-          <title>Cadastros</title>
+          <title>Configurações</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
         </Head>
 
-        <Navbar user={user} />
+        {/* Header responsivo */}
+        <div className="sticky top-0 bg-white shadow-sm z-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <LogoDisplay 
+                className=""
+                fallbackText="Configurações"
+                showFallback={true}
+              />
+              
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 hover:bg-gray-100 rounded-md"
+                >
+                  <FiMenu className="w-6 h-6 text-gray-600" />
+                </button>
+                
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                    >
+                      <FiLogOut className="mr-3 h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <main className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold mb-6">Gerenciamento de Cadastros</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
             <p className="text-yellow-800">
-              Nenhuma seção de cadastros está disponível para você no momento. 
+              Nenhuma seção de configurações está disponível para você no momento. 
               Entre em contato com o administrador se precisar de acesso.
             </p>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
@@ -519,392 +618,689 @@ export default function Cadastros({ user }) {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Cadastros</title>
+        <title>Configurações</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      <Navbar user={user} />
-
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Gerenciamento de Cadastros</h1>
-
-        {/* Tabs de navegação */}
-        <div className="border-b border-gray-200 mb-6">
-          <ul className="flex flex-wrap -mb-px">
-            {abasVisiveis.map((key) => (
-              <li key={key} className="mr-2">
+      {/* Header responsivo */}
+      <div className="sticky top-0 bg-white shadow-sm z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Mobile */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between mb-4">
+              <LogoDisplay 
+                className=""
+                fallbackText="Configurações"
+                showFallback={true}
+              />
+              
+              <div className="relative">
                 <button
-                  onClick={() => setActiveTab(key)}
-                  className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
-                    activeTab === key
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 hover:bg-gray-100 rounded-md"
                 >
-                  {tabsConfig[key].label}
+                  <FiMenu className="w-6 h-6 text-gray-600" />
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Conteúdo da tab atual */}
-        <div>
-          {/* Controle de Visibilidade para Admins */}
-          {isAdmin && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Controle de Visibilidade - {config.label}
-                  </h3>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Como administrador, você pode controlar se esta aba é visível para usuários normais.
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={visibilidadeAbas[activeTab] || false}
-                      onChange={() => toggleVisibilidadeAba(activeTab)}
-                      disabled={salvandoVisibilidade}
-                      className="sr-only"
-                    />
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      visibilidadeAbas[activeTab] ? 'bg-blue-600' : 'bg-gray-200'
-                    } ${salvandoVisibilidade ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        visibilidadeAbas[activeTab] ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-blue-800">
-                      {visibilidadeAbas[activeTab] ? 'Visível para usuários' : 'Oculta para usuários'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tabela de Apresentação da Variável - apenas para projetos e categorias */}
-          {config.hasApresentacao && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4">Configuração de Apresentação</h2>
-              
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nome para Apresentação
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'] ? (
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
-                            <input
-                              type="text"
-                              value={nomeApresentacaoEditado}
-                              onChange={(e) => setNomeApresentacaoEditado(e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              disabled={salvandoApresentacao}
-                            />
-                          ) : (
-                            <div className="text-sm font-medium text-gray-900">
-                              {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].nome_apresentacao}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={salvarEdicaoApresentacao}
-                                disabled={salvandoApresentacao}
-                                className={`text-green-600 hover:text-green-900 ${
-                                  salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                                title="Salvar"
-                              >
-                                <FiSave className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={cancelarEdicaoApresentacao}
-                                disabled={salvandoApresentacao}
-                                className={`text-red-600 hover:text-red-900 ${
-                                  salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                                title="Cancelar"
-                              >
-                                <FiX className="h-5 w-5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => iniciarEdicaoApresentacao(apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'])}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Editar"
-                            >
-                              <FiEdit className="h-5 w-5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <td colSpan="2" className="px-6 py-4 text-center text-sm text-gray-500">
-                          Configuração não encontrada
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Seção principal do Gerenciamento */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Gerenciamento de {config.label}</h2>
-              
-              {/* Botão para cadastrar novo item */}
-              <button
-                onClick={() => setShowCadastroDialog(true)}
-                className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                <FiPlus className="mr-2" />
-                Cadastrar {config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}
-              </button>
-            </div>
-
-            {/* Aviso sobre não poder apagar */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-              <p className="text-yellow-800 text-sm">
-                <strong>Atenção:</strong> Uma vez cadastrados, os {config.label.toLowerCase()} não podem ser apagados do sistema. 
-                Certifique-se de que o nome está correto antes de cadastrar.
-                {activeTab === 'projetos' && (
-                  <span className="block mt-1">
-                    <strong>Novo:</strong> Ao criar um projeto, você será automaticamente vinculado a ele.
-                  </span>
+                
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                    >
+                      <FiLogOut className="mr-3 h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
                 )}
-              </p>
+              </div>
             </div>
-            
-            {loading ? (
-              <div className="flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+
+          {/* Desktop */}
+          <div className="hidden lg:block">
+            <div className="flex items-center justify-between mb-4">
+              <LogoDisplay 
+                className=""
+                fallbackText="Configurações"
+                showFallback={true}
+              />
+              
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 hover:bg-gray-100 rounded-md"
+                >
+                  <FiMenu className="w-6 h-6 text-gray-600" />
+                </button>
+                
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                    >
+                      <FiLogOut className="mr-3 h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {config.campo === 'nome_prompt' ? 'Nome do Prompt' : 'Nome'}
-                      </th>
-                      {config.hasTexto && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Texto do Prompt
-                        </th>
-                      )}
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {dadosAtivos.length > 0 ? (
-                      dadosAtivos.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editandoItem === item.id ? (
-                              <input
-                                type="text"
-                                value={nomeEditado}
-                                onChange={(e) => setNomeEditado(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                disabled={salvandoEdicao}
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-gray-900">
-                                {item[config.campo]}
-                              </div>
-                            )}
-                          </td>
-                          {config.hasTexto && (
-                            <td className="px-6 py-4">
-                              {editandoItem === item.id ? (
-                                <textarea
-                                  value={textoPromptEditado}
-                                  onChange={(e) => setTextoPromptEditado(e.target.value)}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                  rows="3"
-                                  disabled={salvandoEdicao}
-                                />
-                              ) : (
-                                <div className="text-sm text-gray-900 max-w-xs">
-                                  {item[config.campoTexto] ? (
-                                    <span className="truncate block" title={item[config.campoTexto]}>
-                                      {item[config.campoTexto].length > 100 
-                                        ? `${item[config.campoTexto].substring(0, 100)}...` 
-                                        : item[config.campoTexto]
-                                      }
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">Nenhum texto</span>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          )}
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {editandoItem === item.id ? (
-                              <div className="flex justify-end space-x-2">
-                                <button
-                                  onClick={salvarEdicao}
-                                  disabled={salvandoEdicao}
-                                  className={`text-green-600 hover:text-green-900 ${
-                                    salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
-                                  }`}
-                                  title="Salvar"
-                                >
-                                  <FiSave className="h-5 w-5" />
-                                </button>
-                                <button
-                                  onClick={cancelarEdicao}
-                                  disabled={salvandoEdicao}
-                                  className={`text-red-600 hover:text-red-900 ${
-                                    salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
-                                  }`}
-                                  title="Cancelar"
-                                >
-                                  <FiX className="h-5 w-5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => iniciarEdicao(item)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Editar"
-                              >
-                                <FiEdit className="h-5 w-5" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={config.hasTexto ? "3" : "2"}
-                          className="px-6 py-4 text-center text-sm text-gray-500"
-                        >
-                          Nenhum {config.singular} encontrado
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            </div>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Layout principal */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="lg:flex lg:space-x-8">
+          {/* Sidebar de navegação - Desktop apenas */}
+          <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <nav className="space-y-2">
+                <button
+                  onClick={handleIndicadoresClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeNavTab === 'inicio'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiBarChart className="mr-3 h-5 w-5" />
+                  Indicadores
+                </button>
+
+                <button
+                  onClick={handleImportantesClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeNavTab === 'importantes'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiStar className="mr-3 h-5 w-5" />
+                  Importantes
+                </button>
+
+                <button
+                  onClick={handleControleClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeNavTab === 'controle'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiClipboard className="mr-3 h-5 w-5" />
+                  Controle
+                </button>
+
+                <button
+                  onClick={handleRegistrosClick}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeNavTab === 'registros'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <TfiPencil className="mr-3 h-5 w-5" />
+                  Registros
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          {/* Conteúdo principal */}
+          <div className="flex-1 min-w-0">
+            {/* Mobile: Cabeçalho da seção */}
+            <div className="lg:hidden">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-black">Configurações</h2>
+              </div>
+              
+              <p className="text-gray-600 text-sm mb-6">
+                Gerenciamento de cadastros do sistema
+              </p>
+            </div>
+
+            {/* Desktop: Cabeçalho da seção */}
+            <div className="hidden lg:block">
+              <div className="mb-6">
+                <h1 className="text-2xl lg:text-3xl font-bold text-black">Configurações</h1>
+                <p className="text-gray-600 text-sm mt-1">
+                  Gerenciamento de cadastros e configurações do sistema
+                </p>
+              </div>
+            </div>
+
+            {/* Tabs de navegação mobile */}
+            <div className="lg:hidden mb-6">
+              <div className="border-b border-gray-200">
+                <div className="overflow-x-auto">
+                  <nav className="-mb-px flex space-x-6 px-4" aria-label="Tabs">
+                    {abasVisiveis.map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => setActiveTab(key)}
+                        className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
+                          activeTab === key
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        {tabsConfig[key].label}
+                        {activeTab === key && (
+                          <span className="ml-1 bg-blue-100 text-blue-600 px-1 py-0.5 rounded-full text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs de navegação desktop */}
+            <div className="hidden lg:block mb-6">
+              <div className="border-b border-gray-200">
+                <ul className="flex flex-wrap -mb-px">
+                  {abasVisiveis.map((key) => (
+                    <li key={key} className="mr-2">
+                      <button
+                        onClick={() => setActiveTab(key)}
+                        className={`inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                          activeTab === key
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        {tabsConfig[key].label}
+                        {activeTab === key && (
+                          <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
+                            Ativo
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Conteúdo da tab atual */}
+            <div className="bg-white rounded-lg shadow-md p-4 lg:p-6">
+              {/* Controle de Visibilidade para Admins */}
+              {isAdmin && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-800">
+                        Controle de Visibilidade - {config.label}
+                      </h3>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Como administrador, você pode controlar se esta aba é visível para usuários normais.
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibilidadeAbas[activeTab] || false}
+                          onChange={() => toggleVisibilidadeAba(activeTab)}
+                          disabled={salvandoVisibilidade}
+                          className="sr-only"
+                        />
+                        <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          visibilidadeAbas[activeTab] ? 'bg-blue-600' : 'bg-gray-200'
+                        } ${salvandoVisibilidade ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            visibilidadeAbas[activeTab] ? 'translate-x-6' : 'translate-x-1'
+                          }`} />
+                        </div>
+                        <span className="ml-3 text-sm font-medium text-blue-800">
+                          {visibilidadeAbas[activeTab] ? 'Visível para usuários' : 'Oculta para usuários'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tabela de Apresentação da Variável - apenas para projetos e categorias */}
+              {config.hasApresentacao && (
+                <div className="mb-8">
+                  <h2 className="text-lg lg:text-xl font-bold mb-4">Configuração de Apresentação</h2>
+                  
+                  <div className="bg-white rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Nome para Apresentação
+                            </th>
+                            <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Ações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'] ? (
+                            <tr>
+                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
+                                  <input
+                                    type="text"
+                                    value={nomeApresentacaoEditado}
+                                    onChange={(e) => setNomeApresentacaoEditado(e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    disabled={salvandoApresentacao}
+                                  />
+                                ) : (
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].nome_apresentacao}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                {editandoApresentacao === apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'].id ? (
+                                  <div className="flex justify-end space-x-2">
+                                    <button
+                                      onClick={salvarEdicaoApresentacao}
+                                      disabled={salvandoApresentacao}
+                                      className={`text-green-600 hover:text-green-900 ${
+                                        salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
+                                      }`}
+                                      title="Salvar"
+                                    >
+                                      <FiSave className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                      onClick={cancelarEdicaoApresentacao}
+                                      disabled={salvandoApresentacao}
+                                      className={`text-red-600 hover:text-red-900 ${
+                                        salvandoApresentacao ? 'opacity-50 cursor-not-allowed' : ''
+                                      }`}
+                                      title="Cancelar"
+                                    >
+                                      <FiX className="h-5 w-5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => iniciarEdicaoApresentacao(apresentacaoVariaveis[activeTab === 'projetos' ? 'projeto' : 'categoria'])}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Editar"
+                                  >
+                                    <FiEdit className="h-5 w-5" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ) : (
+                            <tr>
+                              <td colSpan="2" className="px-4 lg:px-6 py-4 text-center text-sm text-gray-500">
+                                Configuração não encontrada
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Seção principal do Gerenciamento */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
+                  <h2 className="text-lg lg:text-xl font-bold">Gerenciamento de {config.label}</h2>
+                  
+                  {/* Botão para cadastrar novo item */}
+                  <button
+                    onClick={() => setShowCadastroDialog(true)}
+                    className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <FiPlus className="mr-2 h-4 w-4" />
+                    Cadastrar {config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}
+                  </button>
+                </div>
+
+                {/* Aviso sobre não poder apagar */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+                  <p className="text-yellow-800 text-sm">
+                    <strong>Atenção:</strong> Uma vez cadastrados, os {config.label.toLowerCase()} não podem ser apagados do sistema. 
+                    Certifique-se de que o nome está correto antes de cadastrar.
+                    {activeTab === 'projetos' && (
+                      <span className="block mt-1">
+                        <strong>Novo:</strong> Ao criar um projeto, você será automaticamente vinculado a ele.
+                      </span>
+                    )}
+                  </p>
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {config.campo === 'nome_prompt' ? 'Nome do Prompt' : 'Nome'}
+                            </th>
+                            {config.hasTexto && (
+                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Texto do Prompt
+                              </th>
+                            )}
+                            <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Ações
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {dadosAtivos.length > 0 ? (
+                            dadosAtivos.map((item, index) => (
+                              <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                  {editandoItem === item.id ? (
+                                    <input
+                                      type="text"
+                                      value={nomeEditado}
+                                      onChange={(e) => setNomeEditado(e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                      disabled={salvandoEdicao}
+                                    />
+                                  ) : (
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {item[config.campo]}
+                                    </div>
+                                  )}
+                                </td>
+                                {config.hasTexto && (
+                                  <td className="px-4 lg:px-6 py-4">
+                                    {editandoItem === item.id ? (
+                                      <textarea
+                                        value={textoPromptEditado}
+                                        onChange={(e) => setTextoPromptEditado(e.target.value)}
+                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                        rows="3"
+                                        disabled={salvandoEdicao}
+                                      />
+                                    ) : (
+                                      <div className="text-sm text-gray-900 max-w-xs">
+                                        {item[config.campoTexto] ? (
+                                          <span className="truncate block" title={item[config.campoTexto]}>
+                                            {item[config.campoTexto].length > 100 
+                                              ? `${item[config.campoTexto].substring(0, 100)}...` 
+                                              : item[config.campoTexto]
+                                            }
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 italic">Nenhum texto</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                )}
+                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  {editandoItem === item.id ? (
+                                    <div className="flex justify-end space-x-2">
+                                      <button
+                                        onClick={salvarEdicao}
+                                        disabled={salvandoEdicao}
+                                        className={`text-green-600 hover:text-green-900 ${
+                                          salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                        title="Salvar"
+                                      >
+                                        <FiSave className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={cancelarEdicao}
+                                        disabled={salvandoEdicao}
+                                        className={`text-red-600 hover:text-red-900 ${
+                                          salvandoEdicao ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                        title="Cancelar"
+                                      >
+                                        <FiX className="h-5 w-5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => iniciarEdicao(item)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Editar"
+                                    >
+                                      <FiEdit className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={config.hasTexto ? "3" : "2"}
+                                className="px-4 lg:px-6 py-4 text-center text-sm text-gray-500"
+                              >
+                                Nenhum {config.singular} encontrado
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de navegação inferior - Mobile apenas */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
+        <div className="flex justify-around">
+          <button
+            onClick={handleIndicadoresClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeNavTab === 'inicio'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiBarChart className="w-5 h-5" />
+            <span className="text-xs font-medium">Indicadores</span>
+          </button>
+
+          <button
+            onClick={handleImportantesClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeNavTab === 'importantes'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiStar className="w-5 h-5" />
+            <span className="text-xs font-medium">Importantes</span>
+          </button>
+
+          <button
+            onClick={handleControleClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeNavTab === 'controle'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiClipboard className="w-5 h-5" />
+            <span className="text-xs font-medium">Controle</span>
+          </button>
+
+          <button
+            onClick={handleRegistrosClick}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeNavTab === 'registros'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <TfiPencil className="w-5 h-5" />
+            <span className="text-xs font-medium">Registros</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Espaçamento inferior para mobile */}
+      <div className="lg:hidden pb-16"></div>
 
       {/* Modal para cadastrar novo item */}
       {showCadastroDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">
-                Cadastrar {config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}
-              </h3>
-              <button 
-                onClick={() => {
-                  setShowCadastroDialog(false);
-                  setNovoNome('');
-                  setNovoTextoPrompt('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FiX className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {config.campo === 'nome_prompt' ? 'Nome do Prompt' : `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
-                </label>
-                <input
-                  type="text"
-                  value={novoNome}
-                  onChange={(e) => setNovoNome(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder={`Digite o nome do ${config.singular}`}
-                  disabled={cadastrando}
-                />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-4 lg:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">
+                  Cadastrar {config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowCadastroDialog(false);
+                    setNovoNome('');
+                    setNovoTextoPrompt('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="h-6 w-6" />
+                </button>
               </div>
-
-              {config.hasTexto && (
+              
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Texto do Prompt
+                    {config.campo === 'nome_prompt' ? 'Nome do Prompt' : `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
                   </label>
-                  <textarea
-                    value={novoTextoPrompt}
-                    onChange={(e) => setNovoTextoPrompt(e.target.value)}
+                  <input
+                    type="text"
+                    value={novoNome}
+                    onChange={(e) => setNovoNome(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Digite o texto do prompt"
-                    rows="5"
+                    placeholder={`Digite o nome do ${config.singular}`}
                     disabled={cadastrando}
                   />
                 </div>
-              )}
 
-              {activeTab === 'projetos' && (
-                <p className="text-sm text-gray-600">
-                  Você será automaticamente vinculado a este projeto.
-                </p>
-              )}
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowCadastroDialog(false);
-                  setNovoNome('');
-                  setNovoTextoPrompt('');
-                }}
-                disabled={cadastrando}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
+                {config.hasTexto && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Texto do Prompt
+                    </label>
+                    <textarea
+                      value={novoTextoPrompt}
+                      onChange={(e) => setNovoTextoPrompt(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Digite o texto do prompt"
+                      rows="5"
+                      disabled={cadastrando}
+                    />
+                  </div>
+                )}
+
+                {activeTab === 'projetos' && (
+                  <p className="text-sm text-gray-600">
+                    Você será automaticamente vinculado a este projeto.
+                  </p>
+                )}
+              </div>
               
-              <button
-                onClick={cadastrarItem}
-                disabled={cadastrando || !novoNome.trim()}
-                className={`px-4 py-2 rounded-md text-white ${
-                  cadastrando || !novoNome.trim()
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {cadastrando ? 'Cadastrando...' : 'Cadastrar'}
-              </button>
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowCadastroDialog(false);
+                    setNovoNome('');
+                    setNovoTextoPrompt('');
+                  }}
+                  disabled={cadastrando}
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                
+                <button
+                  onClick={cadastrarItem}
+                  disabled={cadastrando || !novoNome.trim()}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-md text-white transition-colors ${
+                    cadastrando || !novoNome.trim()
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {cadastrando ? 'Cadastrando...' : 'Cadastrar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Overlay para fechar menus quando clicar fora */}
+      {showMenu && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-25 z-10"
+          onClick={() => {
+            setShowMenu(false);
+          }}
+        />
       )}
     </div>
   );
