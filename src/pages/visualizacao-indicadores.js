@@ -745,6 +745,10 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
+  const handleConfiguraciesClick = () => {
+    router.push('/cadastros');
+  };
+
   // ✅ FUNÇÃO: Navegar para página de controle
   const handleControleClick = () => {
     router.push('/visualizacao-geral-indicadores');
@@ -1146,7 +1150,7 @@ export default function VisualizacaoIndicadores({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        // TODO: Implementar configurações
+                        handleConfiguraciesClick();
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -1356,7 +1360,7 @@ export default function VisualizacaoIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          // TODO: Implementar configurações
+                          handleConfiguraciesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >

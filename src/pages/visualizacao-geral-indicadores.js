@@ -134,6 +134,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     }
   };
 
+  const handleConfiguraciesClick = () => {
+    router.push('/cadastros');
+  };
+
   // Função para calcular datas dos períodos
   const calcularPeriodo = (tipo) => {
     const hoje = new Date();
@@ -783,7 +787,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          // TODO: Implementar configurações
+                          handleConfiguraciesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
@@ -1025,7 +1029,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          // TODO: Implementar configurações
+                          handleConfiguraciesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
