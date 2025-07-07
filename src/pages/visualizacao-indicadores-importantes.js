@@ -479,7 +479,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     }
   };
 
-  const handleConfiguraciesClick = () => {
+  const handleConfiguracoesClick = () => {
     router.push('/cadastros');
   };
 
@@ -785,7 +785,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        handleConfiguraciesClick();
+                        handleConfiguracoesClick();
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -978,7 +978,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleConfiguraciesClick();
+                          handleConfiguracoesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
