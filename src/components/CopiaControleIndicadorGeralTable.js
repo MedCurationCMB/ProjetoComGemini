@@ -483,60 +483,60 @@ const CopiaControleIndicadorGeralTable = ({
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
         </div>
         
-        <div className="flex flex-wrap gap-3">
-          {/* Botão Atualizar Informações em Massa (Planilha) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Botão Atualizar via Planilha */}
           <button
             onClick={() => setShowAtualizacaoMassaDialog(true)}
             disabled={controles.length === 0}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+            className={`flex items-center justify-center px-4 py-3 rounded-md text-sm font-medium min-h-[48px] ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'text-white hover:opacity-90'  // ← NOVA LINHA
+                : 'text-white hover:opacity-90'
             }`}
-            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}
           >
-            <FiRefreshCw className="mr-2" />
-            Atualizar Informações em Massa (Planilha)
+            <FiRefreshCw className="mr-2 flex-shrink-0" />
+            <span className="text-center">Atualizar via Planilha</span>
           </button>
           
-          {/* Botão Atualizar Informações em Massa (Inline) */}
+          {/* Botão Atualizar em Massa */}
           <button
             onClick={() => setShowAtualizacaoInlineDialog(true)}
             disabled={controles.length === 0}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+            className={`flex items-center justify-center px-4 py-3 rounded-md text-sm font-medium min-h-[48px] ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'text-white hover:opacity-90'  // ← NOVA LINHA
+                : 'text-white hover:opacity-90'
             }`}
-            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}
           >
-            <FiEdit className="mr-2" />
-            Atualizar Informações em Massa
+            <FiEdit className="mr-2 flex-shrink-0" />
+            <span className="text-center">Atualizar em Massa</span>
           </button>
           
-          {/* Botão Adicionar Linha de Indicador Geral */}
+          {/* Botão Adicionar Linha */}
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"  // ← LINHA ALTERADA
-            style={{ backgroundColor: '#012060' }}  // ← NOVA LINHA
+            className="flex items-center justify-center text-white px-4 py-3 rounded-md text-sm font-medium hover:opacity-90 min-h-[48px]"
+            style={{ backgroundColor: '#012060' }}
           >
-            <FiPlus className="mr-2" />
-            Adicionar Linha de Indicador Geral
+            <FiPlus className="mr-2 flex-shrink-0" />
+            <span className="text-center">Adicionar Linha</span>
           </button>
 
-          {/* Botão Preencher Automático Período de Referência */}
+          {/* Botão Preencher Automático Período Referência */}
           <button
             onClick={() => setShowPreenchimentoAutomaticoDialog(true)}
             disabled={controles.length === 0}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+            className={`flex items-center justify-center px-4 py-3 rounded-md text-sm font-medium min-h-[48px] ${
               controles.length === 0
                 ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'text-white hover:opacity-90'  // ← NOVA LINHA
+                : 'text-white hover:opacity-90'
             }`}
-            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}  // ← NOVA LINHA
+            style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}
           >
-            <FiCalendar className="mr-2" />
-            Preencher Automático Período de Referência
+            <FiCalendar className="mr-2 flex-shrink-0" />
+            <span className="text-center">Preencher Automático Período Referência</span>
           </button>
         </div>
       </div>
