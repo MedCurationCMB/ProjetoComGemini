@@ -856,38 +856,48 @@ export default function Cadastros({ user }) {
         <div className="bg-white rounded-lg shadow-md p-4 lg:p-6">
           {/* Controle de Visibilidade para Admins */}
           {isAdmin && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex flex-col space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                <div className="flex-1">
                   <h3 className="text-sm font-medium text-blue-800">
                     Controle de Visibilidade - {config.label}
                   </h3>
-                  <p className="text-sm text-blue-600 mt-1">
+                  <p className="text-xs text-blue-600 mt-1">
                     Como administrador, você pode controlar se esta aba é visível para usuários normais.
                   </p>
                 </div>
-                <div className="flex items-center">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={visibilidadeAbas[activeTab] || false}
-                      onChange={() => toggleVisibilidadeAba(activeTab)}
-                      disabled={salvandoVisibilidade}
-                      className="sr-only"
-                    />
-                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                
+                <div className="flex items-center justify-between lg:justify-end">
+                  <span className="text-sm font-medium text-blue-800 lg:mr-3">
+                    {visibilidadeAbas[activeTab] ? 'Visível para usuários' : 'Oculta para usuários'}
+                  </span>
+                  
+                  <button
+                    onClick={() => toggleVisibilidadeAba(activeTab)}
+                    disabled={salvandoVisibilidade}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                       visibilidadeAbas[activeTab] ? 'bg-blue-600' : 'bg-gray-200'
-                    } ${salvandoVisibilidade ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    } ${salvandoVisibilidade ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    type="button"
+                    role="switch"
+                    aria-checked={visibilidadeAbas[activeTab]}
+                    aria-label={`Alternar visibilidade da aba ${config.label}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
                         visibilidadeAbas[activeTab] ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-blue-800">
-                      {visibilidadeAbas[activeTab] ? 'Visível para usuários' : 'Oculta para usuários'}
-                    </span>
-                  </label>
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
+              
+              {salvandoVisibilidade && (
+                <div className="mt-2 flex items-center text-xs text-blue-600">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-2"></div>
+                  Salvando alteração...
+                </div>
+              )}
             </div>
           )}
 
