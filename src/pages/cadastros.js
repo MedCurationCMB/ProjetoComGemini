@@ -30,6 +30,7 @@ export default function Cadastros({ user }) {
   const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState([]);
   const [tiposIndicador, setTiposIndicador] = useState([]);
   const [prompts, setPrompts] = useState([]);
+  const [promptsIndicadores, setPromptsIndicadores] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Estados para edição
@@ -103,6 +104,16 @@ export default function Cadastros({ user }) {
       campo: 'nome_prompt',
       campoTexto: 'texto_prompt',
       singular: 'prompt',
+      artigo: 'um',
+      hasApresentacao: false,
+      hasTexto: true
+    },
+    promptsIndicadores: {
+      label: 'Prompts Indicadores',
+      tabela: 'prompts_indicadores',
+      campo: 'nome_prompt',
+      campoTexto: 'texto_prompt',
+      singular: 'prompt de indicador',
       artigo: 'um',
       hasApresentacao: false,
       hasTexto: true
@@ -256,6 +267,9 @@ export default function Cadastros({ user }) {
           break;
         case 'prompts':
           setPrompts(data || []);
+          break;
+        case 'promptsIndicadores':
+          setPromptsIndicadores(data || []);
           break;
       }
     } catch (error) {
@@ -505,6 +519,7 @@ export default function Cadastros({ user }) {
       case 'tiposUnidadeIndicador': return tiposUnidadeIndicador;
       case 'tiposIndicador': return tiposIndicador;
       case 'prompts': return prompts;
+      case 'promptsIndicadores': return promptsIndicadores;
       default: return [];
     }
   };
