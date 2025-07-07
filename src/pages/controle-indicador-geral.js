@@ -11,6 +11,7 @@ import {
   FiUser,
   FiSettings,
   FiLogOut,
+  FiHome,
   FiFilter,
   FiX,
   FiBarChart,

@@ -18,6 +18,7 @@ import {
   FiX,
   FiCheckCircle,
   FiClock,
+  FiHome,
   FiAlertOctagon,
   FiStar,
   FiClipboard,
