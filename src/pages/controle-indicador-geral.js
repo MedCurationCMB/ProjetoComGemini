@@ -16,13 +16,14 @@ import {
   FiBarChart,
   FiStar,
   FiClipboard,
-  FiSearch
+  FiSearch,
+  FiClock
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
 export default function CopiaControleIndicadorGeral({ user }) {
   const router = useRouter();
-  const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos', 'realizado', 'meta'
+  const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos', 'realizado', 'meta', 'pendentes'
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
@@ -115,25 +116,29 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   }, [user, router]);
 
-  // Função para obter o título da aba ativa
+  // ✅ NOVA FUNÇÃO: Obter título da aba ativa com nova aba Pendentes
   const getTituloAba = () => {
     switch (abaAtiva) {
       case 'realizado':
         return 'Indicadores - Realizado';
       case 'meta':
         return 'Indicadores - Meta';
+      case 'pendentes':
+        return 'Indicadores - Pendentes';
       default:
         return 'Todos os Indicadores';
     }
   };
 
-  // Função para obter a descrição da aba ativa
+  // ✅ NOVA FUNÇÃO: Obter descrição da aba ativa com nova aba Pendentes
   const getDescricaoAba = () => {
     switch (abaAtiva) {
       case 'realizado':
         return 'Visualizando apenas indicadores do tipo "Realizado"';
       case 'meta':
         return 'Visualizando apenas indicadores do tipo "Meta"';
+      case 'pendentes':
+        return 'Visualizando apenas indicadores sem valor apresentado (independente da data)';
       default:
         return 'Visualizando todos os tipos de indicadores';
     }
@@ -141,6 +146,17 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
   // Função para gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
+    // ✅ PARA ABA PENDENTES: Não mostrar filtros de prazo pois são ignorados
+    if (abaAtiva === 'pendentes') {
+      let textoBase = getDescricaoAba();
+      
+      if (searchTerm) {
+        textoBase += ` • Busca: "${searchTerm}"`;
+      }
+      
+      return textoBase;
+    }
+
     if (!filtrosPrazo.periodo) {
       return getDescricaoAba();
     }
@@ -180,6 +196,11 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
   // Verificar se há filtros ativos
   const hasFiltrosAtivos = () => {
+    // ✅ PARA ABA PENDENTES: Só considerar busca como filtro ativo
+    if (abaAtiva === 'pendentes') {
+      return searchTerm.trim() !== '';
+    }
+
     return filtroValorPendente || 
            searchTerm.trim() !== '' ||
            filtrosPrazo.periodo !== '30dias' ||
@@ -198,6 +219,16 @@ export default function CopiaControleIndicadorGeral({ user }) {
     setFiltroValorPendente(false);
     setSearchTerm(''); // ✅ NOVO: Limpar busca
     setShowFilters(false);
+  };
+
+  // ✅ NOVA FUNÇÃO: Lidar com mudança de aba
+  const handleAbaChange = (novaAba) => {
+    setAbaAtiva(novaAba);
+    
+    // ✅ Para aba Pendentes, limpar filtros de prazo já que são ignorados
+    if (novaAba === 'pendentes') {
+      setFiltroValorPendente(false); // Filtro redundante na aba Pendentes
+    }
   };
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
@@ -287,20 +318,24 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 />
               </div>
               
+              {/* ✅ FILTROS: Desabilitar para aba Pendentes */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
+                disabled={abaAtiva === 'pendentes'}
                 className={`p-3 rounded-lg transition-colors ${
-                  showFilters || hasFiltrosAtivos() 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  abaAtiva === 'pendentes'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : showFilters || hasFiltrosAtivos() 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 <FiFilter className="w-5 h-5" />
               </button>
             </div>
 
-            {/* ✅ MOBILE: Filtros melhorados */}
-            {showFilters && (
+            {/* ✅ MOBILE: Filtros melhorados - Ocultar para aba Pendentes */}
+            {showFilters && abaAtiva !== 'pendentes' && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
@@ -461,13 +496,16 @@ export default function CopiaControleIndicadorGeral({ user }) {
               
               {/* Controles à direita - Desktop */}
               <div className="flex items-center space-x-3">
-                {/* Botão de filtro */}
+                {/* Botão de filtro - Desabilitar para aba Pendentes */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
+                  disabled={abaAtiva === 'pendentes'}
                   className={`p-3 rounded-lg transition-colors ${
-                    showFilters || hasFiltrosAtivos() 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    abaAtiva === 'pendentes'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : showFilters || hasFiltrosAtivos() 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   <FiFilter className="w-5 h-5" />
@@ -521,8 +559,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </div>
             </div>
 
-            {/* Filtros Desktop */}
-            {showFilters && (
+            {/* Filtros Desktop - Ocultar para aba Pendentes */}
+            {showFilters && abaAtiva !== 'pendentes' && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
@@ -760,13 +798,13 @@ export default function CopiaControleIndicadorGeral({ user }) {
             {/* Sistema de Abas */}
             <div className="bg-white rounded-lg shadow-md mb-6">
               <div className="border-b border-gray-200">
-                {/* ✅ MOBILE: Navegação por abas horizontal com scroll */}
+                {/* ✅ MOBILE: Navegação por abas horizontal com scroll - NOVA ABA PENDENTES */}
                 <div className="lg:hidden">
                   <div className="overflow-x-auto">
                     <nav className="-mb-px flex space-x-6 px-4" aria-label="Tabs">
                       {/* Aba: Todos */}
                       <button
-                        onClick={() => setAbaAtiva('todos')}
+                        onClick={() => handleAbaChange('todos')}
                         className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
                           abaAtiva === 'todos'
                             ? 'border-blue-500 text-blue-600'
@@ -783,7 +821,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
                       {/* Aba: Realizado */}
                       <button
-                        onClick={() => setAbaAtiva('realizado')}
+                        onClick={() => handleAbaChange('realizado')}
                         className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
                           abaAtiva === 'realizado'
                             ? 'border-green-500 text-green-600'
@@ -800,7 +838,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
                       {/* Aba: Meta */}
                       <button
-                        onClick={() => setAbaAtiva('meta')}
+                        onClick={() => handleAbaChange('meta')}
                         className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
                           abaAtiva === 'meta'
                             ? 'border-orange-500 text-orange-600'
@@ -814,16 +852,33 @@ export default function CopiaControleIndicadorGeral({ user }) {
                           </span>
                         )}
                       </button>
+
+                      {/* ✅ NOVA ABA: Pendentes */}
+                      <button
+                        onClick={() => handleAbaChange('pendentes')}
+                        className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
+                          abaAtiva === 'pendentes'
+                            ? 'border-red-500 text-red-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        ⏰ Pendentes
+                        {abaAtiva === 'pendentes' && (
+                          <span className="ml-1 bg-red-100 text-red-600 px-1 py-0.5 rounded-full text-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
                     </nav>
                   </div>
                 </div>
 
-                {/* ✅ DESKTOP: Navegação por abas normal */}
+                {/* ✅ DESKTOP: Navegação por abas normal - NOVA ABA PENDENTES */}
                 <div className="hidden lg:block">
                   <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                     {/* Aba: Todos */}
                     <button
-                      onClick={() => setAbaAtiva('todos')}
+                      onClick={() => handleAbaChange('todos')}
                       className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                         abaAtiva === 'todos'
                           ? 'border-blue-500 text-blue-600'
@@ -840,7 +895,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
                     {/* Aba: Realizado */}
                     <button
-                      onClick={() => setAbaAtiva('realizado')}
+                      onClick={() => handleAbaChange('realizado')}
                       className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                         abaAtiva === 'realizado'
                           ? 'border-green-500 text-green-600'
@@ -857,7 +912,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
                     {/* Aba: Meta */}
                     <button
-                      onClick={() => setAbaAtiva('meta')}
+                      onClick={() => handleAbaChange('meta')}
                       className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                         abaAtiva === 'meta'
                           ? 'border-orange-500 text-orange-600'
@@ -871,13 +926,30 @@ export default function CopiaControleIndicadorGeral({ user }) {
                         </span>
                       )}
                     </button>
+
+                    {/* ✅ NOVA ABA: Pendentes */}
+                    <button
+                      onClick={() => handleAbaChange('pendentes')}
+                      className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                        abaAtiva === 'pendentes'
+                          ? 'border-red-500 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Pendentes
+                      {abaAtiva === 'pendentes' && (
+                        <span className="ml-2 bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs">
+                          Ativo
+                        </span>
+                      )}
+                    </button>
                   </nav>
                 </div>
               </div>
 
               {/* Conteúdo da Aba Ativa */}
               <div className="p-4 lg:p-6">
-                {/* ✅ MOBILE: Cabeçalho de aba compacto */}
+                {/* ✅ MOBILE: Cabeçalho de aba compacto - NOVA ABA PENDENTES */}
                 <div className="lg:hidden mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">
                     {getTituloAba()}
@@ -892,15 +964,19 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     {abaAtiva === 'meta' && (
                       <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
                     )}
+                    {abaAtiva === 'pendentes' && (
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    )}
                     <span className="text-sm text-gray-600">
                       {abaAtiva === 'todos' && 'Todos os tipos'}
                       {abaAtiva === 'realizado' && 'Tipo "Realizado"'}
                       {abaAtiva === 'meta' && 'Tipo "Meta"'}
+                      {abaAtiva === 'pendentes' && 'Sem valor apresentado'}
                     </span>
                   </div>
                 </div>
 
-                {/* ✅ DESKTOP: Cabeçalho de aba completo */}
+                {/* ✅ DESKTOP: Cabeçalho de aba completo - NOVA ABA PENDENTES */}
                 <div className="hidden lg:block mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">
                     {getTituloAba()}
@@ -916,10 +992,14 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       {abaAtiva === 'meta' && (
                         <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
                       )}
+                      {abaAtiva === 'pendentes' && (
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                      )}
                       <span className="text-sm text-gray-600">
                         {abaAtiva === 'todos' && 'Mostrando todos os tipos de indicadores'}
                         {abaAtiva === 'realizado' && 'Filtrando apenas indicadores do tipo "Realizado"'}
                         {abaAtiva === 'meta' && 'Filtrando apenas indicadores do tipo "Meta"'}
+                        {abaAtiva === 'pendentes' && 'Mostrando apenas indicadores sem valor apresentado (independente da data)'}
                       </span>
                     </div>
                   </div>
@@ -929,9 +1009,9 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 <CopiaControleIndicadorGeralTable 
                   user={user} 
                   filtroTipoIndicador={abaAtiva}
-                  filtroValorPendente={filtroValorPendente}
+                  filtroValorPendente={abaAtiva === 'pendentes' ? true : filtroValorPendente} // ✅ FORÇAR true para aba Pendentes
                   setFiltroValorPendente={setFiltroValorPendente}
-                  filtrosPrazo={filtrosPrazo}
+                  filtrosPrazo={abaAtiva === 'pendentes' ? null : filtrosPrazo} // ✅ IGNORAR filtros de prazo para aba Pendentes
                   setFiltrosPrazo={setFiltrosPrazo}
                   searchTerm={searchTerm} // ✅ NOVO: Passar termo de busca
                 />

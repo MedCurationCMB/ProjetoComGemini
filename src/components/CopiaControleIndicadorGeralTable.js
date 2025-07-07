@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão Completa com Formatação PT-BR
+// Componente CopiaControleIndicadorGeralTable.js - Versão Completa com Formatação PT-BR e Aba Pendentes
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -16,7 +16,8 @@ const CopiaControleIndicadorGeralTable = ({
   filtroValorPendente = false,
   setFiltroValorPendente,
   filtrosPrazo,
-  setFiltrosPrazo
+  setFiltrosPrazo,
+  searchTerm = '' // ✅ NOVO: Termo de busca
 }) => {
   // ✅ NOVA FUNÇÃO: Formatar valores numéricos para padrão brasileiro
   const formatarValorIndicador = (valor) => {
@@ -68,7 +69,7 @@ const CopiaControleIndicadorGeralTable = ({
     if (!loading && projetosVinculados.length >= 0) {
       fetchControles();
     }
-  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo]);
+  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm]); // ✅ ADICIONAR searchTerm
 
   // Função para calcular período
   const calcularPeriodo = (tipo) => {
@@ -230,12 +231,15 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // Aplicar filtro por tipo de indicador
+  // ✅ ATUALIZADA: Aplicar filtro por tipo de indicador incluindo nova aba Pendentes
   const aplicarFiltroTipoIndicador = (query) => {
     if (filtroTipoIndicador === 'realizado') {
       return query.eq('tipo_indicador', 1); // Tipo 1 = Realizado
     } else if (filtroTipoIndicador === 'meta') {
       return query.eq('tipo_indicador', 2); // Tipo 2 = Meta
+    } else if (filtroTipoIndicador === 'pendentes') {
+      // ✅ NOVA: Para aba Pendentes, não filtrar por tipo, mas forçar valor pendente
+      return query.is('valor_indicador_apresentado', null);
     }
     // Para 'todos', não aplicar filtro adicional
     return query;
@@ -243,14 +247,24 @@ const CopiaControleIndicadorGeralTable = ({
 
   // Aplicar filtro por valor pendente
   const aplicarFiltroValorPendente = (query) => {
+    // ✅ ATUALIZADA: Para aba Pendentes, o filtro já é aplicado em aplicarFiltroTipoIndicador
+    if (filtroTipoIndicador === 'pendentes') {
+      return query; // Já filtrado na função anterior
+    }
+    
     if (filtroValorPendente) {
       return query.is('valor_indicador_apresentado', null);
     }
     return query;
   };
 
-  // Aplicar filtros de prazo
+  // ✅ ATUALIZADA: Aplicar filtros de prazo - IGNORAR para aba Pendentes
   const aplicarFiltrosPrazo = (query) => {
+    // ✅ NOVA: Para aba Pendentes, ignorar filtros de prazo
+    if (filtroTipoIndicador === 'pendentes') {
+      return query; // Não aplicar filtros de prazo
+    }
+
     if (!filtrosPrazo) return query;
 
     let dataInicioFiltro = null;
@@ -273,6 +287,16 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
+  // ✅ NOVA: Aplicar filtro de busca por termo
+  const aplicarFiltroBusca = (query) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return query;
+    }
+
+    // Buscar no campo 'indicador' (case-insensitive)
+    return query.ilike('indicador', `%${searchTerm.trim()}%`);
+  };
+
   // Buscar os dados com todos os filtros aplicados
   const fetchControles = async () => {
     try {
@@ -293,6 +317,7 @@ const CopiaControleIndicadorGeralTable = ({
       query = aplicarFiltroTipoIndicador(query);
       query = aplicarFiltroValorPendente(query);
       query = aplicarFiltrosPrazo(query);
+      query = aplicarFiltroBusca(query); // ✅ NOVO: Aplicar filtro de busca
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -477,7 +502,7 @@ const CopiaControleIndicadorGeralTable = ({
   return (
     <div>
 
-      {/* Botões de Ação em estilo moderno */}
+      {/* Botões de Ação em estilo moderno - NOMES ATUALIZADOS */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
@@ -818,10 +843,11 @@ const CopiaControleIndicadorGeralTable = ({
                     <div className="flex flex-col items-center">
                       <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
                       <div>
-                        {/* Mensagem adaptada para o filtro por tipo */}
+                        {/* ✅ NOVA: Mensagem adaptada para o filtro por tipo incluindo Pendentes */}
                         {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
                         {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
                         {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'pendentes' && 'Nenhum indicador pendente (sem valor apresentado) encontrado para os projetos vinculados'}
                       </div>
                     </div>
                   </td>
@@ -832,7 +858,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* Informações adicionais sobre atualização em massa */}
+      {/* ✅ ATUALIZADA: Informações adicionais sobre atualização em massa com nova aba Pendentes */}
       {controles.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
@@ -844,17 +870,25 @@ const CopiaControleIndicadorGeralTable = ({
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1">
                 <li>• <strong>Atualização via Planilha:</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
-                <li>• <strong>Atualização Inline:</strong> Edite diretamente na interface, todos os registros visíveis</li>
+                <li>• <strong>Atualização em Massa:</strong> Edite diretamente na interface, todos os registros visíveis</li>
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
                 <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
+                {filtroTipoIndicador === 'pendentes' && (
+                  <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado (independente da data)</li>
+                )}
               </ul>
               <div className="mt-3 p-3 bg-white rounded-md border border-blue-200">
                 <p className="text-sm text-blue-700">
                   <strong>📊 Registros disponíveis para atualização:</strong> {controles.length} indicador(es)
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Baseado nos filtros aplicados: {filtroTipoIndicador} • {filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • {filtrosPrazo?.periodo || 'Sem filtro de prazo'}
+                  Baseado nos filtros aplicados: {filtroTipoIndicador} • 
+                  {filtroTipoIndicador === 'pendentes' 
+                    ? 'Apenas sem valor apresentado (sem filtro de prazo)' 
+                    : `${filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}`
+                  }
+                  {searchTerm && ` • Busca: "${searchTerm}"`}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade
