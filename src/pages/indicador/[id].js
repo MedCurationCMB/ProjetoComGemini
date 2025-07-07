@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo, FiBrain } from 'react-icons/fi';
 import { 
   ComposedChart, 
   Bar, 
@@ -16,6 +16,7 @@ import {
   Legend,
   Tooltip
 } from 'recharts';
+import IndicadorAnalysisDialog from '../../components/IndicadorAnalysisDialog';
 
 // ✅ NOVA CONFIGURAÇÃO: Definir limites máximos
 const MAX_CHART_WIDTH = {
@@ -70,6 +71,10 @@ export default function IndicadorDetalhe({ user }) {
   const [showConfiguracoes, setShowConfiguracoes] = useState(false);
   const [atualizandoConfiguracao, setAtualizandoConfiguracao] = useState(false);
   const [indicadorBaseId, setIndicadorBaseId] = useState(null); // Para armazenar o ID do controle_indicador
+
+  // ✅ NOVOS ESTADOS PARA ANÁLISE IA
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [analiseExistente, setAnaliseExistente] = useState(null);
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO
@@ -459,6 +464,48 @@ export default function IndicadorDetalhe({ user }) {
     } finally {
       setAtualizandoConfiguracao(false);
     }
+  };
+
+  // ✅ NOVA FUNÇÃO: Buscar análise existente
+  const buscarAnaliseExistente = async (indicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('controle_indicador')
+        .select('resultado_analise, prompt_id, prompt_utilizado')
+        .eq('id', indicadorId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar análise existente:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar análise existente:', error);
+      return null;
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Abrir dialog de análise
+  const abrirAnaliseDialog = async () => {
+    if (!id) return;
+    
+    // Buscar análise existente
+    const analise = await buscarAnaliseExistente(id);
+    setAnaliseExistente(analise);
+    setShowAnalysisDialog(true);
+  };
+
+  // ✅ FUNÇÃO MODIFICADA: Lidar com resultado da análise
+  const handleAnalysisComplete = async (resultado) => {
+    console.log('Análise concluída:', resultado);
+    
+    // Atualizar a análise existente
+    const analiseAtualizada = await buscarAnaliseExistente(id);
+    setAnaliseExistente(analiseAtualizada);
+    
+    toast.success('Análise salva com sucesso!');
   };
 
   // Função CORRIGIDA para filtrar por período
@@ -1555,6 +1602,18 @@ export default function IndicadorDetalhe({ user }) {
         </div>
       )}
 
+      {/* ✅ MODAL DE ANÁLISE IA */}
+      {showAnalysisDialog && (
+        <IndicadorAnalysisDialog
+          dadosTabela={dadosTabela}
+          nomeIndicador={nomeIndicador}
+          indicadorId={id}
+          analiseExistente={analiseExistente}
+          onClose={() => setShowAnalysisDialog(false)}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
+
       {/* MOBILE: Layout com tabela */}
       <div className="lg:hidden pb-20">
         {/* Header fixo com título - Mobile */}
@@ -1856,7 +1915,7 @@ export default function IndicadorDetalhe({ user }) {
 
         {/* Barra fixa inferior com botões de ação - Mobile */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
-          <div className="max-w-md mx-auto flex justify-center space-x-8">
+          <div className="max-w-md mx-auto flex justify-center space-x-6">
             {/* Botão Importante */}
             <button
               onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
@@ -1882,6 +1941,20 @@ export default function IndicadorDetalhe({ user }) {
               <FiClock className={`h-5 w-5 ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
               <span className={`text-xs font-medium ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`}>
                 Ler Depois
+              </span>
+            </button>
+
+            {/* ✅ NOVO: Botão Análise IA - Mobile */}
+            <button
+              onClick={abrirAnaliseDialog}
+              disabled={!dadosTabela || dadosTabela.length === 0}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+                !dadosTabela || dadosTabela.length === 0 ? 'opacity-50' : 'hover:bg-gray-50'
+              }`}
+            >
+              <FiBrain className="h-5 w-5 text-purple-600" />
+              <span className="text-xs font-medium text-purple-600">
+                Análise IA
               </span>
             </button>
 
@@ -2077,6 +2150,20 @@ export default function IndicadorDetalhe({ user }) {
                 >
                   <FiClock className="w-4 h-4" />
                   <span className="font-medium">Ler Depois</span>
+                </button>
+
+                {/* ✅ NOVO: Botão Análise IA - Desktop */}
+                <button
+                  onClick={abrirAnaliseDialog}
+                  disabled={!dadosTabela || dadosTabela.length === 0}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    !dadosTabela || dadosTabela.length === 0 
+                      ? 'opacity-50 cursor-not-allowed text-gray-300' 
+                      : 'text-purple-600 hover:text-purple-800 hover:bg-purple-50'
+                  }`}
+                >
+                  <FiBrain className="w-4 h-4" />
+                  <span className="font-medium">Análise IA</span>
                 </button>
 
                 {/* Botão Arquivar */}
