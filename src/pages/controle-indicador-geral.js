@@ -766,32 +766,14 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
             {/* ✅ DESKTOP: Cabeçalho da seção */}
             <div className="hidden lg:block">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
-                  <p className="text-gray-600 text-sm mt-1">
-                    {gerarTextoDescritivo()}
-                    {hasFiltrosAtivos() && (
-                      <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
-                    )}
-                  </p>
-                </div>
-                
-                <div className="flex space-x-4">
-                  <Link 
-                    href="/controle-indicador-geral" 
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Versão Completa
-                  </Link>
-                  
-                  <Link 
-                    href="/welcome" 
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Voltar
-                  </Link>
-                </div>
+              <div className="mb-6">
+                <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
+                <p className="text-gray-600 text-sm mt-1">
+                  {gerarTextoDescritivo()}
+                  {hasFiltrosAtivos() && (
+                    <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
+                  )}
+                </p>
               </div>
             </div>
 
