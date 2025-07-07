@@ -830,7 +830,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
-                      📊 Todos os Indicadores
+                      Todos os Indicadores
                       {abaAtiva === 'todos' && (
                         <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
                           Ativo
@@ -847,7 +847,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
-                      ✅ Realizado
+                      Realizado
                       {abaAtiva === 'realizado' && (
                         <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
                           Ativo
@@ -864,7 +864,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
-                      🎯 Meta
+                      Meta
                       {abaAtiva === 'meta' && (
                         <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs">
                           Ativo
