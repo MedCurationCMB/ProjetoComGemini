@@ -1303,13 +1303,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                   )}
                 </p>
               </div>
-              
-              <Link 
-                href="/welcome" 
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Voltar
-              </Link>
             </div>
 
             {/* KPIs com divisão Meta/Realizado */}
