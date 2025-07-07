@@ -513,18 +513,8 @@ const CopiaControleIndicadorGeralTable = ({
             <FiEdit className="mr-2 flex-shrink-0" />
             <span className="text-center">Atualizar em Massa</span>
           </button>
-          
-          {/* Botão Adicionar Linha */}
-          <button
-            onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center justify-center text-white px-4 py-3 rounded-md text-sm font-medium hover:opacity-90 min-h-[48px]"
-            style={{ backgroundColor: '#012060' }}
-          >
-            <FiPlus className="mr-2 flex-shrink-0" />
-            <span className="text-center">Adicionar Linha</span>
-          </button>
 
-          {/* Botão Preencher Automático Período Referência */}
+          {/* Botão Inserir Referência Auto */}
           <button
             onClick={() => setShowPreenchimentoAutomaticoDialog(true)}
             disabled={controles.length === 0}
@@ -536,7 +526,17 @@ const CopiaControleIndicadorGeralTable = ({
             style={controles.length > 0 ? { backgroundColor: '#012060' } : {}}
           >
             <FiCalendar className="mr-2 flex-shrink-0" />
-            <span className="text-center">Preencher Automático Período Referência</span>
+            <span className="text-center">Inserir Referência Auto</span>
+          </button>
+          
+          {/* Botão Adicionar Linha */}
+          <button
+            onClick={() => setShowAdicionarLinhaDialog(true)}
+            className="flex items-center justify-center text-white px-4 py-3 rounded-md text-sm font-medium hover:opacity-90 min-h-[48px]"
+            style={{ backgroundColor: '#012060' }}
+          >
+            <FiPlus className="mr-2 flex-shrink-0" />
+            <span className="text-center">Adicionar Linha</span>
           </button>
         </div>
       </div>
