@@ -205,7 +205,7 @@ const HistoricoAnalisesIndicadorDialog = ({ indicadorId, onClose }) => {
 
       {/* Modal Secundário - Visualizar Análise Completa */}
       {showAnaliseModal && selectedAnalise && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-60">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[85vh] overflow-hidden mx-4">
             {/* Header do Modal de Análise */}
             <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
