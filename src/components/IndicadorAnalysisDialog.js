@@ -3,7 +3,14 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
 import { FiAward, FiZap, FiCpu, FiX } from 'react-icons/fi';
 
-const IndicadorAnalysisDialog = ({ dadosTabela, nomeIndicador, indicadorId, analiseExistente, onClose, onAnalysisComplete }) => {
+const IndicadorAnalysisDialog = ({ 
+  dadosTabela, 
+  nomeIndicador, 
+  indicadorId, 
+  analiseExistente, 
+  onClose, 
+  onAnalysisComplete 
+}) => {
   const [prompts, setPrompts] = useState([]);
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -363,4 +370,5 @@ const IndicadorAnalysisDialog = ({ dadosTabela, nomeIndicador, indicadorId, anal
   );
 };
 
+// Certificar que a exportação está correta
 export default IndicadorAnalysisDialog;
