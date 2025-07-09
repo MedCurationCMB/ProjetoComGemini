@@ -231,10 +231,10 @@ const HistoricoAnalisesIndicadorDialog = ({ indicadorId, onClose }) => {
               <div className="prose max-w-none">
                 <div className="bg-gray-50 p-4 rounded-lg border">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Resultado da Análise:</h4>
-                  <div className="bg-white p-4 rounded border">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-900 leading-relaxed font-sans">
+                  <div className="bg-white p-6 rounded border border-gray-300">
+                    <div className="text-sm text-gray-900 leading-relaxed font-sans whitespace-pre-wrap">
                       {selectedAnalise.resultado_analise}
-                    </pre>
+                    </div>
                   </div>
                 </div>
                 
@@ -242,9 +242,9 @@ const HistoricoAnalisesIndicadorDialog = ({ indicadorId, onClose }) => {
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
                     <h4 className="text-sm font-medium text-blue-800 mb-3">Prompt Utilizado:</h4>
                     <div className="bg-white p-4 rounded border border-blue-300">
-                      <pre className="whitespace-pre-wrap text-xs text-blue-900 leading-relaxed font-mono max-h-32 overflow-y-auto">
+                      <div className="text-xs text-blue-900 leading-relaxed font-mono max-h-32 overflow-y-auto whitespace-pre-wrap">
                         {selectedAnalise.prompt_utilizado}
-                      </pre>
+                      </div>
                     </div>
                   </div>
                 )}
