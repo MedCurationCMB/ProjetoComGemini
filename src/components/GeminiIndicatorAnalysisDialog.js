@@ -11,6 +11,54 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
   const [result, setResult] = useState(null);
   const [chaveDisponivel, setChaveDisponivel] = useState(null);
   const [checkingKey, setCheckingKey] = useState(true);
+  
+  // ✅ NOVOS ESTADOS PARA ANÁLISE EXISTENTE
+  const [existingAnalysis, setExistingAnalysis] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(true);
+  const [showNewAnalysis, setShowNewAnalysis] = useState(false);
+
+  // ✅ NOVA FUNÇÃO: Verificar se já existe análise
+  const checkExistingAnalysis = async () => {
+    try {
+      setLoadingExisting(true);
+      
+      const { data, error } = await supabase
+        .from('controle_indicador')
+        .select('resultado_analise, prompt_utilizado, prompt_id')
+        .eq('id', controleIndicadorId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao verificar análise existente:', error);
+        return;
+      }
+
+      // Verificar se todos os campos estão preenchidos
+      if (data && data.resultado_analise && data.prompt_utilizado && data.prompt_id) {
+        setExistingAnalysis(data);
+        console.log('Análise existente encontrada:', data);
+      } else {
+        console.log('Nenhuma análise existente encontrada');
+        setShowNewAnalysis(true); // Mostrar interface de nova análise
+      }
+    } catch (error) {
+      console.error('Erro ao verificar análise existente:', error);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Iniciar nova análise
+  const startNewAnalysis = () => {
+    setShowNewAnalysis(true);
+    setExistingAnalysis(null);
+    setResult(null);
+  };
+
+  // ✅ NOVO: Verificar análise existente ao abrir o modal
+  useEffect(() => {
+    checkExistingAnalysis();
+  }, [controleIndicadorId]);
 
   // Verificar se existe uma chave configurada
   useEffect(() => {
@@ -42,7 +90,7 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
     verificarChave();
   }, []);
 
-  // Buscar prompts disponíveis para indicadores
+  // Buscar prompts disponíveis para indicadores - APENAS quando necessário
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
@@ -77,8 +125,11 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
       }
     };
 
-    fetchPrompts();
-  }, []);
+    // Só buscar prompts se precisar mostrar a interface de nova análise
+    if (showNewAnalysis) {
+      fetchPrompts();
+    }
+  }, [showNewAnalysis]);
 
   // Função para formatar os dados da tabela para envio
   const formatTableData = () => {
@@ -206,7 +257,55 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
         </div>
         
         {/* Verificação e carregamento */}
-        {checkingKey ? (
+        {loadingExisting ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+            <span>Verificando análises anteriores...</span>
+          </div>
+        ) : existingAnalysis && !showNewAnalysis ? (
+          // ✅ MOSTRAR ANÁLISE EXISTENTE
+          <div className="space-y-6">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">📊 Análise Anterior Encontrada</h3>
+              <p className="text-blue-700 text-sm">
+                Encontramos uma análise anterior para este indicador. Você pode visualizar o resultado ou gerar uma nova análise.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Resultado da Análise Anterior</h3>
+              <div className="prose max-w-none">
+                <pre className="whitespace-pre-wrap bg-white p-4 rounded border text-sm text-gray-900 leading-relaxed max-h-80 overflow-y-auto">
+                  {existingAnalysis.resultado_analise}
+                </pre>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Prompt Utilizado</h3>
+              <div className="prose max-w-none">
+                <pre className="whitespace-pre-wrap bg-white p-4 rounded border text-sm text-gray-900 leading-relaxed max-h-40 overflow-y-auto">
+                  {existingAnalysis.prompt_utilizado}
+                </pre>
+              </div>
+            </div>
+            
+            <div className="flex justify-between space-x-4">
+              <button
+                onClick={startNewAnalysis}
+                className="py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                🔄 Nova Análise
+              </button>
+              <button
+                onClick={onClose}
+                className="py-2 px-4 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        ) : checkingKey ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
             <span>Verificando configuração da API...</span>
@@ -304,6 +403,12 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
             </div>
             
             <div className="flex justify-end space-x-4">
+              <button
+                onClick={startNewAnalysis}
+                className="py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                🔄 Nova Análise
+              </button>
               <button
                 onClick={onClose}
                 className="py-2 px-4 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
