@@ -1,13 +1,41 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+from datetime import datetime, timezone
 from supabase import create_client, Client
 from urllib.parse import parse_qs
 
 # Configuração do cliente Supabase
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 supabase_key = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
+
+def registrar_login(user_id):
+    """
+    Registra o login do usuário na tabela log_logins
+    """
+    try:
+        # Criar cliente com chave de serviço para inserção
+        service_supabase = create_client(supabase_url, supabase_service_key)
+        
+        # Obter data/hora atual com timezone UTC
+        data_login = datetime.now(timezone.utc).isoformat()
+        
+        # Inserir log de login
+        result = service_supabase.table('log_logins').insert({
+            'usuario_id': user_id,
+            'data_login': data_login
+        }).execute()
+        
+        if result.error:
+            print(f"Erro ao registrar login: {result.error}")
+        else:
+            print(f"Login registrado com sucesso para usuário {user_id} em {data_login}")
+            
+    except Exception as e:
+        print(f"Erro ao registrar login: {str(e)}")
+        # Não interromper o processo de login se houver erro no log
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -94,6 +122,10 @@ class handler(BaseHTTPRequestHandler):
                 "email": email,
                 "password": password
             })
+            
+            # ✅ NOVO: Registrar o login após autenticação bem-sucedida
+            if response.user and response.user.id:
+                registrar_login(response.user.id)
             
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
