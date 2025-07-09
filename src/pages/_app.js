@@ -10,37 +10,7 @@ function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userActive, setUserActive] = useState(true);
-  const [loginRegistered, setLoginRegistered] = useState(false); // Para evitar múltiplos registros
   const router = useRouter();
-
-  // Função para registrar login automático (sessão existente)
-  const registrarLoginAutomatico = async (userId) => {
-    if (loginRegistered) return; // Evitar múltiplos registros na mesma sessão
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) return;
-      
-      const response = await fetch('/api/auth/register-auto-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          usuario_id: userId
-        })
-      });
-      
-      if (response.ok) {
-        console.log('Login automático registrado');
-        setLoginRegistered(true);
-      }
-    } catch (error) {
-      console.error('Erro ao registrar login automático:', error);
-    }
-  };
 
   useEffect(() => {
     // Verificar se o usuário está autenticado
@@ -55,9 +25,6 @@ function MyApp({ Component, pageProps }) {
           
           if (active) {
             setUser(session.user);
-            
-            // ✅ NOVO: Registrar login automático para sessões existentes
-            await registrarLoginAutomatico(session.user.id);
           } else {
             // Se não estiver ativo, redirecionar para página de acesso negado
             if (router.pathname !== '/acesso-negado') {
@@ -137,9 +104,7 @@ function MyApp({ Component, pageProps }) {
     // Configurar listener para mudanças de autenticação
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event);
-      
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         // Verificar se o usuário está ativo
         const active = await isUserActive(session.user.id);
@@ -147,12 +112,6 @@ function MyApp({ Component, pageProps }) {
         
         if (active) {
           setUser(session.user);
-          
-          // ✅ NOVO: Registrar login para novos logins (não automáticos)
-          if (event === 'SIGNED_IN') {
-            console.log('Novo login detectado via onAuthStateChange');
-            setLoginRegistered(false); // Reset para permitir novo registro
-          }
         } else {
           // Se não estiver ativo, redirecionar para página de acesso negado
           if (router.pathname !== '/acesso-negado') {
@@ -163,7 +122,6 @@ function MyApp({ Component, pageProps }) {
       } else {
         setUser(null);
         setUserActive(true); // Reset para não mostrar mensagem quando não há usuário
-        setLoginRegistered(false); // Reset quando sair
       }
     });
     
