@@ -145,7 +145,7 @@ const HistoricoAnalisesIndicadorDialog = ({ indicadorId, onClose }) => {
                                     {formatDate(analise.data_analise)}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    ID: {analise.id?.substring(0, 8)}...
+                                    ID: {analise.id ? String(analise.id).substring(0, 8) + '...' : 'N/A'}
                                   </div>
                                 </div>
                               </div>
@@ -192,7 +192,7 @@ const HistoricoAnalisesIndicadorDialog = ({ indicadorId, onClose }) => {
                         <strong>Prévia:</strong> {getPreview(analise.resultado_analise)}
                       </div>
                       <div className="text-xs text-gray-500 mt-2">
-                        ID: {analise.id?.substring(0, 8)}...
+                        ID: {analise.id ? String(analise.id).substring(0, 8) + '...' : 'N/A'}
                       </div>
                     </div>
                   ))}
