@@ -47,12 +47,26 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, onClose, onAnalysisCompl
     const fetchPrompts = async () => {
       try {
         setFetchingPrompts(true);
-        const { data, error } = await supabase
+        
+        // Primeiro tentar buscar na tabela 1s
+        let { data, error } = await supabase
           .from('prompts_indicadores')
           .select('*')
           .order('nome_prompt', { ascending: true });
 
-        if (error) throw error;
+        // Se a tabela não existir, tentar na tabela prompts
+        if (error && error.code === '42P01') {
+          console.log('Tabela prompts_indicadores não encontrada, usando tabela prompts');
+          const fallbackResponse = await supabase
+            .from('prompts')
+            .select('*')
+            .order('nome_prompt', { ascending: true });
+          
+          if (fallbackResponse.error) throw fallbackResponse.error;
+          data = fallbackResponse.data;
+        } else if (error) {
+          throw error;
+        }
         
         setPrompts(data || []);
       } catch (error) {
@@ -141,8 +155,8 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, onClose, onAnalysisCompl
       // Formatar os dados da tabela
       const tableData = formatTableData();
       
-      // Chamar a API de análise múltipla (reutilizando a API existente)
-      const response = await fetch('/api/analyze_multiple', {
+      // Chamar a API de análise específica para indicadores
+      const response = await fetch('/api/analyze_indicators', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
