@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+from datetime import datetime
 from supabase import create_client, Client
 import google.generativeai as genai
 
@@ -138,7 +139,11 @@ class handler(BaseHTTPRequestHandler):
                 
                 print(f"Resposta do Gemini recebida - Tamanho: {len(resultado)} caracteres")
                 
-                # ✅ NOVO: Salvar os dados na tabela controle_indicador
+                # Obter timestamp atual para ambas as operações
+                agora = datetime.now().isoformat()
+                
+                # ✅ SALVAR os dados na tabela controle_indicador (mantém funcionamento original)
+                controle_salvo = False
                 try:
                     update_response = service_supabase.table('controle_indicador').update({
                         'resultado_analise': resultado,
@@ -148,22 +153,44 @@ class handler(BaseHTTPRequestHandler):
                     
                     if update_response.error:
                         print(f"Erro ao atualizar controle_indicador: {update_response.error}")
-                        # Não falhar a requisição por causa disso, apenas logar
                     else:
                         print(f"Dados salvos com sucesso na tabela controle_indicador (ID: {controle_indicador_id})")
+                        controle_salvo = True
                 
                 except Exception as save_error:
                     print(f"Erro ao salvar na tabela controle_indicador: {str(save_error)}")
-                    # Não falhar a requisição por causa disso, apenas logar
                 
-                # Responder com sucesso
+                # ✅ NOVO: SEMPRE salvar no histórico de análises (nova linha a cada análise)
+                historico_salvo = False
+                try:
+                    historico_response = service_supabase.table('historico_analises_indicador').insert({
+                        'indicador_id': controle_indicador_id,     # Referência ao controle_indicador
+                        'resultado_analise': resultado,             # Resultado da IA
+                        'prompt_utilizado': prompt_completo,        # Prompt completo usado
+                        'data_analise': agora,                      # Data/hora da análise
+                        'created_at': agora,                        # Timestamp de criação
+                        'updated_at': agora                         # Timestamp de atualização
+                    }).execute()
+                    
+                    if historico_response.error:
+                        print(f"Erro ao salvar no histórico de análises: {historico_response.error}")
+                    else:
+                        print(f"Análise salva no histórico com sucesso (Indicador ID: {controle_indicador_id})")
+                        historico_salvo = True
+                        
+                except Exception as historico_error:
+                    print(f"Erro ao salvar no histórico de análises: {str(historico_error)}")
+                
+                # Responder com sucesso, indicando o status de ambas as operações
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "success": True,
                     "resultado": resultado,
-                    "saved_to_db": True
+                    "saved_to_controle": controle_salvo,        # Status do salvamento principal
+                    "saved_to_history": historico_salvo,       # Status do salvamento no histórico
+                    "timestamp": agora                          # Timestamp da operação
                 }).encode())
                 
             except Exception as api_error:
