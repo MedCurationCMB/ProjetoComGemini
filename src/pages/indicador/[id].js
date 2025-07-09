@@ -1860,6 +1860,22 @@ export default function IndicadorDetalhe({ user }) {
             </button>
           </div>
 
+          {/* ✅ NOVO: Botão Análise IA - Mobile (após Marcar como Lido) */}
+          <div className="mt-4">
+            <button
+              onClick={() => setShowAnalysisDialog(true)}
+              disabled={indicadores.length === 0}
+              className={`w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors ${
+                indicadores.length === 0
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+            >
+              <FiCpu className="mr-2" />
+              {indicadores.length === 0 ? 'Análise IA (sem dados)' : 'Análise com IA'}
+            </button>
+          </div>
+
           {/* Botão Voltar para Início */}
           <div className="mt-6">
             <button
@@ -1914,20 +1930,6 @@ export default function IndicadorDetalhe({ user }) {
               <FiArchive className={`h-4 w-4 ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
               <span className={`text-xs font-medium ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
                 Arquivar
-              </span>
-            </button>
-
-            {/* ✅ NOVO: Botão Análise IA - Mobile */}
-            <button
-              onClick={() => setShowAnalysisDialog(true)}
-              disabled={indicadores.length === 0}
-              className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
-                indicadores.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <FiCpu className="h-4 w-4 text-gray-400" />
-              <span className="text-xs font-medium text-gray-400">
-                Análise IA
               </span>
             </button>
           </div>
@@ -2126,18 +2128,6 @@ export default function IndicadorDetalhe({ user }) {
                   <FiArchive className="w-4 h-4" />
                   <span className="font-medium">Arquivar</span>
                 </button>
-
-                {/* ✅ NOVO: Botão Análise IA - Desktop */}
-                <button
-                  onClick={() => setShowAnalysisDialog(true)}
-                  disabled={indicadores.length === 0}
-                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                    indicadores.length === 0 ? 'opacity-50 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <FiCpu className="w-4 h-4" />
-                  <span className="font-medium">Análise IA</span>
-                </button>
               </div>
             </div>
           </div>
@@ -2267,8 +2257,21 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
-          {/* Botão Marcar como Lido - Desktop */}
-          <div className="mt-6 flex justify-end">
+          {/* ✅ MODIFICADO: Botões Marcar como Lido + Análise IA - Desktop */}
+          <div className="mt-6 flex justify-end space-x-4">
+            <button
+              onClick={() => setShowAnalysisDialog(true)}
+              disabled={indicadores.length === 0}
+              className={`px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm ${
+                indicadores.length === 0
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+            >
+              <FiCpu className="mr-2 h-4 w-4" />
+              {indicadores.length === 0 ? 'Análise IA (sem dados)' : 'Análise com IA'}
+            </button>
+            
             <button
               onClick={toggleLidoTodos}
               disabled={marcandoComoLido}
