@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo, FiCpu } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo, FiCpu, FiBookOpen } from 'react-icons/fi';
 import { 
   ComposedChart, 
   Bar, 
@@ -17,6 +17,7 @@ import {
   Tooltip
 } from 'recharts';
 import GeminiIndicatorAnalysisDialog from '../../components/GeminiIndicatorAnalysisDialog';
+import HistoricoAnalisesIndicadorDialog from '../../components/HistoricoAnalisesIndicadorDialog';
 
 // ✅ NOVA CONFIGURAÇÃO: Definir limites máximos
 const MAX_CHART_WIDTH = {
@@ -74,6 +75,7 @@ export default function IndicadorDetalhe({ user }) {
 
   // ✅ NOVO ESTADO PARA ANÁLISE DE IA
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO
@@ -1573,6 +1575,14 @@ export default function IndicadorDetalhe({ user }) {
         />
       )}
 
+      {/* ✅ NOVO: Modal para histórico de análises */}
+      {showHistoricoDialog && (
+        <HistoricoAnalisesIndicadorDialog 
+          indicadorId={id}
+          onClose={() => setShowHistoricoDialog(false)}
+        />
+      )}
+
       {/* MOBILE: Layout com tabela */}
       <div className="lg:hidden pb-20">
         {/* Header fixo com título - Mobile */}
@@ -1860,8 +1870,9 @@ export default function IndicadorDetalhe({ user }) {
             </button>
           </div>
 
-          {/* ✅ NOVO: Botão Análise IA - Mobile (após Marcar como Lido) */}
-          <div className="mt-4">
+          {/* ✅ BOTÕES: Análise IA + Histórico - Mobile */}
+          <div className="mt-4 space-y-3">
+            {/* Botão Análise IA */}
             <button
               onClick={() => setShowAnalysisDialog(true)}
               disabled={indicadores.length === 0}
@@ -1873,6 +1884,15 @@ export default function IndicadorDetalhe({ user }) {
             >
               <FiCpu className="mr-2" />
               {indicadores.length === 0 ? 'Análise IA (sem dados)' : 'Análise com IA'}
+            </button>
+
+            {/* ✅ NOVO: Botão Histórico de Análises */}
+            <button
+              onClick={() => setShowHistoricoDialog(true)}
+              className="w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors bg-green-600 text-white hover:bg-green-700"
+            >
+              <FiBookOpen className="mr-2" />
+              Histórico de Análises
             </button>
           </div>
 
@@ -2257,8 +2277,16 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
-          {/* ✅ MODIFICADO: Botões Marcar como Lido + Análise IA - Desktop */}
+          {/* ✅ BOTÕES: Histórico + Análise IA + Marcar como Lido - Desktop */}
           <div className="mt-6 flex justify-end space-x-4">
+            <button
+              onClick={() => setShowHistoricoDialog(true)}
+              className="px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm bg-green-600 text-white hover:bg-green-700"
+            >
+              <FiBookOpen className="mr-2 h-4 w-4" />
+              Histórico de Análises
+            </button>
+            
             <button
               onClick={() => setShowAnalysisDialog(true)}
               disabled={indicadores.length === 0}
