@@ -357,18 +357,8 @@ export default function VisualizacaoIndicadores({ user }) {
 
     return (
       <div className="mb-3">
-        {/* ✅ NOVA LEGENDA FIXA - igual à página indicador */}
-        <div className={`${isMobile ? 'mb-2' : 'mb-3'} flex justify-center space-x-4`}>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
-            <span className="text-xs text-gray-600">Realizado</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-gray-500 rounded mr-2"></div>
-            <span className="text-xs text-gray-600">Meta</span>
-          </div>
-        </div>
-
+        {/* ❌ REMOVIDO: Legenda fixa */}
+        
         {/* Container com scroll condicional usando a mesma lógica da página indicador */}
         <ScrollableChartContainer dataLength={dataLength} isMobile={isMobile}>
           <div style={{ height: altura }}>
@@ -419,16 +409,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   />
                 </Bar>
                 
-                {/* ✅ LINHA PARA META */}
-                <Line 
-                  type="monotone" 
-                  dataKey="metaApresentado" 
-                  stroke="#6B7280" 
-                  strokeWidth={isMobile ? 2 : 3}
-                  dot={{ fill: '#6B7280', strokeWidth: 2, r: isMobile ? 3 : 4 }}
-                  name="Meta"
-                  connectNulls={true}
-                />
+                {/* ❌ REMOVIDO: Linha para Meta */}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
