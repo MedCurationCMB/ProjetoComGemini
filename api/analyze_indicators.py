@@ -22,13 +22,14 @@ class handler(BaseHTTPRequestHandler):
             # Extrai os dados necessários
             prompt_id = data.get('prompt_id')  # UUID como string
             text_to_analyze = data.get('text_to_analyze')  # Texto combinado dos indicadores
+            controle_indicador_id = data.get('controle_indicador_id')  # ID do controle indicador
             
             # Valida os campos necessários
-            if not prompt_id or not text_to_analyze:
+            if not prompt_id or not text_to_analyze or not controle_indicador_id:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos"}).encode())
+                self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos (prompt_id, text_to_analyze, controle_indicador_id)"}).encode())
                 return
             
             # Verificar se o usuário está autenticado através do token JWT
@@ -137,13 +138,32 @@ class handler(BaseHTTPRequestHandler):
                 
                 print(f"Resposta do Gemini recebida - Tamanho: {len(resultado)} caracteres")
                 
+                # ✅ NOVO: Salvar os dados na tabela controle_indicador
+                try:
+                    update_response = service_supabase.table('controle_indicador').update({
+                        'resultado_analise': resultado,
+                        'prompt_id': prompt_id,
+                        'prompt_utilizado': prompt_completo
+                    }).eq('id', controle_indicador_id).execute()
+                    
+                    if update_response.error:
+                        print(f"Erro ao atualizar controle_indicador: {update_response.error}")
+                        # Não falhar a requisição por causa disso, apenas logar
+                    else:
+                        print(f"Dados salvos com sucesso na tabela controle_indicador (ID: {controle_indicador_id})")
+                
+                except Exception as save_error:
+                    print(f"Erro ao salvar na tabela controle_indicador: {str(save_error)}")
+                    # Não falhar a requisição por causa disso, apenas logar
+                
                 # Responder com sucesso
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "success": True,
-                    "resultado": resultado
+                    "resultado": resultado,
+                    "saved_to_db": True
                 }).encode())
                 
             except Exception as api_error:

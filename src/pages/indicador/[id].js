@@ -1567,6 +1567,7 @@ export default function IndicadorDetalhe({ user }) {
       {showAnalysisDialog && (
         <GeminiIndicatorAnalysisDialog 
           indicadorData={indicadores}
+          controleIndicadorId={id}
           onClose={() => setShowAnalysisDialog(false)}
           onAnalysisComplete={handleAnalysisComplete}
         />

@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
 import { FiAward, FiZap, FiCpu } from 'react-icons/fi';
 
-const GeminiIndicatorAnalysisDialog = ({ indicadorData, onClose, onAnalysisComplete }) => {
+const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onClose, onAnalysisComplete }) => {
   const [prompts, setPrompts] = useState([]);
   const [selectedPromptId, setSelectedPromptId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, onClose, onAnalysisCompl
       try {
         setFetchingPrompts(true);
         
-        // Primeiro tentar buscar na tabela 1s
+        // Primeiro tentar buscar na tabela prompts_indicadores
         let { data, error } = await supabase
           .from('prompts_indicadores')
           .select('*')
@@ -164,7 +164,8 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, onClose, onAnalysisCompl
         },
         body: JSON.stringify({
           prompt_id: selectedPromptId,
-          text_to_analyze: tableData
+          text_to_analyze: tableData,
+          controle_indicador_id: controleIndicadorId
         })
       });
       
