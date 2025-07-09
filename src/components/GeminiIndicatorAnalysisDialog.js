@@ -297,7 +297,7 @@ const GeminiIndicatorAnalysisDialog = ({ indicadorData, controleIndicadorId, onC
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Resultado da Análise</h3>
               <div className="prose max-w-none">
-                <pre className="whitespace-pre-wrap bg-white p-4 rounded border text-sm">
+                <pre className="whitespace-pre-wrap bg-white p-4 rounded border text-sm text-gray-900 leading-relaxed">
                   {result}
                 </pre>
               </div>
