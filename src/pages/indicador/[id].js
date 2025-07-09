@@ -1,11 +1,11 @@
 // Arquivo: src/pages/indicador/[id].js
-import { useState, useEffect, useRef, useMemo } from 'react'; // ✅ ADICIONADO useRef
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo } from 'react-icons/fi';
+import { FiChevronLeft, FiStar, FiClock, FiArchive, FiHome, FiCalendar, FiArrowLeft, FiFilter, FiX, FiChevronDown, FiChevronUp, FiSettings, FiInfo, FiCpu } from 'react-icons/fi';
 import { 
   ComposedChart, 
   Bar, 
@@ -16,6 +16,7 @@ import {
   Legend,
   Tooltip
 } from 'recharts';
+import GeminiIndicatorAnalysisDialog from '../../components/GeminiIndicatorAnalysisDialog';
 
 // ✅ NOVA CONFIGURAÇÃO: Definir limites máximos
 const MAX_CHART_WIDTH = {
@@ -70,6 +71,9 @@ export default function IndicadorDetalhe({ user }) {
   const [showConfiguracoes, setShowConfiguracoes] = useState(false);
   const [atualizandoConfiguracao, setAtualizandoConfiguracao] = useState(false);
   const [indicadorBaseId, setIndicadorBaseId] = useState(null); // Para armazenar o ID do controle_indicador
+
+  // ✅ NOVO ESTADO PARA ANÁLISE DE IA
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO
@@ -220,8 +224,6 @@ export default function IndicadorDetalhe({ user }) {
             {children}
           </div>
         </div>
-        
-        {/* ✅ REMOVIDO: Indicador de scroll desnecessário */}
       </div>
     );
   };
@@ -359,6 +361,12 @@ export default function IndicadorDetalhe({ user }) {
       minimumFractionDigits: 0, 
       maximumFractionDigits: 2 
     });
+  };
+
+  // ✅ NOVA FUNÇÃO: Função para lidar com a conclusão da análise
+  const handleAnalysisComplete = (resultado) => {
+    console.log('Análise de indicadores concluída:', resultado);
+    toast.success('Análise de indicadores concluída com sucesso!');
   };
 
   // ✅ NOVA FUNÇÃO: Carregar configurações do indicador
@@ -1555,6 +1563,15 @@ export default function IndicadorDetalhe({ user }) {
         </div>
       )}
 
+      {/* ✅ NOVO MODAL: Modal para análise de IA */}
+      {showAnalysisDialog && (
+        <GeminiIndicatorAnalysisDialog 
+          indicadorData={indicadores}
+          onClose={() => setShowAnalysisDialog(false)}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
+
       {/* MOBILE: Layout com tabela */}
       <div className="lg:hidden pb-20">
         {/* Header fixo com título - Mobile */}
@@ -1854,18 +1871,18 @@ export default function IndicadorDetalhe({ user }) {
           </div>
         </div>
 
-        {/* Barra fixa inferior com botões de ação - Mobile */}
+        {/* ✅ MODIFICADO: Barra fixa inferior com botões de ação - Mobile */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
-          <div className="max-w-md mx-auto flex justify-center space-x-8">
+          <div className="max-w-md mx-auto flex justify-center space-x-6">
             {/* Botão Importante */}
             <button
               onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
               disabled={atualizandoStatus}
-              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
               }`}
             >
-              <FiStar className={`h-5 w-5 ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`} />
+              <FiStar className={`h-4 w-4 ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`} />
               <span className={`text-xs font-medium ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`}>
                 Importante
               </span>
@@ -1875,11 +1892,11 @@ export default function IndicadorDetalhe({ user }) {
             <button
               onClick={() => alternarStatusTodos('ler_depois', statusGeral.ler_depois)}
               disabled={atualizandoStatus}
-              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
               }`}
             >
-              <FiClock className={`h-5 w-5 ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
+              <FiClock className={`h-4 w-4 ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`} />
               <span className={`text-xs font-medium ${statusGeral.ler_depois ? 'text-blue-600' : 'text-gray-400'}`}>
                 Ler Depois
               </span>
@@ -1889,13 +1906,27 @@ export default function IndicadorDetalhe({ user }) {
             <button
               onClick={() => alternarStatusTodos('arquivado', statusGeral.arquivado)}
               disabled={atualizandoStatus}
-              className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
               }`}
             >
-              <FiArchive className={`h-5 w-5 ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
+              <FiArchive className={`h-4 w-4 ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
               <span className={`text-xs font-medium ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
                 Arquivar
+              </span>
+            </button>
+
+            {/* ✅ NOVO: Botão Análise IA - Mobile */}
+            <button
+              onClick={() => setShowAnalysisDialog(true)}
+              disabled={indicadores.length === 0}
+              className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
+                indicadores.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <FiCpu className="h-4 w-4 text-gray-400" />
+              <span className="text-xs font-medium text-gray-400">
+                Análise IA
               </span>
             </button>
           </div>
@@ -2043,7 +2074,7 @@ export default function IndicadorDetalhe({ user }) {
               </div>
             )}
             
-            {/* Segunda linha - APENAS botões de ação */}
+            {/* ✅ MODIFICADO: Segunda linha - APENAS botões de ação */}
             <div className="flex items-center justify-end">
               {/* Botões de ação */}
               <div className="flex space-x-3">
@@ -2093,6 +2124,18 @@ export default function IndicadorDetalhe({ user }) {
                 >
                   <FiArchive className="w-4 h-4" />
                   <span className="font-medium">Arquivar</span>
+                </button>
+
+                {/* ✅ NOVO: Botão Análise IA - Desktop */}
+                <button
+                  onClick={() => setShowAnalysisDialog(true)}
+                  disabled={indicadores.length === 0}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                    indicadores.length === 0 ? 'opacity-50 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <FiCpu className="w-4 h-4" />
+                  <span className="font-medium">Análise IA</span>
                 </button>
               </div>
             </div>
