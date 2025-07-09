@@ -138,7 +138,7 @@ class handler(BaseHTTPRequestHandler):
                 
                 print(f"Resposta do Gemini recebida - Tamanho: {len(resultado)} caracteres")
                 
-                # ✅ ATUALIZAR: Salvar os dados na tabela controle_indicador
+                # ✅ NOVO: Salvar os dados na tabela controle_indicador
                 try:
                     update_response = service_supabase.table('controle_indicador').update({
                         'resultado_analise': resultado,
@@ -156,24 +156,6 @@ class handler(BaseHTTPRequestHandler):
                     print(f"Erro ao salvar na tabela controle_indicador: {str(save_error)}")
                     # Não falhar a requisição por causa disso, apenas logar
                 
-                # ✅ NOVO: Salvar no histórico de análises
-                try:
-                    historico_response = service_supabase.table('historico_analises_indicador').insert({
-                        'indicador_id': controle_indicador_id,
-                        'resultado_analise': resultado,
-                        'prompt_utilizado': prompt_completo
-                    }).execute()
-                    
-                    if historico_response.error:
-                        print(f"Erro ao salvar no histórico: {historico_response.error}")
-                        # Não falhar a requisição por causa disso, apenas logar
-                    else:
-                        print(f"Análise salva no histórico com sucesso")
-                
-                except Exception as historico_error:
-                    print(f"Erro ao salvar no histórico: {str(historico_error)}")
-                    # Não falhar a requisição por causa disso, apenas logar
-                
                 # Responder com sucesso
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -181,8 +163,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({
                     "success": True,
                     "resultado": resultado,
-                    "saved_to_db": True,
-                    "saved_to_history": True
+                    "saved_to_db": True
                 }).encode())
                 
             except Exception as api_error:
