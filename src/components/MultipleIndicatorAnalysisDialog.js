@@ -274,8 +274,8 @@ const MultipleIndicatorAnalysisDialog = ({
       
       console.log('Dados para análise:', textToAnalyze.substring(0, 200) + '...');
       
-      // Chamar a API de análise múltipla
-      const response = await fetch('/api/analyze_multiple', {
+      // ✅ ATUALIZADO: Chamar a nova API analyze_multiple_indicators
+      const response = await fetch('/api/analyze_multiple_indicators', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
