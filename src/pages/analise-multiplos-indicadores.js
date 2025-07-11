@@ -397,7 +397,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                         setShowMenu(false);
                         handleAnalisesIndicadoresClick();
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center bg-blue-50 text-blue-700"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiCpu className="mr-3 h-4 w-4" />
                       Análises Indicadores
@@ -611,7 +611,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                           setShowMenu(false);
                           handleAnalisesIndicadoresClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center bg-blue-50 text-blue-700"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
                         <FiCpu className="mr-3 h-4 w-4" />
                         Análises Indicadores
