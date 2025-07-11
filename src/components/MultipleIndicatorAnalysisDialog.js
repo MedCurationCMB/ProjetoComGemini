@@ -80,9 +80,31 @@ const MultipleIndicatorAnalysisDialog = ({
         }
         
         setPrompts(data || []);
+        
+        // Debug: Log dos prompts encontrados
+        console.log('Prompts carregados para análise múltipla:', data);
+        
       } catch (error) {
         console.error('Erro ao carregar prompts:', error);
         toast.error('Não foi possível carregar os prompts disponíveis');
+        
+        // Tentar buscar prompts da tabela principal como fallback
+        try {
+          console.log('Tentando fallback para tabela prompts...');
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('prompts')
+            .select('*')
+            .order('nome_prompt', { ascending: true });
+            
+          if (fallbackError) throw fallbackError;
+          
+          setPrompts(fallbackData || []);
+          console.log('Prompts carregados via fallback:', fallbackData);
+          
+        } catch (fallbackError) {
+          console.error('Erro no fallback de prompts:', fallbackError);
+          toast.error('Erro crítico: Não foi possível carregar nenhum prompt');
+        }
       } finally {
         setFetchingPrompts(false);
       }
@@ -227,6 +249,18 @@ const MultipleIndicatorAnalysisDialog = ({
     try {
       setLoading(true);
       
+      // Debug: Log do prompt selecionado
+      console.log('Prompt selecionado:', selectedPromptId);
+      console.log('Prompts disponíveis:', prompts);
+      
+      // Verificar se o prompt selecionado existe
+      const promptSelecionado = prompts.find(p => p.id === selectedPromptId);
+      if (!promptSelecionado) {
+        throw new Error(`Prompt com ID ${selectedPromptId} não encontrado na lista de prompts disponíveis`);
+      }
+      
+      console.log('Dados do prompt selecionado:', promptSelecionado);
+      
       // Obter o token de acesso do usuário atual
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -237,6 +271,8 @@ const MultipleIndicatorAnalysisDialog = ({
 
       // Formatar os dados para análise
       const textToAnalyze = formatarDadosParaIA(dadosIndicadores);
+      
+      console.log('Dados para análise:', textToAnalyze.substring(0, 200) + '...');
       
       // Chamar a API de análise múltipla
       const response = await fetch('/api/analyze_multiple', {
@@ -252,6 +288,8 @@ const MultipleIndicatorAnalysisDialog = ({
       });
       
       const data = await response.json();
+      
+      console.log('Resposta da API:', data);
       
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar análise');
