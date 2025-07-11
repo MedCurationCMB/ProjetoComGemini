@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
-import { FiAward, FiZap, FiCpu, FiX, FiEye, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiAward, FiZap, FiCpu, FiX, FiEye, FiChevronDown, FiChevronUp, FiSave, FiCheckCircle } from 'react-icons/fi';
 
 const MultipleIndicatorAnalysisDialog = ({ 
   indicadoresSelecionados = [], 
@@ -22,6 +22,10 @@ const MultipleIndicatorAnalysisDialog = ({
   const [dadosIndicadores, setDadosIndicadores] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [previewText, setPreviewText] = useState('');
+
+  // ✅ NOVOS ESTADOS para salvamento
+  const [analiseInfo, setAnaliseInfo] = useState(null); // Info sobre salvamento
+  const [indicadoresInfo, setIndicadoresInfo] = useState([]); // Info para enviar para API
 
   // Verificar se existe uma chave configurada
   useEffect(() => {
@@ -131,6 +135,13 @@ const MultipleIndicatorAnalysisDialog = ({
           .in('id', indicadoresSelecionados);
 
         if (errorInfo) throw errorInfo;
+
+        // ✅ NOVO: Preparar informações dos indicadores para envio
+        const indicadoresInfoArray = infoIndicadores.map(info => ({
+          id: info.id,
+          nome: info.indicador
+        }));
+        setIndicadoresInfo(indicadoresInfoArray);
 
         // Depois buscar todos os dados detalhados
         const { data: dadosDetalhados, error: errorDetalhes } = await supabase
@@ -273,8 +284,9 @@ const MultipleIndicatorAnalysisDialog = ({
       const textToAnalyze = formatarDadosParaIA(dadosIndicadores);
       
       console.log('Dados para análise:', textToAnalyze.substring(0, 200) + '...');
+      console.log('Informações dos indicadores:', indicadoresInfo);
       
-      // ✅ ATUALIZADO: Chamar a nova API analyze_multiple_indicators
+      // ✅ ATUALIZADO: Chamar a nova API com informações dos indicadores
       const response = await fetch('/api/analyze_multiple_indicators', {
         method: 'POST',
         headers: {
@@ -283,7 +295,8 @@ const MultipleIndicatorAnalysisDialog = ({
         },
         body: JSON.stringify({
           prompt_id: selectedPromptId,
-          text_to_analyze: textToAnalyze
+          text_to_analyze: textToAnalyze,
+          indicadores_info: indicadoresInfo // ✅ NOVO: Enviar info dos indicadores
         })
       });
       
@@ -297,11 +310,24 @@ const MultipleIndicatorAnalysisDialog = ({
       
       setResult(data.resultado);
       
+      // ✅ NOVO: Armazenar informações sobre o salvamento
+      setAnaliseInfo({
+        salva: data.analise_salva,
+        id: data.analise_id,
+        indicadores_analisados: data.indicadores_analisados,
+        timestamp: data.timestamp
+      });
+      
       if (onAnalysisComplete) {
         onAnalysisComplete(data.resultado);
       }
       
-      toast.success('Análise comparativa concluída com sucesso!');
+      // ✅ MENSAGEM MELHORADA: Incluir info sobre salvamento
+      if (data.analise_salva) {
+        toast.success('✅ Análise comparativa concluída e salva no histórico!');
+      } else {
+        toast.success('⚠️ Análise concluída, mas não foi possível salvar no histórico');
+      }
     } catch (error) {
       console.error('Erro na análise:', error);
       toast.error(error.message || 'Erro ao processar análise');
@@ -313,6 +339,7 @@ const MultipleIndicatorAnalysisDialog = ({
   // Função para nova análise
   const startNewAnalysis = () => {
     setResult(null);
+    setAnaliseInfo(null);
   };
 
   return (
@@ -361,7 +388,7 @@ const MultipleIndicatorAnalysisDialog = ({
                   📊 Indicadores Selecionados para Análise
                 </h3>
                 <p className="text-blue-700 text-sm mb-3">
-                  {dadosIndicadores.length} indicadores serão analisados comparativamente:
+                  {dadosIndicadores.length} indicadores serão analisados comparativamente e <strong>salvos no histórico</strong>:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {dadosIndicadores.map((indicador, index) => (
@@ -437,6 +464,17 @@ const MultipleIndicatorAnalysisDialog = ({
                 )}
               </div>
               
+              {/* ✅ NOVO: Aviso sobre salvamento */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="flex items-center">
+                  <FiSave className="w-5 h-5 text-green-600 mr-2" />
+                  <h4 className="text-sm font-medium text-green-800">Salvamento Automático</h4>
+                </div>
+                <p className="text-sm text-green-700 mt-1">
+                  Esta análise comparativa será automaticamente salva no seu histórico pessoal para consultas futuras.
+                </p>
+              </div>
+              
               {/* Botão de análise */}
               <div className="pt-4">
                 <button
@@ -467,22 +505,68 @@ const MultipleIndicatorAnalysisDialog = ({
           {/* Resultado da análise */}
           {result && (
             <div className="space-y-6">
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h3 className="text-lg font-medium text-green-900 mb-2">
-                  ✅ Análise Comparativa Concluída
-                </h3>
-                <p className="text-green-700 text-sm">
-                  A análise dos {dadosIndicadores.length} indicadores foi concluída com sucesso!
-                </p>
-              </div>
+              {/* ✅ NOVO: Status do salvamento */}
+              {analiseInfo && (
+                <div className={`p-4 rounded-lg border ${
+                  analiseInfo.salva 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-center">
+                    {analiseInfo.salva ? (
+                      <FiCheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    ) : (
+                      <FiX className="w-5 h-5 text-yellow-600 mr-2" />
+                    )}
+                    <h3 className={`text-lg font-medium ${
+                      analiseInfo.salva ? 'text-green-900' : 'text-yellow-900'
+                    }`}>
+                      {analiseInfo.salva 
+                        ? '✅ Análise Comparativa Salva com Sucesso!' 
+                        : '⚠️ Análise Concluída (Erro no Salvamento)'
+                      }
+                    </h3>
+                  </div>
+                  <div className={`text-sm mt-1 ${
+                    analiseInfo.salva ? 'text-green-700' : 'text-yellow-700'
+                  }`}>
+                    {analiseInfo.salva ? (
+                      <>
+                        <p>A análise de <strong>{analiseInfo.indicadores_analisados} indicadores</strong> foi salva no seu histórico pessoal.</p>
+                        {analiseInfo.id && (
+                          <p className="text-xs mt-1 opacity-75">ID da análise: {analiseInfo.id}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p>A análise foi concluída, mas houve um problema ao salvar no histórico. O resultado ainda está disponível abaixo.</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Resultado da Análise</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Resultado da Análise Comparativa</h3>
                 <div className="prose max-w-none">
                   <div className="bg-white p-6 rounded border border-gray-300 max-h-96 overflow-y-auto">
                     <div className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">
                       {result}
                     </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* ✅ NOVO: Informações adicionais sobre a análise */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="text-sm font-medium text-blue-800 mb-2">📋 Detalhes da Análise</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-700">
+                  <div>
+                    <span className="font-medium">Indicadores:</span> {dadosIndicadores.length}
+                  </div>
+                  <div>
+                    <span className="font-medium">Prompt:</span> {prompts.find(p => p.id === selectedPromptId)?.nome_prompt || 'N/A'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Data:</span> {analiseInfo?.timestamp ? new Date(analiseInfo.timestamp).toLocaleString('pt-BR') : 'N/A'}
                   </div>
                 </div>
               </div>

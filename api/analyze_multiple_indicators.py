@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+from datetime import datetime
 from supabase import create_client, Client
 import google.generativeai as genai
 
@@ -22,13 +23,14 @@ class handler(BaseHTTPRequestHandler):
             # Extrai os dados necessários
             prompt_id = data.get('prompt_id')  # UUID como string
             text_to_analyze = data.get('text_to_analyze')  # Texto combinado dos indicadores
+            indicadores_info = data.get('indicadores_info', [])  # Lista com ID e nome dos indicadores
             
             # Valida os campos necessários
-            if not prompt_id or not text_to_analyze:
+            if not prompt_id or not text_to_analyze or not indicadores_info:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos (prompt_id, text_to_analyze)"}).encode())
+                self.wfile.write(json.dumps({"error": "Campos obrigatórios não fornecidos (prompt_id, text_to_analyze, indicadores_info)"}).encode())
                 return
             
             # Verificar se o usuário está autenticado através do token JWT
@@ -45,12 +47,13 @@ class handler(BaseHTTPRequestHandler):
             # Criar cliente Supabase
             supabase = create_client(supabase_url, supabase_key)
             
-            # Validar token
+            # Validar token e obter usuário
             try:
                 user_response = supabase.auth.get_user(token)
                 user = user_response.user
                 if not user:
                     raise Exception("Usuário não autenticado")
+                user_id = user.id
             except Exception as auth_error:
                 self.send_response(401)
                 self.send_header('Content-Type', 'application/json')
@@ -137,13 +140,53 @@ class handler(BaseHTTPRequestHandler):
                 
                 print(f"Resposta do Gemini recebida - Tamanho: {len(resultado)} caracteres")
                 
-                # Responder com sucesso (não salvamos no banco para análise múltipla)
+                # ✅ NOVO: Salvar a análise múltipla no banco de dados
+                agora = datetime.now().isoformat()
+                
+                # Extrair IDs e nomes dos indicadores
+                indicadores_ids = [info['id'] for info in indicadores_info]
+                nomes_indicadores = [info['nome'] for info in indicadores_info]
+                
+                print(f"Salvando análise múltipla para usuário {user_id}")
+                print(f"Indicadores IDs: {indicadores_ids}")
+                print(f"Nomes dos indicadores: {nomes_indicadores}")
+                
+                # Salvar no banco
+                save_response = service_supabase.table('analises_multiplas_indicadores').insert({
+                    'indicadores_ids': indicadores_ids,
+                    'nomes_indicadores': nomes_indicadores,
+                    'resultado_analise': resultado,
+                    'prompt_utilizado': prompt_completo,
+                    'prompt_id': prompt_id,
+                    'usuario_id': user_id,
+                    'data_analise': agora,
+                    'created_at': agora,
+                    'updated_at': agora
+                }).execute()
+                
+                analise_salva = True
+                analise_id = None
+                
+                if save_response.error:
+                    print(f"Erro ao salvar análise múltipla: {save_response.error}")
+                    analise_salva = False
+                else:
+                    print(f"Análise múltipla salva com sucesso")
+                    if save_response.data and len(save_response.data) > 0:
+                        analise_id = save_response.data[0].get('id')
+                        print(f"ID da análise salva: {analise_id}")
+                
+                # Responder com sucesso
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "success": True,
-                    "resultado": resultado
+                    "resultado": resultado,
+                    "analise_salva": analise_salva,
+                    "analise_id": analise_id,
+                    "indicadores_analisados": len(indicadores_ids),
+                    "timestamp": agora
                 }).encode())
                 
             except Exception as api_error:
