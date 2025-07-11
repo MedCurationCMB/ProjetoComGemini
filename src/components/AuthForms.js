@@ -33,7 +33,7 @@ export const LoginForm = () => {
       if (adminStatus) {
         router.push('/welcome');
       } else {
-        router.push('/med-curation-mobile');
+        router.push('/visualizacao-indicadores');
       }
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer login');
