@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiBarChart3, FiCheck, FiEye, FiCalendar, FiFolder, FiTrendingUp } from 'react-icons/fi';
+import { FiBarChart2, FiCheck, FiEye, FiCalendar, FiFolder, FiTrendingUp } from 'react-icons/fi';
 
 const IndicadoresSelectTable = ({ user, onSelectionChange }) => {
   const [indicadores, setIndicadores] = useState([]);
@@ -371,7 +371,7 @@ const IndicadoresSelectTable = ({ user, onSelectionChange }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <FiBarChart3 className="h-5 w-5 text-blue-500 mr-2" />
+                    <FiBarChart2 className="h-5 w-5 text-blue-500 mr-2" />
                     <div>
                       <div className="text-sm font-medium text-gray-900">
                         {item.indicador || 'Indicador sem nome'}
