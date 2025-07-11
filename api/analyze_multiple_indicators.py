@@ -65,16 +65,24 @@ class handler(BaseHTTPRequestHandler):
             service_supabase = create_client(supabase_url, supabase_service_key)
             
             # Buscar a chave API vigente no Supabase
-            chave_response = service_supabase.table('configuracoes_gemini').select('chave').eq('vigente', True).execute()
-            
-            if not chave_response.data or len(chave_response.data) == 0:
+            try:
+                chave_response = service_supabase.table('configuracoes_gemini').select('chave').eq('vigente', True).execute()
+                
+                if not chave_response.data or len(chave_response.data) == 0:
+                    self.send_response(500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Chave API da Gemini não configurada. Entre em contato com o administrador."}).encode())
+                    return
+                
+                api_key = chave_response.data[0].get('chave')
+            except Exception as chave_error:
+                print(f"Erro ao buscar chave API: {str(chave_error)}")
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Chave API da Gemini não configurada. Entre em contato com o administrador."}).encode())
+                self.wfile.write(json.dumps({"error": "Erro ao acessar configurações da API Gemini."}).encode())
                 return
-            
-            api_key = chave_response.data[0].get('chave')
             
             # Buscar o prompt no Supabase - PRIMEIRO TENTAR prompts_indicadores
             prompt_response = None
@@ -152,29 +160,32 @@ class handler(BaseHTTPRequestHandler):
                 print(f"Nomes dos indicadores: {nomes_indicadores}")
                 
                 # Salvar no banco
-                save_response = service_supabase.table('historico_analises_multiplas').insert({
-                    'indicadores_ids': indicadores_ids,
-                    'nomes_indicadores': nomes_indicadores,
-                    'resultado_analise': resultado,
-                    'prompt_utilizado': prompt_completo,
-                    'prompt_id': prompt_id,
-                    'usuario_id': user_id,
-                    'data_analise': agora,
-                    'created_at': agora,
-                    'updated_at': agora
-                }).execute()
-                
-                analise_salva = True
-                analise_id = None
-                
-                if save_response.error:
-                    print(f"Erro ao salvar análise múltipla: {save_response.error}")
-                    analise_salva = False
-                else:
-                    print(f"Análise múltipla salva com sucesso")
+                try:
+                    save_response = service_supabase.table('historico_analises_multiplas').insert({
+                        'indicadores_ids': indicadores_ids,
+                        'nomes_indicadores': nomes_indicadores,
+                        'resultado_analise': resultado,
+                        'prompt_utilizado': prompt_completo,
+                        'prompt_id': prompt_id,
+                        'usuario_id': user_id,
+                        'data_analise': agora,
+                        'created_at': agora,
+                        'updated_at': agora
+                    }).execute()
+                    
+                    analise_salva = True
+                    analise_id = None
+                    
                     if save_response.data and len(save_response.data) > 0:
                         analise_id = save_response.data[0].get('id')
                         print(f"ID da análise salva: {analise_id}")
+                    
+                    print(f"Análise múltipla salva com sucesso")
+                    
+                except Exception as save_error:
+                    print(f"Erro ao salvar análise múltipla: {str(save_error)}")
+                    analise_salva = False
+                    analise_id = None
                 
                 # Responder com sucesso
                 self.send_response(200)
