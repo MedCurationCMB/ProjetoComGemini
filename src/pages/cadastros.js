@@ -125,6 +125,14 @@ export default function Cadastros({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
+  const handleInicioClick = () => {
+    router.push('/visualizacao-indicadores');
+  };
+
+  const handleAnalisesIndicadoresClick = () => {
+    router.push('/analise-multiplos-indicadores');
+  };
+
   // Função para fazer logout
   const handleLogout = async () => {
     try {

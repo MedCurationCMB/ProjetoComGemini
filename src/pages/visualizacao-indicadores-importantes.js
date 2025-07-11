@@ -488,6 +488,10 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
+  const handleAnalisesIndicadoresClick = () => {
+    router.push('/analise-multiplos-indicadores');
+  };
+
   const handleControleClick = () => {
     router.push('/visualizacao-geral-indicadores');
   };
@@ -795,6 +799,16 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        handleAnalisesIndicadoresClick();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiCpu className="mr-3 h-4 w-4" />
+                      Análises Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                         handleConfiguracoesClick();
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
@@ -994,6 +1008,16 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleAnalisesIndicadoresClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      >
+                        <FiCpu className="mr-3 h-4 w-4" />
+                        Análises Indicadores
                       </button>
                       <button
                         onClick={() => {

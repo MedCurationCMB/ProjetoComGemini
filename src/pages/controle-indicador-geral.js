@@ -85,6 +85,10 @@ export default function CopiaControleIndicadorGeral({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
+  const handleAnalisesIndicadoresClick = () => {
+    router.push('/analise-multiplos-indicadores');
+  };
+
   // Função para calcular datas dos períodos
   const calcularPeriodo = (tipo) => {
     const hoje = new Date();
@@ -296,6 +300,16 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleAnalisesIndicadoresClick();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiCpu className="mr-3 h-4 w-4" />
+                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => {
@@ -561,6 +575,16 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleAnalisesIndicadoresClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      >
+                        <FiCpu className="mr-3 h-4 w-4" />
+                        Análises Indicadores
                       </button>
                       <button
                         onClick={() => {
