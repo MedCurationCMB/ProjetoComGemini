@@ -1,7 +1,7 @@
 // src/components/SelectedIndicatorsPreview.js
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { FiEye, FiChevronDown, FiChevronUp, FiBarChart3, FiCalendar, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import { FiEye, FiChevronDown, FiChevronUp, FiBarChart2, FiCalendar, FiTrendingUp, FiTarget } from 'react-icons/fi';
 
 const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = {}, projetos = {} }) => {
   const [dadosIndicadores, setDadosIndicadores] = useState([]);
@@ -150,7 +150,7 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
   if (indicadoresSelecionados.length === 0) {
     return (
       <div className="bg-gray-50 rounded-lg p-6 text-center">
-        <FiBarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <FiBarChart2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
         <p className="text-gray-500 font-medium">Selecione indicadores para ver o preview</p>
         <p className="text-gray-400 text-sm mt-1">
           Escolha pelo menos 2 indicadores para fazer uma análise comparativa
@@ -251,7 +251,7 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                     <div className="flex items-center">
-                      <FiBarChart3 className="w-4 h-4 mr-1" />
+                      <FiBarChart2 className="w-4 h-4 mr-1" />
                       {indicador.estatisticas.totalRegistros} registros
                     </div>
                     <div className="flex items-center">
