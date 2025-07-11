@@ -18,7 +18,8 @@ import {
   FiStar,
   FiClipboard,
   FiSearch,
-  FiClock
+  FiClock,
+  FiCpu
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 

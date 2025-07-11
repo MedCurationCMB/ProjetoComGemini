@@ -15,7 +15,8 @@ import {
   FiHome,
   FiSettings,
   FiLogOut,
-  FiArrowLeft
+  FiArrowLeft,
+  FiCpu
 } from "react-icons/fi";
 
 export default function Cadastros({ user }) {

@@ -32,7 +32,8 @@ import {
   FiLogOut,
   FiX,
   FiCalendar,
-  FiBarChart 
+  FiBarChart,
+  FiCpu
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi'; // ✅ NOVO ÍCONE PARA REGISTROS
 
