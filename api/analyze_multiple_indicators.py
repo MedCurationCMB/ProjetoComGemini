@@ -152,7 +152,7 @@ class handler(BaseHTTPRequestHandler):
                 print(f"Nomes dos indicadores: {nomes_indicadores}")
                 
                 # Salvar no banco
-                save_response = service_supabase.table('analises_multiplas_indicadores').insert({
+                save_response = service_supabase.table('historico_analises_multiplas').insert({
                     'indicadores_ids': indicadores_ids,
                     'nomes_indicadores': nomes_indicadores,
                     'resultado_analise': resultado,

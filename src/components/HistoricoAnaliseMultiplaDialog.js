@@ -18,7 +18,7 @@ const HistoricoAnaliseMultiplaDialog = ({ onClose }) => {
         setLoading(true);
         
         const { data, error } = await supabase
-          .from('analises_multiplas_indicadores')
+          .from('historico_analises_multiplas')
           .select('*')
           .order('data_analise', { ascending: false }); // Mais recente primeiro
         
@@ -76,7 +76,7 @@ const HistoricoAnaliseMultiplaDialog = ({ onClose }) => {
       setDeletingId(analiseId);
       
       const { error } = await supabase
-        .from('analises_multiplas_indicadores')
+        .from('historico_analises_multiplas')
         .delete()
         .eq('id', analiseId);
       
