@@ -6,6 +6,7 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiArrowLeft, FiCpu, FiCheckSquare, FiSquare, FiSearch, FiFilter, FiX } from 'react-icons/fi';
 import MultipleIndicatorAnalysisDialog from '../components/MultipleIndicatorAnalysisDialog';
+import SelectedIndicatorsPreview from '../components/SelectedIndicatorsPreview';
 
 export default function AnaliseMultiplosIndicadores({ user }) {
   const router = useRouter();
@@ -303,6 +304,17 @@ export default function AnaliseMultiplosIndicadores({ user }) {
 
         {/* Conteúdo Mobile */}
         <div className="px-4 py-4 pb-20">
+          {/* Preview dos Indicadores Selecionados - Mobile */}
+          {indicadoresSelecionados.length > 0 && (
+            <div className="mb-6">
+              <SelectedIndicatorsPreview 
+                indicadoresSelecionados={indicadoresSelecionados}
+                categorias={categorias}
+                projetos={projetos}
+              />
+            </div>
+          )}
+
           {/* Lista de indicadores */}
           <div className="space-y-3">
             {indicadoresFiltrados.map(indicador => {
@@ -482,6 +494,17 @@ export default function AnaliseMultiplosIndicadores({ user }) {
 
         {/* Conteúdo Desktop */}
         <div className="max-w-6xl mx-auto px-8 py-8">
+          {/* Preview dos Indicadores Selecionados - Desktop */}
+          {indicadoresSelecionados.length > 0 && (
+            <div className="mb-8">
+              <SelectedIndicatorsPreview 
+                indicadoresSelecionados={indicadoresSelecionados}
+                categorias={categorias}
+                projetos={projetos}
+              />
+            </div>
+          )}
+
           {/* Grid de indicadores */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {indicadoresFiltrados.map(indicador => {
