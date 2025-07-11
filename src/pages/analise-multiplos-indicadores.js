@@ -11,20 +11,14 @@ import {
   FiFolder,
   FiMenu, 
   FiHome, 
-  FiStar, 
-  FiClock,
-  FiClipboard,
   FiUser, 
   FiSettings, 
   FiLogOut,
-  FiX,
   FiCheckSquare,
   FiSquare,
   FiCpu,
-  FiBarChart,
   FiBookOpen
 } from 'react-icons/fi';
-import { TfiPencil } from 'react-icons/tfi';
 import MultipleIndicatorAnalysisDialog from '../components/MultipleIndicatorAnalysisDialog';
 import SelectedIndicatorsPreview from '../components/SelectedIndicatorsPreview';
 import HistoricoAnaliseMultiplaDialog from '../components/HistoricoAnaliseMultiplaDialog';
@@ -41,15 +35,12 @@ export default function AnaliseMultiplosIndicadores({ user }) {
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
-  // Estados de filtro e busca (igual ao visualizacao-indicadores)
+  // Estados de filtro e busca
   const [searchTerm, setSearchTerm] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  
-  // Estados para navegação (igual ao visualizacao-indicadores)
-  const [activeTab, setActiveTab] = useState('analise-multipla');
   
   // Estados para modais
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
@@ -62,7 +53,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
     }
   }, [user, router]);
 
-  // Função para fazer logout (igual ao visualizacao-indicadores)
+  // Função para fazer logout
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -74,7 +65,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
     }
   };
 
-  // Funções de navegação (igual ao visualizacao-indicadores)
+  // Funções de navegação
   const handleConfiguracoesClick = () => {
     router.push('/cadastros');
   };
@@ -83,19 +74,11 @@ export default function AnaliseMultiplosIndicadores({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
-  const handleControleClick = () => {
-    router.push('/visualizacao-geral-indicadores');
+  const handleAnalisesIndicadoresClick = () => {
+    router.push('/analise-multiplos-indicadores');
   };
 
-  const handleRegistrosClick = () => {
-    router.push('/controle-indicador-geral');
-  };
-
-  const handleImportantesClick = () => {
-    router.push('/visualizacao-indicadores-importantes');
-  };
-
-  // Função para buscar projetos vinculados (igual ao visualizacao-indicadores)
+  // Função para buscar projetos vinculados
   const fetchProjetosVinculados = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -115,7 +98,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
     }
   };
 
-  // Função para buscar dados de apresentação (igual ao visualizacao-indicadores)
+  // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
     try {
       const { data, error } = await supabase
@@ -135,7 +118,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
     }
   };
 
-  // Carregar categorias e projetos (adaptado do visualizacao-indicadores)
+  // Carregar categorias e projetos
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
@@ -364,7 +347,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
         />
       )}
 
-      {/* Header responsivo (igual ao visualizacao-indicadores) */}
+      {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Mobile */}
@@ -386,7 +369,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                   <FiMenu className="w-6 h-6 text-gray-600" />
                 </button>
                 
-                {/* Dropdown do menu */}
+                {/* Dropdown do menu - ATUALIZADO */}
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                     <button
@@ -402,12 +385,22 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        setShowHistoricoDialog(true);
+                        // TODO: Implementar perfil
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
-                      <FiBookOpen className="mr-3 h-4 w-4" />
-                      Histórico
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleAnalisesIndicadoresClick();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center bg-blue-50 text-blue-700"
+                    >
+                      <FiCpu className="mr-3 h-4 w-4" />
+                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => {
@@ -590,7 +583,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                     <FiMenu className="w-6 h-6 text-gray-600" />
                   </button>
                   
-                  {/* Dropdown do menu */}
+                  {/* Dropdown do menu - ATUALIZADO */}
                   {showMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                       <button
@@ -606,12 +599,22 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          setShowHistoricoDialog(true);
+                          // TODO: Implementar perfil
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
-                        <FiBookOpen className="mr-3 h-4 w-4" />
-                        Histórico
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleAnalisesIndicadoresClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center bg-blue-50 text-blue-700"
+                      >
+                        <FiCpu className="mr-3 h-4 w-4" />
+                        Análises Indicadores
                       </button>
                       <button
                         onClick={() => {
@@ -731,234 +734,158 @@ export default function AnaliseMultiplosIndicadores({ user }) {
         </div>
       </div>
 
-      {/* Layout principal */}
+      {/* Conteúdo principal - SEM SIDEBAR */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="lg:flex lg:space-x-8">
-          {/* Sidebar de navegação - Desktop apenas (igual ao visualizacao-indicadores) */}
-          <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <nav className="space-y-2">
-                <button
-                  onClick={handleInicioClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiBarChart className="mr-3 h-5 w-5" />
-                  Indicadores
-                </button>
+        {/* Cabeçalho da seção */}
+        <div className="mb-6">
+          <h2 className="text-2xl lg:text-3xl font-bold text-black">Análise Múltipla de Indicadores</h2>
+          <p className="text-gray-600 text-sm mt-1">
+            Selecione múltiplos indicadores para análise comparativa com IA
+          </p>
+        </div>
 
-                <button
-                  onClick={handleImportantesClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiStar className="mr-3 h-5 w-5" />
-                  Importantes
-                </button>
-
-                <button
-                  onClick={handleControleClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiClipboard className="mr-3 h-5 w-5" />
-                  Controle
-                </button>
-
-                <button
-                  onClick={handleRegistrosClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <TfiPencil className="mr-3 h-5 w-5" />
-                  Registros
-                </button>
-
-                {/* Item ativo - Análise Múltipla */}
-                <button
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-100 text-blue-700"
-                >
-                  <FiCpu className="mr-3 h-5 w-5" />
-                  Análise Múltipla
-                </button>
-              </nav>
-            </div>
+        {/* Loading */}
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
+        ) : projetosVinculados.length === 0 ? (
+          <div className="py-8 text-center">
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FiFolder className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+            </p>
+          </div>
+        ) : (
+          <div>
+            {/* Preview dos Indicadores Selecionados */}
+            {indicadoresSelecionados.length > 0 && (
+              <div className="mb-8">
+                <SelectedIndicatorsPreview 
+                  indicadoresSelecionados={indicadoresSelecionados}
+                  categorias={categorias}
+                  projetos={projetos}
+                />
+              </div>
+            )}
 
-          {/* Conteúdo principal */}
-          <div className="flex-1 min-w-0">
-            {/* Mobile: Cabeçalho da seção */}
+            {/* Lista de indicadores - Mobile */}
             <div className="lg:hidden">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-2xl font-bold text-black">Análise Múltipla de Indicadores</h2>
-              </div>
-              
-              <p className="text-gray-600 text-sm mb-6">
-                Selecione múltiplos indicadores para análise comparativa com IA
-              </p>
-            </div>
-
-            {/* Desktop: Cabeçalho da seção */}
-            <div className="hidden lg:flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl lg:text-3xl font-bold text-black">Análise Múltipla de Indicadores</h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Selecione múltiplos indicadores para análise comparativa com IA
-                </p>
-              </div>
-            </div>
-
-            {/* Loading */}
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
-            ) : projetosVinculados.length === 0 ? (
-              <div className="py-8 text-center">
-                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <FiFolder className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
-                <p className="text-gray-500 max-w-md mx-auto">
-                  Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
-                </p>
-              </div>
-            ) : (
-              <div>
-                {/* Preview dos Indicadores Selecionados - Desktop */}
-                {indicadoresSelecionados.length > 0 && (
-                  <div className="hidden lg:block mb-8">
-                    <SelectedIndicatorsPreview 
-                      indicadoresSelecionados={indicadoresSelecionados}
-                      categorias={categorias}
-                      projetos={projetos}
-                    />
-                  </div>
-                )}
-
-                {/* Preview dos Indicadores Selecionados - Mobile */}
-                {indicadoresSelecionados.length > 0 && (
-                  <div className="lg:hidden mb-6">
-                    <SelectedIndicatorsPreview 
-                      indicadoresSelecionados={indicadoresSelecionados}
-                      categorias={categorias}
-                      projetos={projetos}
-                    />
-                  </div>
-                )}
-
-                {/* Lista de indicadores - Mobile */}
-                <div className="lg:hidden">
-                  {indicadores.length > 0 ? (
-                    <div className="space-y-3">
-                      {indicadores.map(indicador => {
-                        const isSelected = indicadoresSelecionados.includes(indicador.id);
-                        return (
-                          <div
-                            key={indicador.id}
-                            onClick={() => toggleIndicadorSelecionado(indicador.id)}
-                            className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                              isSelected
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-gray-900 truncate">
-                                  {indicador.indicador}
-                                </h3>
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {indicador.projeto_id && (
-                                    <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">
-                                      {projetos[indicador.projeto_id] || 'Projeto N/A'}
-                                    </span>
-                                  )}
-                                  {indicador.categoria_id && (
-                                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                      {categorias[indicador.categoria_id] || 'Categoria N/A'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="ml-3 flex-shrink-0">
-                                {isSelected ? (
-                                  <FiCheckSquare className="w-5 h-5 text-blue-600" />
-                                ) : (
-                                  <FiSquare className="w-5 h-5 text-gray-400" />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">Nenhum indicador encontrado com os filtros aplicados</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Grid de indicadores - Desktop */}
-                <div className="hidden lg:block">
-                  {indicadores.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {indicadores.map(indicador => {
-                        const isSelected = indicadoresSelecionados.includes(indicador.id);
-                        return (
-                          <div
-                            key={indicador.id}
-                            onClick={() => toggleIndicadorSelecionado(indicador.id)}
-                            className={`p-6 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                              isSelected
-                                ? 'border-blue-500 bg-blue-50 shadow-sm'
-                                : 'border-gray-200 bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <h3 className="font-semibold text-gray-900 text-lg leading-tight">
-                                {indicador.indicador}
-                              </h3>
-                              <div className="ml-3 flex-shrink-0">
-                                {isSelected ? (
-                                  <FiCheckSquare className="w-6 h-6 text-blue-600" />
-                                ) : (
-                                  <FiSquare className="w-6 h-6 text-gray-400" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
+              {indicadores.length > 0 ? (
+                <div className="space-y-3">
+                  {indicadores.map(indicador => {
+                    const isSelected = indicadoresSelecionados.includes(indicador.id);
+                    return (
+                      <div
+                        key={indicador.id}
+                        onClick={() => toggleIndicadorSelecionado(indicador.id)}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {indicador.indicador}
+                            </h3>
+                            <div className="mt-1 flex flex-wrap gap-1">
                               {indicador.projeto_id && (
-                                <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+                                <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">
                                   {projetos[indicador.projeto_id] || 'Projeto N/A'}
                                 </span>
                               )}
                               {indicador.categoria_id && (
-                                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full ml-2">
+                                <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                                   {categorias[indicador.categoria_id] || 'Categoria N/A'}
                                 </span>
                               )}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 text-lg">
-                        Nenhum indicador encontrado com os filtros aplicados
-                      </p>
-                    </div>
-                  )}
+                          
+                          <div className="ml-3 flex-shrink-0">
+                            {isSelected ? (
+                              <FiCheckSquare className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <FiSquare className="w-5 h-5 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Nenhum indicador encontrado com os filtros aplicados</p>
+                </div>
+              )}
+            </div>
+
+            {/* Grid de indicadores - Desktop */}
+            <div className="hidden lg:block">
+              {indicadores.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {indicadores.map(indicador => {
+                    const isSelected = indicadoresSelecionados.includes(indicador.id);
+                    return (
+                      <div
+                        key={indicador.id}
+                        onClick={() => toggleIndicadorSelecionado(indicador.id)}
+                        className={`p-6 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="font-semibold text-gray-900 text-lg leading-tight">
+                            {indicador.indicador}
+                          </h3>
+                          <div className="ml-3 flex-shrink-0">
+                            {isSelected ? (
+                              <FiCheckSquare className="w-6 h-6 text-blue-600" />
+                            ) : (
+                              <FiSquare className="w-6 h-6 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {indicador.projeto_id && (
+                            <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+                              {projetos[indicador.projeto_id] || 'Projeto N/A'}
+                            </span>
+                          )}
+                          {indicador.categoria_id && (
+                            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full ml-2">
+                              {categorias[indicador.categoria_id] || 'Categoria N/A'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">
+                    Nenhum indicador encontrado com os filtros aplicados
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Botão fixo de análise - Mobile */}
       {indicadoresSelecionados.length > 0 && (
-        <div className="lg:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 p-4">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30">
           <button
             onClick={iniciarAnalise}
             disabled={indicadoresSelecionados.length < 2}
@@ -974,53 +901,8 @@ export default function AnaliseMultiplosIndicadores({ user }) {
         </div>
       )}
 
-      {/* Barra de navegação inferior - Mobile (igual ao visualizacao-indicadores) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
-        <div className="flex justify-around">
-          <button
-            onClick={handleInicioClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <FiBarChart className="w-5 h-5" />
-            <span className="text-xs font-medium">Indicadores</span>
-          </button>
-
-          <button
-            onClick={handleImportantesClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <FiStar className="w-5 h-5" />
-            <span className="text-xs font-medium">Importantes</span>
-          </button>
-
-          <button
-            onClick={handleControleClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <FiClipboard className="w-5 h-5" />
-            <span className="text-xs font-medium">Controle</span>
-          </button>
-
-          <button
-            onClick={handleRegistrosClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <TfiPencil className="w-5 h-5" />
-            <span className="text-xs font-medium">Registros</span>
-          </button>
-
-          {/* Item ativo - Análise Múltipla */}
-          <button
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-blue-600"
-          >
-            <FiCpu className="w-5 h-5" />
-            <span className="text-xs font-medium">Análise</span>
-          </button>
-        </div>
-      </div>
-
       {/* Espaçamento inferior para mobile */}
-      <div className="lg:hidden pb-16"></div>
+      <div className="lg:hidden pb-20"></div>
 
       {/* Overlay para fechar menus quando clicar fora */}
       {showMenu && (
