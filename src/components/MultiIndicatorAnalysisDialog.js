@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
-import { FiAward, FiZap, FiCpu, FiBarChart3, FiInfo, FiEye } from 'react-icons/fi';
+import { FiAward, FiZap, FiCpu, FiBarChart2, FiInfo, FiEye } from 'react-icons/fi';
 
 const MultiIndicatorAnalysisDialog = ({ selectedIndicadores, onClose, onAnalysisComplete }) => {
   const [prompts, setPrompts] = useState([]);
@@ -415,7 +415,7 @@ const MultiIndicatorAnalysisDialog = ({ selectedIndicadores, onClose, onAnalysis
               
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
                 <div className="flex items-start">
-                  <FiBarChart3 className="text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                  <FiBarChart2 className="text-blue-500 mt-1 mr-2 flex-shrink-0" />
                   <div>
                     <h3 className="font-medium text-blue-800 mb-1">Indicadores selecionados: {selectedIndicadores.length}</h3>
                     <p className="text-sm text-blue-700">
@@ -560,7 +560,7 @@ const MultiIndicatorAnalysisDialog = ({ selectedIndicadores, onClose, onAnalysis
                 {indicadorData.indicadores.map((indicador, index) => (
                   <div key={indicador.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center mb-3">
-                      <FiBarChart3 className="text-blue-500 mr-2" />
+                      <FiBarChart2 className="text-blue-500 mr-2" />
                       <h4 className="font-semibold text-gray-900">
                         {index + 1}. {indicador.indicador}
                       </h4>
