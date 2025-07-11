@@ -86,7 +86,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
         
         const { data, error } = await supabase
           .from('controle_indicador')
-          .select('id, indicador, projeto_id, categoria_id, created_at')
+          .select('id, indicador, projeto_id, categoria_id')
           .order('indicador');
         
         if (error) throw error;
