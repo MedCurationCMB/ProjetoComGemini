@@ -23,7 +23,7 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
         // Primeiro buscar informações básicas dos indicadores
         const { data: infoIndicadores, error: errorInfo } = await supabase
           .from('controle_indicador')
-          .select('id, indicador, projeto_id, categoria_id, created_at')
+          .select('id, indicador, projeto_id, categoria_id')
           .in('id', indicadoresSelecionados);
 
         if (errorInfo) throw errorInfo;
@@ -70,7 +70,6 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
               nome: info.indicador,
               projeto_id: info.projeto_id,
               categoria_id: info.categoria_id,
-              created_at: info.created_at,
               dados: dadosDoIndicador,
               estatisticas: {
                 totalRegistros: dadosDoIndicador.length,
