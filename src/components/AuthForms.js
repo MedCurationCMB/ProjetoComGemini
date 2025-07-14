@@ -4,20 +4,28 @@ import { supabase } from '../utils/supabaseClient';
 import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
-// Função para registrar login com melhor tratamento de erros
+// Função para registrar login com debug detalhado
 const registrarLogin = async (usuario) => {
   try {
-    console.log('Iniciando registro de login para:', usuario.email);
+    console.log('=== INÍCIO DEBUG REGISTRO LOGIN ===');
+    console.log('Usuário:', {
+      id: usuario.id,
+      email: usuario.email,
+      metadata: usuario.user_metadata
+    });
     
     // Obter sessão atual para o token
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.warn('Não foi possível obter sessão para registrar login');
+      console.error('❌ Sessão não encontrada');
       return { success: false, error: 'Sessão não encontrada' };
     }
 
-    console.log('Sessão obtida, preparando dados...');
+    console.log('✅ Sessão obtida:', {
+      user_id: session.user.id,
+      expires_at: session.expires_at
+    });
 
     // Preparar dados do login
     const loginData = {
@@ -26,48 +34,86 @@ const registrarLogin = async (usuario) => {
       email_usuario: usuario.email
     };
 
-    console.log('Dados preparados:', loginData);
+    console.log('📤 Dados a serem enviados:', loginData);
 
-    // Chamar API para registrar login
-    const response = await fetch('/api/record_login', {
+    // URL da API
+    const apiUrl = '/api/record_login';
+    console.log('📍 URL da API:', apiUrl);
+
+    // Headers da requisição
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    };
+    console.log('📋 Headers:', {
+      'Content-Type': headers['Content-Type'],
+      'Authorization': `Bearer ${session.access_token.substring(0, 20)}...`
+    });
+
+    // Fazer a requisição
+    console.log('🚀 Fazendo requisição...');
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
+      headers,
       body: JSON.stringify(loginData)
     });
 
-    console.log('Resposta da API:', response.status, response.statusText);
+    console.log('📥 Resposta recebida:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
 
-    // Verificar se a resposta é JSON válido
+    // Verificar content-type
     const contentType = response.headers.get('content-type');
+    console.log('📄 Content-Type:', contentType);
+
+    // Ler a resposta como texto primeiro
+    const responseText = await response.text();
+    console.log('📝 Resposta como texto (primeiros 500 chars):', responseText.substring(0, 500));
+
+    // Verificar se é JSON válido
     if (!contentType || !contentType.includes('application/json')) {
-      console.error('Resposta não é JSON:', contentType);
-      const textResponse = await response.text();
-      console.error('Conteúdo da resposta:', textResponse.substring(0, 200));
-      return { success: false, error: 'Resposta inválida do servidor' };
+      console.error('❌ Resposta não é JSON:', {
+        contentType,
+        responsePreview: responseText.substring(0, 200)
+      });
+      return { success: false, error: 'Resposta não é JSON', debug: { contentType, responsePreview: responseText.substring(0, 200) } };
     }
 
-    const result = await response.json();
+    // Tentar fazer parse do JSON
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      console.log('✅ JSON parseado com sucesso:', result);
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError);
+      return { success: false, error: 'Erro de parsing JSON', debug: { parseError: parseError.message, responseText: responseText.substring(0, 200) } };
+    }
 
     if (!response.ok) {
-      console.error('Erro ao registrar login:', result);
-      return { success: false, error: result.error || 'Erro desconhecido' };
+      console.error('❌ Resposta não OK:', result);
+      return { success: false, error: result.error || 'Erro da API', debug: result };
     }
 
-    console.log('Login registrado com sucesso:', result);
+    console.log('✅ Login registrado com sucesso:', result);
+    console.log('=== FIM DEBUG REGISTRO LOGIN ===');
     return { success: true, data: result };
     
   } catch (error) {
-    console.error('Erro ao registrar login:', error);
+    console.error('💥 ERRO DURANTE REGISTRO:', error);
+    console.error('Stack trace:', error.stack);
     
-    // Verificar se é erro de JSON parsing
-    if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
-      return { success: false, error: 'Erro de comunicação com o servidor' };
-    }
-    
-    return { success: false, error: error.message || 'Erro desconhecido' };
+    return { 
+      success: false, 
+      error: error.message || 'Erro desconhecido',
+      debug: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    };
   }
 };
 
@@ -83,7 +129,7 @@ export const LoginForm = () => {
     try {
       setLoading(true);
       
-      console.log('Iniciando login para:', email);
+      console.log('🔐 Iniciando login para:', email);
       
       // Fazer login usando o serviço de autenticação do Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -92,24 +138,32 @@ export const LoginForm = () => {
       });
       
       if (error) {
-        console.error('Erro no login:', error);
+        console.error('❌ Erro no login:', error);
         throw error;
       }
       
-      console.log('Login realizado com sucesso');
+      console.log('✅ Login no Supabase realizado com sucesso');
       
       // Verificar se o usuário é admin
       const adminStatus = await isUserAdmin(data.user.id);
-      console.log('Status de admin:', adminStatus);
+      console.log('👑 Status de admin:', adminStatus);
       
-      // Tentar registrar o login (não bloquear se falhar)
+      // Tentar registrar o login (com debug detalhado)
+      console.log('📝 Iniciando registro do login...');
       const loginRegistrado = await registrarLogin(data.user);
       
       if (loginRegistrado.success) {
-        console.log('Login registrado no histórico');
+        console.log('✅ Login registrado no histórico com sucesso');
       } else {
-        console.warn('Falha ao registrar login no histórico:', loginRegistrado.error);
-        // Apenas log o erro, não interromper o fluxo
+        console.warn('⚠️ Falha ao registrar login no histórico:', loginRegistrado);
+        
+        // Mostrar detalhes do erro no console para debug
+        if (loginRegistrado.debug) {
+          console.error('🔍 Debug info:', loginRegistrado.debug);
+        }
+        
+        // Opcional: mostrar toast com erro (pode comentar se não quiser mostrar para o usuário)
+        // toast.error(`Erro no registro: ${loginRegistrado.error}`);
       }
       
       toast.success('Login realizado com sucesso!');
@@ -121,7 +175,7 @@ export const LoginForm = () => {
         router.push('/visualizacao-indicadores');
       }
     } catch (error) {
-      console.error('Erro durante o login:', error);
+      console.error('💥 Erro durante o login:', error);
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
