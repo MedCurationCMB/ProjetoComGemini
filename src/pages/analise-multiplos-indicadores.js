@@ -689,10 +689,71 @@ export default function AnaliseMultiplosIndicadores({ user }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
 
-            {/* Ações em massa Desktop */}
-            <div className="mt-4 flex justify-between items-center">
-              <div className="flex space-x-3">
+      {/* Conteúdo principal - SEM SIDEBAR */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Cabeçalho da seção */}
+        <div className="mb-6">
+          <h2 className="text-2xl lg:text-3xl font-bold text-black">Análise Múltipla de Indicadores</h2>
+          <p className="text-gray-600 text-sm mt-1">
+            Selecione múltiplos indicadores para análise comparativa com IA
+          </p>
+        </div>
+
+        {/* NOVA SEÇÃO: Controles de Seleção - ADICIONAR AQUI */}
+        {!loading && projetosVinculados.length > 0 && indicadores.length > 0 && (
+          <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
+            {/* Mobile */}
+            <div className="lg:hidden">
+              <div className="flex flex-col space-y-3">
+                {/* Primeira linha: Contador e botões principais */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">
+                    {indicadoresSelecionados.length} de {indicadores.length} selecionados
+                  </span>
+                  
+                  {indicadoresSelecionados.length > 0 && (
+                    <button
+                      onClick={iniciarAnalise}
+                      disabled={indicadoresSelecionados.length < 2}
+                      className={`px-3 py-2 rounded-lg flex items-center text-sm font-medium transition-colors ${
+                        indicadoresSelecionados.length < 2
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      <FiCpu className="mr-1 w-4 h-4" />
+                      Analisar
+                    </button>
+                  )}
+                </div>
+                
+                {/* Segunda linha: Ações de seleção */}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={selecionarTodos}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                  >
+                    {todosFiltradosSelecionados ? 'Desmarcar' : 'Selecionar'} Todos
+                  </button>
+                  {indicadoresSelecionados.length > 0 && (
+                    <button
+                      onClick={limparSelecoes}
+                      className="text-red-600 hover:text-red-800 font-medium text-sm"
+                    >
+                      Limpar Seleções
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop */}
+            <div className="hidden lg:flex lg:justify-between lg:items-center">
+              <div className="flex space-x-4">
                 <button
                   onClick={selecionarTodos}
                   className="text-blue-600 hover:text-blue-800 font-medium text-sm"
@@ -731,18 +792,7 @@ export default function AnaliseMultiplosIndicadores({ user }) {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Conteúdo principal - SEM SIDEBAR */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Cabeçalho da seção */}
-        <div className="mb-6">
-          <h2 className="text-2xl lg:text-3xl font-bold text-black">Análise Múltipla de Indicadores</h2>
-          <p className="text-gray-600 text-sm mt-1">
-            Selecione múltiplos indicadores para análise comparativa com IA
-          </p>
-        </div>
+        )}
 
         {/* Loading */}
         {loading ? (
