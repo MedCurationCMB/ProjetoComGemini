@@ -4,16 +4,29 @@ import { supabase } from '../utils/supabaseClient';
 import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
-// Função para registrar login
+// Função para registrar login com melhor tratamento de erros
 const registrarLogin = async (usuario) => {
   try {
+    console.log('Iniciando registro de login para:', usuario.email);
+    
     // Obter sessão atual para o token
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
       console.warn('Não foi possível obter sessão para registrar login');
-      return;
+      return { success: false, error: 'Sessão não encontrada' };
     }
+
+    console.log('Sessão obtida, preparando dados...');
+
+    // Preparar dados do login
+    const loginData = {
+      usuario_id: usuario.id,
+      nome_usuario: usuario.user_metadata?.nome || usuario.email.split('@')[0],
+      email_usuario: usuario.email
+    };
+
+    console.log('Dados preparados:', loginData);
 
     // Chamar API para registrar login
     const response = await fetch('/api/record_login', {
@@ -22,25 +35,39 @@ const registrarLogin = async (usuario) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({
-        usuario_id: usuario.id,
-        nome_usuario: usuario.user_metadata?.nome || usuario.email,
-        email_usuario: usuario.email
-      })
+      body: JSON.stringify(loginData)
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Erro ao registrar login:', errorData.error);
-      return;
+    console.log('Resposta da API:', response.status, response.statusText);
+
+    // Verificar se a resposta é JSON válido
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Resposta não é JSON:', contentType);
+      const textResponse = await response.text();
+      console.error('Conteúdo da resposta:', textResponse.substring(0, 200));
+      return { success: false, error: 'Resposta inválida do servidor' };
     }
 
     const result = await response.json();
-    console.log('Login registrado com sucesso:', result.data_login);
+
+    if (!response.ok) {
+      console.error('Erro ao registrar login:', result);
+      return { success: false, error: result.error || 'Erro desconhecido' };
+    }
+
+    console.log('Login registrado com sucesso:', result);
+    return { success: true, data: result };
     
   } catch (error) {
     console.error('Erro ao registrar login:', error);
-    // Não interromper o fluxo de login se houver erro no registro
+    
+    // Verificar se é erro de JSON parsing
+    if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+      return { success: false, error: 'Erro de comunicação com o servidor' };
+    }
+    
+    return { success: false, error: error.message || 'Erro desconhecido' };
   }
 };
 
@@ -56,19 +83,34 @@ export const LoginForm = () => {
     try {
       setLoading(true);
       
+      console.log('Iniciando login para:', email);
+      
       // Fazer login usando o serviço de autenticação do Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro no login:', error);
+        throw error;
+      }
+      
+      console.log('Login realizado com sucesso');
       
       // Verificar se o usuário é admin
       const adminStatus = await isUserAdmin(data.user.id);
+      console.log('Status de admin:', adminStatus);
       
-      // Registrar o login (não bloquear se falhar)
-      await registrarLogin(data.user);
+      // Tentar registrar o login (não bloquear se falhar)
+      const loginRegistrado = await registrarLogin(data.user);
+      
+      if (loginRegistrado.success) {
+        console.log('Login registrado no histórico');
+      } else {
+        console.warn('Falha ao registrar login no histórico:', loginRegistrado.error);
+        // Apenas log o erro, não interromper o fluxo
+      }
       
       toast.success('Login realizado com sucesso!');
       
@@ -79,6 +121,7 @@ export const LoginForm = () => {
         router.push('/visualizacao-indicadores');
       }
     } catch (error) {
+      console.error('Erro durante o login:', error);
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
@@ -118,7 +161,7 @@ export const LoginForm = () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
       >
         {loading ? 'Carregando...' : 'Entrar'}
       </button>
@@ -209,7 +252,7 @@ export const RegisterForm = () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
       >
         {loading ? 'Carregando...' : 'Cadastrar'}
       </button>
