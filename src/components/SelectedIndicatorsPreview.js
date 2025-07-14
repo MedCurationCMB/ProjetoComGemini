@@ -6,6 +6,7 @@ import { FiEye, FiChevronDown, FiChevronUp, FiBarChart2, FiCalendar, FiTrendingU
 const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = {}, projetos = {} }) => {
   const [dadosIndicadores, setDadosIndicadores] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showIndicators, setShowIndicators] = useState(false); // ✅ NOVO: Controla visibilidade dos indicadores
   const [expandedIndicators, setExpandedIndicators] = useState(new Set());
 
   // Carregar dados dos indicadores selecionados
@@ -136,20 +137,14 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
     console.log('Toggle expandido para indicador:', indicadorId, 'Novo estado:', newExpanded.has(indicadorId) ? 'expandido' : 'recolhido');
   };
 
-  // ✅ NOVA FUNÇÃO: Toggle para todos os indicadores
-  const toggleAllExpanded = (event) => {
+  // ✅ FUNÇÃO ATUALIZADA: Toggle para mostrar/ocultar indicadores
+  const toggleShowIndicators = (event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
     
-    if (expandedIndicators.size === dadosIndicadores.length) {
-      // Se todos estão expandidos, recolher todos
-      setExpandedIndicators(new Set());
-    } else {
-      // Expandir todos
-      setExpandedIndicators(new Set(dadosIndicadores.map(ind => ind.id)));
-    }
+    setShowIndicators(!showIndicators);
   };
 
   // Calcular totais gerais
@@ -194,13 +189,13 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
             </h3>
           </div>
           <button
-            onClick={toggleAllExpanded}
+            onClick={toggleShowIndicators}
             className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
           >
             <span className="mr-1 text-sm font-medium">
-              {expandedIndicators.size === dadosIndicadores.length ? 'Ocultar' : 'Ver'} Detalhes
+              {showIndicators ? 'Ocultar' : 'Ver'} Detalhes
             </span>
-            {expandedIndicators.size === dadosIndicadores.length ? (
+            {showIndicators ? (
               <FiChevronUp className="w-4 h-4" />
             ) : (
               <FiChevronDown className="w-4 h-4" />
@@ -239,8 +234,8 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
         </div>
       )}
 
-      {/* Lista de Indicadores */}
-      {!loading && (
+      {/* ✅ LISTA DE INDICADORES - VISIBILIDADE CONTROLADA PELO BOTÃO */}
+      {!loading && showIndicators && (
         <div className="divide-y divide-gray-200">
           {dadosIndicadores.map((indicador, index) => (
             <div key={indicador.id} className="px-6 py-4">
@@ -364,8 +359,8 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
         </div>
       )}
 
-      {/* Footer com informações */}
-      {!loading && dadosIndicadores.length > 0 && (
+      {/* ✅ FOOTER - VISIBILIDADE CONTROLADA PELO BOTÃO */}
+      {!loading && dadosIndicadores.length > 0 && showIndicators && (
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <div>
