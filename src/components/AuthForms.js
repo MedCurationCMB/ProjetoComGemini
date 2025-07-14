@@ -4,6 +4,46 @@ import { supabase } from '../utils/supabaseClient';
 import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
+// Função para registrar login
+const registrarLogin = async (usuario) => {
+  try {
+    // Obter sessão atual para o token
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.warn('Não foi possível obter sessão para registrar login');
+      return;
+    }
+
+    // Chamar API para registrar login
+    const response = await fetch('/api/record_login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        usuario_id: usuario.id,
+        nome_usuario: usuario.user_metadata?.nome || usuario.email,
+        email_usuario: usuario.email
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Erro ao registrar login:', errorData.error);
+      return;
+    }
+
+    const result = await response.json();
+    console.log('Login registrado com sucesso:', result.data_login);
+    
+  } catch (error) {
+    console.error('Erro ao registrar login:', error);
+    // Não interromper o fluxo de login se houver erro no registro
+  }
+};
+
 export const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +66,9 @@ export const LoginForm = () => {
       
       // Verificar se o usuário é admin
       const adminStatus = await isUserAdmin(data.user.id);
+      
+      // Registrar o login (não bloquear se falhar)
+      await registrarLogin(data.user);
       
       toast.success('Login realizado com sucesso!');
       
