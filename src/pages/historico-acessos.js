@@ -19,7 +19,8 @@ import {
   FiClock,
   FiX,
   FiCalendar,
-  FiDownload
+  FiDownload,
+  FiList
 } from "react-icons/fi";
 
 export default function HistoricoAcessos({ user }) {
@@ -52,11 +53,11 @@ export default function HistoricoAcessos({ user }) {
 
   // Função para voltar para a página de indicadores
   const handleVoltarClick = () => {
-    router.push('/welcome');
+    router.push('/visualizacao-indicadores');
   };
 
   const handleInicioClick = () => {
-    router.push('/welcome');
+    router.push('/visualizacao-indicadores');
   };
 
   const handleAnalisesIndicadoresClick = () => {
@@ -77,6 +78,10 @@ export default function HistoricoAcessos({ user }) {
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer logout');
     }
+  };
+
+  const handleHistoricoAcessos = () => {
+    router.push('/historico-acessos');
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -100,13 +105,13 @@ export default function HistoricoAcessos({ user }) {
         setIsAdmin(adminStatus);
         
         if (!adminStatus) {
-          router.replace("/welcome");
+          router.replace("/visualizacao-indicadores");
           toast.error("Você não tem permissão para acessar esta página");
           return;
         }
       } catch (error) {
         console.error('Erro ao verificar status de admin:', error);
-        router.replace("/welcome");
+        router.replace("/visualizacao-indicadores");
         toast.error("Erro ao verificar permissões");
         return;
       } finally {
@@ -421,12 +426,11 @@ export default function HistoricoAcessos({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        handleAdminClick();
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Administração
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
                     </button>
                     <button
                       onClick={() => {
@@ -437,6 +441,25 @@ export default function HistoricoAcessos({ user }) {
                     >
                       <FiCpu className="mr-3 h-4 w-4" />
                       Análises Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleHistoricoAcessos();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiList className="mr-3 h-4 w-4" />
+                      Histórico Acessos (admin)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
                     </button>
                     <button
                       onClick={() => {
@@ -496,12 +519,11 @@ export default function HistoricoAcessos({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        handleAdminClick();
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Administração
+                      <FiUser className="mr-3 h-4 w-4" />
+                      Perfil
                     </button>
                     <button
                       onClick={() => {
@@ -512,6 +534,25 @@ export default function HistoricoAcessos({ user }) {
                     >
                       <FiCpu className="mr-3 h-4 w-4" />
                       Análises Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleHistoricoAcessos();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiList className="mr-3 h-4 w-4" />
+                      Histórico Acessos (admin)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FiSettings className="mr-3 h-4 w-4" />
+                      Configurações
                     </button>
                     <button
                       onClick={() => {

@@ -23,7 +23,8 @@ import {
   FiStar,
   FiClipboard,
   FiBarChart,
-  FiCpu
+  FiCpu,
+  FiList
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -134,6 +135,10 @@ export default function VisualizacaoGeralIndicadores({ user }) {
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer logout');
     }
+  };
+
+  const handleHistoricoAcessos = () => {
+    router.push('/historico-acessos');
   };
 
   const handleConfiguracoesClick = () => {
@@ -797,7 +802,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          // TODO: Implementar perfil
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
@@ -817,7 +821,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleConfiguracoesClick();
+                          handleHistoricoAcessos();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      >
+                        <FiList className="mr-3 h-4 w-4" />
+                        Histórico Acessos (admin)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
@@ -1059,7 +1072,6 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          // TODO: Implementar perfil
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
@@ -1079,7 +1091,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleConfiguracoesClick();
+                          handleHistoricoAcessos();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      >
+                        <FiList className="mr-3 h-4 w-4" />
+                        Histórico Acessos (admin)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
