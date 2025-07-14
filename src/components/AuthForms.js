@@ -4,17 +4,39 @@ import { supabase } from '../utils/supabaseClient';
 import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
+// Função para obter data/hora no fuso horário de Brasília
+const obterDataHoraBrasilia = () => {
+  const agora = new Date();
+  
+  // Opção 1: Usando toLocaleString para obter a data no fuso de Brasília
+  const dataBrasilia = new Date(agora.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+  
+  // Opção 2: Formatação manual para garantir o formato ISO correto
+  const offset = -3; // UTC-3 (Brasília)
+  const dataUTC = new Date(agora.getTime() + (agora.getTimezoneOffset() * 60000));
+  const dataBrasiliaISO = new Date(dataUTC.getTime() + (offset * 60 * 60000));
+  
+  // Retornar no formato ISO com timezone
+  return dataBrasiliaISO.toISOString().replace('Z', '-03:00');
+};
+
 // Função simples para registrar login diretamente no Supabase
 const registrarLoginHistorico = async (usuario) => {
   try {
     console.log('Registrando login para:', usuario.email);
+
+    // Obter data/hora no fuso horário de Brasília
+    const dataHoraBrasilia = obterDataHoraBrasilia();
+    
+    console.log('Data/hora UTC:', new Date().toISOString());
+    console.log('Data/hora Brasília:', dataHoraBrasilia);
 
     // Dados do login
     const loginData = {
       usuario_id: usuario.id,
       nome_usuario: usuario.user_metadata?.nome || usuario.email.split('@')[0],
       email_usuario: usuario.email,
-      data_login: new Date().toISOString()
+      data_login: dataHoraBrasilia
     };
 
     console.log('Dados a inserir:', loginData);
