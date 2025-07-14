@@ -6,7 +6,6 @@ import { FiEye, FiChevronDown, FiChevronUp, FiBarChart2, FiCalendar, FiTrendingU
 const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = {}, projetos = {} }) => {
   const [dadosIndicadores, setDadosIndicadores] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [expandedIndicators, setExpandedIndicators] = useState(new Set());
 
   // Carregar dados dos indicadores selecionados
@@ -118,8 +117,13 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
     }
   };
 
-  // Função para alternar expansão de indicador
-  const toggleExpanded = (indicadorId) => {
+  // ✅ FUNÇÃO CORRIGIDA: Alternar expansão de indicador
+  const toggleExpanded = (indicadorId, event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     const newExpanded = new Set(expandedIndicators);
     if (newExpanded.has(indicadorId)) {
       newExpanded.delete(indicadorId);
@@ -127,6 +131,25 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
       newExpanded.add(indicadorId);
     }
     setExpandedIndicators(newExpanded);
+    
+    // Debug para verificar funcionamento
+    console.log('Toggle expandido para indicador:', indicadorId, 'Novo estado:', newExpanded.has(indicadorId) ? 'expandido' : 'recolhido');
+  };
+
+  // ✅ NOVA FUNÇÃO: Toggle para todos os indicadores
+  const toggleAllExpanded = (event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    if (expandedIndicators.size === dadosIndicadores.length) {
+      // Se todos estão expandidos, recolher todos
+      setExpandedIndicators(new Set());
+    } else {
+      // Expandir todos
+      setExpandedIndicators(new Set(dadosIndicadores.map(ind => ind.id)));
+    }
   };
 
   // Calcular totais gerais
@@ -161,7 +184,7 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      {/* Header do Preview */}
+      {/* ✅ HEADER CORRIGIDO */}
       <div className="bg-blue-50 px-6 py-4 border-b border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -171,13 +194,13 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
             </h3>
           </div>
           <button
-            onClick={() => setShowDetails(!showDetails)}
+            onClick={toggleAllExpanded}
             className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
           >
             <span className="mr-1 text-sm font-medium">
-              {showDetails ? 'Ocultar' : 'Ver'} Detalhes
+              {expandedIndicators.size === dadosIndicadores.length ? 'Ocultar' : 'Ver'} Detalhes
             </span>
-            {showDetails ? (
+            {expandedIndicators.size === dadosIndicadores.length ? (
               <FiChevronUp className="w-4 h-4" />
             ) : (
               <FiChevronDown className="w-4 h-4" />
@@ -221,10 +244,10 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
         <div className="divide-y divide-gray-200">
           {dadosIndicadores.map((indicador, index) => (
             <div key={indicador.id} className="px-6 py-4">
-              {/* Cabeçalho do Indicador */}
+              {/* ✅ CABEÇALHO DO INDICADOR CORRIGIDO */}
               <div 
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleExpanded(indicador.id)}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+                onClick={(e) => toggleExpanded(indicador.id, e)}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center mb-2">
@@ -278,8 +301,8 @@ const SelectedIndicatorsPreview = ({ indicadoresSelecionados = [], categorias = 
                 </div>
               </div>
 
-              {/* Detalhes Expandidos */}
-              {expandedIndicators.has(indicador.id) && showDetails && (
+              {/* ✅ DETALHES EXPANDIDOS CORRIGIDOS */}
+              {expandedIndicators.has(indicador.id) && (
                 <div className="mt-4 pl-8 border-l-2 border-blue-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Estatísticas Detalhadas */}
