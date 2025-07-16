@@ -15,13 +15,15 @@ import {
   FiCalendar,
   FiInfo,
   FiUpload,
-  FiPaperclip
+  FiPaperclip,
+  FiSave,
+  FiPlus
 } from 'react-icons/fi';
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
 import TipTapEditor from './TipTapEditor';
 import VisualizarTextoAnalise from './VisualizarTextoAnalise';
 
-// Componente do popup de detalhes do anexo
+// Componente do popup de detalhes do anexo - ATUALIZADO
 const DetalheAnexoPopup = ({ 
   item, 
   onClose, 
@@ -74,7 +76,7 @@ const DetalheAnexoPopup = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
           <div className="flex justify-between items-center">
@@ -143,15 +145,39 @@ const DetalheAnexoPopup = ({
                   <FiType className="mr-2 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Texto Extraído</span>
                 </div>
-                {item.conteudo && item.conteudo.trim() !== '' ? (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                    Disponível
-                  </span>
-                ) : (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    Não extraído
-                  </span>
-                )}
+                <div className="flex items-center space-x-2">
+                  {item.conteudo && item.conteudo.trim() !== '' ? (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        Disponível
+                      </span>
+                      <button
+                        onClick={() => onViewTextClick(item, 'conteudo')}
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => onViewTextClick(item, 'conteudo', true)}
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Editar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Não extraído
+                      </span>
+                      <button
+                        onClick={() => onViewTextClick(item, 'conteudo', true)}
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Adicionar
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -159,15 +185,39 @@ const DetalheAnexoPopup = ({
                   <FiCpu className="mr-2 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Análise de IA</span>
                 </div>
-                {item.retorno_ia && item.retorno_ia.trim() !== '' ? (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                    Disponível
-                  </span>
-                ) : (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                    Não analisado
-                  </span>
-                )}
+                <div className="flex items-center space-x-2">
+                  {item.retorno_ia && item.retorno_ia.trim() !== '' ? (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        Disponível
+                      </span>
+                      <button
+                        onClick={() => onViewReturnClick(item)}
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => onViewReturnClick(item, true)}
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Editar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        Não analisado
+                      </span>
+                      <button
+                        onClick={() => onAnalyzeClick(item.id)}
+                        className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                      >
+                        Analisar
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -175,23 +225,47 @@ const DetalheAnexoPopup = ({
                   <FiEdit className="mr-2 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Texto Análise</span>
                 </div>
-                {item.texto_analise && item.texto_analise.trim() !== '' ? (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                    Disponível
-                  </span>
-                ) : (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                    Sem análise
-                  </span>
-                )}
+                <div className="flex items-center space-x-2">
+                  {item.texto_analise && item.texto_analise.trim() !== '' ? (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        Disponível
+                      </span>
+                      <button
+                        onClick={() => onViewAnalysisClick(item)}
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => onViewAnalysisClick(item, true)}
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Editar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        Sem análise
+                      </span>
+                      <button
+                        onClick={() => onViewAnalysisClick(item, true)}
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Adicionar
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer com ações */}
+        {/* Footer com ações principais */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 rounded-b-lg">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <button
               onClick={() => onOpenClick(item.id)}
               className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center text-sm"
@@ -213,7 +287,7 @@ const DetalheAnexoPopup = ({
               className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center text-sm"
             >
               <FiCpu className="mr-1 h-4 w-4" />
-              Analisar IA
+              IA
             </button>
             
             <button
@@ -223,6 +297,14 @@ const DetalheAnexoPopup = ({
               <FiEdit className="mr-1 h-4 w-4" />
               Editar
             </button>
+
+            <button
+              onClick={onClose}
+              className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center justify-center text-sm"
+            >
+              <FiX className="mr-1 h-4 w-4" />
+              Fechar
+            </button>
           </div>
         </div>
       </div>
@@ -230,7 +312,7 @@ const DetalheAnexoPopup = ({
   );
 };
 
-// Componente principal da lista de anexos
+// Componente principal da lista de anexos - COMPLETAMENTE ATUALIZADO
 const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
   const [anexos, setAnexos] = useState([]);
   const [categorias, setCategorias] = useState({});
@@ -244,8 +326,41 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
   const [showDetalhePopup, setShowDetalhePopup] = useState(false);
   const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
   
+  // Estados para edição de documentos (como no ConteudoTable)
+  const [documentoEditando, setDocumentoEditando] = useState(null);
+  const [formEdicao, setFormEdicao] = useState({
+    categoria_id: '',
+    projeto_id: '',
+    descricao: '',
+    conteudo: '',
+    retorno_ia: '',
+    texto_analise: ''
+  });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
+  // Estados para visualização/edição de textos
+  const [textoVisualizando, setTextoVisualizando] = useState(null);
+  const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo');
+  const [tituloVisualizando, setTituloVisualizando] = useState('');
+  
+  // Estados para edição de texto extraído
+  const [editandoConteudo, setEditandoConteudo] = useState(null);
+  const [textoEditado, setTextoEditado] = useState('');
+  const [atualizandoTexto, setAtualizandoTexto] = useState(false);
+  
+  // Estados para edição de retorno de IA
+  const [editandoRetornoIA, setEditandoRetornoIA] = useState(null);
+  const [retornoIAEditado, setRetornoIAEditado] = useState('');
+  const [atualizandoRetornoIA, setAtualizandoRetornoIA] = useState(false);
+  
+  // Estados para texto análise
+  const [editandoTextoAnalise, setEditandoTextoAnalise] = useState(null);
+  const [textoAnaliseHtml, setTextoAnaliseHtml] = useState('');
+  const [atualizandoTextoAnalise, setAtualizandoTextoAnalise] = useState(false);
+  const [visualizandoTextoAnaliseHtml, setVisualizandoTextoAnaliseHtml] = useState(null);
+  
   // Estado para controlar as abas
-  const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos' ou 'pendentes'
+  const [abaAtiva, setAbaAtiva] = useState('todos');
 
   useEffect(() => {
     if (user?.id) {
@@ -401,6 +516,267 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
       setLoading(false);
     }
   };
+
+  // === FUNÇÕES DE VISUALIZAÇÃO E EDIÇÃO ===
+
+  // Visualizar texto extraído ou resultado da IA
+  const visualizarTexto = (item, tipo = 'conteudo', editar = false) => {
+    if (tipo === 'conteudo') {
+      if (editar || !item.conteudo || item.conteudo.trim() === '') {
+        setEditandoConteudo(item);
+        setTextoEditado(item.conteudo || '');
+      } else {
+        setTextoVisualizando(item.conteudo);
+        setTipoTextoVisualizando('conteudo');
+        setTituloVisualizando('Texto Extraído');
+      }
+    } else if (tipo === 'retorno_ia') {
+      if (editar) {
+        setEditandoRetornoIA(item);
+        setRetornoIAEditado(item.retorno_ia || '');
+      } else if (item.retorno_ia && item.retorno_ia.trim() !== '') {
+        setTextoVisualizando(item.retorno_ia);
+        setTipoTextoVisualizando('retorno_ia');
+        setTituloVisualizando('Análise de IA');
+      } else {
+        toast.error('Não há análise de IA disponível para este documento');
+      }
+    }
+  };
+
+  // Função para visualizar/editar texto análise
+  const visualizarTextoAnalise = (item, editar = false) => {
+    if (editar) {
+      setEditandoTextoAnalise(item);
+      setTextoAnaliseHtml(item.texto_analise || '<p></p>');
+    } else if (item.texto_analise && item.texto_analise.trim() !== '') {
+      setVisualizandoTextoAnaliseHtml(item.texto_analise);
+    } else {
+      toast.error('Não há texto análise disponível para este documento');
+    }
+  };
+
+  // Salvar o texto editado no Supabase
+  const salvarTextoEditado = async () => {
+    if (!editandoConteudo || !textoEditado.trim()) {
+      toast.error('Por favor, insira o texto extraído antes de salvar');
+      return;
+    }
+
+    try {
+      setAtualizandoTexto(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoTexto(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ conteudo: textoEditado })
+        .eq('id', editandoConteudo.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setAnexos(anexos.map(item => 
+        item.id === editandoConteudo.id 
+          ? { ...item, conteudo: textoEditado } 
+          : item
+      ));
+      
+      toast.success('Texto atualizado com sucesso!');
+      setEditandoConteudo(null);
+      setTextoEditado('');
+      
+    } catch (error) {
+      console.error('Erro ao atualizar texto:', error);
+      toast.error('Erro ao salvar o texto');
+    } finally {
+      setAtualizandoTexto(false);
+    }
+  };
+
+  // Função para salvar o retorno da IA editado
+  const salvarRetornoIAEditado = async () => {
+    if (!editandoRetornoIA) return;
+
+    try {
+      setAtualizandoRetornoIA(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoRetornoIA(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ retorno_ia: retornoIAEditado })
+        .eq('id', editandoRetornoIA.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setAnexos(anexos.map(item => 
+        item.id === editandoRetornoIA.id 
+          ? { ...item, retorno_ia: retornoIAEditado } 
+          : item
+      ));
+      
+      toast.success('Análise de IA atualizada com sucesso!');
+      setEditandoRetornoIA(null);
+      setRetornoIAEditado('');
+      
+    } catch (error) {
+      console.error('Erro ao atualizar análise de IA:', error);
+      toast.error('Erro ao salvar a análise de IA');
+    } finally {
+      setAtualizandoRetornoIA(false);
+    }
+  };
+
+  // Função para salvar o texto análise como HTML
+  const salvarTextoAnaliseEditado = async () => {
+    if (!editandoTextoAnalise) return;
+
+    try {
+      setAtualizandoTextoAnalise(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoTextoAnalise(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ texto_analise: textoAnaliseHtml })
+        .eq('id', editandoTextoAnalise.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setAnexos(anexos.map(item => 
+        item.id === editandoTextoAnalise.id 
+          ? { ...item, texto_analise: textoAnaliseHtml } 
+          : item
+      ));
+      
+      toast.success('Texto análise atualizado com sucesso!');
+      setEditandoTextoAnalise(null);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar texto análise:', error);
+      toast.error('Erro ao salvar o texto análise');
+    } finally {
+      setAtualizandoTextoAnalise(false);
+    }
+  };
+
+  // === FUNÇÕES DE EDIÇÃO DE DOCUMENTO ===
+
+  // Função para iniciar edição de documento
+  const iniciarEdicaoDocumento = (documento) => {
+    setDocumentoEditando(documento.id);
+    setFormEdicao({
+      categoria_id: documento.categoria_id || '',
+      projeto_id: documento.projeto_id || '',
+      descricao: documento.descricao || '',
+      conteudo: documento.conteudo || '',
+      retorno_ia: documento.retorno_ia || '',
+      texto_analise: documento.texto_analise || ''
+    });
+    setShowDetalhePopup(false); // Fechar popup de detalhes
+  };
+
+  // Função para cancelar edição
+  const cancelarEdicao = () => {
+    setDocumentoEditando(null);
+    setFormEdicao({
+      categoria_id: '',
+      projeto_id: '',
+      descricao: '',
+      conteudo: '',
+      retorno_ia: '',
+      texto_analise: ''
+    });
+  };
+
+  // Função para manipular mudanças nos campos do formulário
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormEdicao(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Função para salvar documento editado
+  const salvarDocumentoEditado = async () => {
+    if (!documentoEditando) return;
+    
+    try {
+      setSalvandoEdicao(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setSalvandoEdicao(false);
+        return;
+      }
+      
+      // Preparar dados para atualização
+      const dadosAtualizacao = {
+        categoria_id: formEdicao.categoria_id,
+        projeto_id: formEdicao.projeto_id,
+        descricao: formEdicao.descricao,
+        conteudo: formEdicao.conteudo,
+        retorno_ia: formEdicao.retorno_ia,
+        texto_analise: formEdicao.texto_analise
+      };
+      
+      // Atualizar o documento no Supabase
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update(dadosAtualizacao)
+        .eq('id', documentoEditando)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar a lista local
+      setAnexos(anexos.map(item => 
+        item.id === documentoEditando
+          ? { ...item, ...dadosAtualizacao }
+          : item
+      ));
+      
+      toast.success('Documento atualizado com sucesso!');
+      
+      // Fechar o modo de edição
+      setDocumentoEditando(null);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar documento:', error);
+      toast.error('Erro ao salvar as alterações');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  };
+
+  // === FUNÇÕES DE NAVEGAÇÃO E UTILITÁRIOS ===
 
   // Formata a data para exibição
   const formatDate = (dateString) => {
@@ -566,6 +942,16 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
     }
   };
 
+  // Função para fechar modal de texto
+  const fecharModalTexto = () => {
+    setTextoVisualizando(null);
+  };
+
+  // Função para navegar para upload
+  const handleNovoUpload = () => {
+    window.location.href = '/upload';
+  };
+
   // Funções para obter título e descrição das abas
   const getTituloAba = () => {
     switch (abaAtiva) {
@@ -698,41 +1084,67 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
         <div className="p-4 lg:p-6">
           {/* MOBILE: Cabeçalho de aba compacto */}
           <div className="lg:hidden mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">
-              {getTituloAba()}
-            </h2>
-            <div className="flex items-center">
-              {abaAtiva === 'todos' && (
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-              )}
-              {abaAtiva === 'pendentes' && (
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              )}
-              <span className="text-sm text-gray-600">
-                {abaAtiva === 'todos' && 'Todos os anexos'}
-                {abaAtiva === 'pendentes' && 'Sem texto extraído'}
-              </span>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  {getTituloAba()}
+                </h2>
+                <div className="flex items-center">
+                  {abaAtiva === 'todos' && (
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                  )}
+                  {abaAtiva === 'pendentes' && (
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                  )}
+                  <span className="text-sm text-gray-600">
+                    {abaAtiva === 'todos' && 'Todos os anexos'}
+                    {abaAtiva === 'pendentes' && 'Sem texto extraído'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Botão Novo Upload - Mobile */}
+              <button
+                onClick={handleNovoUpload}
+                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center text-sm"
+              >
+                <FiPlus className="mr-1 h-4 w-4" />
+                Upload
+              </button>
             </div>
           </div>
 
           {/* DESKTOP: Cabeçalho de aba completo */}
           <div className="hidden lg:block mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">
-              {getTituloAba()}
-            </h2>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                {abaAtiva === 'todos' && (
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                )}
-                {abaAtiva === 'pendentes' && (
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                )}
-                <span className="text-sm text-gray-600">
-                  {abaAtiva === 'todos' && 'Mostrando todos os anexos disponíveis'}
-                  {abaAtiva === 'pendentes' && 'Filtrando apenas anexos sem texto extraído'}
-                </span>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  {getTituloAba()}
+                </h2>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    {abaAtiva === 'todos' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    )}
+                    {abaAtiva === 'pendentes' && (
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    )}
+                    <span className="text-sm text-gray-600">
+                      {abaAtiva === 'todos' && 'Mostrando todos os anexos disponíveis'}
+                      {abaAtiva === 'pendentes' && 'Filtrando apenas anexos sem texto extraído'}
+                    </span>
+                  </div>
+                </div>
               </div>
+              
+              {/* Botão Novo Upload - Desktop */}
+              <button
+                onClick={handleNovoUpload}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+              >
+                <FiPlus className="mr-2 h-5 w-5" />
+                Novo Upload
+              </button>
             </div>
           </div>
 
@@ -750,6 +1162,90 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
             </p>
           </div>
 
+          {/* Modo de edição de documento */}
+          {documentoEditando && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-blue-900">Editando Documento</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={salvarDocumentoEditado}
+                    disabled={salvandoEdicao}
+                    className={`flex items-center px-4 py-2 rounded ${
+                      salvandoEdicao
+                        ? 'bg-gray-400 text-gray-100 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    {salvandoEdicao ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                        Salvando
+                      </>
+                    ) : (
+                      <>
+                        <FiSave className="mr-2 h-4 w-4" />
+                        Salvar
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={cancelarEdicao}
+                    disabled={salvandoEdicao}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded flex items-center"
+                  >
+                    <FiX className="mr-2 h-4 w-4" />
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                  <select
+                    name="categoria_id"
+                    value={formEdicao.categoria_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione</option>
+                    {Object.entries(categorias).map(([id, nome]) => (
+                      <option key={id} value={id}>{nome}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Projeto</label>
+                  <select
+                    name="projeto_id"
+                    value={formEdicao.projeto_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Selecione</option>
+                    {Object.entries(projetos).map(([id, nome]) => (
+                      <option key={id} value={id}>{nome}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                  <textarea
+                    name="descricao"
+                    value={formEdicao.descricao}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Descrição do documento"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Lista de anexos */}
           <div className="space-y-3">
             {(() => {
@@ -766,7 +1262,11 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
                     <div 
                       key={item.id}
                       onClick={() => handleItemClick(item)}
-                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                        documentoEditando === item.id 
+                          ? 'bg-blue-50 border-blue-300' 
+                          : 'bg-white border-gray-200'
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         {/* Lado esquerdo - Informações principais */}
@@ -780,6 +1280,15 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
                                 <span className="text-xs font-medium text-orange-600 flex items-center">
                                   <FiUpload className="mr-1 h-3 w-3" />
                                   Pendente
+                                </span>
+                              </>
+                            )}
+                            {documentoEditando === item.id && (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs font-medium text-blue-600 flex items-center">
+                                  <FiEdit className="mr-1 h-3 w-3" />
+                                  Editando
                                 </span>
                               </>
                             )}
@@ -864,12 +1373,19 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     {abaAtiva === 'todos' ? 'Nenhum anexo encontrado' : 'Nenhum anexo pendente'}
                   </h3>
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 mb-4">
                     {abaAtiva === 'todos' 
                       ? 'Não há anexos disponíveis para os filtros selecionados.'
                       : 'Todos os anexos possuem texto extraído.'
                     }
                   </p>
+                  <button
+                    onClick={handleNovoUpload}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center mx-auto"
+                  >
+                    <FiPlus className="mr-2 h-5 w-5" />
+                    Fazer Upload
+                  </button>
                 </div>
               );
             })()}
@@ -877,7 +1393,272 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
         </div>
       </div>
 
-      {/* Modais */}
+      {/* MODAIS E POPUPS */}
+
+      {/* Modal para visualização de texto */}
+      {textoVisualizando !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{tituloVisualizando}</h2>
+              <button 
+                onClick={fecharModalTexto}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+              {textoVisualizando || ''}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para edição/adição de texto extraído */}
+      {editandoConteudo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '' 
+                  ? "Adicionar Texto Extraído" 
+                  : "Editar Texto Extraído"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoConteudo(null);
+                  setTextoEditado('');
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoConteudo.nome_arquivo}
+              </p>
+              {(!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '') && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+                  <p className="text-yellow-800 font-medium mb-2">Texto não disponível para extração</p>
+                  <p className="text-yellow-700">
+                    Para extrair o texto deste documento, por favor, utilize esta ferramenta:
+                  </p>
+                  <a 
+                    href="https://testedoctr.streamlit.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-2 p-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded"
+                  >
+                    Acessar Ferramenta de Extração de Texto
+                  </a>
+                  <p className="mt-3 text-sm text-gray-600">
+                    1. Na ferramenta, faça upload do documento PDF<br/>
+                    2. Extraia o texto e copie-o<br/>
+                    3. Cole o texto no campo abaixo e salve as alterações
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="textoExtraido" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '' 
+                  ? "Cole o texto extraído aqui:" 
+                  : "Texto extraído:"}
+              </label>
+              <textarea
+                id="textoExtraido"
+                value={textoEditado}
+                onChange={(e) => setTextoEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Cole aqui o texto extraído do documento..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarTextoEditado}
+                disabled={atualizandoTexto || !textoEditado.trim()}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoTexto || !textoEditado.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoTexto ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para edição/adição de retorno de IA */}
+      {editandoRetornoIA && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicionar Análise de IA" 
+                  : "Editar Análise de IA"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoRetornoIA(null);
+                  setRetornoIAEditado('');
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoRetornoIA.nome_arquivo}
+              </p>
+              {(!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '') && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+                  <p className="text-yellow-800 font-medium mb-2">Análise de IA não disponível</p>
+                  <p className="text-yellow-700">
+                    Este documento ainda não foi analisado pela IA. Você pode adicionar manualmente uma análise abaixo ou usar o botão de análise com IA.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="retornoIA" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicione uma análise:" 
+                  : "Análise de IA:"}
+              </label>
+              <textarea
+                id="retornoIA"
+                value={retornoIAEditado}
+                onChange={(e) => setRetornoIAEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Digite ou cole a análise da IA aqui..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarRetornoIAEditado}
+                disabled={atualizandoRetornoIA}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoRetornoIA
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoRetornoIA ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal para edição/adição de texto análise com TipTap */}
+      {editandoTextoAnalise && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicionar Texto Análise" 
+                  : "Editar Texto Análise"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoTextoAnalise(null);
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoTextoAnalise.nome_arquivo}
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicione uma análise manual:" 
+                  : "Texto análise:"}
+              </label>
+              
+              <TipTapEditor 
+                initialValue={textoAnaliseHtml}
+                onChange={html => setTextoAnaliseHtml(html)}
+              />
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarTextoAnaliseEditado}
+                disabled={atualizandoTextoAnalise}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoTextoAnalise
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoTextoAnalise ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para visualização de texto análise com HTML formatado */}
+      {visualizandoTextoAnaliseHtml && (
+        <VisualizarTextoAnalise 
+          htmlContent={visualizandoTextoAnaliseHtml}
+          onClose={() => setVisualizandoTextoAnaliseHtml(null)}
+        />
+      )}
+
+      {/* Popup de detalhes do anexo */}
       {showDetalhePopup && (
         <DetalheAnexoPopup
           item={itemSelecionado}
@@ -886,25 +1667,23 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
           projetos={projetos}
           documentoVinculacoes={documentoVinculacoes}
           onEditClick={(item) => {
-            // Implementar edição se necessário
-            console.log('Editar:', item);
-            setShowDetalhePopup(false);
+            iniciarEdicaoDocumento(item);
           }}
           onAnalyzeClick={(itemId) => {
             setDocumentoParaAnaliseIA(itemId);
             setShowDetalhePopup(false);
           }}
-          onViewTextClick={(item, tipo) => {
-            // Implementar visualização de texto se necessário
-            console.log('Ver texto:', item, tipo);
+          onViewTextClick={(item, tipo, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTexto(item, tipo, editar);
           }}
-          onViewAnalysisClick={(item) => {
-            // Implementar visualização de análise se necessário
-            console.log('Ver análise:', item);
+          onViewAnalysisClick={(item, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTextoAnalise(item, editar);
           }}
-          onViewReturnClick={(item) => {
-            // Implementar visualização de retorno IA se necessário
-            console.log('Ver retorno IA:', item);
+          onViewReturnClick={(item, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTexto(item, 'retorno_ia', editar);
           }}
           onDownloadClick={(itemId) => {
             downloadPdf(itemId);
@@ -915,6 +1694,7 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
         />
       )}
 
+      {/* Modal para análise de IA */}
       {documentoParaAnaliseIA && (
         <GeminiAnalysisDialog 
           documentId={documentoParaAnaliseIA}

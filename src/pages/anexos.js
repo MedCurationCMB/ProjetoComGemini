@@ -18,7 +18,8 @@ import {
   FiLogOut,
   FiBarChart,
   FiList,
-  FiPaperclip
+  FiPaperclip,
+  FiPlus
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -149,6 +150,11 @@ export default function Anexos({ user }) {
     }
   };
 
+  // Função para navegar para upload
+  const handleNovoUpload = () => {
+    router.push('/upload');
+  };
+
   // Funções de navegação
   const handleInicioClick = () => {
     router.push('/visualizacao-indicadores');
@@ -245,6 +251,16 @@ export default function Anexos({ user }) {
                     >
                       <FiHome className="mr-3 h-4 w-4" />
                       Início
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleNovoUpload();
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                    >
+                      <FiPlus className="mr-3 h-4 w-4" />
+                      Novo Upload
                     </button>
                     <button
                       onClick={() => {
@@ -396,6 +412,15 @@ export default function Anexos({ user }) {
               
               {/* Controles à direita */}
               <div className="flex items-center space-x-3">
+                {/* Botão de Upload */}
+                <button
+                  onClick={handleNovoUpload}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+                >
+                  <FiPlus className="mr-2 h-5 w-5" />
+                  Novo Upload
+                </button>
+                
                 {/* Botão de filtro */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -429,6 +454,16 @@ export default function Anexos({ user }) {
                       >
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleNovoUpload();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      >
+                        <FiPlus className="mr-3 h-4 w-4" />
+                        Novo Upload
                       </button>
                       <button
                         onClick={() => {
@@ -612,9 +647,16 @@ export default function Anexos({ user }) {
                   <FiFolder className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
-                <p className="text-gray-500 max-w-md mx-auto">
+                <p className="text-gray-500 max-w-md mx-auto mb-4">
                   Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
                 </p>
+                <button
+                  onClick={handleNovoUpload}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center mx-auto"
+                >
+                  <FiPlus className="mr-2 h-5 w-5" />
+                  Fazer Upload
+                </button>
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-6">
