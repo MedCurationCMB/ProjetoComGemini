@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
-import ControleConteudoGeralTable from '../components/ControleConteudoGeralTable';
+import ControleConteudoListView from '../components/ControleConteudoListView';
 import { 
   FiSearch, 
   FiFilter, 
@@ -588,7 +588,7 @@ export default function Registros({ user }) {
               </div>
             </div>
 
-            {/* Conteúdo da tabela */}
+            {/* Conteúdo da lista */}
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -604,8 +604,8 @@ export default function Registros({ user }) {
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm">
-                <ControleConteudoGeralTable 
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <ControleConteudoListView 
                   user={user} 
                   filtroProjetoId={projetoSelecionado}
                   filtroCategoriaId={categoriaSelecionada}
