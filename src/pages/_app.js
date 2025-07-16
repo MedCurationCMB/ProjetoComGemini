@@ -1,161 +1,181 @@
-import { useState, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { Toaster } from 'react-hot-toast';
 import { supabase } from '../utils/supabaseClient';
 import { isUserActive } from '../utils/userUtils';
 import '../styles/globals.css';
-import '../styles/tiptap.css';
+
+// Páginas que requerem autenticação
+const protectedPages = [
+  '/welcome',
+  '/base-dados-conteudo',
+  '/controle-conteudo',
+  '/controle-conteudo-geral',
+  '/registros', // Nova página adicionada
+  '/visualizacao-indicadores',
+  '/visualizacao-indicadores-importantes',
+  '/visualizacao-geral-indicadores',
+  '/controle-indicador-geral',
+  '/indicador',
+  '/analise-multiplos-indicadores',
+  '/cadastros',
+  '/historico-acessos'
+];
+
+// Páginas que não requerem autenticação
+const publicPages = [
+  '/login',
+  '/cadastro',
+  '/'
+];
 
 function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userActive, setUserActive] = useState(true);
+  const [userCheckInProgress, setUserCheckInProgress] = useState(false);
   const router = useRouter();
 
+  // Verificar se a página atual requer autenticação
+  const isProtectedPage = protectedPages.some(page => 
+    router.pathname.startsWith(page)
+  );
+
+  const isPublicPage = publicPages.includes(router.pathname);
+
   useEffect(() => {
-    // Verificar se o usuário está autenticado
-    const checkUser = async () => {
+    // Função para verificar sessão
+    const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // Verificar se o usuário está ativo
-          const active = await isUserActive(session.user.id);
-          setUserActive(active);
+        if (session && session.user) {
+          console.log('Sessão encontrada:', session.user.id);
           
-          if (active) {
-            setUser(session.user);
-          } else {
-            // Se não estiver ativo, redirecionar para página de acesso negado
-            if (router.pathname !== '/acesso-negado') {
-              router.push('/acesso-negado');
+          // Verificar se o usuário está ativo
+          setUserCheckInProgress(true);
+          try {
+            const isActive = await isUserActive(session.user.id);
+            
+            if (isActive) {
+              console.log('Usuário está ativo');
+              setUser(session.user);
+            } else {
+              console.log('Usuário inativo, fazendo logout...');
+              await supabase.auth.signOut();
+              setUser(null);
+              if (isProtectedPage) {
+                router.push('/login');
+              }
             }
-            setUser(null);
+          } catch (userCheckError) {
+            console.error('Erro ao verificar status do usuário:', userCheckError);
+            // Em caso de erro na verificação, permitir acesso por precaução
+            setUser(session.user);
+          } finally {
+            setUserCheckInProgress(false);
           }
         } else {
+          console.log('Nenhuma sessão encontrada');
           setUser(null);
-          setUserActive(true); // Reset para não mostrar mensagem quando não há usuário
+          if (isProtectedPage) {
+            router.push('/login');
+          }
         }
       } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
+        console.error('Erro ao verificar sessão:', error);
         setUser(null);
+        if (isProtectedPage) {
+          router.push('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
-    
-    checkUser();
-    
-    // Função para revalidar quando a aba voltar ao foco
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Aba voltou ao foco - revalidando sessão');
+
+    checkSession();
+
+    // Escutar mudanças no estado da autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event);
         
-        try {
-          // Forçar revalidação completa da sessão
-          const { data: { session } } = await supabase.auth.getSession();
+        if (event === 'SIGNED_IN' && session) {
+          console.log('Usuário logado:', session.user.id);
           
-          if (session) {
-            // Reconectar se necessário
-            if (typeof supabase.realtime?.setAuth === 'function') {
-              supabase.realtime.setAuth(session.access_token);
-            }
+          // Verificar se o usuário está ativo
+          setUserCheckInProgress(true);
+          try {
+            const isActive = await isUserActive(session.user.id);
             
-            // Revalidar status do usuário com novo token
-            const active = await isUserActive(session.user.id);
-            console.log('Revalidação de status:', active);
-            
-            if (active) {
+            if (isActive) {
               setUser(session.user);
-              
-              // Forçar atualização da página para reconectar todos os componentes
-              if (router.pathname !== '/acesso-negado' && 
-                  router.pathname !== '/login' && 
-                  router.pathname !== '/cadastro') {
-                router.replace(router.asPath);
+              // Redirecionar para welcome se estivermos em uma página pública
+              if (isPublicPage) {
+                router.push('/welcome');
               }
             } else {
-              if (router.pathname !== '/acesso-negado') {
-                router.push('/acesso-negado');
-              }
+              console.log('Usuário inativo no login');
+              await supabase.auth.signOut();
               setUser(null);
+              router.push('/login');
             }
-          } else {
-            // Se não houver sessão válida, redirecionar para login
-            if (router.pathname !== '/login' && 
-                router.pathname !== '/cadastro' && 
-                router.pathname !== '/acesso-negado') {
-              router.replace('/login');
+          } catch (userCheckError) {
+            console.error('Erro ao verificar status do usuário no login:', userCheckError);
+            // Em caso de erro, permitir acesso
+            setUser(session.user);
+            if (isPublicPage) {
+              router.push('/welcome');
             }
-            setUser(null);
+          } finally {
+            setUserCheckInProgress(false);
           }
-        } catch (error) {
-          console.error('Erro na revalidação:', error);
-          // Em caso de erro, tentar fazer logout e redirecionar para login
-          await supabase.auth.signOut();
-          router.replace('/login');
-        }
-      }
-    };
-
-    // Registrar evento de visibilidade
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-    // Configurar listener para mudanças de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        // Verificar se o usuário está ativo
-        const active = await isUserActive(session.user.id);
-        setUserActive(active);
-        
-        if (active) {
-          setUser(session.user);
-        } else {
-          // Se não estiver ativo, redirecionar para página de acesso negado
-          if (router.pathname !== '/acesso-negado') {
-            router.push('/acesso-negado');
-          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('Usuário deslogado');
           setUser(null);
+          if (isProtectedPage) {
+            router.push('/login');
+          }
         }
-      } else {
-        setUser(null);
-        setUserActive(true); // Reset para não mostrar mensagem quando não há usuário
       }
-    });
-    
+    );
+
+    // Cleanup
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, isProtectedPage, isPublicPage]);
 
-  if (loading) {
-    // Mostrar um indicador de carregamento enquanto verificamos a autenticação
+  // Mostrar loading enquanto verifica autenticação
+  if (loading || userCheckInProgress) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Se estiver na página de acesso negado, não verificar status ativo
-  if (router.pathname === '/acesso-negado' || 
-      router.pathname === '/login' || 
-      router.pathname === '/cadastro') {
+  // Para páginas protegidas, não renderizar se não houver usuário
+  if (isProtectedPage && !user) {
     return (
-      <>
-        <Toaster position="top-right" />
-        <Component {...pageProps} user={user} />
-      </>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
     );
   }
 
   return (
     <>
-      <Toaster position="top-right" />
       <Component {...pageProps} user={user} />
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        }}
+      />
     </>
   );
 }
