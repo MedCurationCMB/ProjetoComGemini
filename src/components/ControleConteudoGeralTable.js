@@ -1,4 +1,4 @@
-// Componente ControleConteudoGeralTable.js modificado com correção para UUIDs
+// Componente ControleConteudoGeralTable.js modificado para aceitar filtros
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -7,15 +7,13 @@ import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
 import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog';
 
-const ControleConteudoGeralTable = ({ user }) => {
+const ControleConteudoGeralTable = ({ user, filtroProjetoId, filtroCategoriaId }) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]); // ✅ CORRIGIDO: Array de UUIDs (strings)
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [anexarDocumentoId, setAnexarDocumentoId] = useState(null);
-  const [filtroProjetoId, setFiltroProjetoId] = useState('');
-  const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
   const [editarItemId, setEditarItemId] = useState(null);
@@ -28,18 +26,16 @@ const ControleConteudoGeralTable = ({ user }) => {
   }, [user]);
 
   useEffect(() => {
-    if (projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+    if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
       fetchControles();
     }
-  }, [projetosVinculados]);
+  }, [projetosVinculados, filtroProjetoId, filtroCategoriaId]);
 
-  // ✅ CORRIGIDO: Função para buscar projetos vinculados ao usuário (UUIDs)
+  // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
     try {
-      console.log('🔍 Buscando projetos vinculados para usuário UUID:', user.id);
-      
       const { data, error } = await supabase
         .from('relacao_usuarios_projetos')
         .select('projeto_id')
@@ -47,14 +43,10 @@ const ControleConteudoGeralTable = ({ user }) => {
       
       if (error) throw error;
       
-      // ✅ CORRIGIDO: projeto_id são UUIDs (strings), não converter para números
-      const projetoIds = data.map(item => item.projeto_id); // Manter como strings (UUIDs)
+      const projetoIds = data.map(item => item.projeto_id);
       setProjetosVinculados(projetoIds);
-      
-      console.log('✅ Projetos vinculados (UUIDs):', projetoIds);
-      console.log('📊 Total de projetos vinculados:', projetoIds.length);
     } catch (error) {
-      console.error('❌ Erro ao carregar projetos vinculados:', error);
+      console.error('Erro ao carregar projetos vinculados:', error);
       setProjetosVinculados([]);
     }
   };
@@ -68,20 +60,18 @@ const ControleConteudoGeralTable = ({ user }) => {
       
       if (error) throw error;
       
-      // ✅ CORRIGIDO: categoria.id são UUIDs (strings)
       const categoriasObj = {};
       data.forEach(cat => {
-        categoriasObj[cat.id] = cat.nome; // cat.id é UUID (string)
+        categoriasObj[cat.id] = cat.nome;
       });
       
       setCategorias(categoriasObj);
-      console.log('✅ Categorias carregadas (UUIDs):', Object.keys(categoriasObj).length);
     } catch (error) {
-      console.error('❌ Erro ao carregar categorias:', error);
+      console.error('Erro ao carregar categorias:', error);
     }
   };
 
-  // ✅ CORRIGIDO: Buscar APENAS os projetos vinculados ao usuário (UUIDs)
+  // Buscar apenas os projetos vinculados ao usuário
   const fetchProjetos = async () => {
     try {
       if (projetosVinculados.length === 0) {
@@ -89,62 +79,54 @@ const ControleConteudoGeralTable = ({ user }) => {
         return;
       }
 
-      console.log('🔍 Buscando projetos com UUIDs:', projetosVinculados);
-
       const { data, error } = await supabase
         .from('projetos')
         .select('*')
-        .in('id', projetosVinculados); // ✅ CORRIGIDO: projetosVinculados são UUIDs (strings)
+        .in('id', projetosVinculados);
       
       if (error) throw error;
       
-      // ✅ CORRIGIDO: projeto.id são UUIDs (strings)
       const projetosObj = {};
       data.forEach(proj => {
-        projetosObj[proj.id] = proj.nome; // proj.id é UUID (string)
+        projetosObj[proj.id] = proj.nome;
       });
       
       setProjetos(projetosObj);
-      console.log('✅ Projetos carregados (UUIDs):', Object.keys(projetosObj).length);
     } catch (error) {
-      console.error('❌ Erro ao carregar projetos:', error);
+      console.error('Erro ao carregar projetos:', error);
     }
   };
 
-  // ✅ CORRIGIDO: Buscar os dados de controle_conteudo_geral APENAS dos projetos vinculados (UUIDs)
+  // Buscar os dados de controle_conteudo_geral
   const fetchControles = async () => {
     try {
       setLoading(true);
       
-      // Se o usuário não tem projetos vinculados, não mostrar nenhum controle
       if (projetosVinculados.length === 0) {
         setControles([]);
         setLoading(false);
         return;
       }
       
-      console.log('🔍 Filtrando controles por projetos UUID:', projetosVinculados);
-      
       let query = supabase
         .from('controle_conteudo_geral')
         .select('*')
-        .in('projeto_id', projetosVinculados); // ✅ CORRIGIDO: filtrar por UUIDs
+        .in('projeto_id', projetosVinculados);
       
-      // ✅ CORRIGIDO: Aplicar filtros se estiverem definidos (UUIDs)
+      // Aplicar filtros se estiverem definidos
       if (filtroProjetoId && filtroProjetoId.trim() !== '') {
-        query = query.eq('projeto_id', filtroProjetoId); // filtroProjetoId é UUID (string)
+        query = query.eq('projeto_id', filtroProjetoId);
       }
       
       if (filtroCategoriaId && filtroCategoriaId.trim() !== '') {
-        query = query.eq('categoria_id', filtroCategoriaId); // filtroCategoriaId é UUID (string)
+        query = query.eq('categoria_id', filtroCategoriaId);
       }
       
       // Aplicar ordenação
       if (ordenacao.campo === 'id_controleconteudo') {
-        // Para base_id (id_controleconteudo), precisamos tratar valores nulos
         query = query.order('id_controleconteudo', { 
           ascending: ordenacao.direcao === 'asc',
-          nullsFirst: ordenacao.direcao === 'asc' // Valores nulos aparecem primeiro em ordem ascendente
+          nullsFirst: ordenacao.direcao === 'asc'
         });
       } else {
         query = query.order(ordenacao.campo, { 
@@ -152,7 +134,7 @@ const ControleConteudoGeralTable = ({ user }) => {
         });
       }
       
-      // Adicionar ordenação secundária para garantir consistência quando valores forem iguais
+      // Adicionar ordenação secundária para garantir consistência
       if (ordenacao.campo !== 'id') {
         query = query.order('id', { ascending: true });
       }
@@ -162,13 +144,9 @@ const ControleConteudoGeralTable = ({ user }) => {
       if (error) throw error;
       
       setControles(Array.isArray(data) ? data : []);
-      console.log('✅ Controles carregados:', data?.length || 0);
-      if (data && data.length > 0) {
-        console.log('📄 Exemplos de projeto_id nos controles:', data.slice(0, 3).map(c => c.projeto_id));
-      }
     } catch (error) {
       toast.error('Erro ao carregar dados de controle');
-      console.error('❌ Erro ao carregar controles:', error);
+      console.error('Erro ao carregar controles:', error);
     } finally {
       setLoading(false);
     }

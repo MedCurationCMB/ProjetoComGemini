@@ -28,6 +28,11 @@ export default function Registros({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categorias, setCategorias] = useState({});
+  const [projetos, setProjetos] = useState({});
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
+  const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
   // Estados para controlar a navegação
   const [activeTab, setActiveTab] = useState('registros');
@@ -61,10 +66,73 @@ export default function Registros({ user }) {
     }
   };
 
-  // Carregar projetos vinculados
+  // Função para buscar apresentação das variáveis
+  const fetchApresentacaoVariaveis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apresentacao_variaveis')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const apresentacaoObj = {};
+      data.forEach(item => {
+        apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
+      });
+      
+      setApresentacaoVariaveis(apresentacaoObj);
+    } catch (error) {
+      console.error('Erro ao carregar apresentação das variáveis:', error);
+    }
+  };
+
+  // Função para buscar categorias
+  const fetchCategorias = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const categoriasObj = {};
+      data.forEach(cat => {
+        categoriasObj[cat.id] = cat.nome;
+      });
+      
+      setCategorias(categoriasObj);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
+
+  // Função para buscar projetos
+  const fetchProjetos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const projetosObj = {};
+      data.forEach(proj => {
+        projetosObj[proj.id] = proj.nome;
+      });
+      
+      setProjetos(projetosObj);
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+    }
+  };
+
+  // Carregar projetos vinculados e outros dados
   useEffect(() => {
     if (user) {
       fetchProjetosVinculados(user.id);
+      fetchApresentacaoVariaveis();
+      fetchCategorias();
+      fetchProjetos();
     }
   }, [user]);
 
@@ -80,7 +148,7 @@ export default function Registros({ user }) {
     }
   };
 
-  // Funções de navegação - todas redirecionam para registros por enquanto
+  // Funções de navegação
   const handleInicioClick = () => {
     router.push('/registros');
   };
@@ -103,6 +171,16 @@ export default function Registros({ user }) {
 
   const handleConfiguracoesClick = () => {
     router.push('/registros');
+  };
+
+  // Verificar se há filtros ativos
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
+
+  // Limpar filtros
+  const clearFilters = () => {
+    setCategoriaSelecionada('');
+    setProjetoSelecionado('');
+    setShowFilters(false);
   };
 
   const getSectionTitle = () => {
@@ -225,7 +303,7 @@ export default function Registros({ user }) {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`p-3 rounded-lg transition-colors ${
-                  showFilters 
+                  showFilters || hasActiveFilters
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
@@ -233,6 +311,56 @@ export default function Registros({ user }) {
                 <FiFilter className="w-5 h-5" />
               </button>
             </div>
+            
+            {/* Terceira linha: Filtros */}
+            {showFilters && (
+              <div className="mt-4 space-y-3">
+                {/* Linha com os selects básicos */}
+                <div className="flex items-end space-x-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {apresentacaoVariaveis.projeto || 'Projeto'}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={projetoSelecionado}
+                      onChange={(e) => setProjetoSelecionado(e.target.value)}
+                    >
+                      <option value="">Todos</option>
+                      {Object.entries(projetos).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {apresentacaoVariaveis.categoria || 'Categoria'}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={categoriaSelecionada}
+                      onChange={(e) => setCategoriaSelecionada(e.target.value)}
+                    >
+                      <option value="">Todos</option>
+                      {Object.entries(categorias).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Botão limpar - aparece só se houver filtros ativos */}
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearFilters}
+                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop: Layout original */}
@@ -267,7 +395,7 @@ export default function Registros({ user }) {
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`p-3 rounded-lg transition-colors ${
-                    showFilters 
+                    showFilters || hasActiveFilters
                       ? 'bg-blue-600 text-white' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -341,6 +469,56 @@ export default function Registros({ user }) {
                 </div>
               </div>
             </div>
+            
+            {/* Segunda linha: Filtros */}
+            {showFilters && (
+              <div className="space-y-3">
+                {/* Linha com os selects básicos */}
+                <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {apresentacaoVariaveis.projeto || 'Projeto'}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={projetoSelecionado}
+                      onChange={(e) => setProjetoSelecionado(e.target.value)}
+                    >
+                      <option value="">Todos</option>
+                      {Object.entries(projetos).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {apresentacaoVariaveis.categoria || 'Categoria'}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={categoriaSelecionada}
+                      onChange={(e) => setCategoriaSelecionada(e.target.value)}
+                    >
+                      <option value="">Todos</option>
+                      {Object.entries(categorias).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Botão limpar - aparece só se houver filtros ativos */}
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearFilters}
+                      className="w-full sm:w-auto px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -427,7 +605,11 @@ export default function Registros({ user }) {
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-sm">
-                <ControleConteudoGeralTable user={user} />
+                <ControleConteudoGeralTable 
+                  user={user} 
+                  filtroProjetoId={projetoSelecionado}
+                  filtroCategoriaId={categoriaSelecionada}
+                />
               </div>
             )}
           </div>
