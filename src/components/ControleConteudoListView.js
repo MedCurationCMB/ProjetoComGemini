@@ -16,11 +16,18 @@ import {
   FiRepeat,
   FiEye,
   FiEyeOff,
-  FiInfo
+  FiInfo,
+  FiType,
+  FiCpu,
+  FiDownload,
+  FiSave
 } from 'react-icons/fi';
 import AnexarDocumentoDialog from './AnexarDocumentoDialog';
 import AdicionarLinhaConteudoDialog from './AdicionarLinhaConteudoDialog';
 import EditarLinhaConteudoDialog from './EditarLinhaConteudoDialog';
+import GeminiAnalysisDialog from './GeminiAnalysisDialog';
+import TipTapEditor from './TipTapEditor';
+import VisualizarTextoAnalise from './VisualizarTextoAnalise';
 
 // Componente do popup de detalhes
 const DetalheConteudoPopup = ({ 
@@ -31,7 +38,14 @@ const DetalheConteudoPopup = ({
   onEditClick, 
   onAnexarClick,
   onToggleVisibilidade,
-  atualizandoVisibilidade 
+  atualizandoVisibilidade,
+  documentoVinculado,
+  onViewTextClick,
+  onViewReturnClick,
+  onViewAnalysisClick,
+  onAnalyzeClick,
+  onDownloadClick,
+  onOpenClick
 }) => {
   if (!item) return null;
 
@@ -54,7 +68,7 @@ const DetalheConteudoPopup = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
           <div className="flex justify-between items-center">
@@ -199,11 +213,202 @@ const DetalheConteudoPopup = ({
               </div>
             </div>
           </div>
+
+          {/* NOVA SEÇÃO: Status dos Conteúdos */}
+          {item.tem_documento && documentoVinculado && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Status dos Conteúdos</h3>
+              
+              {/* Informações do documento */}
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-2">Documento Vinculado</h4>
+                <p className="text-sm text-blue-700">
+                  <strong>Nome:</strong> {documentoVinculado.nome_arquivo || 'Nome não disponível'}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <strong>Descrição:</strong> {documentoVinculado.descricao || 'Sem descrição'}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <strong>Data Upload:</strong> {formatDate(documentoVinculado.data_upload || documentoVinculado.created_at)}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <FiType className="mr-2 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Texto Extraído</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {documentoVinculado.conteudo && documentoVinculado.conteudo.trim() !== '' ? (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Disponível
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewTextClick(documentoVinculado, 'conteudo');
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewTextClick(documentoVinculado, 'conteudo', true);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        >
+                          Editar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          Não extraído
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewTextClick(documentoVinculado, 'conteudo', true);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        >
+                          Adicionar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <FiCpu className="mr-2 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Análise de IA</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {documentoVinculado.retorno_ia && documentoVinculado.retorno_ia.trim() !== '' ? (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Disponível
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewReturnClick(documentoVinculado);
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewReturnClick(documentoVinculado, true);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        >
+                          Editar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          Não analisado
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAnalyzeClick(documentoVinculado.id);
+                          }}
+                          className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                        >
+                          Analisar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <FiEdit className="mr-2 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Texto Análise</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {documentoVinculado.texto_analise && documentoVinculado.texto_analise.trim() !== '' ? (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Disponível
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewAnalysisClick(documentoVinculado);
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewAnalysisClick(documentoVinculado, true);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        >
+                          Editar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          Sem análise
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewAnalysisClick(documentoVinculado, true);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        >
+                          Adicionar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer com ações */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 rounded-b-lg">
           <div className="flex justify-end space-x-3">
+            {/* Botões de ação para documentos */}
+            {item.tem_documento && documentoVinculado && (
+              <>
+                <button
+                  onClick={() => onOpenClick(documentoVinculado.id)}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center text-sm"
+                >
+                  <FiEye className="mr-1 h-4 w-4" />
+                  Abrir PDF
+                </button>
+                
+                <button
+                  onClick={() => onDownloadClick(documentoVinculado.id)}
+                  className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center text-sm"
+                >
+                  <FiDownload className="mr-1 h-4 w-4" />
+                  Baixar
+                </button>
+              </>
+            )}
+            
             <button
               onClick={() => onEditClick(item.id)}
               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
@@ -243,6 +448,23 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
   // Estados para o popup de detalhes
   const [itemSelecionado, setItemSelecionado] = useState(null);
   const [showDetalhePopup, setShowDetalhePopup] = useState(false);
+  const [documentoVinculado, setDocumentoVinculado] = useState(null);
+  
+  // Estados para visualização e edição de textos
+  const [textoVisualizando, setTextoVisualizando] = useState(null);
+  const [tipoTextoVisualizando, setTipoTextoVisualizando] = useState('conteudo');
+  const [tituloVisualizando, setTituloVisualizando] = useState('');
+  const [editandoConteudo, setEditandoConteudo] = useState(null);
+  const [textoEditado, setTextoEditado] = useState('');
+  const [atualizandoTexto, setAtualizandoTexto] = useState(false);
+  const [editandoRetornoIA, setEditandoRetornoIA] = useState(null);
+  const [retornoIAEditado, setRetornoIAEditado] = useState('');
+  const [atualizandoRetornoIA, setAtualizandoRetornoIA] = useState(false);
+  const [editandoTextoAnalise, setEditandoTextoAnalise] = useState(null);
+  const [textoAnaliseHtml, setTextoAnaliseHtml] = useState('');
+  const [atualizandoTextoAnalise, setAtualizandoTextoAnalise] = useState(false);
+  const [visualizandoTextoAnaliseHtml, setVisualizandoTextoAnaliseHtml] = useState(null);
+  const [documentoParaAnaliseIA, setDocumentoParaAnaliseIA] = useState(null);
   
   // Estado para controlar as abas
   const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos' ou 'pendentes'
@@ -367,6 +589,191 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
     }
   };
 
+  // Função para buscar documento vinculado
+  const fetchDocumentoVinculado = async (controleId) => {
+    try {
+      // Primeiro, buscar a relação documento-controle
+      const { data: relacao, error: relacaoError } = await supabase
+        .from('documento_controle_geral_rel')
+        .select('documento_id')
+        .eq('controle_id', controleId)
+        .maybeSingle();
+      
+      if (relacaoError) throw relacaoError;
+      
+      if (relacao && relacao.documento_id) {
+        // Buscar informações completas do documento
+        const { data: documento, error: documentoError } = await supabase
+          .from('base_dados_conteudo')
+          .select('*')
+          .eq('id', relacao.documento_id)
+          .single();
+          
+        if (documentoError) throw documentoError;
+        
+        setDocumentoVinculado(documento);
+      } else {
+        setDocumentoVinculado(null);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documento vinculado:', error);
+      setDocumentoVinculado(null);
+    }
+  };
+
+  // Função para visualizar texto extraído ou resultado da IA
+  const visualizarTexto = (item, tipo = 'conteudo', editar = false) => {
+    if (tipo === 'conteudo') {
+      if (editar || !item.conteudo || item.conteudo.trim() === '') {
+        setEditandoConteudo(item);
+        setTextoEditado(item.conteudo || '');
+      } else {
+        setTextoVisualizando(item.conteudo);
+        setTipoTextoVisualizando('conteudo');
+        setTituloVisualizando('Texto Extraído');
+      }
+    } else if (tipo === 'retorno_ia') {
+      if (editar) {
+        setEditandoRetornoIA(item);
+        setRetornoIAEditado(item.retorno_ia || '');
+      } else if (item.retorno_ia && item.retorno_ia.trim() !== '') {
+        setTextoVisualizando(item.retorno_ia);
+        setTipoTextoVisualizando('retorno_ia');
+        setTituloVisualizando('Análise de IA');
+      } else {
+        toast.error('Não há análise de IA disponível para este documento');
+      }
+    }
+  };
+
+  // Função para visualizar/editar texto análise
+  const visualizarTextoAnalise = (item, editar = false) => {
+    if (editar) {
+      setEditandoTextoAnalise(item);
+      setTextoAnaliseHtml(item.texto_analise || '<p></p>');
+    } else if (item.texto_analise && item.texto_analise.trim() !== '') {
+      setVisualizandoTextoAnaliseHtml(item.texto_analise);
+    } else {
+      toast.error('Não há texto análise disponível para este documento');
+    }
+  };
+
+  // Salvar o texto editado no Supabase
+  const salvarTextoEditado = async () => {
+    if (!editandoConteudo || !textoEditado.trim()) {
+      toast.error('Por favor, insira o texto extraído antes de salvar');
+      return;
+    }
+
+    try {
+      setAtualizandoTexto(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoTexto(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ conteudo: textoEditado })
+        .eq('id', editandoConteudo.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o documento vinculado local
+      setDocumentoVinculado(prev => prev ? { ...prev, conteudo: textoEditado } : null);
+      
+      toast.success('Texto atualizado com sucesso!');
+      setEditandoConteudo(null);
+      setTextoEditado('');
+      
+    } catch (error) {
+      console.error('Erro ao atualizar texto:', error);
+      toast.error('Erro ao salvar o texto');
+    } finally {
+      setAtualizandoTexto(false);
+    }
+  };
+
+  // Função para salvar o retorno da IA editado
+  const salvarRetornoIAEditado = async () => {
+    if (!editandoRetornoIA) return;
+
+    try {
+      setAtualizandoRetornoIA(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoRetornoIA(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ retorno_ia: retornoIAEditado })
+        .eq('id', editandoRetornoIA.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o documento vinculado local
+      setDocumentoVinculado(prev => prev ? { ...prev, retorno_ia: retornoIAEditado } : null);
+      
+      toast.success('Análise de IA atualizada com sucesso!');
+      setEditandoRetornoIA(null);
+      setRetornoIAEditado('');
+      
+    } catch (error) {
+      console.error('Erro ao atualizar análise de IA:', error);
+      toast.error('Erro ao salvar a análise de IA');
+    } finally {
+      setAtualizandoRetornoIA(false);
+    }
+  };
+
+  // Função para salvar o texto análise como HTML
+  const salvarTextoAnaliseEditado = async () => {
+    if (!editandoTextoAnalise) return;
+
+    try {
+      setAtualizandoTextoAnalise(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        setAtualizandoTextoAnalise(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('base_dados_conteudo')
+        .update({ texto_analise: textoAnaliseHtml })
+        .eq('id', editandoTextoAnalise.id)
+        .select();
+      
+      if (error) throw error;
+      
+      // Atualizar o documento vinculado local
+      setDocumentoVinculado(prev => prev ? { ...prev, texto_analise: textoAnaliseHtml } : null);
+      
+      toast.success('Texto análise atualizado com sucesso!');
+      setEditandoTextoAnalise(null);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar texto análise:', error);
+      toast.error('Erro ao salvar o texto análise');
+    } finally {
+      setAtualizandoTextoAnalise(false);
+    }
+  };
+
   // Função para alternar visibilidade
   const toggleVisibilidade = async (itemId, currentVisibility) => {
     try {
@@ -403,6 +810,106 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
       toast.error('Erro ao alterar visibilidade do item');
     } finally {
       setAtualizandoVisibilidade(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  // Função para obter URL temporária
+  const getTemporaryUrl = async (documentId) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar autenticado');
+        return null;
+      }
+
+      const response = await fetch(`/api/get_download_url?id=${documentId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao gerar URL temporária');
+      }
+
+      const data = await response.json();
+      return {
+        url: data.url,
+        filename: data.filename
+      };
+    } catch (error) {
+      console.error('Erro ao obter URL temporária:', error);
+      toast.error('Erro ao gerar link de acesso ao arquivo');
+      return null;
+    }
+  };
+
+  // Função para abrir PDF
+  const openPdf = async (documentId) => {
+    try {
+      toast.loading('Preparando arquivo para visualização...');
+      
+      const result = await getTemporaryUrl(documentId);
+      
+      if (!result || !result.url) {
+        toast.dismiss();
+        toast.error('Não foi possível gerar o link de acesso');
+        return;
+      }
+      
+      toast.dismiss();
+      window.open(result.url, '_blank');
+    } catch (error) {
+      toast.dismiss();
+      console.error('Erro ao abrir PDF:', error);
+      toast.error('Erro ao processar o arquivo');
+    }
+  };
+
+  // Função para download do PDF
+  const downloadPdf = async (documentId) => {
+    try {
+      toast.loading('Preparando arquivo para download...');
+      
+      const result = await getTemporaryUrl(documentId);
+      
+      if (!result || !result.url) {
+        toast.dismiss();
+        toast.error('Não foi possível gerar o link de download');
+        return;
+      }
+      
+      const response = await fetch(result.url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      });
+      
+      if (!response.ok) {
+        toast.dismiss();
+        toast.error('Erro ao fazer download do arquivo');
+        return;
+      }
+      
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = result.filename || 'download.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.dismiss();
+      toast.success('Download iniciado');
+    } catch (error) {
+      toast.dismiss();
+      console.error('Erro ao fazer download:', error);
+      toast.error('Erro ao processar download do arquivo');
     }
   };
 
@@ -446,15 +953,23 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
   };
 
   // Função para abrir o popup de detalhes
-  const handleItemClick = (item) => {
+  const handleItemClick = async (item) => {
     setItemSelecionado(item);
     setShowDetalhePopup(true);
+    
+    // Se o item tem documento, buscar as informações do documento
+    if (item.tem_documento) {
+      await fetchDocumentoVinculado(item.id);
+    } else {
+      setDocumentoVinculado(null);
+    }
   };
 
   // Função para fechar o popup de detalhes
   const handleCloseDetalhe = () => {
     setShowDetalhePopup(false);
     setItemSelecionado(null);
+    setDocumentoVinculado(null);
   };
 
   // Função para atualizar o status de um documento após upload ou vínculo
@@ -475,6 +990,8 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
       // Atualizar o item selecionado se for o mesmo
       if (itemSelecionado && itemSelecionado.id === controleId) {
         setItemSelecionado(prev => ({ ...prev, tem_documento: true }));
+        // Recarregar documento vinculado
+        await fetchDocumentoVinculado(controleId);
       }
       
       toast.success('Documento anexado com sucesso!');
@@ -499,6 +1016,20 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
     setShowDetalhePopup(false);
     fetchControles();
     toast.success('Item atualizado com sucesso!');
+  };
+
+  // Função para lidar com a conclusão da análise IA
+  const handleAnalysisComplete = async (resultado) => {
+    // Recarregar documento vinculado para mostrar o novo resultado
+    if (itemSelecionado && itemSelecionado.tem_documento) {
+      await fetchDocumentoVinculado(itemSelecionado.id);
+    }
+    setDocumentoParaAnaliseIA(null);
+  };
+
+  // Função para fechar modal de texto
+  const fecharModalTexto = () => {
+    setTextoVisualizando(null);
   };
 
   // Funções para obter título e descrição das abas
@@ -828,13 +1359,279 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
         </div>
       </div>
 
-      {/* Modais */}
+      {/* MODAIS E POPUPS */}
+
+      {/* Modal para visualização de texto */}
+      {textoVisualizando !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{tituloVisualizando}</h2>
+              <button 
+                onClick={fecharModalTexto}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap p-4 bg-gray-100 rounded text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+              {textoVisualizando || ''}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para edição/adição de texto extraído */}
+      {editandoConteudo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '' 
+                  ? "Adicionar Texto Extraído" 
+                  : "Editar Texto Extraído"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoConteudo(null);
+                  setTextoEditado('');
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoConteudo.nome_arquivo}
+              </p>
+              {(!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '') && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+                  <p className="text-yellow-800 font-medium mb-2">Texto não disponível para extração</p>
+                  <p className="text-yellow-700">
+                    Para extrair o texto deste documento, por favor, utilize esta ferramenta:
+                  </p>
+                  <a 
+                    href="https://testedoctr.streamlit.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-2 p-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded"
+                  >
+                    Acessar Ferramenta de Extração de Texto
+                  </a>
+                  <p className="mt-3 text-sm text-gray-600">
+                    1. Na ferramenta, faça upload do documento PDF<br/>
+                    2. Extraia o texto e copie-o<br/>
+                    3. Cole o texto no campo abaixo e salve as alterações
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="textoExtraido" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoConteudo.conteudo || editandoConteudo.conteudo.trim() === '' 
+                  ? "Cole o texto extraído aqui:" 
+                  : "Texto extraído:"}
+              </label>
+              <textarea
+                id="textoExtraido"
+                value={textoEditado}
+                onChange={(e) => setTextoEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Cole aqui o texto extraído do documento..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarTextoEditado}
+                disabled={atualizandoTexto || !textoEditado.trim()}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoTexto || !textoEditado.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoTexto ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para edição/adição de retorno de IA */}
+      {editandoRetornoIA && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicionar Análise de IA" 
+                  : "Editar Análise de IA"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoRetornoIA(null);
+                  setRetornoIAEditado('');
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoRetornoIA.nome_arquivo}
+              </p>
+              {(!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '') && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+                  <p className="text-yellow-800 font-medium mb-2">Análise de IA não disponível</p>
+                  <p className="text-yellow-700">
+                    Este documento ainda não foi analisado pela IA. Você pode adicionar manualmente uma análise abaixo ou usar o botão de análise com IA.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="retornoIA" className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoRetornoIA.retorno_ia || editandoRetornoIA.retorno_ia.trim() === '' 
+                  ? "Adicione uma análise:" 
+                  : "Análise de IA:"}
+              </label>
+              <textarea
+                id="retornoIA"
+                value={retornoIAEditado}
+                onChange={(e) => setRetornoIAEditado(e.target.value)}
+                rows={15}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono"
+                placeholder="Digite ou cole a análise da IA aqui..."
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarRetornoIAEditado}
+                disabled={atualizandoRetornoIA}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoRetornoIA
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoRetornoIA ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal para edição/adição de texto análise com TipTap */}
+      {editandoTextoAnalise && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicionar Texto Análise" 
+                  : "Editar Texto Análise"}
+              </h2>
+              <button 
+                onClick={() => {
+                  setEditandoTextoAnalise(null);
+                }}
+                className="text-red-500 hover:text-red-700 bg-gray-100 p-2 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                <strong>Documento:</strong> {editandoTextoAnalise.nome_arquivo}
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {!editandoTextoAnalise.texto_analise || editandoTextoAnalise.texto_analise.trim() === '' 
+                  ? "Adicione uma análise manual:" 
+                  : "Texto análise:"}
+              </label>
+              
+              <TipTapEditor 
+                initialValue={textoAnaliseHtml}
+                onChange={html => setTextoAnaliseHtml(html)}
+              />
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={salvarTextoAnaliseEditado}
+                disabled={atualizandoTextoAnalise}
+                className={`flex items-center px-4 py-2 rounded ${
+                  atualizandoTextoAnalise
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {atualizandoTextoAnalise ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="mr-2" />
+                    Salvar Análise
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para visualização de texto análise com HTML formatado */}
+      {visualizandoTextoAnaliseHtml && (
+        <VisualizarTextoAnalise 
+          htmlContent={visualizandoTextoAnaliseHtml}
+          onClose={() => setVisualizandoTextoAnaliseHtml(null)}
+        />
+      )}
+
+      {/* Popup de detalhes do controle */}
       {showDetalhePopup && (
         <DetalheConteudoPopup
           item={itemSelecionado}
           onClose={handleCloseDetalhe}
           categorias={categorias}
           projetos={projetos}
+          documentoVinculado={documentoVinculado}
           onEditClick={(itemId) => {
             setEditarItemId(itemId);
             setShowDetalhePopup(false);
@@ -845,6 +1642,28 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
           }}
           onToggleVisibilidade={toggleVisibilidade}
           atualizandoVisibilidade={atualizandoVisibilidade[itemSelecionado?.id]}
+          onViewTextClick={(documento, tipo, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTexto(documento, tipo, editar);
+          }}
+          onViewReturnClick={(documento, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTexto(documento, 'retorno_ia', editar);
+          }}
+          onViewAnalysisClick={(documento, editar = false) => {
+            setShowDetalhePopup(false);
+            visualizarTextoAnalise(documento, editar);
+          }}
+          onAnalyzeClick={(documentoId) => {
+            setDocumentoParaAnaliseIA(documentoId);
+            setShowDetalhePopup(false);
+          }}
+          onDownloadClick={(documentoId) => {
+            downloadPdf(documentoId);
+          }}
+          onOpenClick={(documentoId) => {
+            openPdf(documentoId);
+          }}
         />
       )}
 
@@ -876,6 +1695,15 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
           onSuccess={handleEditarSuccess}
           categorias={categorias}
           projetos={projetos}
+        />
+      )}
+
+      {/* Modal para análise de IA */}
+      {documentoParaAnaliseIA && (
+        <GeminiAnalysisDialog 
+          documentId={documentoParaAnaliseIA}
+          onClose={() => setDocumentoParaAnaliseIA(null)}
+          onAnalysisComplete={handleAnalysisComplete}
         />
       )}
     </div>
