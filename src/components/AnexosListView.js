@@ -22,6 +22,7 @@ import {
 import GeminiAnalysisDialog from './GeminiAnalysisDialog';
 import TipTapEditor from './TipTapEditor';
 import VisualizarTextoAnalise from './VisualizarTextoAnalise';
+import UploadModal from './UploadModal';
 
 // Componente do popup de detalhes do anexo - ATUALIZADO
 const DetalheAnexoPopup = ({ 
@@ -361,6 +362,9 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
   
   // Estado para controlar as abas
   const [abaAtiva, setAbaAtiva] = useState('todos');
+
+  // Estado para modal de upload
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -947,9 +951,22 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
     setTextoVisualizando(null);
   };
 
-  // Função para navegar para upload
+  // Função para navegar para upload - ATUALIZADA PARA ABRIR MODAL
   const handleNovoUpload = () => {
-    window.location.href = '/upload';
+    setShowUploadModal(true);
+  };
+
+  // Função para lidar com upload completo
+  const handleUploadComplete = async (data) => {
+    console.log('Upload concluído:', data);
+    
+    // Recarregar a lista de anexos para mostrar o novo arquivo
+    await fetchAnexos();
+    
+    // Fechar o modal
+    setShowUploadModal(false);
+    
+    toast.success('Arquivo enviado e lista atualizada!');
   };
 
   // Funções para obter título e descrição das abas
@@ -1700,6 +1717,17 @@ const AnexosListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
           documentId={documentoParaAnaliseIA}
           onClose={() => setDocumentoParaAnaliseIA(null)}
           onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
+
+      {/* Modal de Upload */}
+      {showUploadModal && (
+        <UploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onUploadComplete={handleUploadComplete}
+          user={user}
+          projetosVinculados={projetosVinculados}
         />
       )}
     </div>

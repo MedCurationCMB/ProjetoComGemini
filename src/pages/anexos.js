@@ -150,11 +150,6 @@ export default function Anexos({ user }) {
     }
   };
 
-  // Função para navegar para upload
-  const handleNovoUpload = () => {
-    router.push('/upload');
-  };
-
   // Funções de navegação
   const handleInicioClick = () => {
     router.push('/visualizacao-indicadores');
@@ -182,6 +177,10 @@ export default function Anexos({ user }) {
 
   const handleConfiguracoesClick = () => {
     router.push('/cadastros');
+  };
+
+  const handleTabelaClick = () => {
+    router.push('/tabela');
   };
 
   // Verificar se há filtros ativos
@@ -213,14 +212,15 @@ export default function Anexos({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Anexos</title>
+        <title>Anexos - Sistema de Gerenciamento</title>
+        <meta name="description" content="Gerencie documentos anexados, análises de IA e extrações de texto" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile: Estrutura igual ao mobile */}
+          {/* Mobile: Estrutura responsiva */}
           <div className="lg:hidden">
             {/* Primeira linha: Logo e Menu */}
             <div className="flex items-center justify-between mb-4">
@@ -234,73 +234,76 @@ export default function Anexos({ user }) {
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 hover:bg-gray-100 rounded-md"
+                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                  aria-label="Menu de navegação"
                 >
                   <FiMenu className="w-6 h-6 text-gray-600" />
                 </button>
                 
                 {/* Dropdown do menu */}
                 {showMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleInicioClick();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
-                    >
-                      <FiHome className="mr-3 h-4 w-4" />
-                      Início
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleNovoUpload();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
-                    >
-                      <FiPlus className="mr-3 h-4 w-4" />
-                      Novo Upload
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiUser className="mr-3 h-4 w-4" />
-                      Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleHistoricoAcessos();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiList className="mr-3 h-4 w-4" />
-                      Histórico Acessos (admin)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleConfiguracoesClick();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Configurações
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleLogout();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
-                    >
-                      <FiLogOut className="mr-3 h-4 w-4" />
-                      Logout
-                    </button>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleInicioClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                      >
+                        <FiHome className="mr-3 h-4 w-4" />
+                        Início
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleTabelaClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                      >
+                        <FiList className="mr-3 h-4 w-4" />
+                        Tabela (Visualização Antiga)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                      >
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleHistoricoAcessos();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                      >
+                        <FiList className="mr-3 h-4 w-4" />
+                        Histórico Acessos (admin)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleConfiguracoesClick();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                      >
+                        <FiSettings className="mr-3 h-4 w-4" />
+                        Configurações
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleLogout();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
+                      >
+                        <FiLogOut className="mr-3 h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -314,7 +317,7 @@ export default function Anexos({ user }) {
                 </div>
                 <input
                   type="text"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm transition-all"
                   placeholder="Buscar anexos..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -328,6 +331,7 @@ export default function Anexos({ user }) {
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
+                aria-label="Filtros"
               >
                 <FiFilter className="w-5 h-5" />
               </button>
@@ -336,14 +340,13 @@ export default function Anexos({ user }) {
             {/* Terceira linha: Filtros */}
             {showFilters && (
               <div className="mt-4 space-y-3">
-                {/* Linha com os selects básicos */}
                 <div className="flex items-end space-x-3">
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       {apresentacaoVariaveis.projeto || 'Projeto'}
                     </label>
                     <select
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       value={projetoSelecionado}
                       onChange={(e) => setProjetoSelecionado(e.target.value)}
                     >
@@ -359,7 +362,7 @@ export default function Anexos({ user }) {
                       {apresentacaoVariaveis.categoria || 'Categoria'}
                     </label>
                     <select
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       value={categoriaSelecionada}
                       onChange={(e) => setCategoriaSelecionada(e.target.value)}
                     >
@@ -384,9 +387,9 @@ export default function Anexos({ user }) {
             )}
           </div>
 
-          {/* Desktop: Layout original */}
+          {/* Desktop: Layout completo */}
           <div className="hidden lg:block">
-            {/* Primeira linha: Logo, Busca e Menu */}
+            {/* Primeira linha: Logo, Busca e Controles */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
@@ -402,7 +405,7 @@ export default function Anexos({ user }) {
                   </div>
                   <input
                     type="text"
-                    className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm transition-all"
                     placeholder="Buscar anexos..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -412,15 +415,6 @@ export default function Anexos({ user }) {
               
               {/* Controles à direita */}
               <div className="flex items-center space-x-3">
-                {/* Botão de Upload */}
-                <button
-                  onClick={handleNovoUpload}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
-                >
-                  <FiPlus className="mr-2 h-5 w-5" />
-                  Novo Upload
-                </button>
-                
                 {/* Botão de filtro */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -429,6 +423,7 @@ export default function Anexos({ user }) {
                       ? 'bg-blue-600 text-white' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
+                  aria-label="Filtros"
                 >
                   <FiFilter className="w-5 h-5" />
                 </button>
@@ -437,73 +432,76 @@ export default function Anexos({ user }) {
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
-                    className="p-2 hover:bg-gray-100 rounded-md"
+                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                    aria-label="Menu de navegação"
                   >
                     <FiMenu className="w-6 h-6 text-gray-600" />
                   </button>
                   
                   {/* Dropdown do menu */}
                   {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleInicioClick();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
-                      >
-                        <FiHome className="mr-3 h-4 w-4" />
-                        Início
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleNovoUpload();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
-                      >
-                        <FiPlus className="mr-3 h-4 w-4" />
-                        Novo Upload
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiUser className="mr-3 h-4 w-4" />
-                        Perfil
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleHistoricoAcessos();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiList className="mr-3 h-4 w-4" />
-                        Histórico Acessos (admin)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleConfiguracoesClick();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiSettings className="mr-3 h-4 w-4" />
-                        Configurações
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          handleLogout();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
-                      >
-                        <FiLogOut className="mr-3 h-4 w-4" />
-                        Logout
-                      </button>
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            handleInicioClick();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        >
+                          <FiHome className="mr-3 h-4 w-4" />
+                          Início
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            handleTabelaClick();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        >
+                          <FiList className="mr-3 h-4 w-4" />
+                          Tabela (Visualização Antiga)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        >
+                          <FiUser className="mr-3 h-4 w-4" />
+                          Perfil
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            handleHistoricoAcessos();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        >
+                          <FiList className="mr-3 h-4 w-4" />
+                          Histórico Acessos (admin)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            handleConfiguracoesClick();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        >
+                          <FiSettings className="mr-3 h-4 w-4" />
+                          Configurações
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            handleLogout();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
+                        >
+                          <FiLogOut className="mr-3 h-4 w-4" />
+                          Logout
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -513,14 +511,13 @@ export default function Anexos({ user }) {
             {/* Segunda linha: Filtros */}
             {showFilters && (
               <div className="space-y-3">
-                {/* Linha com os selects básicos */}
                 <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
                   <div className="w-full sm:flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       {apresentacaoVariaveis.projeto || 'Projeto'}
                     </label>
                     <select
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       value={projetoSelecionado}
                       onChange={(e) => setProjetoSelecionado(e.target.value)}
                     >
@@ -536,7 +533,7 @@ export default function Anexos({ user }) {
                       {apresentacaoVariaveis.categoria || 'Categoria'}
                     </label>
                     <select
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       value={categoriaSelecionada}
                       onChange={(e) => setCategoriaSelecionada(e.target.value)}
                     >
@@ -553,7 +550,7 @@ export default function Anexos({ user }) {
                       onClick={clearFilters}
                       className="w-full sm:w-auto px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
                     >
-                      Limpar
+                      Limpar Filtros
                     </button>
                   )}
                 </div>
@@ -568,7 +565,7 @@ export default function Anexos({ user }) {
         <div className="lg:flex lg:space-x-8">
           {/* Sidebar de navegação - Desktop apenas */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-24">
               <nav className="space-y-2">
                 <button
                   onClick={handleInicioClick}
@@ -613,6 +610,16 @@ export default function Anexos({ user }) {
                   <FiPaperclip className="mr-3 h-5 w-5" />
                   Anexos
                 </button>
+
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <button
+                    onClick={handleTabelaClick}
+                    className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
+                  >
+                    <FiList className="mr-3 h-5 w-5" />
+                    Visualização Tabela
+                  </button>
+                </div>
               </nav>
             </div>
           </div>
@@ -634,9 +641,18 @@ export default function Anexos({ user }) {
                 <h2 className="text-2xl lg:text-3xl font-bold text-black">{getSectionTitle()}</h2>
                 <p className="text-gray-600 text-sm mt-1">{getSectionSubtitle()}</p>
               </div>
+              
+              {/* Link para visualização em tabela */}
+              <button
+                onClick={handleTabelaClick}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center transition-colors"
+              >
+                <FiList className="mr-2 h-5 w-5" />
+                Ver em Tabela
+              </button>
             </div>
 
-            {/* Conteúdo da tabela */}
+            {/* Conteúdo principal */}
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -650,16 +666,25 @@ export default function Anexos({ user }) {
                 <p className="text-gray-500 max-w-md mx-auto mb-4">
                   Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
                 </p>
-                <button
-                  onClick={handleNovoUpload}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center mx-auto"
-                >
-                  <FiPlus className="mr-2 h-5 w-5" />
-                  Fazer Upload
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={handleConfiguracoesClick}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center transition-colors"
+                  >
+                    <FiSettings className="mr-2 h-5 w-5" />
+                    Configurações
+                  </button>
+                  <button
+                    onClick={handleTabelaClick}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center transition-colors"
+                  >
+                    <FiList className="mr-2 h-5 w-5" />
+                    Ver Tabela
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-lg shadow-sm">
                 <AnexosListView 
                   user={user} 
                   filtroProjetoId={projetoSelecionado}
@@ -676,7 +701,7 @@ export default function Anexos({ user }) {
         <div className="flex justify-around">
           <button
             onClick={handleInicioClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
             <FiBarChart className="w-5 h-5" />
             <span className="text-xs font-medium">Indicadores</span>
@@ -684,7 +709,7 @@ export default function Anexos({ user }) {
 
           <button
             onClick={handleImportantesClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
             <FiStar className="w-5 h-5" />
             <span className="text-xs font-medium">Importantes</span>
@@ -692,7 +717,7 @@ export default function Anexos({ user }) {
 
           <button
             onClick={handleControleClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
             <FiClipboard className="w-5 h-5" />
             <span className="text-xs font-medium">Controle</span>
@@ -700,7 +725,7 @@ export default function Anexos({ user }) {
 
           <button
             onClick={handleRegistrosClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
             <TfiPencil className="w-5 h-5" />
             <span className="text-xs font-medium">Registros</span>
@@ -711,7 +736,7 @@ export default function Anexos({ user }) {
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'anexos'
                 ? 'text-blue-600'
-                : 'text-gray-500'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <FiPaperclip className="w-5 h-5" />
@@ -732,6 +757,19 @@ export default function Anexos({ user }) {
           }}
         />
       )}
+
+      {/* Meta tags e informações adicionais no head - melhorias de SEO e performance */}
+      <noscript>
+        <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">JavaScript Necessário</h1>
+            <p className="text-gray-600">
+              Esta aplicação requer JavaScript para funcionar corretamente. 
+              Por favor, habilite JavaScript em seu navegador.
+            </p>
+          </div>
+        </div>
+      </noscript>
     </div>
   );
 }
