@@ -257,16 +257,6 @@ export default function Anexos({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleTabelaClick();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
-                      >
-                        <FiList className="mr-3 h-4 w-4" />
-                        Tabela (Visualização Antiga)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
                       >
@@ -455,16 +445,6 @@ export default function Anexos({ user }) {
                         <button
                           onClick={() => {
                             setShowMenu(false);
-                            handleTabelaClick();
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
-                        >
-                          <FiList className="mr-3 h-4 w-4" />
-                          Tabela (Visualização Antiga)
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowMenu(false);
                           }}
                           className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
                         >
@@ -567,13 +547,6 @@ export default function Anexos({ user }) {
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4 sticky top-24">
               <nav className="space-y-2">
-                <button
-                  onClick={handleInicioClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiBarChart className="mr-3 h-5 w-5" />
-                  Indicadores
-                </button>
 
                 <button
                   onClick={handleImportantesClick}
@@ -611,15 +584,6 @@ export default function Anexos({ user }) {
                   Anexos
                 </button>
 
-                <div className="border-t border-gray-200 pt-2 mt-2">
-                  <button
-                    onClick={handleTabelaClick}
-                    className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                  >
-                    <FiList className="mr-3 h-5 w-5" />
-                    Visualização Tabela
-                  </button>
-                </div>
               </nav>
             </div>
           </div>
@@ -641,15 +605,6 @@ export default function Anexos({ user }) {
                 <h2 className="text-2xl lg:text-3xl font-bold text-black">{getSectionTitle()}</h2>
                 <p className="text-gray-600 text-sm mt-1">{getSectionSubtitle()}</p>
               </div>
-              
-              {/* Link para visualização em tabela */}
-              <button
-                onClick={handleTabelaClick}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center transition-colors"
-              >
-                <FiList className="mr-2 h-5 w-5" />
-                Ver em Tabela
-              </button>
             </div>
 
             {/* Conteúdo principal */}
