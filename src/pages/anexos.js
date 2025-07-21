@@ -19,7 +19,10 @@ import {
   FiBarChart,
   FiList,
   FiPaperclip,
-  FiPlus
+  FiPlus,
+  FiFileText,
+  FiFile,
+  FiEdit
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -155,12 +158,8 @@ export default function Anexos({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
-  const handleImportantesClick = () => {
-    router.push('/visualizacao-indicadores-importantes');
-  };
-
-  const handleControleClick = () => {
-    router.push('/visualizacao-geral-indicadores');
+  const handleDocumentosClick = () => {
+    router.push('/documentos');
   };
 
   const handleRegistrosClick = () => {
@@ -549,26 +548,18 @@ export default function Anexos({ user }) {
               <nav className="space-y-2">
 
                 <button
-                  onClick={handleImportantesClick}
+                  onClick={handleDocumentosClick}
                   className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
                 >
-                  <FiStar className="mr-3 h-5 w-5" />
-                  Importantes
-                </button>
-
-                <button
-                  onClick={handleControleClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiClipboard className="mr-3 h-5 w-5" />
-                  Controle
+                  <FiFileText className="mr-3 h-5 w-5" />
+                  Documentos
                 </button>
 
                 <button
                   onClick={handleRegistrosClick}
                   className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
                 >
-                  <TfiPencil className="mr-3 h-5 w-5" />
+                  <FiEdit className="mr-3 h-5 w-5" />
                   Registros
                 </button>
 
@@ -663,26 +654,18 @@ export default function Anexos({ user }) {
           </button>
 
           <button
-            onClick={handleImportantesClick}
+            onClick={handleDocumentosClick}
             className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
-            <FiStar className="w-5 h-5" />
-            <span className="text-xs font-medium">Importantes</span>
-          </button>
-
-          <button
-            onClick={handleControleClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
-          >
-            <FiClipboard className="w-5 h-5" />
-            <span className="text-xs font-medium">Controle</span>
+            <FiFileText className="w-5 h-5" />
+            <span className="text-xs font-medium">Documentos</span>
           </button>
 
           <button
             onClick={handleRegistrosClick}
             className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
           >
-            <TfiPencil className="w-5 h-5" />
+            <FiEdit className="w-5 h-5" />
             <span className="text-xs font-medium">Registros</span>
           </button>
 
