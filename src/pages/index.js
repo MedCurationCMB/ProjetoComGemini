@@ -25,7 +25,7 @@ export default function Home({ user }) {
         if (adminStatus) {
           router.replace('/welcome');
         } else {
-          router.replace('/visualizacao-indicadores');
+          router.replace('/med-curation-desktop');
         }
       } catch (error) {
         console.error('Erro ao verificar status de admin:', error);
