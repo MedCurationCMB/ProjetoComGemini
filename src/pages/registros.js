@@ -154,11 +154,7 @@ export default function Registros({ user }) {
 
   // Funções de navegação
   const handleInicioClick = () => {
-    router.push('/registros');
-  };
-
-  const handleImportantesClick = () => {
-    router.push('/registros');
+    router.push('/documentos');
   };
 
   const handleAnexosClick = () => {
@@ -169,12 +165,8 @@ export default function Registros({ user }) {
     router.push('/registros');
   };
 
-  const handleHistoricoAcessos = () => {
-    router.push('/registros');
-  };
-
   const handleConfiguracoesClick = () => {
-    router.push('/registros');
+    router.push('/cadastros');
   };
 
   const handleDocumentosClick = () => {
@@ -244,7 +236,7 @@ export default function Registros({ user }) {
                         setShowMenu(false);
                         handleInicioClick();
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                     >
                       <FiHome className="mr-3 h-4 w-4" />
                       Início
@@ -252,8 +244,10 @@ export default function Registros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        // TODO: Implementar perfil
+                        toast.info('Perfil em desenvolvimento');
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
@@ -261,19 +255,9 @@ export default function Registros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        handleHistoricoAcessos();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiList className="mr-3 h-4 w-4" />
-                      Histórico Acessos (admin)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
                         handleConfiguracoesClick();
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                     >
                       <FiSettings className="mr-3 h-4 w-4" />
                       Configurações
@@ -283,7 +267,7 @@ export default function Registros({ user }) {
                         setShowMenu(false);
                         handleLogout();
                       }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
                     >
                       <FiLogOut className="mr-3 h-4 w-4" />
                       Logout
@@ -428,7 +412,7 @@ export default function Registros({ user }) {
                           setShowMenu(false);
                           handleInicioClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
@@ -436,8 +420,10 @@ export default function Registros({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          // TODO: Implementar perfil
+                          toast.info('Perfil em desenvolvimento');
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
@@ -445,19 +431,9 @@ export default function Registros({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleHistoricoAcessos();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiList className="mr-3 h-4 w-4" />
-                        Histórico Acessos (admin)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
                           handleConfiguracoesClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiSettings className="mr-3 h-4 w-4" />
                         Configurações
@@ -467,7 +443,7 @@ export default function Registros({ user }) {
                           setShowMenu(false);
                           handleLogout();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
                       >
                         <FiLogOut className="mr-3 h-4 w-4" />
                         Logout

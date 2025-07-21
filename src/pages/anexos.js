@@ -155,7 +155,7 @@ export default function Anexos({ user }) {
 
   // Funções de navegação
   const handleInicioClick = () => {
-    router.push('/visualizacao-indicadores');
+    router.push('/documentos');
   };
 
   const handleDocumentosClick = () => {
@@ -168,10 +168,6 @@ export default function Anexos({ user }) {
 
   const handleAnexosClick = () => {
     router.push('/anexos');
-  };
-
-  const handleHistoricoAcessos = () => {
-    router.push('/historico-acessos');
   };
 
   const handleConfiguracoesClick = () => {
@@ -241,14 +237,14 @@ export default function Anexos({ user }) {
                 
                 {/* Dropdown do menu */}
                 {showMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                     <div className="py-1">
                       <button
                         onClick={() => {
                           setShowMenu(false);
                           handleInicioClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
@@ -256,8 +252,10 @@ export default function Anexos({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          // TODO: Implementar perfil
+                          toast.info('Perfil em desenvolvimento');
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
@@ -265,19 +263,9 @@ export default function Anexos({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          handleHistoricoAcessos();
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
-                      >
-                        <FiList className="mr-3 h-4 w-4" />
-                        Histórico Acessos (admin)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
                           handleConfiguracoesClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
                         <FiSettings className="mr-3 h-4 w-4" />
                         Configurações
@@ -429,14 +417,14 @@ export default function Anexos({ user }) {
                   
                   {/* Dropdown do menu */}
                   {showMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                       <div className="py-1">
                         <button
                           onClick={() => {
                             setShowMenu(false);
                             handleInicioClick();
                           }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                         >
                           <FiHome className="mr-3 h-4 w-4" />
                           Início
@@ -444,8 +432,10 @@ export default function Anexos({ user }) {
                         <button
                           onClick={() => {
                             setShowMenu(false);
+                            // TODO: Implementar perfil
+                            toast.info('Perfil em desenvolvimento');
                           }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                         >
                           <FiUser className="mr-3 h-4 w-4" />
                           Perfil
@@ -453,19 +443,9 @@ export default function Anexos({ user }) {
                         <button
                           onClick={() => {
                             setShowMenu(false);
-                            handleHistoricoAcessos();
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
-                        >
-                          <FiList className="mr-3 h-4 w-4" />
-                          Histórico Acessos (admin)
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowMenu(false);
                             handleConfiguracoesClick();
                           }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 transition-colors"
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                         >
                           <FiSettings className="mr-3 h-4 w-4" />
                           Configurações
@@ -645,14 +625,6 @@ export default function Anexos({ user }) {
       {/* Barra de navegação inferior - Mobile apenas */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
-          <button
-            onClick={handleInicioClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
-          >
-            <FiBarChart className="w-5 h-5" />
-            <span className="text-xs font-medium">Indicadores</span>
-          </button>
-
           <button
             onClick={handleDocumentosClick}
             className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500 hover:text-gray-700"

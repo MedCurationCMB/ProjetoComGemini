@@ -422,38 +422,29 @@ export default function Documentos({ user }) {
                 {/* Dropdown do menu */}
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                    <Link href="/med-curation-desktop" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                      <FiHome className="mr-3 h-4 w-4" />
-                      Curadoria
-                    </Link>
-                    <Link href="/registros" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                      <FiEdit className="mr-3 h-4 w-4" />
-                      Registros
-                    </Link>
-                    <Link href="/anexos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                      <FiPaperclip className="mr-3 h-4 w-4" />
-                      Anexos
+                    <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                      <FiFileText className="mr-3 h-4 w-4" />
+                      Documentos
                     </Link>
                     <button
                       onClick={() => {
                         setShowMenu(false);
                         // TODO: Implementar perfil
+                        toast.info('Perfil em desenvolvimento');
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
                     </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        // TODO: Implementar configurações
-                      }}
+                    <Link
+                      href="/cadastros"
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      onClick={() => setShowMenu(false)}
                     >
                       <FiSettings className="mr-3 h-4 w-4" />
                       Configurações
-                    </button>
+                    </Link>
                     <button
                       onClick={() => {
                         setShowMenu(false);
@@ -648,36 +639,29 @@ export default function Documentos({ user }) {
                   
                   {showMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                      <Link href="/med-curation-desktop" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                        <FiHome className="mr-3 h-4 w-4" />
-                        Curadoria
-                      </Link>
-                      <Link href="/registros" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                        <FiEdit className="mr-3 h-4 w-4" />
-                        Registros
-                      </Link>
-                      <Link href="/anexos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                        <FiPaperclip className="mr-3 h-4 w-4" />
-                        Anexos
+                      <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                        <FiFileText className="mr-3 h-4 w-4" />
+                        Documentos
                       </Link>
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          // TODO: Implementar perfil
+                          toast.info('Perfil em desenvolvimento');
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
                       </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                        }}
+                      <Link
+                        href="/cadastros"
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                        onClick={() => setShowMenu(false)}
                       >
                         <FiSettings className="mr-3 h-4 w-4" />
                         Configurações
-                      </button>
+                      </Link>
                       <button
                         onClick={() => {
                           setShowMenu(false);
