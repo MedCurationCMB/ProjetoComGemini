@@ -13,137 +13,188 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
 
   useEffect(() => {
+    let mounted = true; // Flag para evitar state updates em componentes desmontados
+    
     // Verificar se o usuário está autenticado
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Verificando autenticação inicial...');
+        
+        // ✅ MUDANÇA PRINCIPAL: Usar getSession() primeiro para dados locais rápidos
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Erro ao obter sessão:', sessionError);
+          if (mounted) {
+            setUser(null);
+            setUserActive(true);
+            setLoading(false);
+          }
+          return;
+        }
         
         if (session?.user) {
-          // Verificar se o usuário está ativo
-          const active = await isUserActive(session.user.id);
-          setUserActive(active);
+          console.log('Sessão encontrada, verificando status do usuário...');
           
-          if (active) {
-            setUser(session.user);
-          } else {
-            // Se não estiver ativo, redirecionar para página de acesso negado
-            if (router.pathname !== '/acesso-negado') {
-              router.push('/acesso-negado');
+          // Verificar se o usuário está ativo
+          try {
+            const active = await isUserActive(session.user.id);
+            
+            if (!mounted) return; // Componente foi desmontado
+            
+            setUserActive(active);
+            
+            if (active) {
+              setUser(session.user);
+              console.log('Usuário ativo confirmado');
+            } else {
+              console.log('Usuário inativo, redirecionando...');
+              setUser(null);
+              // Só redirecionar se não estiver já na página de acesso negado
+              if (router.pathname !== '/acesso-negado') {
+                router.push('/acesso-negado');
+              }
             }
-            setUser(null);
+          } catch (activeError) {
+            console.error('Erro ao verificar status ativo:', activeError);
+            // Em caso de erro na verificação, permitir acesso por segurança
+            if (mounted) {
+              setUser(session.user);
+              setUserActive(true);
+            }
           }
         } else {
-          setUser(null);
-          setUserActive(true); // Reset para não mostrar mensagem quando não há usuário
+          console.log('Nenhuma sessão encontrada');
+          if (mounted) {
+            setUser(null);
+            setUserActive(true);
+          }
         }
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
-        setUser(null);
+        if (mounted) {
+          setUser(null);
+          setUserActive(true);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
     
     checkUser();
     
-    // Função para revalidar quando a aba voltar ao foco
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Aba voltou ao foco - revalidando sessão');
-        
-        try {
-          // Forçar revalidação completa da sessão
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            // Reconectar se necessário
-            if (typeof supabase.realtime?.setAuth === 'function') {
-              supabase.realtime.setAuth(session.access_token);
-            }
-            
-            // Revalidar status do usuário com novo token
+    // ✅ CONFIGURAR LISTENER PARA MUDANÇAS DE AUTENTICAÇÃO
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event);
+      
+      if (!mounted) return;
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          try {
             const active = await isUserActive(session.user.id);
-            console.log('Revalidação de status:', active);
+            setUserActive(active);
             
             if (active) {
               setUser(session.user);
-              
-              // Forçar atualização da página para reconectar todos os componentes
-              if (router.pathname !== '/acesso-negado' && 
-                  router.pathname !== '/login' && 
-                  router.pathname !== '/cadastro') {
-                router.replace(router.asPath);
-              }
             } else {
+              setUser(null);
               if (router.pathname !== '/acesso-negado') {
                 router.push('/acesso-negado');
               }
-              setUser(null);
             }
-          } else {
-            // Se não houver sessão válida, redirecionar para login
-            if (router.pathname !== '/login' && 
-                router.pathname !== '/cadastro' && 
-                router.pathname !== '/acesso-negado') {
-              router.replace('/login');
-            }
-            setUser(null);
+          } catch (error) {
+            console.error('Erro ao verificar status no auth change:', error);
+            // Em caso de erro, permitir acesso
+            setUser(session.user);
+            setUserActive(true);
           }
-        } catch (error) {
-          console.error('Erro na revalidação:', error);
-          // Em caso de erro, tentar fazer logout e redirecionar para login
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setUserActive(true);
+      }
+    });
+    
+    // ✅ FUNÇÃO PARA REVALIDAR QUANDO A ABA VOLTAR AO FOCO
+    const handleVisibilityChange = async () => {
+      if (!mounted || document.visibilityState !== 'visible') return;
+      
+      console.log('Aba voltou ao foco - revalidando sessão');
+      
+      try {
+        // Verificar sessão atual novamente
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Revalidar status do usuário
+          const active = await isUserActive(session.user.id);
+          
+          if (mounted) {
+            setUserActive(active);
+            
+            if (active) {
+              setUser(session.user);
+            } else {
+              setUser(null);
+              if (router.pathname !== '/acesso-negado') {
+                router.push('/acesso-negado');
+              }
+            }
+          }
+        } else {
+          if (mounted) {
+            setUser(null);
+            setUserActive(true);
+          }
+          
+          // Se não houver sessão válida e não estiver em páginas públicas, redirecionar
+          const publicPages = ['/login', '/cadastro', '/acesso-negado'];
+          if (!publicPages.includes(router.pathname)) {
+            router.replace('/login');
+          }
+        }
+      } catch (error) {
+        console.error('Erro na revalidação:', error);
+        // Em caso de erro grave, fazer logout
+        if (mounted) {
           await supabase.auth.signOut();
+          setUser(null);
           router.replace('/login');
         }
       }
     };
 
-    // Registrar evento de visibilidade
+    // ✅ REGISTRAR EVENTOS
     document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-    // Configurar listener para mudanças de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        // Verificar se o usuário está ativo
-        const active = await isUserActive(session.user.id);
-        setUserActive(active);
-        
-        if (active) {
-          setUser(session.user);
-        } else {
-          // Se não estiver ativo, redirecionar para página de acesso negado
-          if (router.pathname !== '/acesso-negado') {
-            router.push('/acesso-negado');
-          }
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-        setUserActive(true); // Reset para não mostrar mensagem quando não há usuário
-      }
-    });
     
+    // ✅ CLEANUP FUNCTION
     return () => {
+      mounted = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
     };
   }, [router]);
 
+  // ✅ LOADING STATE MAIS SIMPLES
   if (loading) {
-    // Mostrar um indicador de carregamento enquanto verificamos a autenticação
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
       </div>
     );
   }
 
-  // Se estiver na página de acesso negado, não verificar status ativo
-  if (router.pathname === '/acesso-negado' || 
-      router.pathname === '/login' || 
-      router.pathname === '/cadastro') {
+  // ✅ PÁGINAS PÚBLICAS QUE NÃO PRECISAM DE VERIFICAÇÃO
+  const publicPages = ['/acesso-negado', '/login', '/cadastro'];
+  if (publicPages.includes(router.pathname)) {
     return (
       <>
         <Toaster position="top-right" />
@@ -155,7 +206,7 @@ function MyApp({ Component, pageProps }) {
   return (
     <>
       <Toaster position="top-right" />
-      <Component {...pageProps} user={user} />
+      <Component {...pageProps} user={user} userActive={userActive} />
     </>
   );
 }

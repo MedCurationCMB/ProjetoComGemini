@@ -3,25 +3,24 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Configurações otimizadas para estabilidade
+// ✅ CONFIGURAÇÕES OTIMIZADAS PARA ESTABILIDADE
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    // Configurações para melhor handling de sessões
+    // ✅ CONFIGURAÇÕES MELHORADAS PARA HANDLING DE SESSÕES
     storageKey: 'sb-auth-token',
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     debug: process.env.NODE_ENV === 'development'
   },
-  // Configurações de rede para melhor estabilidade
+  // ✅ CONFIGURAÇÕES DE REDE OTIMIZADAS
   realtime: {
     params: {
       eventsPerSecond: 10
     }
   },
-  // Configurações globais
   global: {
     headers: {
       'X-Client-Info': 'nextjs-app'
@@ -32,23 +31,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-// Estado para controle de reconexão
+// ✅ ESTADO PARA CONTROLE DE RECONEXÃO SIMPLIFICADO
 let isReconnecting = false;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 3;
 
-// Detectar mudanças de visibilidade da aba
-let lastActiveTime = Date.now();
-let connectionCheckInterval = null;
-
 /**
- * Função para verificar conectividade com o Supabase
+ * ✅ FUNÇÃO SIMPLIFICADA PARA VERIFICAR CONECTIVIDADE
  */
 export const checkSupabaseConnection = async () => {
   try {
-    console.log('Verificando conectividade com Supabase...');
-    
-    // Fazer uma query simples e rápida
+    // Fazer uma query bem simples e rápida
     const { error } = await supabase
       .from('usuarios')
       .select('count')
@@ -60,7 +53,6 @@ export const checkSupabaseConnection = async () => {
       return false;
     }
     
-    console.log('Conexão com Supabase OK');
     reconnectAttempts = 0; // Reset counter on success
     return true;
   } catch (error) {
@@ -70,12 +62,10 @@ export const checkSupabaseConnection = async () => {
 };
 
 /**
- * Função para renovar sessão manualmente
+ * ✅ FUNÇÃO PARA RENOVAR SESSÃO MANUALMENTE
  */
 export const refreshSession = async () => {
   try {
-    console.log('Renovando sessão...');
-    
     const { data, error } = await supabase.auth.refreshSession();
     
     if (error) {
@@ -83,7 +73,6 @@ export const refreshSession = async () => {
       return false;
     }
     
-    console.log('Sessão renovada com sucesso');
     return true;
   } catch (error) {
     console.error('Falha ao renovar sessão:', error);
@@ -92,11 +81,11 @@ export const refreshSession = async () => {
 };
 
 /**
- * Função para reconectar quando necessário
+ * ✅ FUNÇÃO SIMPLIFICADA PARA RECONECTAR
  */
 const attemptReconnection = async () => {
   if (isReconnecting || reconnectAttempts >= maxReconnectAttempts) {
-    return;
+    return false;
   }
   
   isReconnecting = true;
@@ -119,162 +108,71 @@ const attemptReconnection = async () => {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('supabase-reconnected'));
       }
+      
+      return true;
     } else {
-      // Tentar novamente após um delay
-      setTimeout(() => {
-        isReconnecting = false;
-        attemptReconnection();
-      }, 2000 * reconnectAttempts); // Backoff exponencial
+      return false;
     }
   } catch (error) {
     console.error('Erro durante reconexão:', error);
-    setTimeout(() => {
-      isReconnecting = false;
-      attemptReconnection();
-    }, 2000 * reconnectAttempts);
+    return false;
   } finally {
     isReconnecting = false;
   }
 };
 
-/**
- * Verificação periódica de conectividade
- */
-const startConnectionMonitoring = () => {
-  if (connectionCheckInterval) {
-    clearInterval(connectionCheckInterval);
-  }
-  
-  connectionCheckInterval = setInterval(async () => {
-    const now = Date.now();
-    const timeSinceLastActive = now - lastActiveTime;
-    
-    // Só verificar se a aba esteve inativa por mais de 30 segundos
-    if (timeSinceLastActive > 30000 && !document.hidden) {
-      const isConnected = await checkSupabaseConnection();
-      if (!isConnected) {
-        console.warn('Perda de conectividade detectada, tentando reconectar...');
-        attemptReconnection();
-      }
-    }
-  }, 60000); // Verificar a cada minuto
-};
-
-/**
- * Parar monitoramento de conexão
- */
-const stopConnectionMonitoring = () => {
-  if (connectionCheckInterval) {
-    clearInterval(connectionCheckInterval);
-    connectionCheckInterval = null;
-  }
-};
-
-// Configurações apenas no lado do cliente
+// ✅ CONFIGURAÇÕES SIMPLIFICADAS APENAS NO LADO DO CLIENTE
 if (typeof window !== 'undefined') {
-  // Detectar quando a aba se torna ativa novamente
+  let lastActiveTime = Date.now();
+  
+  // ✅ DETECTAR QUANDO A ABA SE TORNA ATIVA NOVAMENTE
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       lastActiveTime = Date.now();
-      console.log('Aba tornou-se ativa - verificando sessão e conectividade...');
+      console.log('Aba tornou-se ativa');
       
-      // Verificar sessão e conectividade após um pequeno delay
+      // Verificar conectividade após um pequeno delay
       setTimeout(async () => {
-        const currentSession = await supabase.auth.getSession();
-        
-        if (currentSession.data.session) {
-          console.log('Sessão encontrada, verificando conectividade...');
-          const isConnected = await checkSupabaseConnection();
-          
-          if (!isConnected) {
-            console.log('Problemas de conectividade detectados, tentando reconectar...');
-            attemptReconnection();
-          }
-        } else {
-          console.log('Nenhuma sessão encontrada');
+        const isConnected = await checkSupabaseConnection();
+        if (!isConnected) {
+          console.log('Problemas de conectividade detectados');
+          await attemptReconnection();
         }
       }, 500);
-    } else {
-      console.log('Aba tornou-se inativa');
     }
   });
   
-  // Listener para mudanças de foco na janela
-  window.addEventListener('focus', () => {
-    lastActiveTime = Date.now();
-    console.log('Janela recebeu foco');
-    
-    // Verificação mais rápida quando a janela recebe foco
-    setTimeout(async () => {
-      const isConnected = await checkSupabaseConnection();
-      if (!isConnected) {
-        attemptReconnection();
-      }
-    }, 200);
-  });
-  
-  // Listener para quando a janela perde o foco
-  window.addEventListener('blur', () => {
-    console.log('Janela perdeu foco');
-  });
-  
-  // Detectar mudanças de rede
+  // ✅ DETECTAR MUDANÇAS DE REDE
   window.addEventListener('online', () => {
     console.log('Conexão com internet restaurada');
     lastActiveTime = Date.now();
-    setTimeout(() => {
-      checkSupabaseConnection().then(isConnected => {
-        if (!isConnected) {
-          attemptReconnection();
-        }
-      });
+    setTimeout(async () => {
+      const isConnected = await checkSupabaseConnection();
+      if (!isConnected) {
+        await attemptReconnection();
+      }
     }, 1000);
   });
   
   window.addEventListener('offline', () => {
     console.log('Conexão com internet perdida');
-    stopConnectionMonitoring();
   });
   
-  // Iniciar monitoramento quando a página carrega
-  window.addEventListener('load', () => {
-    console.log('Página carregada, iniciando monitoramento de conexão');
-    startConnectionMonitoring();
-  });
-  
-  // Parar monitoramento quando a página descarrega
-  window.addEventListener('beforeunload', () => {
-    stopConnectionMonitoring();
-  });
-  
-  // Listener para eventos de auth
+  // ✅ LISTENER SIMPLIFICADO PARA EVENTOS DE AUTH
   supabase.auth.onAuthStateChange((event, session) => {
     console.log('Auth state changed:', event);
     
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
       lastActiveTime = Date.now();
       reconnectAttempts = 0; // Reset on successful auth
-      
-      // Reiniciar monitoramento após auth
-      if (event === 'SIGNED_IN') {
-        startConnectionMonitoring();
-      }
     } else if (event === 'SIGNED_OUT') {
-      stopConnectionMonitoring();
       reconnectAttempts = 0;
     }
   });
-  
-  // Inicializar imediatamente se ainda não foi
-  setTimeout(() => {
-    if (!connectionCheckInterval) {
-      startConnectionMonitoring();
-    }
-  }, 1000);
 }
 
 /**
- * Função helper para fazer queries com retry automático
+ * ✅ FUNÇÃO HELPER SIMPLIFICADA PARA QUERIES COM RETRY
  */
 export const supabaseQueryWithRetry = async (queryFn, maxAttempts = 2) => {
   let lastError;
@@ -304,14 +202,13 @@ export const supabaseQueryWithRetry = async (queryFn, maxAttempts = 2) => {
 };
 
 /**
- * Obter status atual da conexão
+ * ✅ OBTER STATUS ATUAL DA CONEXÃO
  */
 export const getConnectionStatus = () => {
   return {
     isReconnecting,
     reconnectAttempts,
-    lastActiveTime,
-    hasMonitoring: !!connectionCheckInterval
+    maxReconnectAttempts
   };
 };
 
