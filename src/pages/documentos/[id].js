@@ -1,4 +1,4 @@
-// Arquivo: src/pages/documentos/[id].js - Versão Corrigida Completa
+// Arquivo: src/pages/documentos/[id].js - Versão Completa com Popup Simplificado
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -24,7 +24,9 @@ import {
   FiCalendar,
   FiFileText,
   FiArchive,
-  FiExternalLink
+  FiX,
+  FiMaximize2,
+  FiMinimize2
 } from 'react-icons/fi';
 
 export default function DocumentoDetalhes({ user }) {
@@ -46,7 +48,12 @@ export default function DocumentoDetalhes({ user }) {
   const [filtroLidos, setFiltroLidos] = useState('');
   const [filtroImportantes, setFiltroImportantes] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
-  const [filtroVisivel, setFiltroVisivel] = useState('todos'); // Novo filtro para debug
+  const [filtroVisivel, setFiltroVisivel] = useState('todos');
+
+  // Estados para o popup/diálogo
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [isDialogMaximized, setIsDialogMaximized] = useState(false);
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -87,6 +94,29 @@ export default function DocumentoDetalhes({ user }) {
     }
   };
 
+  // Função para abrir o diálogo
+  const openDialog = (item) => {
+    setSelectedItem(item);
+    setShowDialog(true);
+    setIsDialogMaximized(false);
+    // Prevenir scroll do body quando o modal estiver aberto
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Função para fechar o diálogo
+  const closeDialog = () => {
+    setShowDialog(false);
+    setSelectedItem(null);
+    setIsDialogMaximized(false);
+    // Restaurar scroll do body
+    document.body.style.overflow = 'unset';
+  };
+
+  // Função para alternar maximização
+  const toggleMaximize = () => {
+    setIsDialogMaximized(!isDialogMaximized);
+  };
+
   // Buscar dados do documento principal
   useEffect(() => {
     const fetchDocumento = async () => {
@@ -95,11 +125,9 @@ export default function DocumentoDetalhes({ user }) {
       try {
         setLoading(true);
         
-        // ✅ CORREÇÃO: Convertendo id para string explicitamente
         const documentoId = String(id);
         console.log('Buscando documento ID:', documentoId, 'Tipo:', typeof documentoId);
         
-        // Buscar o documento na tabela controle_conteudo
         const { data: docData, error: docError } = await supabase
           .from('controle_conteudo')
           .select('*')
@@ -116,7 +144,6 @@ export default function DocumentoDetalhes({ user }) {
         console.log('Documento encontrado:', docData);
         setDocumento(docData);
         
-        // Buscar dados de categorias e projetos
         const [categoriasResponse, projetosResponse] = await Promise.all([
           supabase.from('categorias').select('id, nome'),
           supabase.from('projetos').select('id, nome')
@@ -150,7 +177,7 @@ export default function DocumentoDetalhes({ user }) {
     fetchApresentacaoVariaveis();
   }, [id, user, router]);
 
-  // ✅ BUSCAR ITENS RELACIONADOS - VERSÃO CORRIGIDA
+  // Buscar itens relacionados
   useEffect(() => {
     const fetchItensRelacionados = async () => {
       if (!id || !user) return;
@@ -158,21 +185,16 @@ export default function DocumentoDetalhes({ user }) {
       try {
         setLoadingItens(true);
         
-        // ✅ CORREÇÃO: Convertendo id para string explicitamente
         const documentoId = String(id);
         console.log('Buscando itens relacionados para documento ID:', documentoId);
         
-        // ✅ VERSÃO DE DEBUG: Query mais permissiva primeiro
         let query = supabase
           .from('controle_conteudo_geral')
           .select('*')
           .eq('id_controleconteudo', documentoId);
-          // ✅ REMOVIDO temporariamente: .eq('visivel', true)
-          // ✅ REMOVIDO temporariamente: filtros de texto
         
         console.log('Query SQL gerada:', query);
         
-        // Executar query básica primeiro para debug
         const { data: allData, error: debugError } = await query;
         
         if (debugError) {
@@ -184,10 +206,9 @@ export default function DocumentoDetalhes({ user }) {
         console.log('Todos os registros encontrados (sem filtros):', allData);
         console.log('Quantidade total:', allData?.length || 0);
         
-        // ✅ APLICAR FILTROS POSTERIORMENTE
         let filteredData = allData || [];
         
-        // Aplicar filtros se ativos
+        // Aplicar filtros
         if (searchTerm.trim()) {
           filteredData = filteredData.filter(item => 
             (item.descricao && item.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -209,23 +230,19 @@ export default function DocumentoDetalhes({ user }) {
           filteredData = filteredData.filter(item => item.arquivado === true);
         }
         
-        // ✅ NOVO: Filtro de visibilidade opcional
         if (filtroVisivel === 'visiveis') {
           filteredData = filteredData.filter(item => item.visivel === true);
         } else if (filtroVisivel === 'ocultos') {
           filteredData = filteredData.filter(item => item.visivel === false);
         }
-        // Se for 'todos', não filtra
         
         console.log('Dados após filtros:', filteredData);
         console.log('Quantidade após filtros:', filteredData.length);
         
-        // ✅ ORDENAÇÃO: Manter ordenação original
         filteredData.sort((a, b) => {
-          // Ordenar por prazo_entrega se existir, senão por created_at
           const dateA = new Date(a.prazo_entrega || a.created_at || 0);
           const dateB = new Date(b.prazo_entrega || b.created_at || 0);
-          return dateB - dateA; // Mais recentes primeiro
+          return dateB - dateA;
         });
         
         setItensRelacionados(filteredData);
@@ -263,28 +280,24 @@ export default function DocumentoDetalhes({ user }) {
   const getStatusIndicators = (item) => {
     const indicators = [];
     
-    // Adicionar bolinha azul se não foi lido
     if (!item.lido) {
       indicators.push(
         <div key="nao-lido" className="w-3 h-3 bg-blue-500 rounded-full" title="Não lido"></div>
       );
     }
     
-    // Adicionar estrela se é importante
     if (item.importante) {
       indicators.push(
         <FiStar key="importante" className="w-4 h-4 text-yellow-600" title="Importante" />
       );
     }
     
-    // Adicionar ícone de arquivo se está arquivado
     if (item.arquivado) {
       indicators.push(
         <FiArchive key="arquivado" className="w-4 h-4 text-gray-600" title="Arquivado" />
       );
     }
     
-    // ✅ NOVO: Indicador de visibilidade
     if (item.visivel === false) {
       indicators.push(
         <FiEyeOff key="oculto" className="w-4 h-4 text-gray-400" title="Oculto" />
@@ -299,15 +312,13 @@ export default function DocumentoDetalhes({ user }) {
     return item.ler_depois;
   };
 
-  // ✅ CORREÇÃO: Formatar data usando prazo_entrega_inicial para documento principal e prazo_entrega/created_at para itens
+  // Formatar data
   const formatDate = (item, isDocumentoPrincipal = false) => {
     let dateString;
     
     if (isDocumentoPrincipal) {
-      // Para documento principal da tabela controle_conteudo
       dateString = item.prazo_entrega_inicial;
     } else {
-      // Para itens relacionados da tabela controle_conteudo_geral
       dateString = item.prazo_entrega || item.created_at;
     }
     
@@ -325,11 +336,10 @@ export default function DocumentoDetalhes({ user }) {
     }
   };
 
-  // ✅ CORREÇÃO: Extrair prévia do texto - versão mais robusta
+  // Extrair prévia do texto
   const getTextPreview = (htmlContent, maxLength = 150) => {
     if (!htmlContent) return '';
     
-    // Se for só tags vazias, retornar vazio
     if (htmlContent === '<p></p>' || htmlContent.trim() === '') return '';
     
     try {
@@ -337,14 +347,13 @@ export default function DocumentoDetalhes({ user }) {
       tempDiv.innerHTML = htmlContent;
       const textContent = tempDiv.textContent || tempDiv.innerText || '';
       
-      // Se após extrair o texto ainda está vazio
       if (!textContent.trim()) return '';
       
       return textContent.length > maxLength 
         ? textContent.substring(0, maxLength) + '...'
         : textContent;
     } catch (e) {
-      return htmlContent; // Fallback para texto original se der erro
+      return htmlContent;
     }
   };
 
@@ -360,7 +369,7 @@ export default function DocumentoDetalhes({ user }) {
     return `A cada ${tempo} ${documento.recorrencia}${repeticoes}`;
   };
 
-  // ✅ NOVO: Obter status do item
+  // Obter status do item
   const getItemStatus = (item) => {
     const status = [];
     
@@ -372,6 +381,170 @@ export default function DocumentoDetalhes({ user }) {
     
     return status.length > 0 ? status.join(', ') : 'Pendente';
   };
+
+  // Componente do Diálogo/Popup Simplificado
+  const ItemDialog = () => {
+    if (!showDialog || !selectedItem) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={`bg-white rounded-lg shadow-xl transition-all duration-300 ${
+          isDialogMaximized 
+            ? 'w-full h-full max-w-none max-h-none' 
+            : 'w-full max-w-4xl max-h-[90vh]'
+        } flex flex-col`}>
+          
+          {/* Header do Diálogo */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-bold text-gray-900 truncate">
+                {selectedItem.descricao || 'Sem descrição'}
+              </h2>
+              <div className="flex items-center space-x-2">
+                {getStatusIndicators(selectedItem)}
+                {shouldShowReadLaterIcon(selectedItem) && (
+                  <FiClock className="w-4 h-4 text-blue-600" />
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {/* Botão Maximizar/Minimizar */}
+              <button
+                onClick={toggleMaximize}
+                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                title={isDialogMaximized ? 'Minimizar' : 'Maximizar'}
+              >
+                {isDialogMaximized ? (
+                  <FiMinimize2 className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <FiMaximize2 className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+              
+              {/* Botão Fechar */}
+              <button
+                onClick={closeDialog}
+                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                title="Fechar"
+              >
+                <FiX className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Conteúdo do Diálogo */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            
+            {/* Informações do Item */}
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Projeto:</span>
+                  <p className="text-gray-900">
+                    {projetos[selectedItem.projeto_id] || 'Não definido'}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Categoria:</span>
+                  <p className="text-gray-900">
+                    {categorias[selectedItem.categoria_id] || 'Não definida'}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Prazo:</span>
+                  <p className="text-gray-900">
+                    {formatDate(selectedItem, false) || 'Não definido'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  selectedItem.lido 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {selectedItem.lido ? 'Lido' : 'Não Lido'}
+                </span>
+                
+                {selectedItem.importante && (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                    Importante
+                  </span>
+                )}
+                
+                {selectedItem.ler_depois && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                    Ler Depois
+                  </span>
+                )}
+                
+                {selectedItem.arquivado && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                    Arquivado
+                  </span>
+                )}
+                
+                {!selectedItem.visivel && (
+                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                    Oculto
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Conteúdo de Análise */}
+            <div className="flex-1 overflow-auto p-4">
+              {selectedItem.texto_analise ? (
+                <div 
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selectedItem.texto_analise }}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FiFileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">Sem conteúdo disponível</p>
+                  <p className="text-sm">Este item ainda não possui análise de conteúdo.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer Simplificado */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  <span className="font-medium">ID:</span> {selectedItem.id} | 
+                  <span className="font-medium ml-2">Controle:</span> {selectedItem.id_controleconteudo}
+                </div>
+                
+                <button
+                  onClick={closeDialog}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Fechar modal com ESC
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showDialog) {
+        closeDialog();
+      }
+    };
+
+    if (showDialog) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showDialog]);
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
@@ -410,7 +583,6 @@ export default function DocumentoDetalhes({ user }) {
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            {/* Botão voltar e Logo */}
             <div className="flex items-center space-x-4">
               <Link 
                 href="/documentos"
@@ -426,7 +598,6 @@ export default function DocumentoDetalhes({ user }) {
               />
             </div>
             
-            {/* Menu hambúrguer */}
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -435,7 +606,6 @@ export default function DocumentoDetalhes({ user }) {
                 <FiMenu className="w-6 h-6 text-gray-600" />
               </button>
               
-              {/* Dropdown do menu */}
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                   <Link href="/med-curation-desktop" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
@@ -449,7 +619,6 @@ export default function DocumentoDetalhes({ user }) {
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      // TODO: Implementar perfil
                     }}
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                   >
@@ -459,7 +628,6 @@ export default function DocumentoDetalhes({ user }) {
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      // TODO: Implementar configurações
                     }}
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                   >
@@ -529,7 +697,6 @@ export default function DocumentoDetalhes({ user }) {
             </div>
           </div>
           
-          {/* Informações detalhadas do documento */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t pt-4">
             <div>
               <h4 className="text-sm font-medium text-gray-600 mb-1">Prazo de Entrega</h4>
@@ -641,7 +808,6 @@ export default function DocumentoDetalhes({ user }) {
                     </select>
                   </div>
                   
-                  {/* ✅ NOVO: Filtro de visibilidade para debug */}
                   <div className="w-full sm:flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Visibilidade
@@ -701,7 +867,7 @@ export default function DocumentoDetalhes({ user }) {
             )}
           </div>
           
-          {/* Lista de itens relacionados */}
+          {/* Lista de itens relacionados com popup */}
           <div className="p-6">
             {loadingItens ? (
               <div className="flex justify-center py-8">
@@ -719,7 +885,6 @@ export default function DocumentoDetalhes({ user }) {
                     : 'Este documento ainda não possui itens relacionados na curadoria.'
                   }
                 </p>
-                {/* ✅ NOVO: Informações de debug */}
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
                   <p><strong>Debug Info:</strong></p>
                   <p>Documento ID: {id}</p>
@@ -731,79 +896,78 @@ export default function DocumentoDetalhes({ user }) {
               <div className="space-y-4">
                 {itensRelacionados.map((item) => (
                   <div key={item.id} className="block">
-                    <Link 
-                      href={`/documento/${item.id}`}
-                      className="block"
+                    {/* Card clicável que abre o popup */}
+                    <div 
+                      onClick={() => openDialog(item)}
+                      className={`border-l-4 ${getBorderColor(item)} p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer`}
                     >
-                      <div className={`border-l-4 ${getBorderColor(item)} p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
-                            {item.descricao || 'Sem descrição'}
-                          </h3>
-                          <div className="flex items-center space-x-2">
-                            {getStatusIndicators(item)}
-                            {shouldShowReadLaterIcon(item) && (
-                              <FiClock className="w-4 h-4 text-blue-600" />
-                            )}
-                            <FiExternalLink className="w-4 h-4 text-gray-400" />
-                          </div>
-                        </div>
-                        
-                        {/* ✅ MELHORADO: Preview do texto com fallback */}
-                        {item.texto_analise && getTextPreview(item.texto_analise) && (
-                          <p className="text-gray-600 text-sm mb-3 leading-relaxed">
-                            {getTextPreview(item.texto_analise, 200)}
-                          </p>
-                        )}
-                        
-                        {/* ✅ NOVO: Se não tem texto_analise, mostrar indicador */}
-                        {(!item.texto_analise || !getTextPreview(item.texto_analise)) && (
-                          <p className="text-gray-400 text-sm mb-3 italic">
-                            Sem conteúdo de análise disponível
-                          </p>
-                        )}
-                        
-                        {/* Informações do item */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-wrap space-x-2">
-                            {item.projeto_id && (
-                              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                {projetos[item.projeto_id] || `Projeto ${item.projeto_id}`}
-                              </span>
-                            )}
-                            {item.categoria_id && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                {categorias[item.categoria_id] || `Categoria ${item.categoria_id}`}
-                              </span>
-                            )}
-                            {/* ✅ NOVO: Status do item */}
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              {getItemStatus(item)}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center text-gray-500 text-xs">
-                            <FiCalendar className="w-3 h-3 mr-1" />
-                            {formatDate(item, false) || 'Sem data'}
-                          </div>
-                        </div>
-                        
-                        {/* ✅ NOVO: Informações técnicas de debug */}
-                        <div className="mt-3 pt-2 border-t border-gray-200">
-                          <div className="flex justify-between items-center text-xs text-gray-400">
-                            <span>ID: {item.id}</span>
-                            <span>Visível: {item.visivel ? 'Sim' : 'Não'}</span>
-                            <span>Controle: {item.id_controleconteudo}</span>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
+                          {item.descricao || 'Sem descrição'}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          {getStatusIndicators(item)}
+                          {shouldShowReadLaterIcon(item) && (
+                            <FiClock className="w-4 h-4 text-blue-600" />
+                          )}
+                          <div className="text-gray-400 text-xs">
+                            Clique para expandir
                           </div>
                         </div>
                       </div>
-                    </Link>
+                      
+                      {/* Preview do texto */}
+                      {item.texto_analise && getTextPreview(item.texto_analise) && (
+                        <p className="text-gray-600 text-sm mb-3 leading-relaxed">
+                          {getTextPreview(item.texto_analise, 200)}
+                        </p>
+                      )}
+                      
+                      {(!item.texto_analise || !getTextPreview(item.texto_analise)) && (
+                        <p className="text-gray-400 text-sm mb-3 italic">
+                          Sem conteúdo de análise disponível
+                        </p>
+                      )}
+                      
+                      {/* Informações do item */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap space-x-2">
+                          {item.projeto_id && (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                              {projetos[item.projeto_id] || `Projeto ${item.projeto_id}`}
+                            </span>
+                          )}
+                          {item.categoria_id && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {categorias[item.categoria_id] || `Categoria ${item.categoria_id}`}
+                            </span>
+                          )}
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            {getItemStatus(item)}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center text-gray-500 text-xs">
+                          <FiCalendar className="w-3 h-3 mr-1" />
+                          {formatDate(item, false) || 'Sem data'}
+                        </div>
+                      </div>
+                      
+                      {/* Informações técnicas de debug */}
+                      <div className="mt-3 pt-2 border-t border-gray-200">
+                        <div className="flex justify-between items-center text-xs text-gray-400">
+                          <span>ID: {item.id}</span>
+                          <span>Visível: {item.visivel ? 'Sim' : 'Não'}</span>
+                          <span>Controle: {item.id_controleconteudo}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
             
-            {/* ✅ NOVO: Seção de informações de debug sempre visível */}
+            {/* Seção de informações de debug */}
             <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h4 className="text-sm font-medium text-blue-800 mb-2">Informações de Debug</h4>
               <div className="grid grid-cols-2 gap-4 text-xs text-blue-700">
@@ -817,7 +981,6 @@ export default function DocumentoDetalhes({ user }) {
                 </div>
               </div>
               
-              {/* Mostrar resumo dos filtros ativos */}
               {hasActiveFilters && (
                 <div className="mt-2 text-xs text-blue-600">
                   <p><strong>Filtros aplicados:</strong></p>
@@ -835,11 +998,17 @@ export default function DocumentoDetalhes({ user }) {
         </div>
       </div>
 
+      {/* Componente do Popup/Diálogo Simplificado */}
+      <ItemDialog />
+
       {/* Overlay para fechar menus quando clicar fora */}
-      {showMenu && (
+      {(showMenu || showDialog) && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
-          onClick={() => setShowMenu(false)}
+          onClick={() => {
+            setShowMenu(false);
+            // Não fecha o diálogo aqui para evitar fechar acidentalmente
+          }}
         />
       )}
     </div>
