@@ -831,6 +831,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          handleConfiguracoesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
@@ -1101,6 +1102,7 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          handleConfiguracoesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
