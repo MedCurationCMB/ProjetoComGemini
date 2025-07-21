@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { isUserActive } from '../utils/userUtils';
+import { isUserActiveSimple } from '../utils/userUtils'; // ✅ USANDO A VERSÃO SIMPLES
 import '../styles/globals.css';
 import '../styles/tiptap.css';
 
@@ -13,18 +13,22 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
 
   useEffect(() => {
-    let mounted = true; // Flag para evitar state updates em componentes desmontados
+    let mounted = true;
+    let hasInitialized = false; // ✅ FLAG PARA EVITAR MÚLTIPLAS INICIALIZAÇÕES
     
-    // Verificar se o usuário está autenticado
+    // ✅ FUNÇÃO ULTRA SIMPLIFICADA PARA VERIFICAR USUÁRIO
     const checkUser = async () => {
+      if (hasInitialized || !mounted) return;
+      hasInitialized = true;
+      
       try {
-        console.log('Verificando autenticação inicial...');
+        console.log('🔄 Verificando autenticação inicial...');
         
-        // ✅ MUDANÇA PRINCIPAL: Usar getSession() primeiro para dados locais rápidos
+        // ✅ APENAS OBTER SESSÃO LOCAL - SEM VERIFICAÇÕES COMPLEXAS
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error('Erro ao obter sessão:', sessionError);
+          console.error('❌ Erro ao obter sessão:', sessionError.message);
           if (mounted) {
             setUser(null);
             setUserActive(true);
@@ -34,44 +38,41 @@ function MyApp({ Component, pageProps }) {
         }
         
         if (session?.user) {
-          console.log('Sessão encontrada, verificando status do usuário...');
+          console.log('✅ Sessão encontrada para:', session.user.email);
           
-          // Verificar se o usuário está ativo
+          // ✅ VERIFICAÇÃO SIMPLES DE STATUS ATIVO (SEM RETRY, SEM TIMEOUT LONGO)
           try {
-            const active = await isUserActive(session.user.id);
+            const active = await isUserActiveSimple(session.user.id);
             
-            if (!mounted) return; // Componente foi desmontado
+            if (!mounted) return;
             
             setUserActive(active);
+            setUser(session.user);
             
-            if (active) {
-              setUser(session.user);
-              console.log('Usuário ativo confirmado');
-            } else {
-              console.log('Usuário inativo, redirecionando...');
-              setUser(null);
-              // Só redirecionar se não estiver já na página de acesso negado
-              if (router.pathname !== '/acesso-negado') {
-                router.push('/acesso-negado');
-              }
+            console.log('✅ Status do usuário:', active ? 'ATIVO' : 'INATIVO');
+            
+            // ✅ SÓ REDIRECIONAR SE REALMENTE INATIVO
+            if (!active && router.pathname !== '/acesso-negado') {
+              console.log('🔄 Redirecionando para acesso negado');
+              router.push('/acesso-negado');
             }
           } catch (activeError) {
-            console.error('Erro ao verificar status ativo:', activeError);
-            // Em caso de erro na verificação, permitir acesso por segurança
+            console.warn('⚠️ Erro ao verificar status, permitindo acesso:', activeError.message);
+            // ✅ EM CASO DE ERRO, SEMPRE PERMITIR ACESSO
             if (mounted) {
               setUser(session.user);
               setUserActive(true);
             }
           }
         } else {
-          console.log('Nenhuma sessão encontrada');
+          console.log('ℹ️ Nenhuma sessão encontrada');
           if (mounted) {
             setUser(null);
             setUserActive(true);
           }
         }
       } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
+        console.error('❌ Erro geral na verificação:', error.message);
         if (mounted) {
           setUser(null);
           setUserActive(true);
@@ -79,108 +80,47 @@ function MyApp({ Component, pageProps }) {
       } finally {
         if (mounted) {
           setLoading(false);
+          console.log('✅ Verificação inicial concluída');
         }
       }
     };
     
+    // ✅ EXECUTAR VERIFICAÇÃO INICIAL
     checkUser();
     
-    // ✅ CONFIGURAR LISTENER PARA MUDANÇAS DE AUTENTICAÇÃO
+    // ✅ LISTENER SIMPLIFICADO PARA MUDANÇAS DE AUTH
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event);
-      
       if (!mounted) return;
       
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      console.log('🔄 Auth state change:', event);
+      
+      // ✅ APENAS REAGIR A EVENTOS IMPORTANTES
+      if (event === 'SIGNED_IN') {
         if (session?.user) {
-          try {
-            const active = await isUserActive(session.user.id);
-            setUserActive(active);
-            
-            if (active) {
-              setUser(session.user);
-            } else {
-              setUser(null);
-              if (router.pathname !== '/acesso-negado') {
-                router.push('/acesso-negado');
-              }
-            }
-          } catch (error) {
-            console.error('Erro ao verificar status no auth change:', error);
-            // Em caso de erro, permitir acesso
-            setUser(session.user);
-            setUserActive(true);
-          }
+          console.log('✅ Usuário logado:', session.user.email);
+          setUser(session.user);
+          setUserActive(true); // ✅ ASSUMIR ATIVO INICIALMENTE
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log('ℹ️ Usuário deslogado');
         setUser(null);
         setUserActive(true);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token renovado');
+        // ✅ NÃO FAZER NADA ESPECIAL NO REFRESH - MANTER ESTADO ATUAL
       }
     });
     
-    // ✅ FUNÇÃO PARA REVALIDAR QUANDO A ABA VOLTAR AO FOCO
-    const handleVisibilityChange = async () => {
-      if (!mounted || document.visibilityState !== 'visible') return;
-      
-      console.log('Aba voltou ao foco - revalidando sessão');
-      
-      try {
-        // Verificar sessão atual novamente
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          // Revalidar status do usuário
-          const active = await isUserActive(session.user.id);
-          
-          if (mounted) {
-            setUserActive(active);
-            
-            if (active) {
-              setUser(session.user);
-            } else {
-              setUser(null);
-              if (router.pathname !== '/acesso-negado') {
-                router.push('/acesso-negado');
-              }
-            }
-          }
-        } else {
-          if (mounted) {
-            setUser(null);
-            setUserActive(true);
-          }
-          
-          // Se não houver sessão válida e não estiver em páginas públicas, redirecionar
-          const publicPages = ['/login', '/cadastro', '/acesso-negado'];
-          if (!publicPages.includes(router.pathname)) {
-            router.replace('/login');
-          }
-        }
-      } catch (error) {
-        console.error('Erro na revalidação:', error);
-        // Em caso de erro grave, fazer logout
-        if (mounted) {
-          await supabase.auth.signOut();
-          setUser(null);
-          router.replace('/login');
-        }
-      }
-    };
-
-    // ✅ REGISTRAR EVENTOS
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // ✅ CLEANUP FUNCTION
+    // ✅ CLEANUP FUNCTION SIMPLES
     return () => {
       mounted = false;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, []); // ✅ DEPENDÊNCIAS VAZIAS - SÓ EXECUTAR UMA VEZ
 
-  // ✅ LOADING STATE MAIS SIMPLES
+  // ✅ LOADING STATE SIMPLES
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -192,16 +132,9 @@ function MyApp({ Component, pageProps }) {
     );
   }
 
-  // ✅ PÁGINAS PÚBLICAS QUE NÃO PRECISAM DE VERIFICAÇÃO
+  // ✅ PÁGINAS PÚBLICAS
   const publicPages = ['/acesso-negado', '/login', '/cadastro'];
-  if (publicPages.includes(router.pathname)) {
-    return (
-      <>
-        <Toaster position="top-right" />
-        <Component {...pageProps} user={user} />
-      </>
-    );
-  }
+  const isPublicPage = publicPages.includes(router.pathname);
 
   return (
     <>

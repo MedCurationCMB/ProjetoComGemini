@@ -1,13 +1,13 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Cache para evitar múltiplas verificações simultâneas
+ * ✅ CACHE SIMPLIFICADO PARA EVITAR MÚLTIPLAS VERIFICAÇÕES
  */
 let userStatusCache = new Map();
 let ongoingVerifications = new Map();
 
 /**
- * Limpa o cache de status de usuário
+ * ✅ LIMPA O CACHE DE STATUS DE USUÁRIO
  */
 export const clearUserStatusCache = () => {
   userStatusCache.clear();
@@ -15,232 +15,184 @@ export const clearUserStatusCache = () => {
 };
 
 /**
- * Verifica se um usuário está ativo no sistema (versão otimizada)
+ * ✅ VERSÃO ULTRA SIMPLIFICADA PARA VERIFICAR SE USUÁRIO ESTÁ ATIVO
  * @param {string} userId - ID do usuário a ser verificado
  * @returns {Promise<boolean>} - true se ativo, false caso contrário
  */
 export const isUserActive = async (userId) => {
-    try {
-      if (!userId) return false;
-      
-      // Verificar se já existe uma verificação em andamento para este usuário
-      if (ongoingVerifications.has(userId)) {
-        console.log('Aguardando verificação em andamento para usuário:', userId);
-        return await ongoingVerifications.get(userId);
-      }
-      
-      // Verificar cache (válido por 30 segundos)
-      const cached = userStatusCache.get(userId);
-      if (cached && (Date.now() - cached.timestamp) < 30000) {
-        console.log('Usando status em cache para usuário:', userId);
-        return cached.status;
-      }
-      
-      console.log("Verificando status de usuário:", userId);
-      
-      // Criar promise para evitar múltiplas verificações simultâneas
-      const verificationPromise = performUserVerification(userId);
-      ongoingVerifications.set(userId, verificationPromise);
-      
-      try {
-        const result = await verificationPromise;
-        
-        // Salvar no cache
-        userStatusCache.set(userId, {
-          status: result,
-          timestamp: Date.now()
-        });
-        
-        return result;
-      } finally {
-        // Limpar verificação em andamento
-        ongoingVerifications.delete(userId);
-      }
-      
-    } catch (error) {
-      console.error('Falha ao verificar status do usuário:', error);
-      
-      // Se for erro de timeout, mas o usuário estava autenticado, permitir acesso
-      if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
-        console.warn('Timeout na verificação - permitindo acesso por segurança');
-        return true;
-      }
-      
-      // Para outros erros, também permitir acesso por padrão para não bloquear usuários válidos
+  try {
+    if (!userId) {
+      console.log('UserID não fornecido, retornando true por padrão');
       return true;
     }
+    
+    // ✅ VERIFICAR SE JÁ EXISTE UMA VERIFICAÇÃO EM ANDAMENTO
+    if (ongoingVerifications.has(userId)) {
+      console.log('Verificação em andamento, aguardando resultado...');
+      return await ongoingVerifications.get(userId);
+    }
+    
+    // ✅ VERIFICAR CACHE (VÁLIDO POR 2 MINUTOS)
+    const cached = userStatusCache.get(userId);
+    if (cached && (Date.now() - cached.timestamp) < 120000) {
+      console.log('Usando status em cache para usuário:', userId.substring(0, 8));
+      return cached.status;
+    }
+    
+    console.log("Verificando status de usuário:", userId.substring(0, 8));
+    
+    // ✅ CRIAR PROMISE PARA EVITAR MÚLTIPLAS VERIFICAÇÕES SIMULTÂNEAS
+    const verificationPromise = performUserVerificationSimple(userId);
+    ongoingVerifications.set(userId, verificationPromise);
+    
+    try {
+      const result = await verificationPromise;
+      
+      // ✅ SALVAR NO CACHE
+      userStatusCache.set(userId, {
+        status: result,
+        timestamp: Date.now()
+      });
+      
+      return result;
+    } finally {
+      // ✅ LIMPAR VERIFICAÇÃO EM ANDAMENTO
+      ongoingVerifications.delete(userId);
+    }
+    
+  } catch (error) {
+    console.error('Erro ao verificar status do usuário:', error.message);
+    
+    // ✅ EM CASO DE ERRO, SEMPRE PERMITIR ACESSO POR SEGURANÇA
+    console.warn('Permitindo acesso por segurança devido ao erro');
+    return true;
+  }
 };
 
 /**
- * Função interna para realizar a verificação real do usuário
+ * ✅ FUNÇÃO INTERNA SIMPLIFICADA PARA VERIFICAÇÃO
  * @param {string} userId 
  * @returns {Promise<boolean>}
  */
-const performUserVerification = async (userId) => {
-  // Configuração de timeout mais longa e com retry
-  const timeoutDuration = 8000; // 8 segundos
-  const maxAttempts = 2;
+const performUserVerificationSimple = async (userId) => {
+  const timeoutDuration = 5000; // 5 segundos apenas
   
-  // Função para tentar a requisição com retry
-  const attemptQuery = async (attempt = 1) => {
-    try {
-      console.log(`Tentativa ${attempt} de verificação de status para usuário ${userId}`);
+  try {
+    console.log(`Fazendo verificação de status para usuário ${userId.substring(0, 8)}`);
+    
+    // ✅ TIMEOUT CONTROLLER SIMPLES
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeoutDuration);
+    
+    // ✅ QUERY SIMPLIFICADA
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('ativo')
+      .eq('id', userId)
+      .abortSignal(controller.signal)
+      .single();
       
-      // Usar AbortController para controle de timeout mais preciso
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+    clearTimeout(timeoutId);
       
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('ativo')
-        .eq('id', userId)
-        .abortSignal(controller.signal)
-        .single();
-        
-      clearTimeout(timeoutId);
-        
-      if (error) {
-        console.error(`Erro na tentativa ${attempt}:`, error);
-        
-        // Se não for a última tentativa e for um erro recuperável, tenta novamente
-        if (attempt < maxAttempts && isRecoverableError(error)) {
-          console.log(`Tentando novamente em 1 segundo... (tentativa ${attempt + 1})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return attemptQuery(attempt + 1);
-        }
-        
-        throw error;
-      }
+    if (error) {
+      console.error(`Erro na verificação:`, error.message);
       
-      return data;
-    } catch (error) {
-      // Se for erro de abort (timeout)
-      if (error.name === 'AbortError') {
-        console.warn(`Timeout na tentativa ${attempt}`);
-        if (attempt < maxAttempts) {
-          console.log(`Tentando novamente após timeout... (tentativa ${attempt + 1})`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return attemptQuery(attempt + 1);
-        }
-        throw new Error('Timeout na verificação de status');
-      }
-      
-      // Para outros erros, tentar novamente se não for a última tentativa
-      if (attempt < maxAttempts && isRecoverableError(error)) {
-        console.log(`Erro na tentativa ${attempt}, tentando novamente:`, error.message);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return attemptQuery(attempt + 1);
-      }
-      
-      throw error;
+      // ✅ PARA QUALQUER ERRO, PERMITIR ACESSO
+      console.warn('Erro na query, permitindo acesso por segurança');
+      return true;
     }
-  };
-  
-  const data = await attemptQuery();
-  
-  console.log("Status do usuário obtido:", data);
-  
-  // Retornar true se não houver dados ou se ativo for null/undefined
-  if (!data) return true;
-  
-  // Explicitamente retorne true se ativo for true ou não estiver definido
-  return data.ativo !== false;
+    
+    console.log("Status obtido:", data?.ativo);
+    
+    // ✅ RETORNAR TRUE SE NÃO HOUVER DADOS OU SE ATIVO NÃO FOR EXPLICITAMENTE FALSE
+    if (!data) {
+      console.log('Nenhum dado retornado, permitindo acesso');
+      return true;
+    }
+    
+    // ✅ EXPLICITAMENTE RETORNAR TRUE SE ATIVO FOR TRUE OU NÃO ESTIVER DEFINIDO
+    const isActive = data.ativo !== false;
+    console.log('Status final:', isActive);
+    return isActive;
+    
+  } catch (error) {
+    // ✅ SE FOR ERRO DE ABORT (TIMEOUT)
+    if (error.name === 'AbortError') {
+      console.warn('Timeout na verificação - permitindo acesso por segurança');
+      return true;
+    }
+    
+    console.error('Erro na verificação:', error.message);
+    
+    // ✅ PARA QUALQUER OUTRO ERRO, PERMITIR ACESSO
+    console.warn('Permitindo acesso por segurança devido ao erro');
+    return true;
+  }
 };
 
 /**
- * Verifica se um erro é recuperável (pode tentar novamente)
- * @param {Error} error 
- * @returns {boolean}
- */
-const isRecoverableError = (error) => {
-  if (!error) return false;
-  
-  const recoverableErrors = [
-    'network',
-    'timeout',
-    'connection',
-    'NETWORK_ERROR',
-    'PGRST116', // Supabase connection error
-  ];
-  
-  const errorMessage = error.message?.toLowerCase() || '';
-  const errorCode = error.code?.toLowerCase() || '';
-  
-  return recoverableErrors.some(recoverable => 
-    errorMessage.includes(recoverable) || errorCode.includes(recoverable)
-  );
-};
-
-/**
- * Versão simplificada para casos onde a verificação completa não é crítica
+ * ✅ VERSÃO AINDA MAIS SIMPLES PARA CASOS NÃO CRÍTICOS
  * @param {string} userId - ID do usuário a ser verificado
  * @returns {Promise<boolean>} - true se ativo, false caso contrário
  */
 export const isUserActiveSimple = async (userId) => {
-    try {
-      if (!userId) return false;
+  try {
+    if (!userId) return true;
+    
+    console.log("Verificação simples de status de usuário:", userId.substring(0, 8));
+    
+    // ✅ TIMEOUT AINDA MENOR PARA VERIFICAÇÃO SIMPLES
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos
+    
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('ativo')
+      .eq('id', userId)
+      .abortSignal(controller.signal)
+      .single();
+    
+    clearTimeout(timeoutId);
       
-      console.log("Verificação simples de status de usuário:", userId);
-      
-      // Usar AbortController para cancelar requisições longas
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos
-      
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('ativo')
-        .eq('id', userId)
-        .abortSignal(controller.signal)
-        .single();
-      
-      clearTimeout(timeoutId);
-        
-      if (error) {
-        console.error('Erro ao verificar status do usuário (modo simples):', error);
-        return true; // Permitir acesso em caso de erro
-      }
-      
-      console.log("Status do usuário (modo simples):", data);
-      return data?.ativo !== false;
-      
-    } catch (error) {
-      console.error('Falha ao verificar status do usuário (modo simples):', error);
-      
-      // Se for erro de abort (timeout), permitir acesso
-      if (error.name === 'AbortError') {
-        console.warn('Verificação cancelada por timeout - permitindo acesso');
-        return true;
-      }
-      
-      return true; // Permitir acesso por padrão
+    if (error) {
+      console.warn('Erro na verificação simples, permitindo acesso:', error.message);
+      return true;
     }
+    
+    console.log("Status simples:", data?.ativo);
+    return data?.ativo !== false;
+    
+  } catch (error) {
+    console.warn('Erro na verificação simples, permitindo acesso:', error.message);
+    return true;
+  }
 };
 
 /**
- * Desativa um usuário no sistema
+ * ✅ DESATIVA UM USUÁRIO NO SISTEMA
  * @param {string} userId - ID do usuário a ser desativado
  * @returns {Promise<boolean>} - true se sucesso, false caso contrário
  */
 export const deactivateUser = async (userId) => {
   try {
-    console.log(`Tentando desativar usuário: ${userId}`);
+    console.log(`Tentando desativar usuário: ${userId.substring(0, 8)}`);
     
     const { data, error } = await supabase
       .from('usuarios')
       .update({ ativo: false })
       .eq('id', userId)
-      .select(); // Adiciona select() para ver os dados atualizados
-      
-    console.log('Dados retornados ao desativar:', data);
-    console.log('Erro ao desativar:', error);
+      .select();
       
     if (error) {
       console.error('Erro ao desativar usuário:', error);
       return false;
     }
     
-    // Limpar cache para este usuário
+    // ✅ LIMPAR CACHE PARA ESTE USUÁRIO
     userStatusCache.delete(userId);
+    console.log('Usuário desativado com sucesso');
     
     return true;
   } catch (error) {
@@ -250,30 +202,28 @@ export const deactivateUser = async (userId) => {
 };
 
 /**
- * Reativa um usuário no sistema
+ * ✅ REATIVA UM USUÁRIO NO SISTEMA
  * @param {string} userId - ID do usuário a ser reativado
  * @returns {Promise<boolean>} - true se sucesso, false caso contrário
  */
 export const activateUser = async (userId) => {
   try {
-    console.log(`Tentando ativar usuário: ${userId}`);
+    console.log(`Tentando ativar usuário: ${userId.substring(0, 8)}`);
     
     const { data, error } = await supabase
       .from('usuarios')
       .update({ ativo: true })
       .eq('id', userId)
-      .select(); // Adiciona select() para ver os dados atualizados
-      
-    console.log('Dados retornados ao ativar:', data);
-    console.log('Erro ao ativar:', error);
+      .select();
       
     if (error) {
       console.error('Erro ao reativar usuário:', error);
       return false;
     }
     
-    // Limpar cache para este usuário
+    // ✅ LIMPAR CACHE PARA ESTE USUÁRIO
     userStatusCache.delete(userId);
+    console.log('Usuário ativado com sucesso');
     
     return true;
   } catch (error) {
@@ -283,56 +233,66 @@ export const activateUser = async (userId) => {
 };
 
 /**
- * Verifica se um usuário é administrador
+ * ✅ VERIFICA SE UM USUÁRIO É ADMINISTRADOR
  * @param {string} userId - ID do usuário a ser verificado
  * @returns {Promise<boolean>} - true se for admin, false caso contrário
  */
 export const isUserAdmin = async (userId) => {
-    try {
-      if (!userId) return false;
+  try {
+    if (!userId) return false;
+    
+    // ✅ USAR CACHE TAMBÉM PARA ADMIN STATUS
+    const cacheKey = `admin_${userId}`;
+    const cached = userStatusCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < 300000) { // Cache por 5 minutos
+      return cached.status;
+    }
+    
+    console.log("Verificando status de admin:", userId.substring(0, 8));
+    
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('admin')
+      .eq('id', userId)
+      .single();
       
-      // Usar cache também para admin status
-      const cacheKey = `admin_${userId}`;
-      const cached = userStatusCache.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp) < 60000) { // Cache por 1 minuto
-        return cached.status;
-      }
-      
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('admin')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Erro ao verificar status de admin:', error);
-        return false;
-      }
-      
-      const isAdmin = data?.admin === true;
-      
-      // Salvar no cache
-      userStatusCache.set(cacheKey, {
-        status: isAdmin,
-        timestamp: Date.now()
-      });
-      
-      return isAdmin;
-    } catch (error) {
-      console.error('Falha ao verificar status de admin:', error);
+    if (error) {
+      console.error('Erro ao verificar status de admin:', error);
       return false;
     }
+    
+    const isAdmin = data?.admin === true;
+    
+    // ✅ SALVAR NO CACHE
+    userStatusCache.set(cacheKey, {
+      status: isAdmin,
+      timestamp: Date.now()
+    });
+    
+    console.log('Status de admin:', isAdmin);
+    return isAdmin;
+  } catch (error) {
+    console.error('Falha ao verificar status de admin:', error);
+    return false;
+  }
 };
 
-// Limpar cache periodicamente (a cada 5 minutos)
+// ✅ LIMPEZA PERIÓDICA DO CACHE (A CADA 10 MINUTOS)
 if (typeof window !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
+    let cleanedCount = 0;
+    
     for (const [key, value] of userStatusCache.entries()) {
-      // Remover entradas com mais de 5 minutos
-      if (now - value.timestamp > 300000) {
+      // ✅ REMOVER ENTRADAS COM MAIS DE 10 MINUTOS
+      if (now - value.timestamp > 600000) {
         userStatusCache.delete(key);
+        cleanedCount++;
       }
     }
-  }, 300000); // 5 minutos
+    
+    if (cleanedCount > 0) {
+      console.log(`Cache limpo: ${cleanedCount} entradas removidas`);
+    }
+  }, 600000); // 10 minutos
 }
