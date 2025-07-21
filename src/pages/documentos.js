@@ -1,4 +1,4 @@
-// Arquivo: src/pages/documentos.js - Versão Corrigida
+// Arquivo: src/pages/documentos.js - Versão Atualizada com Menu Lateral Modificado
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -23,7 +23,9 @@ import {
   FiLogOut,
   FiX,
   FiCalendar,
-  FiFileText
+  FiFileText,
+  FiEdit,
+  FiPaperclip
 } from 'react-icons/fi';
 
 export default function Documentos({ user }) {
@@ -46,7 +48,7 @@ export default function Documentos({ user }) {
   const [filtroRecorrencia, setFiltroRecorrencia] = useState('');
   
   // Estados para controlar a navegação
-  const [activeTab, setActiveTab] = useState('todos'); // 'todos', 'obrigatorios', 'com_documento', 'recorrentes'
+  const [activeTab, setActiveTab] = useState('documentos'); // 'documentos', 'obrigatorios', 'com_documento', 'recorrentes'
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -232,7 +234,7 @@ export default function Documentos({ user }) {
             query = query.not('recorrencia', 'eq', 'sem recorrencia')
                          .not('recorrencia', 'is', null);
             break;
-          case 'todos':
+          case 'documentos':
           default:
             // Aplicar filtros avançados se estiverem ativos
             if (filtroObrigatorio) {
@@ -294,8 +296,8 @@ export default function Documentos({ user }) {
   // Obter título da seção
   const getSectionTitle = () => {
     switch (activeTab) {
-      case 'todos':
-        return 'Todos os Documentos';
+      case 'documentos':
+        return 'Documentos';
       case 'obrigatorios':
         return 'Documentos Obrigatórios';
       case 'com_documento':
@@ -383,21 +385,6 @@ export default function Documentos({ user }) {
     return `A cada ${tempo} ${documento.recorrencia}${repeticoes}`;
   };
 
-  // Componente customizado para ícone de grade
-  const GridIcon = () => (
-    <div className="w-5 h-5 grid grid-cols-3 gap-0.5">
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-    </div>
-  );
-
   // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
@@ -438,6 +425,14 @@ export default function Documentos({ user }) {
                     <Link href="/med-curation-desktop" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
                       <FiHome className="mr-3 h-4 w-4" />
                       Curadoria
+                    </Link>
+                    <Link href="/registros" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                      <FiEdit className="mr-3 h-4 w-4" />
+                      Registros
+                    </Link>
+                    <Link href="/anexos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                      <FiPaperclip className="mr-3 h-4 w-4" />
+                      Anexos
                     </Link>
                     <button
                       onClick={() => {
@@ -547,8 +542,8 @@ export default function Documentos({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Todos" */}
-                {activeTab === 'todos' && (
+                {/* Filtros Avançados - apenas na aba "Documentos" */}
+                {activeTab === 'documentos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
                       Filtros Avançados
@@ -657,6 +652,14 @@ export default function Documentos({ user }) {
                         <FiHome className="mr-3 h-4 w-4" />
                         Curadoria
                       </Link>
+                      <Link href="/registros" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                        <FiEdit className="mr-3 h-4 w-4" />
+                        Registros
+                      </Link>
+                      <Link href="/anexos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
+                        <FiPaperclip className="mr-3 h-4 w-4" />
+                        Anexos
+                      </Link>
                       <button
                         onClick={() => {
                           setShowMenu(false);
@@ -737,8 +740,8 @@ export default function Documentos({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Todos" */}
-                {activeTab === 'todos' && (
+                {/* Filtros Avançados - apenas na aba "Documentos" */}
+                {activeTab === 'documentos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
                       Filtros Avançados
@@ -805,28 +808,32 @@ export default function Documentos({ user }) {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
                 <button
-                  onClick={() => setActiveTab('todos')}
+                  onClick={() => setActiveTab('documentos')}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'todos'
+                    activeTab === 'documentos'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <GridIcon />
-                  <span className="ml-3">Todos</span>
+                  <FiFileText className="mr-3 h-5 w-5" />
+                  <span className="ml-0">Documentos</span>
                 </button>
 
-                <button
-                  onClick={() => setActiveTab('obrigatorios')}
-                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'obrigatorios'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                <Link
+                  href="/registros"
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100`}
                 >
-                  <div className="w-5 h-5 bg-red-500 rounded-full mr-3"></div>
-                  Obrigatórios
-                </button>
+                  <FiEdit className="mr-3 h-5 w-5" />
+                  <span className="ml-0">Registros</span>
+                </Link>
+
+                <Link
+                  href="/anexos"
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100`}
+                >
+                  <FiPaperclip className="mr-3 h-5 w-5" />
+                  <span className="ml-0">Anexos</span>
+                </Link>
 
                 <button
                   onClick={() => setActiveTab('com_documento')}
@@ -1014,40 +1021,32 @@ export default function Documentos({ user }) {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
-            onClick={() => setActiveTab('todos')}
+            onClick={() => setActiveTab('documentos')}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'todos'
-                ? 'text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
-            <GridIcon />
-            <span className="text-xs font-medium">Todos</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('obrigatorios')}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'obrigatorios'
-                ? 'text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
-            <div className="w-5 h-5 bg-red-500 rounded-full"></div>
-            <span className="text-xs font-medium">Obrigatórios</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('com_documento')}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'com_documento'
+              activeTab === 'documentos'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
             <FiFileText className="w-5 h-5" />
-            <span className="text-xs font-medium">Anexos</span>
+            <span className="text-xs font-medium">Docs</span>
           </button>
+
+          <Link
+            href="/registros"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+          >
+            <FiEdit className="w-5 h-5" />
+            <span className="text-xs font-medium">Registros</span>
+          </Link>
+
+          <Link
+            href="/anexos"
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+          >
+            <FiPaperclip className="w-5 h-5" />
+            <span className="text-xs font-medium">Anexos</span>
+          </Link>
 
           <button
             onClick={() => setActiveTab('recorrentes')}

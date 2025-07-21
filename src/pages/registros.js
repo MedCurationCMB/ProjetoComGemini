@@ -17,7 +17,11 @@ import {
   FiSettings, 
   FiLogOut,
   FiBarChart,
-  FiList
+  FiList,
+  FiFileText,
+  FiFile,
+  FiEdit,
+  FiPaperclip
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -157,8 +161,8 @@ export default function Registros({ user }) {
     router.push('/registros');
   };
 
-  const handleControleClick = () => {
-    router.push('/registros');
+  const handleAnexosClick = () => {
+    router.push('/anexos');
   };
 
   const handleRegistrosClick = () => {
@@ -171,6 +175,10 @@ export default function Registros({ user }) {
 
   const handleConfiguracoesClick = () => {
     router.push('/registros');
+  };
+
+  const handleDocumentosClick = () => {
+    router.push('/documentos');
   };
 
   // Verificar se há filtros ativos
@@ -531,27 +539,11 @@ export default function Registros({ user }) {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
                 <button
-                  onClick={handleInicioClick}
+                  onClick={handleDocumentosClick}
                   className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
                 >
-                  <FiBarChart className="mr-3 h-5 w-5" />
-                  Indicadores
-                </button>
-
-                <button
-                  onClick={handleImportantesClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiStar className="mr-3 h-5 w-5" />
-                  Importantes
-                </button>
-
-                <button
-                  onClick={handleControleClick}
-                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
-                >
-                  <FiClipboard className="mr-3 h-5 w-5" />
-                  Controle
+                  <FiFileText className="mr-3 h-5 w-5" />
+                  Documentos
                 </button>
 
                 <button
@@ -562,8 +554,16 @@ export default function Registros({ user }) {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <TfiPencil className="mr-3 h-5 w-5" />
+                  <FiEdit className="mr-3 h-5 w-5" />
                   Registros
+                </button>
+
+                <button
+                  onClick={handleAnexosClick}
+                  className="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
+                >
+                  <FiPaperclip className="mr-3 h-5 w-5" />
+                  Anexos
                 </button>
               </nav>
             </div>
@@ -620,27 +620,11 @@ export default function Registros({ user }) {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
-            onClick={handleInicioClick}
+            onClick={handleDocumentosClick}
             className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
           >
-            <FiBarChart className="w-5 h-5" />
-            <span className="text-xs font-medium">Indicadores</span>
-          </button>
-
-          <button
-            onClick={handleImportantesClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <FiStar className="w-5 h-5" />
-            <span className="text-xs font-medium">Importantes</span>
-          </button>
-
-          <button
-            onClick={handleControleClick}
-            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
-          >
-            <FiClipboard className="w-5 h-5" />
-            <span className="text-xs font-medium">Controle</span>
+            <FiFileText className="w-5 h-5" />
+            <span className="text-xs font-medium">Documentos</span>
           </button>
 
           <button
@@ -651,8 +635,16 @@ export default function Registros({ user }) {
                 : 'text-gray-500'
             }`}
           >
-            <TfiPencil className="w-5 h-5" />
+            <FiEdit className="w-5 h-5" />
             <span className="text-xs font-medium">Registros</span>
+          </button>
+
+          <button
+            onClick={handleAnexosClick}
+            className="flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors text-gray-500"
+          >
+            <FiPaperclip className="w-5 h-5" />
+            <span className="text-xs font-medium">Anexos</span>
           </button>
         </div>
       </div>
