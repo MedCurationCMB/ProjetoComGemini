@@ -1,4 +1,4 @@
-// Arquivo: src/pages/documentos/[id].js
+// Arquivo: src/pages/documentos/[id].js - Versão Corrigida Completa
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -46,6 +46,7 @@ export default function DocumentoDetalhes({ user }) {
   const [filtroLidos, setFiltroLidos] = useState('');
   const [filtroImportantes, setFiltroImportantes] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
+  const [filtroVisivel, setFiltroVisivel] = useState('todos'); // Novo filtro para debug
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -94,11 +95,15 @@ export default function DocumentoDetalhes({ user }) {
       try {
         setLoading(true);
         
+        // ✅ CORREÇÃO: Convertendo id para string explicitamente
+        const documentoId = String(id);
+        console.log('Buscando documento ID:', documentoId, 'Tipo:', typeof documentoId);
+        
         // Buscar o documento na tabela controle_conteudo
         const { data: docData, error: docError } = await supabase
           .from('controle_conteudo')
           .select('*')
-          .eq('id', id)
+          .eq('id', documentoId)
           .single();
         
         if (docError) {
@@ -108,6 +113,7 @@ export default function DocumentoDetalhes({ user }) {
           return;
         }
         
+        console.log('Documento encontrado:', docData);
         setDocumento(docData);
         
         // Buscar dados de categorias e projetos
@@ -144,7 +150,7 @@ export default function DocumentoDetalhes({ user }) {
     fetchApresentacaoVariaveis();
   }, [id, user, router]);
 
-  // Buscar itens relacionados da tabela controle_conteudo_geral
+  // ✅ BUSCAR ITENS RELACIONADOS - VERSÃO CORRIGIDA
   useEffect(() => {
     const fetchItensRelacionados = async () => {
       if (!id || !user) return;
@@ -152,45 +158,77 @@ export default function DocumentoDetalhes({ user }) {
       try {
         setLoadingItens(true);
         
-        // Query base para buscar itens relacionados
+        // ✅ CORREÇÃO: Convertendo id para string explicitamente
+        const documentoId = String(id);
+        console.log('Buscando itens relacionados para documento ID:', documentoId);
+        
+        // ✅ VERSÃO DE DEBUG: Query mais permissiva primeiro
         let query = supabase
           .from('controle_conteudo_geral')
           .select('*')
-          .eq('id_controleconteudo', id)
-          .eq('visivel', true);
+          .eq('id_controleconteudo', documentoId);
+          // ✅ REMOVIDO temporariamente: .eq('visivel', true)
+          // ✅ REMOVIDO temporariamente: filtros de texto
         
-        // Aplicar filtros se ativos
-        if (searchTerm.trim()) {
-          query = query.or(`descricao.ilike.%${searchTerm.trim()}%,texto_analise.ilike.%${searchTerm.trim()}%`);
-        }
+        console.log('Query SQL gerada:', query);
         
-        if (filtroLidos === 'lidos') {
-          query = query.eq('lido', true);
-        } else if (filtroLidos === 'nao_lidos') {
-          query = query.eq('lido', false);
-        }
+        // Executar query básica primeiro para debug
+        const { data: allData, error: debugError } = await query;
         
-        if (filtroImportantes) {
-          query = query.eq('importante', true);
-        }
-        
-        if (filtroArquivados) {
-          query = query.eq('arquivado', true);
-        }
-        
-        // Ordenar por prazo_entrega se existir, caso contrário por created_at
-        query = query.order('prazo_entrega', { ascending: false, nullsLast: true })
-                     .order('created_at', { ascending: false });
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          console.error('Erro ao buscar itens relacionados:', error);
+        if (debugError) {
+          console.error('Erro na query básica:', debugError);
           toast.error('Erro ao carregar itens relacionados');
           return;
         }
         
-        setItensRelacionados(data || []);
+        console.log('Todos os registros encontrados (sem filtros):', allData);
+        console.log('Quantidade total:', allData?.length || 0);
+        
+        // ✅ APLICAR FILTROS POSTERIORMENTE
+        let filteredData = allData || [];
+        
+        // Aplicar filtros se ativos
+        if (searchTerm.trim()) {
+          filteredData = filteredData.filter(item => 
+            (item.descricao && item.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.texto_analise && item.texto_analise.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
+        }
+        
+        if (filtroLidos === 'lidos') {
+          filteredData = filteredData.filter(item => item.lido === true);
+        } else if (filtroLidos === 'nao_lidos') {
+          filteredData = filteredData.filter(item => item.lido === false);
+        }
+        
+        if (filtroImportantes) {
+          filteredData = filteredData.filter(item => item.importante === true);
+        }
+        
+        if (filtroArquivados) {
+          filteredData = filteredData.filter(item => item.arquivado === true);
+        }
+        
+        // ✅ NOVO: Filtro de visibilidade opcional
+        if (filtroVisivel === 'visiveis') {
+          filteredData = filteredData.filter(item => item.visivel === true);
+        } else if (filtroVisivel === 'ocultos') {
+          filteredData = filteredData.filter(item => item.visivel === false);
+        }
+        // Se for 'todos', não filtra
+        
+        console.log('Dados após filtros:', filteredData);
+        console.log('Quantidade após filtros:', filteredData.length);
+        
+        // ✅ ORDENAÇÃO: Manter ordenação original
+        filteredData.sort((a, b) => {
+          // Ordenar por prazo_entrega se existir, senão por created_at
+          const dateA = new Date(a.prazo_entrega || a.created_at || 0);
+          const dateB = new Date(b.prazo_entrega || b.created_at || 0);
+          return dateB - dateA; // Mais recentes primeiro
+        });
+        
+        setItensRelacionados(filteredData);
         
       } catch (error) {
         console.error('Erro ao carregar itens relacionados:', error);
@@ -201,7 +239,7 @@ export default function DocumentoDetalhes({ user }) {
     };
 
     fetchItensRelacionados();
-  }, [id, user, searchTerm, filtroLidos, filtroImportantes, filtroArquivados]);
+  }, [id, user, searchTerm, filtroLidos, filtroImportantes, filtroArquivados, filtroVisivel]);
 
   // Limpar filtros
   const clearFilters = () => {
@@ -209,11 +247,12 @@ export default function DocumentoDetalhes({ user }) {
     setFiltroLidos('');
     setFiltroImportantes(false);
     setFiltroArquivados(false);
+    setFiltroVisivel('todos');
     setShowFilters(false);
   };
 
   // Verificar se há filtros ativos
-  const hasActiveFilters = searchTerm.trim() || filtroLidos || filtroImportantes || filtroArquivados;
+  const hasActiveFilters = searchTerm.trim() || filtroLidos || filtroImportantes || filtroArquivados || filtroVisivel !== 'todos';
 
   // Função para determinar a cor da borda baseada no status de leitura
   const getBorderColor = (item) => {
@@ -227,21 +266,28 @@ export default function DocumentoDetalhes({ user }) {
     // Adicionar bolinha azul se não foi lido
     if (!item.lido) {
       indicators.push(
-        <div key="nao-lido" className="w-3 h-3 bg-blue-500 rounded-full"></div>
+        <div key="nao-lido" className="w-3 h-3 bg-blue-500 rounded-full" title="Não lido"></div>
       );
     }
     
     // Adicionar estrela se é importante
     if (item.importante) {
       indicators.push(
-        <FiStar key="importante" className="w-4 h-4 text-blue-600" />
+        <FiStar key="importante" className="w-4 h-4 text-yellow-600" title="Importante" />
       );
     }
     
     // Adicionar ícone de arquivo se está arquivado
     if (item.arquivado) {
       indicators.push(
-        <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
+        <FiArchive key="arquivado" className="w-4 h-4 text-gray-600" title="Arquivado" />
+      );
+    }
+    
+    // ✅ NOVO: Indicador de visibilidade
+    if (item.visivel === false) {
+      indicators.push(
+        <FiEyeOff key="oculto" className="w-4 h-4 text-gray-400" title="Oculto" />
       );
     }
     
@@ -253,11 +299,19 @@ export default function DocumentoDetalhes({ user }) {
     return item.ler_depois;
   };
 
-  // Formatar data - priorizar prazo_entrega, fallback para created_at
-  const formatDate = (item) => {
-    const dateString = item.prazo_entrega || item.created_at;
+  // ✅ CORREÇÃO: Formatar data usando prazo_entrega_inicial para documento principal e prazo_entrega/created_at para itens
+  const formatDate = (item, isDocumentoPrincipal = false) => {
+    let dateString;
     
-    if (!dateString) return '';
+    if (isDocumentoPrincipal) {
+      // Para documento principal da tabela controle_conteudo
+      dateString = item.prazo_entrega_inicial;
+    } else {
+      // Para itens relacionados da tabela controle_conteudo_geral
+      dateString = item.prazo_entrega || item.created_at;
+    }
+    
+    if (!dateString) return isDocumentoPrincipal ? 'Sem prazo definido' : '';
     
     try {
       const date = new Date(dateString);
@@ -267,21 +321,56 @@ export default function DocumentoDetalhes({ user }) {
         year: 'numeric'
       });
     } catch (e) {
-      return '';
+      return 'Data inválida';
     }
   };
 
-  // Extrair prévia do texto
+  // ✅ CORREÇÃO: Extrair prévia do texto - versão mais robusta
   const getTextPreview = (htmlContent, maxLength = 150) => {
     if (!htmlContent) return '';
     
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    // Se for só tags vazias, retornar vazio
+    if (htmlContent === '<p></p>' || htmlContent.trim() === '') return '';
     
-    return textContent.length > maxLength 
-      ? textContent.substring(0, maxLength) + '...'
-      : textContent;
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      const textContent = tempDiv.textContent || tempDiv.innerText || '';
+      
+      // Se após extrair o texto ainda está vazio
+      if (!textContent.trim()) return '';
+      
+      return textContent.length > maxLength 
+        ? textContent.substring(0, maxLength) + '...'
+        : textContent;
+    } catch (e) {
+      return htmlContent; // Fallback para texto original se der erro
+    }
+  };
+
+  // Obter texto da recorrência formatado
+  const getRecorrenciaText = (documento) => {
+    if (!documento.recorrencia || documento.recorrencia === 'sem recorrencia') {
+      return 'Sem recorrência';
+    }
+    
+    const tempo = documento.tempo_recorrencia || '';
+    const repeticoes = documento.repeticoes ? ` (${documento.repeticoes}x)` : '';
+    
+    return `A cada ${tempo} ${documento.recorrencia}${repeticoes}`;
+  };
+
+  // ✅ NOVO: Obter status do item
+  const getItemStatus = (item) => {
+    const status = [];
+    
+    if (!item.visivel) status.push('Oculto');
+    if (item.lido) status.push('Lido');
+    if (item.importante) status.push('Importante');
+    if (item.ler_depois) status.push('Ler Depois');
+    if (item.arquivado) status.push('Arquivado');
+    
+    return status.length > 0 ? status.join(', ') : 'Pendente';
   };
 
   // Não renderizar nada até que a verificação de autenticação seja concluída
@@ -419,22 +508,10 @@ export default function DocumentoDetalhes({ user }) {
             </div>
             
             <div className="flex items-center space-x-3 mt-4 lg:mt-0">
-              {documento.importante && (
-                <div className="flex items-center text-yellow-600">
-                  <FiStar className="w-5 h-5 mr-1" />
-                  <span className="text-sm">Importante</span>
-                </div>
-              )}
-              {documento.ler_depois && (
-                <div className="flex items-center text-blue-600">
-                  <FiClock className="w-5 h-5 mr-1" />
-                  <span className="text-sm">Ler Depois</span>
-                </div>
-              )}
-              {documento.arquivado && (
-                <div className="flex items-center text-gray-600">
-                  <FiArchive className="w-5 h-5 mr-1" />
-                  <span className="text-sm">Arquivado</span>
+              {documento.obrigatorio && (
+                <div className="flex items-center text-red-600">
+                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                  <span className="text-sm">Obrigatório</span>
                 </div>
               )}
               {documento.tem_documento && (
@@ -443,22 +520,59 @@ export default function DocumentoDetalhes({ user }) {
                   <span className="text-sm">Com Anexo</span>
                 </div>
               )}
+              {documento.recorrencia && documento.recorrencia !== 'sem recorrencia' && (
+                <div className="flex items-center text-blue-600">
+                  <FiClock className="w-5 h-5 mr-1" />
+                  <span className="text-sm">Recorrente</span>
+                </div>
+              )}
             </div>
           </div>
           
-          {documento.observacoes && (
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Observações</h3>
-              <p className="text-gray-700 leading-relaxed">
-                {documento.observacoes}
+          {/* Informações detalhadas do documento */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t pt-4">
+            <div>
+              <h4 className="text-sm font-medium text-gray-600 mb-1">Prazo de Entrega</h4>
+              <p className="text-gray-900">
+                {formatDate(documento, true)}
               </p>
             </div>
-          )}
+            
+            {documento.recorrencia && documento.recorrencia !== 'sem recorrencia' && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-600 mb-1">Recorrência</h4>
+                <p className="text-gray-900">
+                  {getRecorrenciaText(documento)}
+                </p>
+              </div>
+            )}
+            
+            <div>
+              <h4 className="text-sm font-medium text-gray-600 mb-1">Status</h4>
+              <div className="flex flex-wrap gap-2">
+                {documento.obrigatorio && (
+                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+                    Obrigatório
+                  </span>
+                )}
+                {documento.tem_documento && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                    Tem Documento
+                  </span>
+                )}
+                {!documento.obrigatorio && !documento.tem_documento && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                    Pendente
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
           
           <div className="flex items-center justify-between mt-4 pt-4 border-t text-sm text-gray-500">
             <div className="flex items-center">
               <FiCalendar className="w-4 h-4 mr-1" />
-              Criado em {formatDate(documento)}
+              Criado em {formatDate(documento, true)}
             </div>
             
             <div className="text-right">
@@ -527,6 +641,22 @@ export default function DocumentoDetalhes({ user }) {
                     </select>
                   </div>
                   
+                  {/* ✅ NOVO: Filtro de visibilidade para debug */}
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Visibilidade
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filtroVisivel}
+                      onChange={(e) => setFiltroVisivel(e.target.value)}
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="visiveis">Apenas Visíveis</option>
+                      <option value="ocultos">Apenas Ocultos</option>
+                    </select>
+                  </div>
+                  
                   {hasActiveFilters && (
                     <button
                       onClick={clearFilters}
@@ -589,59 +719,118 @@ export default function DocumentoDetalhes({ user }) {
                     : 'Este documento ainda não possui itens relacionados na curadoria.'
                   }
                 </p>
+                {/* ✅ NOVO: Informações de debug */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Documento ID: {id}</p>
+                  <p>Filtros ativos: {hasActiveFilters ? 'Sim' : 'Não'}</p>
+                  <p>Busca por: id_controleconteudo = {id}</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 {itensRelacionados.map((item) => (
-                  <Link 
-                    key={item.id} 
-                    href={`/documento/${item.id}`}
-                    className="block"
-                  >
-                    <div className={`border-l-4 ${getBorderColor(item)} p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
-                          {item.descricao || 'Sem descrição'}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          {getStatusIndicators(item)}
-                          {shouldShowReadLaterIcon(item) && (
-                            <FiClock className="w-4 h-4 text-blue-600" />
-                          )}
-                          <FiExternalLink className="w-4 h-4 text-gray-400" />
-                        </div>
-                      </div>
-                      
-                      {item.texto_analise && (
-                        <p className="text-gray-600 text-sm mb-3 leading-relaxed">
-                          {getTextPreview(item.texto_analise, 200)}
-                        </p>
-                      )}
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex space-x-2">
-                          {item.projeto_id && (
-                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                              {projetos[item.projeto_id]}
-                            </span>
-                          )}
-                          {item.categoria_id && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {categorias[item.categoria_id]}
-                            </span>
-                          )}
+                  <div key={item.id} className="block">
+                    <Link 
+                      href={`/documento/${item.id}`}
+                      className="block"
+                    >
+                      <div className={`border-l-4 ${getBorderColor(item)} p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
+                            {item.descricao || 'Sem descrição'}
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            {getStatusIndicators(item)}
+                            {shouldShowReadLaterIcon(item) && (
+                              <FiClock className="w-4 h-4 text-blue-600" />
+                            )}
+                            <FiExternalLink className="w-4 h-4 text-gray-400" />
+                          </div>
                         </div>
                         
-                        <div className="flex items-center text-gray-500 text-xs">
-                          <FiCalendar className="w-3 h-3 mr-1" />
-                          {formatDate(item)}
+                        {/* ✅ MELHORADO: Preview do texto com fallback */}
+                        {item.texto_analise && getTextPreview(item.texto_analise) && (
+                          <p className="text-gray-600 text-sm mb-3 leading-relaxed">
+                            {getTextPreview(item.texto_analise, 200)}
+                          </p>
+                        )}
+                        
+                        {/* ✅ NOVO: Se não tem texto_analise, mostrar indicador */}
+                        {(!item.texto_analise || !getTextPreview(item.texto_analise)) && (
+                          <p className="text-gray-400 text-sm mb-3 italic">
+                            Sem conteúdo de análise disponível
+                          </p>
+                        )}
+                        
+                        {/* Informações do item */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap space-x-2">
+                            {item.projeto_id && (
+                              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                {projetos[item.projeto_id] || `Projeto ${item.projeto_id}`}
+                              </span>
+                            )}
+                            {item.categoria_id && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                {categorias[item.categoria_id] || `Categoria ${item.categoria_id}`}
+                              </span>
+                            )}
+                            {/* ✅ NOVO: Status do item */}
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                              {getItemStatus(item)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center text-gray-500 text-xs">
+                            <FiCalendar className="w-3 h-3 mr-1" />
+                            {formatDate(item, false) || 'Sem data'}
+                          </div>
+                        </div>
+                        
+                        {/* ✅ NOVO: Informações técnicas de debug */}
+                        <div className="mt-3 pt-2 border-t border-gray-200">
+                          <div className="flex justify-between items-center text-xs text-gray-400">
+                            <span>ID: {item.id}</span>
+                            <span>Visível: {item.visivel ? 'Sim' : 'Não'}</span>
+                            <span>Controle: {item.id_controleconteudo}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}
+            
+            {/* ✅ NOVO: Seção de informações de debug sempre visível */}
+            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Informações de Debug</h4>
+              <div className="grid grid-cols-2 gap-4 text-xs text-blue-700">
+                <div>
+                  <p><strong>Documento ID:</strong> {id}</p>
+                  <p><strong>Total de itens:</strong> {itensRelacionados.length}</p>
+                </div>
+                <div>
+                  <p><strong>Filtros ativos:</strong> {hasActiveFilters ? 'Sim' : 'Não'}</p>
+                  <p><strong>Loading:</strong> {loadingItens ? 'Sim' : 'Não'}</p>
+                </div>
+              </div>
+              
+              {/* Mostrar resumo dos filtros ativos */}
+              {hasActiveFilters && (
+                <div className="mt-2 text-xs text-blue-600">
+                  <p><strong>Filtros aplicados:</strong></p>
+                  <ul className="list-disc list-inside ml-2">
+                    {searchTerm && <li>Busca: "{searchTerm}"</li>}
+                    {filtroLidos && <li>Leitura: {filtroLidos === 'lidos' ? 'Lidos' : 'Não lidos'}</li>}
+                    {filtroImportantes && <li>Apenas importantes</li>}
+                    {filtroArquivados && <li>Apenas arquivados</li>}
+                    {filtroVisivel !== 'todos' && <li>Visibilidade: {filtroVisivel}</li>}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

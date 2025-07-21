@@ -1,4 +1,4 @@
-// Arquivo: src/pages/documentos.js
+// Arquivo: src/pages/documentos.js - Versão Corrigida
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -41,14 +41,12 @@ export default function Documentos({ user }) {
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
   // Estados para filtros avançados
-  const [filtroImportantes, setFiltroImportantes] = useState(false);
-  const [filtroLerDepois, setFiltroLerDepois] = useState(false);
-  const [filtroArquivados, setFiltroArquivados] = useState(false);
+  const [filtroObrigatorio, setFiltroObrigatorio] = useState(false);
   const [filtroComDocumento, setFiltroComDocumento] = useState(false);
+  const [filtroRecorrencia, setFiltroRecorrencia] = useState('');
   
   // Estados para controlar a navegação
-  const [activeTab, setActiveTab] = useState('todos'); // 'todos', 'importantes', 'ler_depois', 'arquivados'
-  const [showAllContent, setShowAllContent] = useState(true);
+  const [activeTab, setActiveTab] = useState('todos'); // 'todos', 'obrigatorios', 'com_documento', 'recorrentes'
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -92,9 +90,9 @@ export default function Documentos({ user }) {
 
   // Função para determinar a cor da borda baseada no status
   const getBorderColor = (documento) => {
-    if (documento.arquivado) return 'border-gray-400';
-    if (documento.importante) return 'border-yellow-500';
-    if (documento.ler_depois) return 'border-blue-500';
+    if (documento.obrigatorio) return 'border-red-500';
+    if (documento.tem_documento) return 'border-green-500';
+    if (documento.recorrencia && documento.recorrencia !== 'sem recorrencia') return 'border-blue-500';
     return 'border-gray-300';
   };
 
@@ -224,40 +222,43 @@ export default function Documentos({ user }) {
         
         // Aplicar filtros baseados na aba ativa
         switch (activeTab) {
-          case 'importantes':
-            query = query.eq('importante', true);
+          case 'obrigatorios':
+            query = query.eq('obrigatorio', true);
             break;
-          case 'ler_depois':
-            query = query.eq('ler_depois', true);
+          case 'com_documento':
+            query = query.eq('tem_documento', true);
             break;
-          case 'arquivados':
-            query = query.eq('arquivado', true);
+          case 'recorrentes':
+            query = query.not('recorrencia', 'eq', 'sem recorrencia')
+                         .not('recorrencia', 'is', null);
             break;
           case 'todos':
           default:
             // Aplicar filtros avançados se estiverem ativos
-            if (filtroImportantes) {
-              query = query.eq('importante', true);
-            }
-            if (filtroLerDepois) {
-              query = query.eq('ler_depois', true);
-            }
-            if (filtroArquivados) {
-              query = query.eq('arquivado', true);
+            if (filtroObrigatorio) {
+              query = query.eq('obrigatorio', true);
             }
             if (filtroComDocumento) {
               query = query.eq('tem_documento', true);
+            }
+            if (filtroRecorrencia && filtroRecorrencia !== 'todos') {
+              if (filtroRecorrencia === 'sem_recorrencia') {
+                query = query.eq('recorrencia', 'sem recorrencia');
+              } else {
+                query = query.eq('recorrencia', filtroRecorrencia);
+              }
             }
             break;
         }
         
         // Aplicar termo de pesquisa se existir
         if (searchTerm.trim()) {
-          query = query.or(`descricao.ilike.%${searchTerm.trim()}%,observacoes.ilike.%${searchTerm.trim()}%`);
+          query = query.ilike('descricao', `%${searchTerm.trim()}%`);
         }
         
-        // Ordenar por data de criação (mais recentes primeiro)
-        query = query.order('created_at', { ascending: false });
+        // ✅ CORREÇÃO: Ordenar por prazo_entrega_inicial em vez de created_at
+        query = query.order('prazo_entrega_inicial', { ascending: false, nullsLast: true })
+                     .order('id', { ascending: false });
         
         const { data, error } = await query;
         
@@ -275,33 +276,32 @@ export default function Documentos({ user }) {
     if (user && projetosVinculados.length >= 0) {
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, filtroImportantes, filtroLerDepois, filtroArquivados, filtroComDocumento, projetosVinculados]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, filtroObrigatorio, filtroComDocumento, filtroRecorrencia, projetosVinculados]);
 
   // Limpar filtros
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
-    setFiltroImportantes(false);
-    setFiltroLerDepois(false);
-    setFiltroArquivados(false);
+    setFiltroObrigatorio(false);
     setFiltroComDocumento(false);
+    setFiltroRecorrencia('');
     setShowFilters(false);
   };
 
   // Verificar se há filtros ativos
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados || filtroComDocumento;
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroObrigatorio || filtroComDocumento || filtroRecorrencia;
 
   // Obter título da seção
   const getSectionTitle = () => {
     switch (activeTab) {
       case 'todos':
         return 'Todos os Documentos';
-      case 'importantes':
-        return 'Documentos Importantes';
-      case 'ler_depois':
-        return 'Ler Depois';
-      case 'arquivados':
-        return 'Arquivados';
+      case 'obrigatorios':
+        return 'Documentos Obrigatórios';
+      case 'com_documento':
+        return 'Com Anexos';
+      case 'recorrentes':
+        return 'Recorrentes';
       default:
         return 'Documentos';
     }
@@ -327,31 +327,28 @@ export default function Documentos({ user }) {
       );
     }
     
-    // Adicionar estrela se é importante
-    if (documento.importante) {
+    // Adicionar indicador se é obrigatório
+    if (documento.obrigatorio) {
       indicators.push(
-        <FiStar key="importante" className="w-4 h-4 text-yellow-600" />
+        <div key="obrigatorio" className="w-3 h-3 bg-red-500 rounded-full" title="Obrigatório"></div>
       );
     }
     
-    // Adicionar ícone de arquivo se está arquivado
-    if (documento.arquivado) {
+    // Adicionar indicador se é recorrente
+    if (documento.recorrencia && documento.recorrencia !== 'sem recorrencia') {
       indicators.push(
-        <FiArchive key="arquivado" className="w-4 h-4 text-gray-600" />
+        <FiClock key="recorrente" className="w-4 h-4 text-blue-600" title="Recorrente" />
       );
     }
     
     return indicators;
   };
 
-  // Função para verificar se deve mostrar ícone de ler depois
-  const shouldShowReadLaterIcon = (documento) => {
-    return documento.ler_depois;
-  };
-
-  // Formatar data
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
+  // ✅ CORREÇÃO: Formatar data usando prazo_entrega_inicial
+  const formatDate = (documento) => {
+    const dateString = documento.prazo_entrega_inicial;
+    
+    if (!dateString) return 'Sem prazo definido';
     
     try {
       const date = new Date(dateString);
@@ -361,7 +358,7 @@ export default function Documentos({ user }) {
         year: 'numeric'
       });
     } catch (e) {
-      return '';
+      return 'Data inválida';
     }
   };
 
@@ -372,6 +369,18 @@ export default function Documentos({ user }) {
     return text.length > maxLength 
       ? text.substring(0, maxLength) + '...'
       : text;
+  };
+
+  // Obter texto da recorrência formatado
+  const getRecorrenciaText = (documento) => {
+    if (!documento.recorrencia || documento.recorrencia === 'sem recorrencia') {
+      return 'Sem recorrência';
+    }
+    
+    const tempo = documento.tempo_recorrencia || '';
+    const repeticoes = documento.repeticoes ? ` (${documento.repeticoes}x)` : '';
+    
+    return `A cada ${tempo} ${documento.recorrencia}${repeticoes}`;
   };
 
   // Componente customizado para ícone de grade
@@ -544,54 +553,51 @@ export default function Documentos({ user }) {
                     <label className="block text-xs font-medium text-gray-600 mb-2">
                       Filtros Avançados
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    
+                    {/* Primeira linha de filtros */}
+                    <div className="flex flex-wrap gap-2 mb-3">
                       <button
-                        onClick={() => setFiltroImportantes(!filtroImportantes)}
+                        onClick={() => setFiltroObrigatorio(!filtroObrigatorio)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroImportantes 
-                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          filtroObrigatorio 
+                            ? 'bg-red-100 text-red-800 border border-red-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        <FiStar className="w-4 h-4 mr-1" />
-                        Importantes
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroLerDepois 
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiClock className="w-4 h-4 mr-1" />
-                        Ler Depois
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroArquivados(!filtroArquivados)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroArquivados 
-                            ? 'bg-green-100 text-green-800 border border-green-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiArchive className="w-4 h-4 mr-1" />
-                        Arquivados
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                        Obrigatórios
                       </button>
                       
                       <button
                         onClick={() => setFiltroComDocumento(!filtroComDocumento)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                           filtroComDocumento 
-                            ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         <FiFileText className="w-4 h-4 mr-1" />
                         Com Documento
                       </button>
+                    </div>
+                    
+                    {/* Segunda linha - Filtro de recorrência */}
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Recorrência
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={filtroRecorrencia}
+                        onChange={(e) => setFiltroRecorrencia(e.target.value)}
+                      >
+                        <option value="">Todos</option>
+                        <option value="sem_recorrencia">Sem recorrência</option>
+                        <option value="dia">Diária</option>
+                        <option value="semana">Semanal</option>
+                        <option value="mês">Mensal</option>
+                        <option value="ano">Anual</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -737,54 +743,51 @@ export default function Documentos({ user }) {
                     <label className="block text-xs font-medium text-gray-600 mb-2">
                       Filtros Avançados
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    
+                    {/* Primeira linha de filtros */}
+                    <div className="flex flex-wrap gap-2 mb-3">
                       <button
-                        onClick={() => setFiltroImportantes(!filtroImportantes)}
+                        onClick={() => setFiltroObrigatorio(!filtroObrigatorio)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroImportantes 
-                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          filtroObrigatorio 
+                            ? 'bg-red-100 text-red-800 border border-red-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        <FiStar className="w-4 h-4 mr-1" />
-                        Importantes
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroLerDepois 
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiClock className="w-4 h-4 mr-1" />
-                        Ler Depois
-                      </button>
-                      
-                      <button
-                        onClick={() => setFiltroArquivados(!filtroArquivados)}
-                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                          filtroArquivados 
-                            ? 'bg-green-100 text-green-800 border border-green-300' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <FiArchive className="w-4 h-4 mr-1" />
-                        Arquivados
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                        Obrigatórios
                       </button>
                       
                       <button
                         onClick={() => setFiltroComDocumento(!filtroComDocumento)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                           filtroComDocumento 
-                            ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         <FiFileText className="w-4 h-4 mr-1" />
                         Com Documento
                       </button>
+                    </div>
+                    
+                    {/* Segunda linha - Filtro de recorrência */}
+                    <div className="flex-1 max-w-xs">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Recorrência
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={filtroRecorrencia}
+                        onChange={(e) => setFiltroRecorrencia(e.target.value)}
+                      >
+                        <option value="">Todos</option>
+                        <option value="sem_recorrencia">Sem recorrência</option>
+                        <option value="dia">Diária</option>
+                        <option value="semana">Semanal</option>
+                        <option value="mês">Mensal</option>
+                        <option value="ano">Anual</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -814,39 +817,39 @@ export default function Documentos({ user }) {
                 </button>
 
                 <button
-                  onClick={() => setActiveTab('importantes')}
+                  onClick={() => setActiveTab('obrigatorios')}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'importantes'
+                    activeTab === 'obrigatorios'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <FiStar className="mr-3 h-5 w-5" />
-                  Importantes
+                  <div className="w-5 h-5 bg-red-500 rounded-full mr-3"></div>
+                  Obrigatórios
                 </button>
 
                 <button
-                  onClick={() => setActiveTab('ler_depois')}
+                  onClick={() => setActiveTab('com_documento')}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'ler_depois'
+                    activeTab === 'com_documento'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiFileText className="mr-3 h-5 w-5" />
+                  Com Anexos
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('recorrentes')}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'recorrentes'
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <FiClock className="mr-3 h-5 w-5" />
-                  Ler Depois
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('arquivados')}
-                  className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'arquivados'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <FiArchive className="mr-3 h-5 w-5" />
-                  Arquivados
+                  Recorrentes
                 </button>
               </nav>
             </div>
@@ -906,21 +909,23 @@ export default function Documentos({ user }) {
                         <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(documento)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
                           <div className="flex justify-between items-start mb-2">
                             <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
-                              {documento.descricao || 'Sem descrição'}
+                              {getTextPreview(documento.descricao, 60)}
                             </h3>
                             <div className="flex items-center space-x-2">
                               {getStatusIndicators(documento)}
-                              {shouldShowReadLaterIcon(documento) && (
-                                <FiClock className="w-4 h-4 text-blue-600" />
-                              )}
                             </div>
                           </div>
                           
-                          {documento.observacoes && (
-                            <p className="text-gray-600 text-sm mb-3">
-                              {getTextPreview(documento.observacoes, 100)}
+                          <div className="mb-3">
+                            <p className="text-gray-600 text-sm">
+                              {getTextPreview(documento.descricao, 100)}
                             </p>
-                          )}
+                            {documento.recorrencia && documento.recorrencia !== 'sem recorrencia' && (
+                              <p className="text-blue-600 text-xs mt-1">
+                                {getRecorrenciaText(documento)}
+                              </p>
+                            )}
+                          </div>
                           
                           <div className="flex items-center justify-between">
                             <div className="flex space-x-2">
@@ -938,7 +943,7 @@ export default function Documentos({ user }) {
                             
                             <div className="flex items-center text-gray-500 text-xs">
                               <FiCalendar className="w-3 h-3 mr-1" />
-                              {formatDate(documento.created_at)}
+                              {formatDate(documento)}
                             </div>
                           </div>
                         </div>
@@ -956,21 +961,23 @@ export default function Documentos({ user }) {
                           <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(documento)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                             <div className="flex justify-between items-start mb-3">
                               <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                                {documento.descricao || 'Sem descrição'}
+                                {getTextPreview(documento.descricao, 80)}
                               </h3>
                               <div className="flex items-center space-x-2">
                                 {getStatusIndicators(documento)}
-                                {shouldShowReadLaterIcon(documento) && (
-                                  <FiClock className="w-4 h-4 text-blue-600" />
-                                )}
                               </div>
                             </div>
                             
-                            {documento.observacoes && (
-                              <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                                {getTextPreview(documento.observacoes)}
+                            <div className="mb-4">
+                              <p className="text-gray-600 text-sm line-clamp-3">
+                                {getTextPreview(documento.descricao)}
                               </p>
-                            )}
+                              {documento.recorrencia && documento.recorrencia !== 'sem recorrencia' && (
+                                <p className="text-blue-600 text-sm mt-2">
+                                  {getRecorrenciaText(documento)}
+                                </p>
+                              )}
+                            </div>
                             
                             <div className="space-y-2">
                               <div className="flex flex-wrap gap-2">
@@ -988,7 +995,7 @@ export default function Documentos({ user }) {
                               
                               <div className="flex items-center justify-end text-gray-500 text-xs">
                                 <FiCalendar className="w-3 h-3 mr-1" />
-                                {formatDate(documento.created_at)}
+                                {formatDate(documento)}
                               </div>
                             </div>
                           </div>
@@ -1019,39 +1026,39 @@ export default function Documentos({ user }) {
           </button>
 
           <button
-            onClick={() => setActiveTab('importantes')}
+            onClick={() => setActiveTab('obrigatorios')}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'importantes'
+              activeTab === 'obrigatorios'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
-            <FiStar className="w-5 h-5" />
-            <span className="text-xs font-medium">Importantes</span>
+            <div className="w-5 h-5 bg-red-500 rounded-full"></div>
+            <span className="text-xs font-medium">Obrigatórios</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('ler_depois')}
+            onClick={() => setActiveTab('com_documento')}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'ler_depois'
+              activeTab === 'com_documento'
+                ? 'text-blue-600'
+                : 'text-gray-500'
+            }`}
+          >
+            <FiFileText className="w-5 h-5" />
+            <span className="text-xs font-medium">Anexos</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('recorrentes')}
+            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
+              activeTab === 'recorrentes'
                 ? 'text-blue-600'
                 : 'text-gray-500'
             }`}
           >
             <FiClock className="w-5 h-5" />
-            <span className="text-xs font-medium">Ler Depois</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('arquivados')}
-            className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
-              activeTab === 'arquivados'
-                ? 'text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
-            <FiArchive className="w-5 h-5" />
-            <span className="text-xs font-medium">Arquivados</span>
+            <span className="text-xs font-medium">Recorrentes</span>
           </button>
         </div>
       </div>
