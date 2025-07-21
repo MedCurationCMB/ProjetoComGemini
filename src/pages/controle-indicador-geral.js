@@ -88,7 +88,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
   };
 
   const handleInicioClick = () => {
-    router.push('/visualizacao-indicadores');
+    router.push('/inicio');
   };
 
   const handleAnalisesIndicadoresClick = () => {

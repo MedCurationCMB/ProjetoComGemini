@@ -422,6 +422,14 @@ export default function Documentos({ user }) {
                 {/* Dropdown do menu */}
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <Link
+                      href="/inicio"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      <FiHome className="mr-3 h-4 w-4" />
+                      Início
+                    </Link>
                     <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
                       <FiFileText className="mr-3 h-4 w-4" />
                       Documentos
@@ -639,6 +647,14 @@ export default function Documentos({ user }) {
                   
                   {showMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                      <Link
+                        href="/inicio"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                        onClick={() => setShowMenu(false)}
+                      >
+                        <FiHome className="mr-3 h-4 w-4" />
+                        Início
+                      </Link>
                       <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
                         <FiFileText className="mr-3 h-4 w-4" />
                         Documentos

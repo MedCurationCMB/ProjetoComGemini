@@ -155,7 +155,7 @@ export default function Anexos({ user }) {
 
   // Funções de navegação
   const handleInicioClick = () => {
-    router.push('/documentos');
+    router.push('/inicio');
   };
 
   const handleDocumentosClick = () => {
