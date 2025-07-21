@@ -100,7 +100,7 @@ export const LoginForm = () => {
       if (adminStatus) {
         router.push('/welcome');
       } else {
-        router.push('/visualizacao-indicadores');
+        router.push('/med-curation-desktop');
       }
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer login');
