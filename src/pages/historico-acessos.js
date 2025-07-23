@@ -84,6 +84,11 @@ export default function HistoricoAcessos({ user }) {
     router.push('/historico-acessos');
   };
 
+  const handleNavigate = (path) => {
+    setShowMenu(false);
+    router.push(path);
+  };
+
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
@@ -424,6 +429,20 @@ export default function HistoricoAcessos({ user }) {
                       Início
                     </button>
                     <button
+                      onClick={() => handleNavigate('/visualizacao-indicadores')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => handleNavigate('/documentos')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
+                    </button>
+                    <button
                       onClick={() => {
                         setShowMenu(false);
                       }}
@@ -515,6 +534,20 @@ export default function HistoricoAcessos({ user }) {
                     >
                       <FiHome className="mr-3 h-4 w-4" />
                       Início
+                    </button>
+                    <button
+                      onClick={() => handleNavigate('/visualizacao-indicadores')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => handleNavigate('/documentos')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
                     </button>
                     <button
                       onClick={() => {

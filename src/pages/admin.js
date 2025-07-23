@@ -340,18 +340,11 @@ export default function Admin({ user }) {
                       Perfil
                     </button>
                     <button
-                      onClick={() => handleNavigate('/analise-multiplos-indicadores')}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
-                    </button>
-                    <button
                       onClick={() => handleNavigate('/historico-acessos')}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiList className="mr-3 h-4 w-4" />
-                      Histórico Acessos
+                      Histórico Acessos (admin)
                     </button>
                     <button
                       onClick={() => handleNavigate('/configuracoes')}
@@ -419,13 +412,6 @@ export default function Admin({ user }) {
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
-                    </button>
-                    <button
-                      onClick={() => handleNavigate('/analise-multiplos-indicadores')}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => handleNavigate('/historico-acessos')}
