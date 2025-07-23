@@ -23,14 +23,14 @@ export default function Home({ user }) {
         
         // Redirecionar baseado no status de admin
         if (adminStatus) {
-          router.replace('/welcome');
+          router.replace('/inicio');
         } else {
           router.replace('/inicio');
         }
       } catch (error) {
         console.error('Erro ao verificar status de admin:', error);
         // Em caso de erro, redirecionar para welcome por padrão
-        router.replace('/welcome');
+        router.replace('/inicio');
       } finally {
         setChecking(false);
       }

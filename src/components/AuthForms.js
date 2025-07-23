@@ -98,7 +98,7 @@ export const LoginForm = () => {
       
       // Redirecionar baseado no status de admin
       if (adminStatus) {
-        router.push('/welcome');
+        router.push('/inicio');
       } else {
         router.push('/inicio');
       }
