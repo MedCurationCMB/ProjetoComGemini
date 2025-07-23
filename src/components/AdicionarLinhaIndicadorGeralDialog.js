@@ -1,8 +1,9 @@
-// src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Corrigida seguindo o padrão do AdicionarLinhaConteudoDialog
+// src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Corrigida com Rolagem Vertical
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiX, FiCheck, FiCalendar } from 'react-icons/fi';
+import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 
 const AdicionarLinhaIndicadorGeralDialog = ({ 
   onClose, 
@@ -29,6 +30,8 @@ const AdicionarLinhaIndicadorGeralDialog = ({
     tipo_indicador: '',
     subcategoria_id: '',
     prazo_entrega_inicial: '',
+    descricao_detalhada: '',
+    descricao_resumida: '',
     obrigatorio: false
   });
 
@@ -198,6 +201,8 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           tipo_indicador: parseInt(novaLinha.tipo_indicador),
           subcategoria_id: parseInt(novaLinha.subcategoria_id),
           prazo_entrega_inicial: novaLinha.prazo_entrega_inicial || null,
+          descricao_detalhada: novaLinha.descricao_detalhada.trim() || null,
+          descricao_resumida: novaLinha.descricao_resumida.trim() || null,
           recorrencia: 'sem recorrencia', // ← Sempre "sem recorrencia"
           tempo_recorrencia: null,
           repeticoes: 0,
@@ -230,8 +235,9 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-lg w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* ✅ CORREÇÃO: Container principal com max-height e overflow-y-auto */}
+      <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Adicionar Linha de Indicador</h2>
           <button 
@@ -335,17 +341,18 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 </div>
               </>
             ) : (
-              // Formulário para novas linhas não recorrentes
-              <>
+              // ✅ CORREÇÃO: Formulário para novas linhas não recorrentes com melhor espaçamento
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Projeto
+                    Projeto <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="projeto_id"
                     value={novaLinha.projeto_id}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="">Selecione um projeto</option>
                     {Object.entries(projetos).map(([id, nome]) => (
@@ -358,13 +365,14 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Categoria
+                    Categoria <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="categoria_id"
                     value={novaLinha.categoria_id}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="">Selecione uma categoria</option>
                     {Object.entries(categorias).map(([id, nome]) => (
@@ -377,15 +385,16 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Indicador
+                    Indicador <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="indicador"
                     value={novaLinha.indicador}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Digite o nome do indicador"
+                    required
                   />
                 </div>
                 
@@ -397,21 +406,50 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     name="observacao"
                     value={novaLinha.observacao}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    rows="2"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="3"
                     placeholder="Digite observações sobre o indicador"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Indicador
+                    Descrição Detalhada <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <textarea
+                    name="descricao_detalhada"
+                    value={novaLinha.descricao_detalhada}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="4"
+                    placeholder="Digite uma descrição detalhada do indicador, sua finalidade e metodologia"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrição Resumida <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <textarea
+                    name="descricao_resumida"
+                    value={novaLinha.descricao_resumida}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="2"
+                    placeholder="Digite uma descrição resumida do indicador"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Indicador <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="tipo_indicador"
                     value={novaLinha.tipo_indicador}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="">Selecione um tipo</option>
                     {Object.entries(tiposIndicador).map(([id, nome]) => (
@@ -424,13 +462,14 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subcategoria
+                    Subcategoria <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="subcategoria_id"
                     value={novaLinha.subcategoria_id}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="">Selecione uma subcategoria</option>
                     {Object.entries(subcategorias).map(([id, nome]) => (
@@ -450,7 +489,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     name="prazo_entrega_inicial"
                     value={novaLinha.prazo_entrega_inicial}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
@@ -467,9 +506,10 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     Obrigatório
                   </label>
                 </div>
-              </>
+              </div>
             )}
             
+            {/* ✅ CORREÇÃO: Rodapé com botões normal (sem sticky) */}
             <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between">
               <button
                 onClick={() => setStep(1)}

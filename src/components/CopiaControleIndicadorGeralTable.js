@@ -1,9 +1,10 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão Completa com Formatação PT-BR e Aba Pendentes
+// Componente CopiaControleIndicadorGeralTable.js - Versão Atualizada com Botão Criar Linha Base
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX, FiRefreshCw, FiDatabase } from 'react-icons/fi';
 import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDialog';
+import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 import AtualizacaoMassaIndicadorDialog from './AtualizacaoMassaIndicadorDialog';
@@ -17,7 +18,7 @@ const CopiaControleIndicadorGeralTable = ({
   setFiltroValorPendente,
   filtrosPrazo,
   setFiltrosPrazo,
-  searchTerm = '' // ✅ NOVO: Termo de busca
+  searchTerm = ''
 }) => {
   // ✅ NOVA FUNÇÃO: Formatar valores numéricos para padrão brasileiro
   const formatarValorIndicador = (valor) => {
@@ -40,6 +41,7 @@ const CopiaControleIndicadorGeralTable = ({
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
+  const [showAdicionarLinhaBaseDialog, setShowAdicionarLinhaBaseDialog] = useState(false); // ✅ NOVO ESTADO
   const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
   const [showAtualizacaoInlineDialog, setShowAtualizacaoInlineDialog] = useState(false);
   const [showPreenchimentoAutomaticoDialog, setShowPreenchimentoAutomaticoDialog] = useState(false);
@@ -69,7 +71,7 @@ const CopiaControleIndicadorGeralTable = ({
     if (!loading && projetosVinculados.length >= 0) {
       fetchControles();
     }
-  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm]); // ✅ ADICIONAR searchTerm
+  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm]);
 
   // Função para calcular período
   const calcularPeriodo = (tipo) => {
@@ -267,21 +269,23 @@ const CopiaControleIndicadorGeralTable = ({
 
     if (!filtrosPrazo) return query;
 
-    let dataInicioFiltro = null;
-    let dataFimFiltro = null;
+    let dataInicio, dataFim;
 
-    if (filtrosPrazo.periodo && filtrosPrazo.periodo !== 'personalizado') {
+    if (filtrosPrazo.periodo === 'personalizado') {
+      if (!filtrosPrazo.data_inicio || !filtrosPrazo.data_fim) {
+        return query;
+      }
+      dataInicio = filtrosPrazo.data_inicio;
+      dataFim = filtrosPrazo.data_fim;
+    } else {
       const periodo = calcularPeriodo(filtrosPrazo.periodo);
-      dataInicioFiltro = periodo.dataInicio;
-      dataFimFiltro = periodo.dataFim;
-    } else if (filtrosPrazo.periodo === 'personalizado' && filtrosPrazo.data_inicio && filtrosPrazo.data_fim) {
-      dataInicioFiltro = filtrosPrazo.data_inicio;
-      dataFimFiltro = filtrosPrazo.data_fim;
+      dataInicio = periodo.dataInicio;
+      dataFim = periodo.dataFim;
     }
 
-    if (dataInicioFiltro && dataFimFiltro) {
-      query = query.gte('prazo_entrega', dataInicioFiltro)
-                   .lte('prazo_entrega', dataFimFiltro);
+    if (dataInicio && dataFim) {
+      query = query.gte('prazo_entrega', dataInicio)
+                   .lte('prazo_entrega', dataFim);
     }
 
     return query;
@@ -317,7 +321,7 @@ const CopiaControleIndicadorGeralTable = ({
       query = aplicarFiltroTipoIndicador(query);
       query = aplicarFiltroValorPendente(query);
       query = aplicarFiltrosPrazo(query);
-      query = aplicarFiltroBusca(query); // ✅ NOVO: Aplicar filtro de busca
+      query = aplicarFiltroBusca(query);
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -439,6 +443,13 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Operação concluída com sucesso!');
   };
 
+  // ✅ NOVA FUNÇÃO: Lidar com o sucesso da adição de linha base
+  const handleAdicionarLinhaBaseSuccess = () => {
+    setShowAdicionarLinhaBaseDialog(false);
+    fetchControles();
+    toast.success('Linha base criada com sucesso!');
+  };
+
   // Função para lidar com o sucesso da edição de linha
   const handleEditarSuccess = () => {
     setEditarItemId(null);
@@ -502,13 +513,13 @@ const CopiaControleIndicadorGeralTable = ({
   return (
     <div>
 
-      {/* Botões de Ação em estilo moderno - NOMES ATUALIZADOS */}
+      {/* Botões de Ação em estilo moderno - ATUALIZADO COM NOVO BOTÃO */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Botão Atualizar via Planilha */}
           <button
             onClick={() => setShowAtualizacaoMassaDialog(true)}
@@ -554,6 +565,16 @@ const CopiaControleIndicadorGeralTable = ({
             <span className="text-center">Inserir Referência Auto</span>
           </button>
           
+          {/* ✅ NOVO BOTÃO: Criar Linha Base */}
+          <button
+            onClick={() => setShowAdicionarLinhaBaseDialog(true)}
+            className="flex items-center justify-center text-white px-4 py-3 rounded-md text-sm font-medium hover:opacity-90 min-h-[48px]"
+            style={{ backgroundColor: '#012060' }}
+          >
+            <FiDatabase className="mr-2 flex-shrink-0" />
+            <span className="text-center">Criar Linha Base</span>
+          </button>
+          
           {/* Botão Adicionar Linha */}
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
@@ -576,6 +597,17 @@ const CopiaControleIndicadorGeralTable = ({
           tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
+      {/* ✅ NOVO MODAL: Para adicionar linha base */}
+      {showAdicionarLinhaBaseDialog && (
+        <AdicionarLinhaIndicadorBaseDialog
+          onClose={() => setShowAdicionarLinhaBaseDialog(false)}
+          onSuccess={handleAdicionarLinhaBaseSuccess}
+          categorias={categorias}
+          projetos={projetos}
+          subcategorias={subcategorias}
         />
       )}
 
@@ -864,15 +896,17 @@ const CopiaControleIndicadorGeralTable = ({
           <div className="flex items-start">
             <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
             <div>
-              <h4 className="font-medium text-blue-900">Duas Opções de Atualização em Massa</h4>
+              <h4 className="font-medium text-blue-900">Opções de Atualização e Criação</h4>
               <p className="text-sm text-blue-700 mt-1">
-                Você pode atualizar múltiplos indicadores de duas formas diferentes:
+                Você pode atualizar múltiplos indicadores ou criar novas linhas base de diferentes formas:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1">
                 <li>• <strong>Atualização via Planilha:</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
                 <li>• <strong>Atualização em Massa:</strong> Edite diretamente na interface, todos os registros visíveis</li>
+                <li>• <strong>Criar Linha Base:</strong> Cria automaticamente linhas Meta e Realizado com recorrência configurável</li>
+                <li>• <strong>Adicionar Linha:</strong> Adiciona linha individual ou múltiplas linhas baseadas em linha existente</li>
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
-                <li>• <strong>Respeita filtros:</strong> Ambas as opções trabalham apenas com os dados visíveis na tabela</li>
+                <li>• <strong>Respeita filtros:</strong> Todas as opções trabalham apenas com os dados visíveis na tabela</li>
                 <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
                 {filtroTipoIndicador === 'pendentes' && (
                   <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado (independente da data)</li>
@@ -892,6 +926,9 @@ const CopiaControleIndicadorGeralTable = ({
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  <strong>🏗️ Criar Linha Base:</strong> Use o botão "Criar Linha Base" para configurar indicadores com Meta/Realizado automático
                 </p>
               </div>
             </div>

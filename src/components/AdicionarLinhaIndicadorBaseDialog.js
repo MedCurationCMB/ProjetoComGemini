@@ -1,4 +1,4 @@
-// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Modificada (SEM tipo_indicador)
+// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Atualizada com Novos Campos
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -11,12 +11,14 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   projetos, 
   subcategorias 
 }) => {
-  // Estado inicial do formulário - REMOVIDO tipo_indicador
+  // Estado inicial do formulário - REMOVIDO tipo_indicador + ADICIONADOS novos campos
   const [formData, setFormData] = useState({
     projeto_id: '',
     categoria_id: '',
     indicador: '',
     observacao: '',
+    descricao_detalhada: '',
+    descricao_resumida: '',
     subcategoria_id: '',
     prazo_entrega_inicial: '',
     recorrencia: 'sem recorrencia',
@@ -77,12 +79,14 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         }
       }
       
-      // Preparar dados para inserção - REMOVIDO tipo_indicador
+      // Preparar dados para inserção - REMOVIDO tipo_indicador + ADICIONADOS novos campos
       const dadosInsercao = {
         projeto_id: formData.projeto_id,
         categoria_id: formData.categoria_id,
         indicador: formData.indicador.trim(),
         observacao: formData.observacao.trim() || null,
+        descricao_detalhada: formData.descricao_detalhada.trim() || null,
+        descricao_resumida: formData.descricao_resumida.trim() || null,
         // tipo_indicador: REMOVIDO - será definido automaticamente pela função
         subcategoria_id: parseInt(formData.subcategoria_id),
         prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
@@ -126,10 +130,11 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* ✅ ADICIONADO: Container com max-height e overflow para rolagem */}
+      <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Adicionar Linha de Indicador</h2>
+          <h2 className="text-xl font-bold">Criar Linha Base de Indicador</h2>
           <button 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -141,7 +146,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         {/* Informação sobre a criação automática */}
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start">
-            <FiCheck className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+            <FiCheck className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="text-sm font-medium text-blue-800">Criação Automática Meta/Realizado</h3>
               <p className="text-sm text-blue-700 mt-1">
@@ -170,7 +175,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                 name="projeto_id"
                 value={formData.projeto_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
                 <option value="">Selecione um projeto</option>
@@ -191,7 +196,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                 name="categoria_id"
                 value={formData.categoria_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
                 <option value="">Selecione uma categoria</option>
@@ -214,7 +219,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               name="indicador"
               value={formData.indicador}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Digite o nome do indicador"
               required
             />
@@ -229,9 +234,39 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               name="observacao"
               value={formData.observacao}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows="3"
               placeholder="Digite observações sobre o indicador"
+            />
+          </div>
+          
+          {/* ✅ NOVOS CAMPOS: Descrição Detalhada */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descrição Detalhada <span className="text-gray-400 text-xs">(opcional)</span>
+            </label>
+            <textarea
+              name="descricao_detalhada"
+              value={formData.descricao_detalhada}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="4"
+              placeholder="Digite uma descrição detalhada do indicador, sua finalidade e metodologia"
+            />
+          </div>
+          
+          {/* ✅ NOVOS CAMPOS: Descrição Resumida */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descrição Resumida <span className="text-gray-400 text-xs">(opcional)</span>
+            </label>
+            <textarea
+              name="descricao_resumida"
+              value={formData.descricao_resumida}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="2"
+              placeholder="Digite uma descrição resumida do indicador"
             />
           </div>
           
@@ -246,7 +281,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               name="subcategoria_id"
               value={formData.subcategoria_id}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             >
               <option value="">Selecione uma subcategoria</option>
@@ -268,7 +303,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               name="prazo_entrega_inicial"
               value={formData.prazo_entrega_inicial}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           
@@ -281,7 +316,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               name="recorrencia"
               value={formData.recorrencia}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             >
               <option value="sem recorrencia">Sem recorrência</option>
@@ -309,7 +344,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                     handleInputChange(e);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ex: 1"
                 required={formData.recorrencia !== 'sem recorrencia'}
               />
@@ -339,7 +374,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                     handleInputChange(e);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ex: 3"
                 required={formData.recorrencia !== 'sem recorrencia'}
               />
@@ -364,13 +399,13 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             </label>
           </div>
           
-          {/* Botões */}
+          {/* ✅ BOTÕES: Rodapé normal (sem sticky) */}
           <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
@@ -380,11 +415,11 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               disabled={loading}
               className={`px-4 py-2 rounded-md ${
                 loading
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              {loading ? 'Processando...' : 'Adicionar'}
+              {loading ? 'Processando...' : 'Criar Linha Base'}
             </button>
           </div>
         </form>
