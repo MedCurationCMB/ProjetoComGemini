@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com gráfico adaptativo
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com gráfico adaptativo e ícone de informação
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -23,8 +23,8 @@ import {
   FiMenu, 
   FiHome, 
   FiStar, 
-  FiClock, // ✅ MANTIDO para filtros avançados
-  FiClipboard, // ✅ ÍCONE PARA CONTROLE
+  FiClock, 
+  FiClipboard,
   FiEye, 
   FiEyeOff, 
   FiUser, 
@@ -35,9 +35,10 @@ import {
   FiBarChart,
   FiCpu,
   FiList,
-  FiTrendingUp
+  FiTrendingUp,
+  FiInfo // ✅ NOVO ÍCONE
 } from 'react-icons/fi';
-import { TfiPencil } from 'react-icons/tfi'; // ✅ NOVO ÍCONE PARA REGISTROS
+import { TfiPencil } from 'react-icons/tfi';
 
 export default function VisualizacaoIndicadores({ user }) {
   const router = useRouter();
@@ -46,27 +47,30 @@ export default function VisualizacaoIndicadores({ user }) {
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
-  // ✅ ESTADOS PARA FILTROS AVANÇADOS - com filtroLerDepois mantido
+  // ✅ ESTADOS PARA FILTROS AVANÇADOS - removido filtroLerDepois (não precisa mais)
   const [filtroImportantes, setFiltroImportantes] = useState(false);
-  const [filtroLerDepois, setFiltroLerDepois] = useState(false); // ✅ MANTIDO
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
-  // ✅ MODIFICADO: Estados para controlar a navegação - substituído 'ver_todos' por 'registros'
-  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'controle', 'registros'
-  const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
+  // ✅ ESTADOS PARA CONTROLAR A NAVEGAÇÃO
+  const [activeTab, setActiveTab] = useState('inicio');
+  const [showAllContent, setShowAllContent] = useState(false);
+
+  // ✅ NOVOS ESTADOS PARA O MODAL DE INFORMAÇÃO
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState('');
+  const [infoModalTitle, setInfoModalTitle] = useState('');
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO REALIZADO VS META
   // =====================================
 
-  // ✅ NOVA FUNÇÃO: Buscar dados do gráfico com separação Realizado vs Meta
   const fetchGraficoRealizadoMeta = async (idControleindicador) => {
     try {
       const { data, error } = await supabase
@@ -85,11 +89,9 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Preparar dados para gráfico combinado Realizado vs Meta
   const prepararDadosGraficoCombinado = (dadosIndicadores) => {
     if (!dadosIndicadores || dadosIndicadores.length === 0) return [];
     
-    // Agrupar por período de referência
     const dadosAgrupados = {};
     
     dadosIndicadores.forEach(indicador => {
@@ -100,7 +102,6 @@ export default function VisualizacaoIndicadores({ user }) {
         dadosAgrupados[periodo] = {
           periodo,
           periodoCompleto,
-          // Inicializar valores
           realizadoApresentado: 0,
           realizadoIndicador: 0,
           metaApresentado: 0,
@@ -108,7 +109,6 @@ export default function VisualizacaoIndicadores({ user }) {
         };
       }
       
-      // Preencher baseado no tipo_indicador
       if (indicador.tipo_indicador === 1) { // Realizado
         dadosAgrupados[periodo].realizadoApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
         dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
@@ -118,12 +118,10 @@ export default function VisualizacaoIndicadores({ user }) {
       }
     });
     
-    // Converter para array e ordenar por data CRESCENTE (mais antigo primeiro)
     return Object.values(dadosAgrupados)
       .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
   };
 
-  // Função para formatar data para gráfico (DD-MM-AA)
   const formatDateGrafico = (dateString) => {
     if (!dateString) return '';
     
@@ -139,62 +137,51 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ CONFIGURAÇÃO BASEADA EM 7 BARRAS COMO REFERÊNCIA MÁXIMA (igual à página indicador)
   const MAX_VISIBLE_BARS = 7;
 
-  // Função para calcular largura ideal por barra baseada na quantidade
   const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
-    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
     const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
     
     if (isMobile) {
-      // Mobile: adaptar baseado na quantidade (máximo 7)
-      if (effectiveDataLength <= 3) return 60;      // Poucas barras = mais largas
-      if (effectiveDataLength <= 5) return 45;      // Quantidade média
-      if (effectiveDataLength <= 7) return 35;      // 7 barras = tamanho padrão
-      return 35;                                     // Sempre 35 para mobile quando > 7
+      if (effectiveDataLength <= 3) return 60;
+      if (effectiveDataLength <= 5) return 45;
+      if (effectiveDataLength <= 7) return 35;
+      return 35;
     } else {
-      // Desktop: adaptar baseado na quantidade (máximo 7)
-      if (effectiveDataLength <= 3) return 80;      // Poucas barras = mais largas
-      if (effectiveDataLength <= 5) return 65;      // Quantidade média
-      if (effectiveDataLength <= 7) return 50;      // 7 barras = tamanho padrão
-      return 50;                                     // Sempre 50 para desktop quando > 7
+      if (effectiveDataLength <= 3) return 80;
+      if (effectiveDataLength <= 5) return 65;
+      if (effectiveDataLength <= 7) return 50;
+      return 50;
     }
   };
 
-  // Função para calcular espaçamento entre barras baseado na quantidade
   const calculateBarSpacing = (dataLength, isMobile = false) => {
-    // ✅ MODIFICADO: Sempre calcular baseado em no máximo 7 barras
     const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
     
     if (isMobile) {
-      if (effectiveDataLength <= 3) return 15;      // Poucas barras = mais espaço
-      if (effectiveDataLength <= 5) return 10;      // Quantidade média
-      if (effectiveDataLength <= 7) return 5;       // 7 barras = espaçamento padrão
-      return 5;                                      // Sempre 5 para mobile quando > 7
+      if (effectiveDataLength <= 3) return 15;
+      if (effectiveDataLength <= 5) return 10;
+      if (effectiveDataLength <= 7) return 5;
+      return 5;
     } else {
-      if (effectiveDataLength <= 3) return 20;      // Poucas barras = mais espaço
-      if (effectiveDataLength <= 5) return 15;      // Quantidade média
-      if (effectiveDataLength <= 7) return 10;      // 7 barras = espaçamento padrão
-      return 10;                                     // Sempre 10 para desktop quando > 7
+      if (effectiveDataLength <= 3) return 20;
+      if (effectiveDataLength <= 5) return 15;
+      if (effectiveDataLength <= 7) return 10;
+      return 10;
     }
   };
 
-  // Função para calcular se precisa de scroll baseado na tela disponível
   const calculateNeedsScroll = (dataLength, isMobile = false) => {
     return dataLength > MAX_VISIBLE_BARS;
   };
 
-  // ✅ FUNÇÃO CORRIGIDA: Calcular largura total com melhor centralização
   const calculateTotalWidth = (dataLength, isMobile = false) => {
-    // Se temos 7 ou menos barras, calcular normalmente
     if (dataLength <= MAX_VISIBLE_BARS) {
       const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
       const spacing = calculateBarSpacing(dataLength, isMobile);
-      const margins = 40; // ✅ Aumentar margem para melhor espaçamento
+      const margins = 40;
       
       const calculatedWidth = (barWidth + spacing) * dataLength + margins;
-      // ✅ Definir larguras mínimas mais adequadas
       const minWidth = isMobile ? 320 : 400;
       
       return {
@@ -204,50 +191,40 @@ export default function VisualizacaoIndicadores({ user }) {
         visibleBars: dataLength
       };
     } 
-    // Se temos mais de 7 barras, usar largura fixa baseada em 7 barras
     else {
       const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
       const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
-      const margins = 40; // ✅ Aumentar margem
+      const margins = 40;
       
-      // Largura do container fixo (baseado em 7 barras)
       const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
-      
-      // Largura total do conteúdo (todas as barras)
       const totalContentWidth = (barWidth + spacing) * dataLength + margins;
       
       return {
-        width: containerWidth,           // Container sempre do tamanho de 7 barras
-        needsScroll: true,              // Sempre precisa de scroll quando > 7
-        calculatedWidth: totalContentWidth,  // Largura real do conteúdo
+        width: containerWidth,
+        needsScroll: true,
+        calculatedWidth: totalContentWidth,
         visibleBars: MAX_VISIBLE_BARS
       };
     }
   };
 
-  // ✅ FUNÇÃO MODIFICADA: Gap baseado no efetivo número de barras visíveis
   const calculateCategoryGap = (dataLength) => {
     const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
     
-    if (effectiveDataLength <= 3) return "8%";     // Poucas barras = mais espaço
-    if (effectiveDataLength <= 5) return "5%";     // Quantidade média
-    if (effectiveDataLength <= 7) return "3%";     // 7 barras = espaçamento padrão
-    return "3%";                                    // Sempre 3% quando > 7
+    if (effectiveDataLength <= 3) return "8%";
+    if (effectiveDataLength <= 5) return "5%";
+    if (effectiveDataLength <= 7) return "3%";
+    return "3%";
   };
 
-  // ✅ COMPONENTE SCROLLABLE CHART CONTAINER (igual à página indicador)
   const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
-    // ✅ ADICIONAR: useRef e estado para controle de scroll
     const scrollRef = useRef(null);
     const [hasScrolled, setHasScrolled] = useState(false);
 
-    // ✅ USAR NOVA FUNÇÃO baseada em 7 barras
     const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
 
-    // ✅ ADICIONAR: Fazer scroll automático para a direita quando há scroll
     useEffect(() => {
       if (scrollRef.current && !hasScrolled && needsScroll) {
-        // Pequeno delay para garantir que o conteúdo foi renderizado
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollLeft = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
@@ -261,19 +238,16 @@ export default function VisualizacaoIndicadores({ user }) {
       <div 
         className="flex justify-center"
         style={{
-          // ✅ CSS personalizado para scroll mais suave
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
-          // ✅ Largura 100% para centralização
           width: '100%',
           maxWidth: '100%'
         }}
       >
         <div 
-          ref={scrollRef} // ✅ ADICIONAR: ref para controlar o scroll
+          ref={scrollRef}
           className={needsScroll ? "overflow-x-auto" : ""}
           style={{
-            // ✅ Aplicar largura fixa apenas ao container interno quando há scroll
             width: needsScroll ? `${width}px` : 'auto',
             maxWidth: needsScroll ? `${width}px` : '100%',
             scrollBehavior: 'smooth',
@@ -283,7 +257,7 @@ export default function VisualizacaoIndicadores({ user }) {
           <div style={{ 
             width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
             minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
-            margin: '0 auto' // ✅ SEMPRE centralizar o conteúdo
+            margin: '0 auto'
           }}>
             {children}
           </div>
@@ -292,7 +266,6 @@ export default function VisualizacaoIndicadores({ user }) {
     );
   };
 
-  // ✅ COMPONENTE PERSONALIZADO PARA TOOLTIP (igual à página indicador)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -320,10 +293,7 @@ export default function VisualizacaoIndicadores({ user }) {
       const loadGraficoData = async () => {
         setLoadingGrafico(true);
         const data = await fetchGraficoRealizadoMeta(indicador.id_controleindicador);
-        
-        // ✅ NOVA LÓGICA: Preparar dados combinados (Realizado vs Meta)
         const dadosCombinados = prepararDadosGraficoCombinado(data);
-        
         setGraficoData(dadosCombinados);
         setLoadingGrafico(false);
       };
@@ -331,7 +301,6 @@ export default function VisualizacaoIndicadores({ user }) {
       loadGraficoData();
     }, [indicador.id_controleindicador]);
 
-    // Estados de loading e dados vazios
     if (loadingGrafico) {
       return (
         <div className="mb-3 flex justify-center">
@@ -348,21 +317,16 @@ export default function VisualizacaoIndicadores({ user }) {
       );
     }
 
-    // Cálculos adaptativos
     const dataLength = graficoData.length;
     const categoryGap = calculateCategoryGap(dataLength);
     const optimalBarWidth = calculateOptimalBarWidth(dataLength, isMobile);
     
-    // Configurações responsivas
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
     const labelFontSize = isMobile ? 7 : 9;
 
     return (
       <div className="mb-3">
-        {/* ❌ REMOVIDO: Legenda fixa */}
-        
-        {/* Container com scroll condicional usando a mesma lógica da página indicador */}
         <ScrollableChartContainer dataLength={dataLength} isMobile={isMobile}>
           <div style={{ height: altura }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -385,11 +349,10 @@ export default function VisualizacaoIndicadores({ user }) {
                     fill: '#6B7280',
                     textAnchor: 'middle'
                   }}
-                  interval={0} // Mostrar todas as labels
+                  interval={0}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 
-                {/* ✅ BARRA PARA REALIZADO */}
                 <Bar 
                   dataKey="realizadoApresentado" 
                   fill="#3B82F6" 
@@ -411,8 +374,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     }}
                   />
                 </Bar>
-                
-                {/* ❌ REMOVIDO: Linha para Meta */}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -425,36 +386,25 @@ export default function VisualizacaoIndicadores({ user }) {
   // FUNÇÕES EXISTENTES (mantidas)
   // =====================================
 
-  // 2. FUNÇÃO PARA VERIFICAR SE É TIPO KPI OU NULL
   const isKpiOrNull = (indicador) => {
     if (!indicador.controle_indicador) return false;
-    
     const tipoApresentacao = indicador.controle_indicador.tipos_apresentacao?.nome;
-    
-    // Se tipo_apresentacao é NULL ou se o nome é 'KPI'
     return !tipoApresentacao || tipoApresentacao === 'KPI';
   };
 
-  // 3. FUNÇÃO PARA FORMATAR VALOR DO INDICADOR
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
-    
     const num = parseFloat(valor);
     if (isNaN(num)) return valor;
-    
     return num.toLocaleString('pt-BR');
   };
 
-  // 4. FUNÇÃO PARA VERIFICAR SE É TIPO GRÁFICO DE BARRAS
   const isGraficoBarras = (indicador) => {
     if (!indicador.controle_indicador) return false;
-    
     const tipoApresentacao = indicador.controle_indicador.tipos_apresentacao?.nome;
-    
     return tipoApresentacao === 'Gráfico de Barras';
   };
 
-  // ✅ NOVA FUNÇÃO: Separar indicadores por tipo
   const separarIndicadoresPorTipo = (indicadores) => {
     const kpis = [];
     const graficos = [];
@@ -473,13 +423,49 @@ export default function VisualizacaoIndicadores({ user }) {
     return { kpis, graficos, outros };
   };
 
-  // ✅ NOVA FUNÇÃO: Renderizar layout responsivo de KPIs (LIMITE 3 POR LINHA)
+  // ✅ NOVA FUNÇÃO: Abrir modal de informação
+  const handleInfoClick = async (indicador, e) => {
+    e.preventDefault(); // Previne navegação do Link
+    e.stopPropagation(); // Para propagação do evento
+    
+    try {
+      // Buscar a descrição detalhada do controle_indicador
+      const { data, error } = await supabase
+        .from('controle_indicador')
+        .select('descricao_detalhada')
+        .eq('id', indicador.id_controleindicador)
+        .single();
+      
+      if (error) {
+        console.error('Erro ao buscar descrição detalhada:', error);
+        toast.error('Erro ao carregar informações');
+        return;
+      }
+      
+      if (data?.descricao_detalhada) {
+        setInfoModalTitle(indicador.indicador || 'Informações do Indicador');
+        setInfoModalContent(data.descricao_detalhada);
+        setShowInfoModal(true);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar informações:', error);
+      toast.error('Erro ao carregar informações');
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Verificar se deve mostrar ícone de info
+  const shouldShowInfoIcon = (indicador) => {
+    // Esta verificação será feita no render, pois precisamos dos dados do controle_indicador
+    // que são carregados junto com o indicador
+    return indicador.controle_indicador?.descricao_detalhada && 
+           indicador.controle_indicador.descricao_detalhada.trim() !== '';
+  };
+
   const renderKPILayout = (kpis) => {
     if (kpis.length === 0) return null;
 
     const count = kpis.length;
 
-    // Função para renderizar um card KPI individual
     const renderKPICard = (indicador, className = "") => (
       <div key={indicador.id} className={className}>
         <Link href={`/indicador/${indicador.id_controleindicador}`}>
@@ -493,17 +479,25 @@ export default function VisualizacaoIndicadores({ user }) {
                 {shouldShowReadLaterIcon(indicador) && (
                   <FiClock className="w-4 h-4 text-blue-600" />
                 )}
+                {/* ✅ NOVO: Ícone de informação */}
+                {shouldShowInfoIcon(indicador) && (
+                  <button
+                    onClick={(e) => handleInfoClick(indicador, e)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Ver informações detalhadas"
+                  >
+                    <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                  </button>
+                )}
               </div>
             </div>
             
-            {/* Valor KPI */}
             <div className="mb-4">
               <div className="text-5xl font-bold text-black">
                 {formatarValorIndicador(indicador.valor_indicador_apresentado)}
               </div>
             </div>
             
-            {/* Tags e data */}
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
                 {indicador.projeto_id && (
@@ -528,7 +522,7 @@ export default function VisualizacaoIndicadores({ user }) {
       </div>
     );
 
-    // ✅ LÓGICA DE LAYOUT OTIMIZADO BASEADA NA QUANTIDADE (LIMITE 3 POR LINHA)
+    // Layout logic based on count (same as before)
     switch (count) {
       case 1:
         return (
@@ -536,125 +530,94 @@ export default function VisualizacaoIndicadores({ user }) {
             {renderKPICard(kpis[0])}
           </div>
         );
-        
       case 2:
         return (
           <div className="grid grid-cols-2 gap-6 mb-6">
             {kpis.map(kpi => renderKPICard(kpi))}
           </div>
         );
-        
       case 3:
         return (
           <div className="grid grid-cols-3 gap-6 mb-6">
             {kpis.map(kpi => renderKPICard(kpi))}
           </div>
         );
-        
       case 4:
-        // ✅ CASO ESPECIAL: 3 na primeira linha + 1 ocupando toda a segunda linha
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 1 KPI ocupando toda a largura */}
             <div className="grid grid-cols-1 gap-6">
               {renderKPICard(kpis[3])}
             </div>
           </div>
         );
-        
       case 5:
-        // ✅ CASO ESPECIAL: 3 na primeira linha + 2 na segunda linha
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 2 KPIs */}
             <div className="grid grid-cols-2 gap-6">
               {kpis.slice(3, 5).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
-        
       case 6:
-        // ✅ CASO ESPECIAL: 3 na primeira linha + 3 na segunda linha
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
-        
       case 7:
-        // ✅ CASO ESPECIAL: 3 na primeira linha + 3 na segunda linha + 1 na terceira linha (largura total)
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Terceira linha: 1 KPI ocupando toda a largura */}
             <div className="grid grid-cols-1 gap-6">
               {renderKPICard(kpis[6])}
             </div>
           </div>
         );
-        
       case 8:
-        // ✅ CASO ESPECIAL: 3 + 3 + 2 KPIs
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Terceira linha: 2 KPIs */}
             <div className="grid grid-cols-2 gap-6">
               {kpis.slice(6, 8).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
-        
       case 9:
-        // ✅ CASO ESPECIAL: 3 + 3 + 3 KPIs
         return (
           <div className="space-y-6 mb-6">
-            {/* Primeira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Segunda linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
             </div>
-            {/* Terceira linha: 3 KPIs */}
             <div className="grid grid-cols-3 gap-6">
               {kpis.slice(6, 9).map(kpi => renderKPICard(kpi))}
             </div>
           </div>
         );
-        
       default:
-        // ✅ FALLBACK: Para mais de 9 KPIs, usar grid padrão de 3 colunas
         return (
           <div className="grid grid-cols-3 gap-6 mb-6">
             {kpis.map(kpi => renderKPICard(kpi))}
@@ -663,7 +626,6 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
     try {
       const { data, error } = await supabase
@@ -672,7 +634,6 @@ export default function VisualizacaoIndicadores({ user }) {
       
       if (error) throw error;
       
-      // Converter array em objeto para fácil acesso por nome_variavel
       const apresentacaoObj = {};
       data.forEach(item => {
         apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
@@ -684,7 +645,6 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -694,7 +654,6 @@ export default function VisualizacaoIndicadores({ user }) {
       
       if (error) throw error;
       
-      // Extrair apenas os IDs dos projetos
       const projetoIds = data.map(item => item.projeto_id);
       setProjetosVinculados(projetoIds);
       
@@ -705,19 +664,17 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // Função para determinar a cor da borda baseada no status de leitura
+  // ✅ MODIFICADO: Remover lógica da bolinha azul, manter apenas borda cinza
   const getBorderColor = (indicador) => {
-    return indicador.lido ? 'border-gray-300' : 'border-blue-500';
+    return 'border-blue-500'; // Sempre cinza, sem verificação de lido
   };
 
-  // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
     if (!user) {
       router.replace('/login');
     }
   }, [user, router]);
 
-  // Função para fazer logout
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -745,117 +702,89 @@ export default function VisualizacaoIndicadores({ user }) {
     router.push('/analise-multiplos-indicadores');
   };
 
-  // ✅ FUNÇÃO: Navegar para página de controle
   const handleControleClick = () => {
     router.push('/visualizacao-geral-indicadores');
   };
 
-  // ✅ NOVA FUNÇÃO: Navegar para página de registros
   const handleRegistrosClick = () => {
     router.push('/controle-indicador-geral');
   };
 
-  // 1. ADICIONAR nova função de navegação (após handleRegistrosClick):
   const handleImportantesClick = () => {
     router.push('/visualizacao-indicadores-importantes');
   };
 
-  // Carregar categorias, projetos e projetos vinculados
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
-        // Buscar projetos vinculados primeiro
         const projetoIds = await fetchProjetosVinculados(user.id);
         
-        // ✅ LÓGICA CORRIGIDA: Buscar categorias de controles visíveis E de projetos vinculados
         if (projetoIds.length > 0) {
-          // Buscar quais categorias têm controles visíveis EM PROJETOS VINCULADOS
           const { data: categoriasComControles, error: categoriasControlesError } = await supabase
             .from('controle_indicador_geral')
             .select('categoria_id')
             .eq('visivel', true)
-            .in('projeto_id', projetoIds) // ✅ NOVA RESTRIÇÃO: apenas projetos vinculados
-            .not('categoria_id', 'is', null); // Excluir registros sem categoria
+            .in('projeto_id', projetoIds)
+            .not('categoria_id', 'is', null);
           
           if (categoriasControlesError) throw categoriasControlesError;
           
-          // Extrair IDs únicos de categorias que têm controles visíveis em projetos vinculados
           const categoriasComControlesVisiveis = [...new Set(
             categoriasComControles.map(item => item.categoria_id)
           )];
           
-          console.log('Projetos vinculados:', projetoIds);
-          console.log('Categorias com controles visíveis em projetos vinculados:', categoriasComControlesVisiveis);
-          
-          // Buscar apenas as categorias que atendem aos dois critérios
           if (categoriasComControlesVisiveis.length > 0) {
             const { data: categoriasData, error: categoriasError } = await supabase
               .from('categorias')
               .select('id, nome')
-              .in('id', categoriasComControlesVisiveis) // Apenas categorias com controles visíveis em projetos vinculados
+              .in('id', categoriasComControlesVisiveis)
               .order('nome');
             
             if (categoriasError) throw categoriasError;
             
-            // Converter array em objeto para fácil acesso por ID
             const categoriasObj = {};
             categoriasData.forEach(cat => {
               categoriasObj[cat.id] = cat.nome;
             });
             
             setCategorias(categoriasObj);
-            console.log('Categorias carregadas para dropdown:', categoriasData?.length || 0);
           } else {
-            // Se não há categorias que atendem aos critérios, definir como objeto vazio
             setCategorias({});
-            console.log('Nenhuma categoria possui controles visíveis em projetos vinculados');
           }
           
-          // ✅ LÓGICA DOS PROJETOS (mantida igual)
-          // Buscar quais projetos têm controles visíveis
           const { data: projetosComControles, error: controlesError } = await supabase
             .from('controle_indicador_geral')
             .select('projeto_id')
             .eq('visivel', true)
-            .in('projeto_id', projetoIds); // Apenas dos projetos vinculados
+            .in('projeto_id', projetoIds);
           
           if (controlesError) throw controlesError;
           
-          // Extrair IDs únicos de projetos que têm controles visíveis
           const projetosComControlesVisiveis = [...new Set(
             projetosComControles.map(item => item.projeto_id)
           )];
           
-          console.log('Projetos com controles visíveis:', projetosComControlesVisiveis);
-          
-          // Buscar apenas os projetos que estão nas duas listas
           if (projetosComControlesVisiveis.length > 0) {
             const { data: projetosData, error: projetosError } = await supabase
               .from('projetos')
               .select('id, nome')
-              .in('id', projetosComControlesVisiveis) // Apenas projetos com controles visíveis
+              .in('id', projetosComControlesVisiveis)
               .order('nome');
             
             if (projetosError) throw projetosError;
             
-            // Converter array em objeto para fácil acesso por ID
             const projetosObj = {};
             projetosData.forEach(proj => {
               projetosObj[proj.id] = proj.nome;
             });
             
             setProjetos(projetosObj);
-            console.log('Projetos carregados para dropdown:', projetosData?.length || 0);
           } else {
-            // Se não há projetos com controles visíveis, definir como objeto vazio
             setProjetos({});
-            console.log('Nenhum projeto vinculado possui controles visíveis');
           }
         } else {
-          // Se não há projetos vinculados, não há categorias nem projetos para mostrar
           setCategorias({});
           setProjetos({});
-          console.log('Usuário não possui projetos vinculados');
         }
         
         await fetchApresentacaoVariaveis();
@@ -869,20 +798,19 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar indicadores com base nos filtros e navegação (incluindo filtroLerDepois)
+  // ✅ MODIFICADO: Buscar indicadores SEM verificação de lido + incluir descricao_detalhada
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
         setLoading(true);
         
-        // Se o usuário não tem projetos vinculados, não mostrar nenhum indicador
         if (projetosVinculados.length === 0) {
           setIndicadores([]);
           setLoading(false);
           return;
         }
         
-        // Iniciar a consulta com filtros básicos obrigatórios E join com tabelas relacionadas
+        // ✅ MODIFICADO: Incluir descricao_detalhada no select do controle_indicador
         let query = supabase
           .from('controle_indicador_geral')
           .select(`
@@ -890,16 +818,16 @@ export default function VisualizacaoIndicadores({ user }) {
             controle_indicador!inner(
               id,
               tipo_apresentacao,
+              descricao_detalhada,
               tipos_apresentacao(nome)
             )
           `)
-          .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
-          .not('indicador', 'is', null)  // ← SEGUNDO: não pode ser null
-          .not('indicador', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
-          .not('periodo_referencia', 'is', null)  // ← QUARTO: periodo_referencia não pode ser null
-          .in('projeto_id', projetosVinculados); // ← NOVO: Filtrar apenas projetos vinculados
+          .eq('visivel', true)
+          .not('indicador', 'is', null)
+          .not('indicador', 'eq', '')
+          .not('periodo_referencia', 'is', null)
+          .in('projeto_id', projetosVinculados);
           
-        // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
           query = query.eq('projeto_id', projetoSelecionado);
         }
@@ -908,44 +836,32 @@ export default function VisualizacaoIndicadores({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // ✅ MODIFICADO: Aplicar filtros baseados na aba ativa (alterado ver_todos para registros)
+        // ✅ MODIFICADO: Remover verificação de 'lido' da aba início
         switch (activeTab) {
           case 'inicio':
-            if (!showAllContent) {
-              // Mostrar apenas não lidos
-              query = query.eq('lido', false);
-            }
-            // Se showAllContent for true, mostra todos (sem filtro adicional)
+            // Não aplicar filtro de lido - mostrar todos
             break;
           case 'importantes':
             query = query.eq('importante', true);
             break;
-          case 'controle': // ✅ ABA: redireciona para outra página, mas mantemos a lógica
-            // Na aba "Controle", não aplicar filtros específicos (ou redirecionar)
+          case 'controle':
             break;
-          case 'registros': // ✅ NOVO: substituiu ver_todos
-            // Na aba "Registros", não aplicar filtros automáticos da aba
+          case 'registros':
             break;
         }
 
-        // ✅ APLICAR FILTROS AVANÇADOS EM TODAS AS ABAS (incluindo filtroLerDepois)
+        // ✅ MODIFICADO: Remover filtroLerDepois
         if (filtroImportantes) {
           query = query.eq('importante', true);
-        }
-        if (filtroLerDepois) { // ✅ MANTIDO
-          query = query.eq('ler_depois', true);
         }
         if (filtroArquivados) {
           query = query.eq('arquivado', true);
         }
         
-        // Aplicar termo de pesquisa se existir
         if (searchTerm.trim()) {
           query = query.ilike('indicador', `%${searchTerm.trim()}%`);
         }
         
-        // ALTERAÇÃO: Ordenar por periodo_referencia se existir, caso contrário por created_at
-        // Primeiro tentativa: ordenar por periodo_referencia (nulls last) e depois por created_at
         query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
             .order('created_at', { ascending: false });
 
@@ -953,19 +869,16 @@ export default function VisualizacaoIndicadores({ user }) {
 
         if (error) throw error;
 
-        // ✅ NOVA LÓGICA: Agrupar por id_controleindicador e manter apenas o mais recente
         const indicadoresAgrupados = {};
         (data || []).forEach(indicador => {
           const controlId = indicador.id_controleindicador;
           
-          // Se não existe esse id_controleindicador ainda, ou se este tem data mais recente
           if (!indicadoresAgrupados[controlId] || 
               new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
               indicadoresAgrupados[controlId] = indicador;
           }
         });
 
-        // Converter de volta para array e ordenar novamente
         const indicadoresFinais = Object.values(indicadoresAgrupados)
           .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
 
@@ -977,25 +890,23 @@ export default function VisualizacaoIndicadores({ user }) {
       }
     };
 
-    if (user && projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+    if (user && projetosVinculados.length >= 0) {
       fetchIndicadores();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]); // ✅ INCLUÍDO: filtroLerDepois
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroArquivados, projetosVinculados]);
 
-  // ✅ MODIFICADO: Limpar filtros (incluindo filtroLerDepois)
+  // ✅ MODIFICADO: Limpar filtros sem filtroLerDepois
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
     setFiltroImportantes(false);
-    setFiltroLerDepois(false); // ✅ MANTIDO
     setFiltroArquivados(false);
     setShowFilters(false);
   };
 
-  // ✅ MODIFICADO: Verificar se há filtros ativos (incluindo filtroLerDepois)
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados;
+  // ✅ MODIFICADO: Verificar filtros ativos sem filtroLerDepois
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroArquivados;
 
-  // ✅ MODIFICADO: Obter título da seção (alterado ver_todos para registros)
   const getSectionTitle = () => {
     switch (activeTab) {
       case 'inicio':
@@ -1004,44 +915,37 @@ export default function VisualizacaoIndicadores({ user }) {
         return 'Importantes';
       case 'controle':
         return 'Controle';
-      case 'registros': // ✅ MODIFICADO
+      case 'registros':
         return 'Registros';
       default:
         return 'Indicadores';
     }
   };
 
-  // Obter subtítulo da seção
   const getSectionSubtitle = () => {
     if (projetosVinculados.length === 0) {
       return 'Nenhum projeto vinculado encontrado';
     }
     
+    // ✅ MODIFICADO: Remover referência a "não lidos"
     if (activeTab === 'inicio') {
-      return showAllContent ? 'Todos os Indicadores' : 'Indicadores não lidos';
+      return showAllContent ? 'Todos os Indicadores' : 'Indicadores disponíveis';
     }
     return `${indicadores.length} indicadores encontrados`;
   };
 
-  // ✅ MODIFICADO: Obter indicadores de status do indicador (mantida lógica de ler_depois)
+  // ✅ MODIFICADO: Remover bolinha azul, manter apenas outros indicadores
   const getStatusIndicators = (indicador) => {
     const indicators = [];
     
-    // Adicionar bolinha azul se não foi lido
-    if (!indicador.lido) {
-      indicators.push(
-        <div key="nao-lido" className="w-3 h-3 bg-blue-500 rounded-full"></div>
-      );
-    }
+    // ✅ REMOVIDO: Bolinha azul de não lido
     
-    // Adicionar estrela se é importante
     if (indicador.importante) {
       indicators.push(
         <FiStar key="importante" className="w-4 h-4 text-blue-600" />
       );
     }
     
-    // Adicionar ícone de arquivo se está arquivado
     if (indicador.arquivado) {
       indicators.push(
         <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
@@ -1051,14 +955,11 @@ export default function VisualizacaoIndicadores({ user }) {
     return indicators;
   };
 
-  // ✅ MANTIDA: Função para verificar se deve mostrar ícone de ler depois
   const shouldShowReadLaterIcon = (indicador) => {
     return indicador.ler_depois;
   };
 
-  // ALTERAÇÃO: Formatar data - priorizar periodo_referencia, fallback para created_at
   const formatDate = (indicador) => {
-    // Priorizar periodo_referencia se existir, caso contrário usar created_at
     const dateString = indicador.periodo_referencia || indicador.created_at;
     
     if (!dateString) return '';
@@ -1075,7 +976,6 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // Não renderizar nada até que a verificação de autenticação seja concluída
   if (!user) {
     return null;
   }
@@ -1087,7 +987,45 @@ export default function VisualizacaoIndicadores({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* ✅ CSS para melhorar a scrollbar */}
+      {/* ✅ NOVO: Modal de Informação */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {infoModalTitle}
+              </h3>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Conteúdo do Modal */}
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {infoModalContent}
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer do Modal */}
+            <div className="flex items-center justify-end p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .overflow-x-auto::-webkit-scrollbar {
           height: 6px;
@@ -1111,9 +1049,8 @@ export default function VisualizacaoIndicadores({ user }) {
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile: Estrutura igual ao mobile */}
+          {/* Mobile */}
           <div className="lg:hidden">
-            {/* Primeira linha: Logo e Menu */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
@@ -1121,7 +1058,6 @@ export default function VisualizacaoIndicadores({ user }) {
                 showFallback={true}
               />
               
-              {/* Menu hambúrguer */}
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -1130,7 +1066,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   <FiMenu className="w-6 h-6 text-gray-600" />
                 </button>
                 
-                {/* Dropdown do menu */}
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                     <button
@@ -1217,7 +1152,6 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             </div>
             
-            {/* Segunda linha: Busca e Filtro */}
             <div className="flex items-center space-x-3">
               <div className="flex-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1244,10 +1178,9 @@ export default function VisualizacaoIndicadores({ user }) {
               </button>
             </div>
             
-            {/* ✅ Terceira linha: Filtros (incluindo filtroLerDepois) */}
+            {/* ✅ MODIFICADO: Filtros sem "Ler Depois" */}
             {showFilters && (
               <div className="mt-4 space-y-3">
-                {/* Linha com os selects básicos */}
                 <div className="flex items-end space-x-3">
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -1281,7 +1214,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     </select>
                   </div>
                   
-                  {/* Botão limpar - aparece só se houver filtros ativos */}
                   {hasActiveFilters && (
                     <button
                       onClick={clearFilters}
@@ -1292,7 +1224,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ Filtros Avançados (incluindo Ler Depois) */}
+                {/* ✅ MODIFICADO: Filtros Avançados sem "Ler Depois" */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
@@ -1308,19 +1240,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     >
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
-                    </button>
-                    
-                    {/* ✅ MANTIDO: Filtro Ler Depois */}
-                    <button
-                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroLerDepois 
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <FiClock className="w-4 h-4 mr-1" />
-                      Ler Depois
                     </button>
                     
                     <button
@@ -1340,9 +1259,8 @@ export default function VisualizacaoIndicadores({ user }) {
             )}
           </div>
 
-          {/* Desktop: Layout original */}
+          {/* Desktop: Layout similar */}
           <div className="hidden lg:block">
-            {/* Primeira linha: Logo, Busca e Menu */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
@@ -1350,7 +1268,6 @@ export default function VisualizacaoIndicadores({ user }) {
                 showFallback={true}
               />
               
-              {/* Barra de busca - Desktop */}
               <div className="flex-1 max-w-md lg:max-w-lg mx-4">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1366,9 +1283,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 </div>
               </div>
               
-              {/* Controles à direita */}
               <div className="flex items-center space-x-3">
-                {/* Botão de filtro */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`p-3 rounded-lg transition-colors ${
@@ -1380,7 +1295,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   <FiFilter className="w-5 h-5" />
                 </button>
                 
-                {/* Menu hambúrguer */}
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
@@ -1389,7 +1303,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     <FiMenu className="w-6 h-6 text-gray-600" />
                   </button>
                   
-                  {/* Dropdown do menu */}
                   {showMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
                       <button
@@ -1477,10 +1390,9 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             </div>
             
-            {/* ✅ Segunda linha: Filtros (incluindo filtroLerDepois) */}
+            {/* ✅ MODIFICADO: Filtros desktop sem "Ler Depois" */}
             {showFilters && (
               <div className="space-y-3">
-                {/* Linha com os selects básicos */}
                 <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
                   <div className="w-full sm:flex-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -1514,7 +1426,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     </select>
                   </div>
                   
-                  {/* Botão limpar - aparece só se houver filtros ativos */}
                   {hasActiveFilters && (
                     <button
                       onClick={clearFilters}
@@ -1525,7 +1436,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ Filtros Avançados (incluindo Ler Depois) */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
@@ -1541,19 +1451,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     >
                       <FiStar className="w-4 h-4 mr-1" />
                       Importantes
-                    </button>
-                    
-                    {/* ✅ MANTIDO: Filtro Ler Depois */}
-                    <button
-                      onClick={() => setFiltroLerDepois(!filtroLerDepois)}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroLerDepois 
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <FiClock className="w-4 h-4 mr-1" />
-                      Ler Depois
                     </button>
                     
                     <button
@@ -1578,7 +1475,7 @@ export default function VisualizacaoIndicadores({ user }) {
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="lg:flex lg:space-x-8">
-          {/* ✅ MODIFICADO: Sidebar de navegação - Desktop apenas (substituído Ver Todos por Registros) */}
+          {/* Sidebar de navegação - Desktop apenas */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
@@ -1598,7 +1495,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 </button>
 
                 <button
-                  onClick={handleImportantesClick} // ✅ MODIFICADO: era setActiveTab('importantes')
+                  onClick={handleImportantesClick}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'importantes'
                       ? 'bg-blue-100 text-blue-700'
@@ -1621,7 +1518,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   Controle
                 </button>
 
-                {/* ✅ MODIFICADO: Substituído Ver Todos por Registros */}
                 <button
                   onClick={handleRegistrosClick}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -1639,12 +1535,11 @@ export default function VisualizacaoIndicadores({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            {/* Mobile: Cabeçalho da seção igual ao mobile */}
+            {/* Mobile: Cabeçalho da seção */}
             <div className="lg:hidden">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
                 
-                {/* Botão Ver todos - apenas na seção Início */}
                 {activeTab === 'inicio' && (
                   <button
                     onClick={() => setShowAllContent(!showAllContent)}
@@ -1659,14 +1554,13 @@ export default function VisualizacaoIndicadores({ user }) {
               <p className="text-gray-600 text-sm mb-6">{getSectionSubtitle()}</p>
             </div>
 
-            {/* Desktop: Cabeçalho da seção original */}
+            {/* Desktop: Cabeçalho da seção */}
             <div className="hidden lg:flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl lg:text-3xl font-bold text-black">{getSectionTitle()}</h2>
                 <p className="text-gray-600 text-sm mt-1">{getSectionSubtitle()}</p>
               </div>
               
-              {/* Botão Ver todos - apenas na seção Início */}
               {activeTab === 'inicio' && (
                 <button
                   onClick={() => setShowAllContent(!showAllContent)}
@@ -1697,7 +1591,6 @@ export default function VisualizacaoIndicadores({ user }) {
               <div>
                 {/* Mobile: Layout sem card de destaque */}
                 <div className="lg:hidden">
-                  {/* Cards regulares - Mobile */}
                   {indicadores.length > 0 ? (
                     indicadores.map((indicador, index) => {
                       const isKPI = isKpiOrNull(indicador);
@@ -1716,10 +1609,19 @@ export default function VisualizacaoIndicadores({ user }) {
                                   {shouldShowReadLaterIcon(indicador) && (
                                     <FiClock className="w-4 h-4 text-blue-600" />
                                   )}
+                                  {/* ✅ NOVO: Ícone de informação - Mobile */}
+                                  {shouldShowInfoIcon(indicador) && (
+                                    <button
+                                      onClick={(e) => handleInfoClick(indicador, e)}
+                                      className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                      title="Ver informações detalhadas"
+                                    >
+                                      <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               
-                              {/* NOVO: Mostrar valor KPI ou Gráfico de Barras baseado no tipo */}
                               {(() => {
                                 if (isKPI) {
                                   return (
@@ -1736,9 +1638,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                 return null;
                               })()}
                               
-                              {/* Layout condicional para as tags e data */}
                               {(isKPI || isGrafico) ? (
-                                // Para KPI/Gráfico: tags e data na mesma linha
                                 <div className="flex items-center justify-between">
                                   <div className="flex space-x-2">
                                     {indicador.projeto_id && (
@@ -1759,7 +1659,6 @@ export default function VisualizacaoIndicadores({ user }) {
                                   </div>
                                 </div>
                               ) : (
-                                // Para outros tipos: layout original
                                 <div className="flex items-center justify-between">
                                   <div className="flex space-x-2">
                                     {indicador.projeto_id && (
@@ -1792,19 +1691,18 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
 
-                {/* ✅ DESKTOP: Layout com sistema KPI responsivo */}
+                {/* Desktop: Layout com sistema KPI responsivo */}
                 <div className="hidden lg:block">
                   {indicadores.length > 0 ? (
                     (() => {
-                      // Separar indicadores por tipo
                       const { kpis, graficos, outros } = separarIndicadoresPorTipo(indicadores);
                       
                       return (
                         <div>
-                          {/* ✅ SEÇÃO DE KPIs COM LAYOUT RESPONSIVO */}
+                          {/* Seção de KPIs com layout responsivo */}
                           {kpis.length > 0 && renderKPILayout(kpis)}
                           
-                          {/* ✅ SEÇÃO DE GRÁFICOS DE BARRAS (largura total) */}
+                          {/* Seção de gráficos de barras */}
                           {graficos.length > 0 && (
                             <div className="space-y-6 mb-6">
                               {graficos.map((indicador) => (
@@ -1820,13 +1718,21 @@ export default function VisualizacaoIndicadores({ user }) {
                                           {shouldShowReadLaterIcon(indicador) && (
                                             <FiClock className="w-4 h-4 text-blue-600" />
                                           )}
+                                          {/* ✅ NOVO: Ícone de informação - Desktop gráficos */}
+                                          {shouldShowInfoIcon(indicador) && (
+                                            <button
+                                              onClick={(e) => handleInfoClick(indicador, e)}
+                                              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                              title="Ver informações detalhadas"
+                                            >
+                                              <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                       
-                                      {/* ✅ Gráfico de Barras Adaptativo com Realizado vs Meta */}
                                       <GraficoBarrasAdaptativo indicador={indicador} isMobile={false} />
                                       
-                                      {/* Tags e data */}
                                       <div className="flex items-center justify-between">
                                         <div className="flex flex-wrap gap-2">
                                           {indicador.projeto_id && (
@@ -1853,7 +1759,7 @@ export default function VisualizacaoIndicadores({ user }) {
                             </div>
                           )}
                           
-                          {/* ✅ SEÇÃO DE OUTROS TIPOS (grid normal) */}
+                          {/* Seção de outros tipos */}
                           {outros.length > 0 && (
                             <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
                               {outros.map((indicador) => (
@@ -1869,10 +1775,19 @@ export default function VisualizacaoIndicadores({ user }) {
                                           {shouldShowReadLaterIcon(indicador) && (
                                             <FiClock className="w-4 h-4 text-blue-600" />
                                           )}
+                                          {/* ✅ NOVO: Ícone de informação - Desktop outros */}
+                                          {shouldShowInfoIcon(indicador) && (
+                                            <button
+                                              onClick={(e) => handleInfoClick(indicador, e)}
+                                              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                              title="Ver informações detalhadas"
+                                            >
+                                              <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                       
-                                      {/* Layout para outros tipos */}
                                       <div className="space-y-2">
                                         <div className="flex flex-wrap gap-2">
                                           {indicador.projeto_id && (
@@ -1913,7 +1828,7 @@ export default function VisualizacaoIndicadores({ user }) {
         </div>
       </div>
 
-      {/* ✅ MODIFICADO: Barra de navegação inferior - Mobile apenas (substituído Ver Todos por Registros) */}
+      {/* Barra de navegação inferior - Mobile apenas */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
@@ -1932,7 +1847,7 @@ export default function VisualizacaoIndicadores({ user }) {
           </button>
 
           <button
-            onClick={handleImportantesClick} // ✅ MODIFICADO: era setActiveTab('importantes')
+            onClick={handleImportantesClick}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'importantes'
                 ? 'text-blue-600'
@@ -1955,7 +1870,6 @@ export default function VisualizacaoIndicadores({ user }) {
             <span className="text-xs font-medium">Controle</span>
           </button>
 
-          {/* ✅ MODIFICADO: Substituído Ver Todos por Registros */}
           <button
             onClick={handleRegistrosClick}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
@@ -1974,11 +1888,14 @@ export default function VisualizacaoIndicadores({ user }) {
       <div className="lg:hidden pb-16"></div>
 
       {/* Overlay para fechar menus quando clicar fora */}
-      {showMenu && (
+      {(showMenu || showInfoModal) && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
           onClick={() => {
             setShowMenu(false);
+            if (!showInfoModal) { // Só fecha o menu se o modal não estiver aberto
+              setShowMenu(false);
+            }
           }}
         />
       )}
