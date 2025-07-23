@@ -490,6 +490,10 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     router.push('/configuracoes');
   };
 
+  const handleIndicadoresClick = () => {
+    router.push('/visualizacao-indicadores');
+  };
+
   // ✅ FUNÇÕES DE NAVEGAÇÃO (iguais à página principal)
   const handleInicioClick = () => {
     router.push('/inicio');
@@ -1201,7 +1205,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
                 <button
-                  onClick={handleInicioClick}
+                  onClick={handleIndicadoresClick}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'inicio'
                       ? 'bg-blue-100 text-blue-700'
