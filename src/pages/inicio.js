@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
+import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
 import { 
@@ -14,13 +15,39 @@ import {
   FiBarChart,
   FiFileText,
   FiArrowRight,
-  FiTrendingUp,  // ← NOVO ÍCONE para Gestão Indicadores
-  FiFolder      // ← NOVO ÍCONE para Gestão Documentos
+  FiTrendingUp,
+  FiFolder,
+  FiShield
 } from 'react-icons/fi';
 
 export default function Inicio({ user }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  // Verificar se o usuário é administrador
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setCheckingAdmin(false);
+        return;
+      }
+
+      try {
+        const adminStatus = await isUserAdmin(user.id);
+        setIsAdmin(adminStatus);
+      } catch (error) {
+        console.error('Erro ao verificar status de admin:', error);
+        setIsAdmin(false);
+      } finally {
+        setCheckingAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -48,6 +75,10 @@ export default function Inicio({ user }) {
 
   const handleDocumentosClick = () => {
     router.push('/documentos');
+  };
+
+  const handleAdminClick = () => {
+    router.push('/admin');
   };
 
   // Obter nome do usuário
@@ -79,7 +110,7 @@ export default function Inicio({ user }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Mobile: Layout responsivo */}
           <div className="lg:hidden">
-            {/* Primeira linha: Logo e Menu */}
+            {/* Primeira linha: Logo e controles à direita */}
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
@@ -87,81 +118,96 @@ export default function Inicio({ user }) {
                 showFallback={true}
               />
               
-              {/* Menu hambúrguer */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                  aria-label="Menu de navegação"
-                >
-                  <FiMenu className="w-6 h-6 text-gray-600" />
-                </button>
-                
-                {/* Dropdown do menu */}
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/inicio');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiHome className="mr-3 h-4 w-4" />
-                      Início
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/visualizacao-indicadores');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiTrendingUp className="mr-3 h-4 w-4" />
-                      Gestão Indicadores
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/documentos');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiFolder className="mr-3 h-4 w-4" />
-                      Gestão Documentos
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        toast.info('Perfil em desenvolvimento');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiUser className="mr-3 h-4 w-4" />
-                      Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/configuracoes');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiSettings className="mr-3 h-4 w-4" />
-                      Configurações
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleLogout();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
-                    >
-                      <FiLogOut className="mr-3 h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
+              {/* Controles à direita */}
+              <div className="flex items-center space-x-2">
+                {/* Botão Admin (só aparece para admins) */}
+                {!checkingAdmin && isAdmin && (
+                  <button
+                    onClick={handleAdminClick}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center text-sm font-medium"
+                    title="Painel de Administração"
+                  >
+                    <FiShield className="w-4 h-4 mr-1" />
+                    Admin
+                  </button>
                 )}
+                
+                {/* Menu hambúrguer */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                    aria-label="Menu de navegação"
+                  >
+                    <FiMenu className="w-6 h-6 text-gray-600" />
+                  </button>
+                  
+                  {/* Dropdown do menu */}
+                  {showMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/inicio');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiHome className="mr-3 h-4 w-4" />
+                        Início
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/visualizacao-indicadores');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiTrendingUp className="mr-3 h-4 w-4" />
+                        Gestão Indicadores
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/documentos');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiFolder className="mr-3 h-4 w-4" />
+                        Gestão Documentos
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          toast.info('Perfil em desenvolvimento');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/configuracoes');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiSettings className="mr-3 h-4 w-4" />
+                        Configurações
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          handleLogout();
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-red-600 transition-colors"
+                      >
+                        <FiLogOut className="mr-3 h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -180,6 +226,18 @@ export default function Inicio({ user }) {
               
               {/* Controles à direita */}
               <div className="flex items-center space-x-3">
+                {/* Botão Admin (só aparece para admins) */}
+                {!checkingAdmin && isAdmin && (
+                  <button
+                    onClick={handleAdminClick}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center font-medium"
+                    title="Painel de Administração"
+                  >
+                    <FiShield className="w-4 h-4 mr-2" />
+                    Admin
+                  </button>
+                )}
+                
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
