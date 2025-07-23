@@ -25,7 +25,8 @@ import {
   FiCalendar,
   FiFileText,
   FiEdit,
-  FiPaperclip
+  FiPaperclip,
+  FiTrendingUp
 } from 'react-icons/fi';
 
 export default function Documentos({ user }) {
@@ -430,10 +431,26 @@ export default function Documentos({ user }) {
                       <FiHome className="mr-3 h-4 w-4" />
                       Início
                     </Link>
-                    <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                      <FiFileText className="mr-3 h-4 w-4" />
-                      Documentos
-                    </Link>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push('/visualizacao-indicadores');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push('/documentos');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
+                    </button>
                     <button
                       onClick={() => {
                         setShowMenu(false);
@@ -446,7 +463,7 @@ export default function Documentos({ user }) {
                       Perfil
                     </button>
                     <Link
-                      href="/cadastros"
+                      href="/configuracoes"
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       onClick={() => setShowMenu(false)}
                     >
@@ -655,10 +672,26 @@ export default function Documentos({ user }) {
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
                       </Link>
-                      <Link href="/documentos" className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center">
-                        <FiFileText className="mr-3 h-4 w-4" />
-                        Documentos
-                      </Link>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/visualizacao-indicadores');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiTrendingUp className="mr-3 h-4 w-4" />
+                        Gestão Indicadores
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/documentos');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiFolder className="mr-3 h-4 w-4" />
+                        Gestão Documentos
+                      </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
@@ -671,7 +704,7 @@ export default function Documentos({ user }) {
                         Perfil
                       </button>
                       <Link
-                        href="/cadastros"
+                        href="/configuracoes"
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                         onClick={() => setShowMenu(false)}
                       >

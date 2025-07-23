@@ -17,7 +17,9 @@ import {
   FiLogOut,
   FiArrowLeft,
   FiCpu,
-  FiList
+  FiList,
+  FiFolder,
+  FiTrendingUp
 } from "react-icons/fi";
 
 export default function Cadastros({ user }) {
@@ -599,21 +601,31 @@ export default function Cadastros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-indicadores');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push('/documentos');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleAnalisesIndicadoresClick();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => {
@@ -721,21 +733,31 @@ export default function Cadastros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-indicadores');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push('/documentos');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleAnalisesIndicadoresClick();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => {
@@ -814,21 +836,31 @@ export default function Cadastros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-indicadores');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiTrendingUp className="mr-3 h-4 w-4" />
+                      Gestão Indicadores
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push('/documentos');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiFolder className="mr-3 h-4 w-4" />
+                      Gestão Documentos
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        handleAnalisesIndicadoresClick();
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
                     </button>
                     <button
                       onClick={() => {

@@ -22,7 +22,8 @@ import {
   FiPlus,
   FiFileText,
   FiFile,
-  FiEdit
+  FiEdit,
+  FiTrendingUp
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -171,7 +172,7 @@ export default function Anexos({ user }) {
   };
 
   const handleConfiguracoesClick = () => {
-    router.push('/cadastros');
+    router.push('/configuracoes');
   };
 
   const handleTabelaClick = () => {
@@ -248,6 +249,26 @@ export default function Anexos({ user }) {
                       >
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/visualizacao-indicadores');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiTrendingUp className="mr-3 h-4 w-4" />
+                        Gestão Indicadores
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/documentos');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiFolder className="mr-3 h-4 w-4" />
+                        Gestão Documentos
                       </button>
                       <button
                         onClick={() => {
@@ -428,6 +449,26 @@ export default function Anexos({ user }) {
                         >
                           <FiHome className="mr-3 h-4 w-4" />
                           Início
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            router.push('/visualizacao-indicadores');
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                        >
+                          <FiTrendingUp className="mr-3 h-4 w-4" />
+                          Gestão Indicadores
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            router.push('/documentos');
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                        >
+                          <FiFolder className="mr-3 h-4 w-4" />
+                          Gestão Documentos
                         </button>
                         <button
                           onClick={() => {
