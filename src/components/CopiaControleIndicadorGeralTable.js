@@ -1,10 +1,9 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão Atualizada com Botão Criar Linha Base
+// Componente CopiaControleIndicadorGeralTable.js - Versão Sem Botão Criar Linha Base
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX, FiRefreshCw, FiDatabase } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiChevronUp, FiChevronDown, FiEdit, FiFolder, FiUpload, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import AdicionarLinhaIndicadorGeralDialog from './AdicionarLinhaIndicadorGeralDialog';
-import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 import EditarLinhaIndicadorGeralDialog from './EditarLinhaIndicadorGeralDialog';
 import AnexarDocumentoIndicadorDialog from './AnexarDocumentoIndicadorDialog';
 import AtualizacaoMassaIndicadorDialog from './AtualizacaoMassaIndicadorDialog';
@@ -41,7 +40,6 @@ const CopiaControleIndicadorGeralTable = ({
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
-  const [showAdicionarLinhaBaseDialog, setShowAdicionarLinhaBaseDialog] = useState(false); // ✅ NOVO ESTADO
   const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
   const [showAtualizacaoInlineDialog, setShowAtualizacaoInlineDialog] = useState(false);
   const [showPreenchimentoAutomaticoDialog, setShowPreenchimentoAutomaticoDialog] = useState(false);
@@ -443,13 +441,6 @@ const CopiaControleIndicadorGeralTable = ({
     toast.success('Operação concluída com sucesso!');
   };
 
-  // ✅ NOVA FUNÇÃO: Lidar com o sucesso da adição de linha base
-  const handleAdicionarLinhaBaseSuccess = () => {
-    setShowAdicionarLinhaBaseDialog(false);
-    fetchControles();
-    toast.success('Linha base criada com sucesso!');
-  };
-
   // Função para lidar com o sucesso da edição de linha
   const handleEditarSuccess = () => {
     setEditarItemId(null);
@@ -513,13 +504,13 @@ const CopiaControleIndicadorGeralTable = ({
   return (
     <div>
 
-      {/* Botões de Ação em estilo moderno - ATUALIZADO COM NOVO BOTÃO */}
+      {/* Botões de Ação em estilo moderno - REMOVIDO BOTÃO CRIAR LINHA BASE */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Botão Atualizar via Planilha */}
           <button
             onClick={() => setShowAtualizacaoMassaDialog(true)}
@@ -565,16 +556,6 @@ const CopiaControleIndicadorGeralTable = ({
             <span className="text-center">Inserir Referência Auto</span>
           </button>
           
-          {/* ✅ NOVO BOTÃO: Criar Linha Base */}
-          <button
-            onClick={() => setShowAdicionarLinhaBaseDialog(true)}
-            className="flex items-center justify-center text-white px-4 py-3 rounded-md text-sm font-medium hover:opacity-90 min-h-[48px]"
-            style={{ backgroundColor: '#012060' }}
-          >
-            <FiDatabase className="mr-2 flex-shrink-0" />
-            <span className="text-center">Criar Linha Base</span>
-          </button>
-          
           {/* Botão Adicionar Linha */}
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
@@ -597,17 +578,6 @@ const CopiaControleIndicadorGeralTable = ({
           tiposIndicador={tiposIndicador}
           subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
-        />
-      )}
-
-      {/* ✅ NOVO MODAL: Para adicionar linha base */}
-      {showAdicionarLinhaBaseDialog && (
-        <AdicionarLinhaIndicadorBaseDialog
-          onClose={() => setShowAdicionarLinhaBaseDialog(false)}
-          onSuccess={handleAdicionarLinhaBaseSuccess}
-          categorias={categorias}
-          projetos={projetos}
-          subcategorias={subcategorias}
         />
       )}
 
@@ -890,21 +860,21 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* ✅ ATUALIZADA: Informações adicionais sobre atualização em massa com nova aba Pendentes */}
+      {/* ✅ ATUALIZADA: Informações adicionais - SEM REFERÊNCIA AO BOTÃO CRIAR LINHA BASE */}
       {controles.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
             <FiRefreshCw className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
             <div>
-              <h4 className="font-medium text-blue-900">Opções de Atualização e Criação</h4>
+              <h4 className="font-medium text-blue-900">Opções de Atualização</h4>
               <p className="text-sm text-blue-700 mt-1">
-                Você pode atualizar múltiplos indicadores ou criar novas linhas base de diferentes formas:
+                Você pode atualizar múltiplos indicadores ou adicionar novas linhas de diferentes formas:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1">
                 <li>• <strong>Atualização via Planilha:</strong> Baixe Excel → Edite → Faça upload → Confirme</li>
                 <li>• <strong>Atualização em Massa:</strong> Edite diretamente na interface, todos os registros visíveis</li>
-                <li>• <strong>Criar Linha Base:</strong> Cria automaticamente linhas Meta e Realizado com recorrência configurável</li>
                 <li>• <strong>Adicionar Linha:</strong> Adiciona linha individual ou múltiplas linhas baseadas em linha existente</li>
+                <li>• <strong>Inserir Referência Auto:</strong> Preenche automaticamente períodos de referência baseados na recorrência</li>
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Todas as opções trabalham apenas com os dados visíveis na tabela</li>
                 <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
@@ -926,9 +896,6 @@ const CopiaControleIndicadorGeralTable = ({
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  <strong>🏗️ Criar Linha Base:</strong> Use o botão "Criar Linha Base" para configurar indicadores com Meta/Realizado automático
                 </p>
               </div>
             </div>

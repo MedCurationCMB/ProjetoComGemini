@@ -1,8 +1,9 @@
 // src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Corrigida com Rolagem Vertical
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiPlus, FiX, FiCheck, FiCalendar } from 'react-icons/fi';
+import { FiPlus, FiX, FiCheck, FiCalendar, FiDatabase } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 
 const AdicionarLinhaIndicadorGeralDialog = ({ 
@@ -13,6 +14,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   tiposIndicador, 
   subcategorias 
 }) => {
+  const router = useRouter();
   const [step, setStep] = useState(1); // 1: escolha recorrente, 2: formulário
   const [isRecorrente, setIsRecorrente] = useState(null);
   const [linhasBase, setLinhasBase] = useState([]);
@@ -41,6 +43,11 @@ const AdicionarLinhaIndicadorGeralDialog = ({
       fetchLinhasBaseRecorrentes();
     }
   }, [isRecorrente]);
+
+  const handleIrParaControleIndicador = () => {
+    onClose(); // Fechar o modal atual
+    router.push('/controle-indicador'); // Navegar para a página
+  };
 
   const fetchLinhasBaseRecorrentes = async () => {
     try {
@@ -281,6 +288,28 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 </div>
               </button>
             </div>
+
+            {isRecorrente === true && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <FiDatabase className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-2">Precisa criar uma linha base primeiro?</h4>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Para adicionar linhas recorrentes, você precisa ter uma linha base configurada. 
+                      Se ainda não criou, use o botão abaixo para ir à página de controle.
+                    </p>
+                    <button
+                      onClick={handleIrParaControleIndicador}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                    >
+                      <FiDatabase className="mr-2 h-4 w-4" />
+                      Criar Linha Base
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 pt-4 border-t border-gray-200">
               <button

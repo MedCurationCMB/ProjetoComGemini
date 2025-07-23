@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 
 const ControleIndicadorTable = ({ user }) => {
@@ -9,12 +9,13 @@ const ControleIndicadorTable = ({ user }) => {
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
-  // REMOVIDO: const [tiposIndicador, setTiposIndicador] = useState({});
   const [subcategorias, setSubcategorias] = useState({});
   const [loading, setLoading] = useState(true);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user?.id) {
@@ -26,11 +27,10 @@ const ControleIndicadorTable = ({ user }) => {
     if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
-      // REMOVIDO: fetchTiposIndicador();
       fetchSubcategorias();
       fetchControles();
     }
-  }, [projetosVinculados]);
+  }, [projetosVinculados, filtroProjetoId, filtroCategoriaId, searchTerm]);
 
   // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
@@ -99,28 +99,6 @@ const ControleIndicadorTable = ({ user }) => {
     }
   };
 
-  // REMOVIDO: Buscar tipos de indicador (não é mais necessário para o formulário)
-  /*
-  const fetchTiposIndicador = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tipos_indicador')
-        .select('*');
-      
-      if (error) throw error;
-      
-      const tiposObj = {};
-      data.forEach(tipoItem => {
-        tiposObj[tipoItem.id] = tipoItem.tipo;
-      });
-      
-      setTiposIndicador(tiposObj);
-    } catch (error) {
-      console.error('Erro ao carregar tipos de indicador:', error);
-    }
-  };
-  */
-
   // Buscar subcategorias
   const fetchSubcategorias = async () => {
     try {
@@ -165,6 +143,11 @@ const ControleIndicadorTable = ({ user }) => {
       
       if (filtroCategoriaId) {
         query = query.eq('categoria_id', filtroCategoriaId);
+      }
+
+      // Aplicar filtro de busca
+      if (searchTerm.trim()) {
+        query = query.ilike('indicador', `%${searchTerm.trim()}%`);
       }
       
       const { data, error } = await query;
@@ -254,17 +237,15 @@ const ControleIndicadorTable = ({ user }) => {
     toast.success('Operação concluída com sucesso!');
   };
 
-  // Aplicar filtros
-  const aplicarFiltros = () => {
-    fetchControles();
-  };
-
   // Limpar filtros
   const limparFiltros = () => {
     setFiltroProjetoId('');
     setFiltroCategoriaId('');
-    setTimeout(fetchControles, 0);
+    setSearchTerm('');
+    setShowFilters(false);
   };
+
+  const hasActiveFilters = filtroProjetoId || filtroCategoriaId || searchTerm.trim();
 
   if (loading) {
     return (
@@ -291,76 +272,179 @@ const ControleIndicadorTable = ({ user }) => {
 
   return (
     <div>
-      {/* Filtros */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-medium">Filtros</h3>
+      {/* Header com busca e filtros - Mobile */}
+      <div className="lg:hidden mb-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiSearch className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+              placeholder="Buscar indicadores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           
-          {/* Botão Adicionar Linha de Indicador */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-3 rounded-lg transition-colors ${
+              showFilters || hasActiveFilters 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <FiFilter className="w-5 h-5" />
+          </button>
+
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg text-sm font-medium"
+          >
+            <FiPlus className="mr-2" />
+            Adicionar
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Projeto
+                </label>
+                <select
+                  value={filtroProjetoId}
+                  onChange={(e) => setFiltroProjetoId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todos os projetos</option>
+                  {Object.entries(projetos).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Categoria
+                </label>
+                <select
+                  value={filtroCategoriaId}
+                  onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todas as categorias</option>
+                  {Object.entries(categorias).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {hasActiveFilters && (
+              <div className="flex justify-center">
+                <button
+                  onClick={limparFiltros}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Limpar Filtros
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Header com busca e filtros - Desktop */}
+      <div className="hidden lg:block mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4 flex-1">
+            <div className="flex-1 max-w-md relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                placeholder="Buscar indicadores..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-3 rounded-lg transition-colors ${
+                showFilters || hasActiveFilters 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <FiFilter className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowAdicionarLinhaDialog(true)}
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-sm font-medium ml-4"
           >
             <FiPlus className="mr-2" />
             Adicionar Linha de Indicador
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Projeto (apenas projetos vinculados)
-            </label>
-            <select
-              value={filtroProjetoId}
-              onChange={(e) => setFiltroProjetoId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todos os projetos vinculados</option>
-              {Object.entries(projetos).map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
+        {showFilters && (
+          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-end space-x-4">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Projeto (apenas projetos vinculados)
+                </label>
+                <select
+                  value={filtroProjetoId}
+                  onChange={(e) => setFiltroProjetoId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todos os projetos vinculados</option>
+                  {Object.entries(projetos).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Categoria
+                </label>
+                <select
+                  value={filtroCategoriaId}
+                  onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todas as categorias</option>
+                  {Object.entries(categorias).map(([id, nome]) => (
+                    <option key={id} value={id}>{nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {hasActiveFilters && (
+                <button
+                  onClick={limparFiltros}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Limpar Filtros
+                </button>
+              )}
+            </div>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria
-            </label>
-            <select
-              value={filtroCategoriaId}
-              onChange={(e) => setFiltroCategoriaId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todas as categorias</option>
-              {Object.entries(categorias).map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="flex items-end space-x-2">
-            <button 
-              onClick={aplicarFiltros}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Aplicar
-            </button>
-            <button 
-              onClick={limparFiltros}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Limpar
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Modal para adicionar linha de indicador - REMOVIDO tiposIndicador */}
+      {/* Modal para adicionar linha de indicador */}
       {showAdicionarLinhaDialog && (
         <AdicionarLinhaIndicadorBaseDialog
           onClose={() => setShowAdicionarLinhaDialog(false)}
@@ -371,45 +455,44 @@ const ControleIndicadorTable = ({ user }) => {
         />
       )}
 
-      {/* Tabela de Controle */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
+      {/* Tabela de Controle - Desktop */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
           <thead>
-            <tr>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+            <tr className="bg-gray-50">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 ID
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Projeto
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Categoria
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Indicador
               </th>
-              {/* REMOVIDO: Coluna Tipo Indicador - não é mais relevante para a tabela base */}
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Subcategoria
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Prazo Inicial
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Recorrência
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Obrigatório
               </th>
-              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Linhas Criadas
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-300">
+          <tbody className="divide-y divide-gray-200">
             {controles.length > 0 ? (
               controles.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.id}
                   </td>
@@ -420,9 +503,13 @@ const ControleIndicadorTable = ({ user }) => {
                     {categorias[item.categoria_id] || 'Categoria indisponível'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.indicador}
+                    <div className="max-w-xs">
+                      <p className="font-medium">{item.indicador}</p>
+                      {item.observacao && (
+                        <p className="text-xs text-gray-500 mt-1">{item.observacao}</p>
+                      )}
+                    </div>
                   </td>
-                  {/* REMOVIDO: Coluna Tipo Indicador */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
                   </td>
@@ -434,12 +521,12 @@ const ControleIndicadorTable = ({ user }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.recorrencia ? (
-                      <span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {item.recorrencia}
                         {item.tempo_recorrencia ? ` (${item.tempo_recorrencia})` : ''}
                       </span>
                     ) : (
-                      '-'
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -455,7 +542,6 @@ const ControleIndicadorTable = ({ user }) => {
                       </span>
                     )}
                   </td>
-                  {/* NOVA COLUNA: Mostrar quantas linhas foram criadas automaticamente */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
                       // Calcular quantas linhas foram criadas baseado na configuração
@@ -483,13 +569,109 @@ const ControleIndicadorTable = ({ user }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                  Nenhum item de controle encontrado para os projetos vinculados
+                <td colSpan="9" className="px-6 py-8 text-center text-sm text-gray-500">
+                  {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Cards para Mobile */}
+      <div className="lg:hidden space-y-4">
+        {controles.length > 0 ? (
+          controles.map((item) => (
+            <div key={item.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 mb-1">
+                    {item.indicador}
+                  </h3>
+                  <p className="text-xs text-gray-500">ID: {item.id}</p>
+                </div>
+                
+                <div className="flex items-center space-x-2 ml-2">
+                  {item.obrigatorio ? (
+                    <span className="text-green-600">
+                      <FiCheck className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">
+                      <FiX className="w-4 h-4" />
+                    </span>
+                  )}
+                  
+                  {(() => {
+                    let linhasBase;
+                    if (!item.repeticoes || item.repeticoes <= 0) {
+                      linhasBase = 1;
+                    } else {
+                      linhasBase = 1 + item.repeticoes;
+                    }
+                    const totalLinhas = linhasBase * 2;
+                    
+                    return (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {totalLinhas}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+              
+              {item.observacao && (
+                <p className="text-sm text-gray-600 mb-3">{item.observacao}</p>
+              )}
+              
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center text-sm">
+                  <span className="font-medium text-gray-600 w-20">Projeto:</span>
+                  <span className="text-gray-900">{projetos[item.projeto_id] || 'Indisponível'}</span>
+                </div>
+                
+                <div className="flex items-center text-sm">
+                  <span className="font-medium text-gray-600 w-20">Categoria:</span>
+                  <span className="text-gray-900">{categorias[item.categoria_id] || 'Indisponível'}</span>
+                </div>
+                
+                <div className="flex items-center text-sm">
+                  <span className="font-medium text-gray-600 w-20">Subcategoria:</span>
+                  <span className="text-gray-900">{subcategorias[item.subcategoria_id] || 'Indisponível'}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
+                <div className="flex items-center">
+                  <FiCalendar className="mr-1" />
+                  {formatDate(item.prazo_entrega_inicial)}
+                </div>
+                
+                {item.recorrencia && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700">
+                    {item.recorrencia}
+                    {item.tempo_recorrencia ? ` (${item.tempo_recorrencia})` : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-8">
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FiFolder className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {searchTerm.trim() ? 'Nenhum indicador encontrado' : 'Nenhum controle encontrado'}
+            </h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              {searchTerm.trim() 
+                ? 'Tente ajustar sua busca ou limpar os filtros.'
+                : 'Comece adicionando uma nova linha de indicador.'
+              }
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

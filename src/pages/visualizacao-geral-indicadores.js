@@ -26,7 +26,8 @@ import {
   FiCpu,
   FiList,
   FiFolder,
-  FiTrendingUp
+  FiTrendingUp,
+  FiEdit3
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -833,6 +834,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          router.push('/controle-indicador');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiEdit3 className="mr-3 h-4 w-4" />
+                        Criar Indicador Base
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                           handleAnalisesIndicadoresClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
@@ -1120,6 +1131,16 @@ export default function VisualizacaoGeralIndicadores({ user }) {
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/controle-indicador');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiEdit3 className="mr-3 h-4 w-4" />
+                        Criar Indicador Base
                       </button>
                       <button
                         onClick={() => {
