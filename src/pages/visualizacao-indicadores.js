@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com gráfico adaptativo e ícone de informação
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com descrição resumida
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -36,7 +36,7 @@ import {
   FiCpu,
   FiList,
   FiTrendingUp,
-  FiInfo // ✅ NOVO ÍCONE
+  FiInfo
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -54,15 +54,12 @@ export default function VisualizacaoIndicadores({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
-  // ✅ ESTADOS PARA FILTROS AVANÇADOS - removido filtroLerDepois (não precisa mais)
   const [filtroImportantes, setFiltroImportantes] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
-  // ✅ ESTADOS PARA CONTROLAR A NAVEGAÇÃO
   const [activeTab, setActiveTab] = useState('inicio');
   const [showAllContent, setShowAllContent] = useState(false);
 
-  // ✅ NOVOS ESTADOS PARA O MODAL DE INFORMAÇÃO
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
@@ -169,10 +166,6 @@ export default function VisualizacaoIndicadores({ user }) {
       if (effectiveDataLength <= 7) return 10;
       return 10;
     }
-  };
-
-  const calculateNeedsScroll = (dataLength, isMobile = false) => {
-    return dataLength > MAX_VISIBLE_BARS;
   };
 
   const calculateTotalWidth = (dataLength, isMobile = false) => {
@@ -282,9 +275,6 @@ export default function VisualizacaoIndicadores({ user }) {
     return null;
   };
 
-  // =====================================
-  // COMPONENTE DO GRÁFICO ADAPTATIVO REALIZADO VS META
-  // =====================================
   const GraficoBarrasAdaptativo = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
     const [loadingGrafico, setLoadingGrafico] = useState(true);
@@ -383,7 +373,7 @@ export default function VisualizacaoIndicadores({ user }) {
   };
 
   // =====================================
-  // FUNÇÕES EXISTENTES (mantidas)
+  // FUNÇÕES EXISTENTES
   // =====================================
 
   const isKpiOrNull = (indicador) => {
@@ -423,13 +413,11 @@ export default function VisualizacaoIndicadores({ user }) {
     return { kpis, graficos, outros };
   };
 
-  // ✅ NOVA FUNÇÃO: Abrir modal de informação
   const handleInfoClick = async (indicador, e) => {
-    e.preventDefault(); // Previne navegação do Link
-    e.stopPropagation(); // Para propagação do evento
+    e.preventDefault();
+    e.stopPropagation();
     
     try {
-      // Buscar a descrição detalhada do controle_indicador
       const { data, error } = await supabase
         .from('controle_indicador')
         .select('descricao_detalhada')
@@ -453,76 +441,85 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Verificar se deve mostrar ícone de info
   const shouldShowInfoIcon = (indicador) => {
-    // Esta verificação será feita no render, pois precisamos dos dados do controle_indicador
-    // que são carregados junto com o indicador
     return indicador.controle_indicador?.descricao_detalhada && 
            indicador.controle_indicador.descricao_detalhada.trim() !== '';
   };
+
+  // ✅ NOVA FUNÇÃO: Verificar se deve mostrar descrição resumida
+  const getDescricaoResumida = (indicador) => {
+    const descricao = indicador.controle_indicador?.descricao_resumida;
+    return descricao && descricao.trim() !== '' ? descricao.trim() : null;
+  };
+
+  const renderKPICard = (indicador, className = "") => (
+    <div key={indicador.id} className={className}>
+      <Link href={`/indicador/${indicador.id_controleindicador}`}>
+        <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex-1 pr-2">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                {indicador.indicador || 'Sem indicador'}
+              </h3>
+              {/* ✅ NOVA: Descrição resumida */}
+              {getDescricaoResumida(indicador) && (
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  {getDescricaoResumida(indicador)}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              {getStatusIndicators(indicador)}
+              {shouldShowReadLaterIcon(indicador) && (
+                <FiClock className="w-4 h-4 text-blue-600" />
+              )}
+              {shouldShowInfoIcon(indicador) && (
+                <button
+                  onClick={(e) => handleInfoClick(indicador, e)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Ver informações detalhadas"
+                >
+                  <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <div className="mb-4">
+            <div className="text-5xl font-bold text-black">
+              {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {indicador.projeto_id && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                  {projetos[indicador.projeto_id]}
+                </span>
+              )}
+              {indicador.categoria_id && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                  {categorias[indicador.categoria_id]}
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center text-gray-400 text-xs">
+              <FiCalendar className="w-3 h-3 mr-1" />
+              {formatDate(indicador)}
+            </div>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
 
   const renderKPILayout = (kpis) => {
     if (kpis.length === 0) return null;
 
     const count = kpis.length;
 
-    const renderKPICard = (indicador, className = "") => (
-      <div key={indicador.id} className={className}>
-        <Link href={`/indicador/${indicador.id_controleindicador}`}>
-          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                {indicador.indicador || 'Sem indicador'}
-              </h3>
-              <div className="flex items-center space-x-2">
-                {getStatusIndicators(indicador)}
-                {shouldShowReadLaterIcon(indicador) && (
-                  <FiClock className="w-4 h-4 text-blue-600" />
-                )}
-                {/* ✅ NOVO: Ícone de informação */}
-                {shouldShowInfoIcon(indicador) && (
-                  <button
-                    onClick={(e) => handleInfoClick(indicador, e)}
-                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                    title="Ver informações detalhadas"
-                  >
-                    <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <div className="text-5xl font-bold text-black">
-                {formatarValorIndicador(indicador.valor_indicador_apresentado)}
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {indicador.projeto_id && (
-                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
-                    {projetos[indicador.projeto_id]}
-                  </span>
-                )}
-                {indicador.categoria_id && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
-                    {categorias[indicador.categoria_id]}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center text-gray-500 text-xs">
-                <FiCalendar className="w-3 h-3 mr-1" />
-                {formatDate(indicador)}
-              </div>
-            </div>
-          </div>
-        </Link>
-      </div>
-    );
-
-    // Layout logic based on count (same as before)
     switch (count) {
       case 1:
         return (
@@ -664,9 +661,9 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ MODIFICADO: Remover lógica da bolinha azul, manter apenas borda cinza
+  // ✅ MODIFICADO: Borda sempre azul
   const getBorderColor = (indicador) => {
-    return 'border-blue-500'; // Sempre cinza, sem verificação de lido
+    return 'border-blue-500';
   };
 
   useEffect(() => {
@@ -798,7 +795,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar indicadores SEM verificação de lido + incluir descricao_detalhada
+  // ✅ MODIFICADO: Buscar indicadores incluindo descricao_resumida
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
@@ -810,7 +807,7 @@ export default function VisualizacaoIndicadores({ user }) {
           return;
         }
         
-        // ✅ MODIFICADO: Incluir descricao_detalhada no select do controle_indicador
+        // ✅ MODIFICADO: Incluir descricao_resumida no select
         let query = supabase
           .from('controle_indicador_geral')
           .select(`
@@ -819,6 +816,7 @@ export default function VisualizacaoIndicadores({ user }) {
               id,
               tipo_apresentacao,
               descricao_detalhada,
+              descricao_resumida,
               tipos_apresentacao(nome)
             )
           `)
@@ -836,10 +834,8 @@ export default function VisualizacaoIndicadores({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // ✅ MODIFICADO: Remover verificação de 'lido' da aba início
         switch (activeTab) {
           case 'inicio':
-            // Não aplicar filtro de lido - mostrar todos
             break;
           case 'importantes':
             query = query.eq('importante', true);
@@ -850,7 +846,6 @@ export default function VisualizacaoIndicadores({ user }) {
             break;
         }
 
-        // ✅ MODIFICADO: Remover filtroLerDepois
         if (filtroImportantes) {
           query = query.eq('importante', true);
         }
@@ -895,7 +890,6 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroArquivados, projetosVinculados]);
 
-  // ✅ MODIFICADO: Limpar filtros sem filtroLerDepois
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
@@ -904,7 +898,6 @@ export default function VisualizacaoIndicadores({ user }) {
     setShowFilters(false);
   };
 
-  // ✅ MODIFICADO: Verificar filtros ativos sem filtroLerDepois
   const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroArquivados;
 
   const getSectionTitle = () => {
@@ -927,18 +920,14 @@ export default function VisualizacaoIndicadores({ user }) {
       return 'Nenhum projeto vinculado encontrado';
     }
     
-    // ✅ MODIFICADO: Remover referência a "não lidos"
     if (activeTab === 'inicio') {
       return showAllContent ? 'Todos os Indicadores' : 'Indicadores disponíveis';
     }
     return `${indicadores.length} indicadores encontrados`;
   };
 
-  // ✅ MODIFICADO: Remover bolinha azul, manter apenas outros indicadores
   const getStatusIndicators = (indicador) => {
     const indicators = [];
-    
-    // ✅ REMOVIDO: Bolinha azul de não lido
     
     if (indicador.importante) {
       indicators.push(
@@ -987,11 +976,10 @@ export default function VisualizacaoIndicadores({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* ✅ NOVO: Modal de Informação */}
+      {/* Modal de Informação */}
       {showInfoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            {/* Header do Modal */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 {infoModalTitle}
@@ -1004,7 +992,6 @@ export default function VisualizacaoIndicadores({ user }) {
               </button>
             </div>
             
-            {/* Conteúdo do Modal */}
             <div className="p-4 overflow-y-auto max-h-[60vh]">
               <div className="prose prose-sm max-w-none">
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -1013,7 +1000,6 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             </div>
             
-            {/* Footer do Modal */}
             <div className="flex items-center justify-end p-4 border-t border-gray-200">
               <button
                 onClick={() => setShowInfoModal(false)}
@@ -1178,7 +1164,6 @@ export default function VisualizacaoIndicadores({ user }) {
               </button>
             </div>
             
-            {/* ✅ MODIFICADO: Filtros sem "Ler Depois" */}
             {showFilters && (
               <div className="mt-4 space-y-3">
                 <div className="flex items-end space-x-3">
@@ -1224,7 +1209,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ MODIFICADO: Filtros Avançados sem "Ler Depois" */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
@@ -1390,7 +1374,6 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             </div>
             
-            {/* ✅ MODIFICADO: Filtros desktop sem "Ler Depois" */}
             {showFilters && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
@@ -1589,7 +1572,7 @@ export default function VisualizacaoIndicadores({ user }) {
               </div>
             ) : (
               <div>
-                {/* Mobile: Layout sem card de destaque */}
+                {/* Mobile: Layout com descrição resumida */}
                 <div className="lg:hidden">
                   {indicadores.length > 0 ? (
                     indicadores.map((indicador, index) => {
@@ -1601,15 +1584,22 @@ export default function VisualizacaoIndicadores({ user }) {
                           <Link href={`/indicador/${indicador.id_controleindicador}`}>
                             <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
                               <div className="flex justify-between items-start mb-2">
-                                <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
-                                  {indicador.indicador || 'Sem indicador'}
-                                </h3>
+                                <div className="flex-1 pr-2">
+                                  <h3 className="text-base font-bold text-gray-900 mb-1">
+                                    {indicador.indicador || 'Sem indicador'}
+                                  </h3>
+                                  {/* ✅ NOVA: Descrição resumida - Mobile */}
+                                  {getDescricaoResumida(indicador) && (
+                                    <p className="text-xs text-gray-400 leading-relaxed">
+                                      {getDescricaoResumida(indicador)}
+                                    </p>
+                                  )}
+                                </div>
                                 <div className="flex items-center space-x-2">
                                   {getStatusIndicators(indicador)}
                                   {shouldShowReadLaterIcon(indicador) && (
                                     <FiClock className="w-4 h-4 text-blue-600" />
                                   )}
-                                  {/* ✅ NOVO: Ícone de informação - Mobile */}
                                   {shouldShowInfoIcon(indicador) && (
                                     <button
                                       onClick={(e) => handleInfoClick(indicador, e)}
@@ -1653,7 +1643,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                     )}
                                   </div>
                                   
-                                  <div className="flex items-center text-gray-500 text-xs">
+                                  <div className="flex items-center text-gray-400 text-xs">
                                     <FiCalendar className="w-3 h-3 mr-1" />
                                     {formatDate(indicador)}
                                   </div>
@@ -1691,7 +1681,7 @@ export default function VisualizacaoIndicadores({ user }) {
                   )}
                 </div>
 
-                {/* Desktop: Layout com sistema KPI responsivo */}
+                {/* Desktop: Layout com sistema KPI responsivo e descrição resumida */}
                 <div className="hidden lg:block">
                   {indicadores.length > 0 ? (
                     (() => {
@@ -1710,15 +1700,22 @@ export default function VisualizacaoIndicadores({ user }) {
                                   <Link href={`/indicador/${indicador.id_controleindicador}`}>
                                     <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                                       <div className="flex justify-between items-start mb-3">
-                                        <h3 className="text-xl font-bold text-gray-900 flex-1 pr-2">
-                                          {indicador.indicador || 'Sem indicador'}
-                                        </h3>
+                                        <div className="flex-1 pr-2">
+                                          <h3 className="text-xl font-bold text-gray-900 mb-1">
+                                            {indicador.indicador || 'Sem indicador'}
+                                          </h3>
+                                          {/* ✅ NOVA: Descrição resumida - Desktop gráficos */}
+                                          {getDescricaoResumida(indicador) && (
+                                            <p className="text-sm text-gray-400 leading-relaxed">
+                                              {getDescricaoResumida(indicador)}
+                                            </p>
+                                          )}
+                                        </div>
                                         <div className="flex items-center space-x-2">
                                           {getStatusIndicators(indicador)}
                                           {shouldShowReadLaterIcon(indicador) && (
                                             <FiClock className="w-4 h-4 text-blue-600" />
                                           )}
-                                          {/* ✅ NOVO: Ícone de informação - Desktop gráficos */}
                                           {shouldShowInfoIcon(indicador) && (
                                             <button
                                               onClick={(e) => handleInfoClick(indicador, e)}
@@ -1747,7 +1744,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                           )}
                                         </div>
                                         
-                                        <div className="flex items-center text-gray-500 text-sm">
+                                        <div className="flex items-center text-gray-400 text-sm">
                                           <FiCalendar className="w-4 h-4 mr-1" />
                                           {formatDate(indicador)}
                                         </div>
@@ -1767,15 +1764,22 @@ export default function VisualizacaoIndicadores({ user }) {
                                   <Link href={`/indicador/${indicador.id_controleindicador}`}>
                                     <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                                       <div className="flex justify-between items-start mb-3">
-                                        <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                                          {indicador.indicador || 'Sem indicador'}
-                                        </h3>
+                                        <div className="flex-1 pr-2">
+                                          <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                            {indicador.indicador || 'Sem indicador'}
+                                          </h3>
+                                          {/* ✅ NOVA: Descrição resumida - Desktop outros */}
+                                          {getDescricaoResumida(indicador) && (
+                                            <p className="text-sm text-gray-400 leading-relaxed">
+                                              {getDescricaoResumida(indicador)}
+                                            </p>
+                                          )}
+                                        </div>
                                         <div className="flex items-center space-x-2">
                                           {getStatusIndicators(indicador)}
                                           {shouldShowReadLaterIcon(indicador) && (
                                             <FiClock className="w-4 h-4 text-blue-600" />
                                           )}
-                                          {/* ✅ NOVO: Ícone de informação - Desktop outros */}
                                           {shouldShowInfoIcon(indicador) && (
                                             <button
                                               onClick={(e) => handleInfoClick(indicador, e)}
@@ -1802,7 +1806,7 @@ export default function VisualizacaoIndicadores({ user }) {
                                           )}
                                         </div>
                                         
-                                        <div className="flex items-center justify-end text-gray-500 text-xs">
+                                        <div className="flex items-center justify-end text-gray-400 text-xs">
                                           <FiCalendar className="w-3 h-3 mr-1" />
                                           {formatDate(indicador)}
                                         </div>
@@ -1893,7 +1897,7 @@ export default function VisualizacaoIndicadores({ user }) {
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
           onClick={() => {
             setShowMenu(false);
-            if (!showInfoModal) { // Só fecha o menu se o modal não estiver aberto
+            if (!showInfoModal) {
               setShowMenu(false);
             }
           }}
