@@ -563,9 +563,9 @@ export default function Cadastros({ user }) {
               {/* Botão Voltar + Logo */}
               <div className="flex items-center">
                 <button
-                  onClick={handleVoltarClick}
+                  onClick={handleInicioClick}
                   className="mr-3 p-2 hover:bg-gray-100 rounded-md transition-colors"
-                  title="Voltar"
+                  title="Início"
                 >
                   <FiArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
@@ -685,9 +685,9 @@ export default function Cadastros({ user }) {
               {/* Botão Voltar + Logo */}
               <div className="flex items-center">
                 <button
-                  onClick={handleVoltarClick}
+                  onClick={handleInicioClick}
                   className="mr-3 p-2 hover:bg-gray-100 rounded-md transition-colors"
-                  title="Voltar"
+                  title="Início"
                 >
                   <FiArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
@@ -778,9 +778,9 @@ export default function Cadastros({ user }) {
               {/* Botão Voltar + Logo */}
               <div className="flex items-center">
                 <button
-                  onClick={handleVoltarClick}
+                  onClick={handleInicioClick}
                   className="mr-4 p-2 hover:bg-gray-100 rounded-md transition-colors"
-                  title="Voltar para Indicadores"
+                  title="Voltar para Início"
                 >
                   <FiArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
