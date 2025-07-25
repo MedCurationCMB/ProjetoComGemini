@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import GeminiIndicatorAnalysisDialog from '../../components/GeminiIndicatorAnalysisDialog';
 import HistoricoAnalisesIndicadorDialog from '../../components/HistoricoAnalisesIndicadorDialog';
+import PDFPrinter from '../../components/PDFPrinter';
 
 // ✅ NOVA CONFIGURAÇÃO: Definir limites máximos
 const MAX_CHART_WIDTH = {
@@ -1870,7 +1871,7 @@ export default function IndicadorDetalhe({ user }) {
             </button>
           </div>
 
-          {/* ✅ BOTÕES: Análise IA + Histórico - Mobile */}
+          {/* ✅ BOTÕES: Análise IA + Histórico + PDF - Mobile */}
           <div className="mt-4 space-y-3">
             {/* Botão Análise IA */}
             <button
@@ -1886,7 +1887,7 @@ export default function IndicadorDetalhe({ user }) {
               {indicadores.length === 0 ? 'Análise IA (sem dados)' : 'Análise com IA'}
             </button>
 
-            {/* ✅ NOVO: Botão Histórico de Análises */}
+            {/* Botão Histórico de Análises */}
             <button
               onClick={() => setShowHistoricoDialog(true)}
               className="w-full py-3 rounded-md flex items-center justify-center font-medium transition-colors bg-green-600 text-white hover:bg-green-700"
@@ -1894,6 +1895,25 @@ export default function IndicadorDetalhe({ user }) {
               <FiBookOpen className="mr-2" />
               Histórico de Análises
             </button>
+
+            {/* ✅ NOVO: Botão Imprimir Página - Mobile */}
+            <PDFPrinter
+              nomeIndicador={nomeIndicador}
+              indicadores={indicadores}
+              infoGeral={infoGeral}
+              categorias={categorias}
+              projetos={projetos}
+              configuracoes={configuracoes}
+              calcularKPIs={calcularKPIs}
+              formatKPIValue={formatKPIValue}
+              formatDate={formatDate}
+              formatValue={formatValue}
+              dadosTabela={dadosTabela}
+              filtroPeriodo={filtroPeriodo}
+              dataInicio={dataInicio}
+              dataFim={dataFim}
+              dadosGraficoCombinado={dadosGraficoCombinado} // ✅ ADICIONADO
+            />
           </div>
 
           {/* Botão Voltar para Início */}
@@ -2277,8 +2297,8 @@ export default function IndicadorDetalhe({ user }) {
             </table>
           </div>
           
-          {/* ✅ BOTÕES: Histórico + Análise IA + Marcar como Lido - Desktop */}
-          <div className="mt-6 flex justify-end space-x-4">
+          {/* ✅ BOTÕES: Histórico + Análise IA + PDF + Marcar como Lido - Desktop */}
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
             <button
               onClick={() => setShowHistoricoDialog(true)}
               className="px-4 py-2 rounded-md flex items-center font-medium transition-colors text-sm bg-green-600 text-white hover:bg-green-700"
@@ -2299,6 +2319,25 @@ export default function IndicadorDetalhe({ user }) {
               <FiCpu className="mr-2 h-4 w-4" />
               {indicadores.length === 0 ? 'Análise IA (sem dados)' : 'Análise com IA'}
             </button>
+
+            {/* ✅ NOVO: Botão Imprimir Página - Desktop */}
+            <PDFPrinter
+              nomeIndicador={nomeIndicador}
+              indicadores={indicadores}
+              infoGeral={infoGeral}
+              categorias={categorias}
+              projetos={projetos}
+              configuracoes={configuracoes}
+              calcularKPIs={calcularKPIs}
+              formatKPIValue={formatKPIValue}
+              formatDate={formatDate}
+              formatValue={formatValue}
+              dadosTabela={dadosTabela}
+              filtroPeriodo={filtroPeriodo}
+              dataInicio={dataInicio}
+              dataFim={dataFim}
+              dadosGraficoCombinado={dadosGraficoCombinado} // ✅ ADICIONADO
+            />
             
             <button
               onClick={toggleLidoTodos}
