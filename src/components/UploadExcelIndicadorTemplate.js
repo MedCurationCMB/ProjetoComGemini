@@ -121,8 +121,8 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       const tiposNomeParaId = {};
       const tiposIdParaNome = {};
       tiposData.forEach((tipoItem) => {
-        tiposNomeParaId[tipoItem.tipo.toLowerCase()] = tipoItem.id;  // ← MUDANÇA
-        tiposIdParaNome[tipoItem.id] = tipoItem.tipo;  // ← MUDANÇA
+        tiposNomeParaId[tipoItem.tipo.toLowerCase()] = tipoItem.id;
+        tiposIdParaNome[tipoItem.id] = tipoItem.tipo;
       });
 
       // Criar mapeamentos para subcategorias
@@ -188,12 +188,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Template Indicadores");
 
-      // Definir cabeçalhos (removidas as colunas solicitadas)
+      // ✅ DEFINIR CABEÇALHOS COM AS NOVAS COLUNAS
       worksheet.columns = [
         { header: "projeto_id", key: "projeto_id", width: 20 },
         { header: "categoria_id", key: "categoria_id", width: 20 },
         { header: "indicador", key: "indicador", width: 40 },
         { header: "observacao", key: "observacao", width: 40 },
+        { header: "descricao_detalhada", key: "descricao_detalhada", width: 50 }, // ✅ NOVA COLUNA
+        { header: "descricao_resumida", key: "descricao_resumida", width: 40 },   // ✅ NOVA COLUNA
         { header: "tipo_indicador", key: "tipo_indicador", width: 20 },
         { header: "subcategoria_id", key: "subcategoria_id", width: 20 },
         { header: "prazo_entrega_inicial", key: "prazo_entrega_inicial", width: 15 },
@@ -203,12 +205,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         { header: "obrigatorio", key: "obrigatorio", width: 12 },
       ];
 
-      // Adicionar uma linha de informação sobre como preencher
+      // ✅ ADICIONAR LINHA DE INFORMAÇÃO COM AS NOVAS COLUNAS
       const infoRow = worksheet.addRow({
         projeto_id: "Nome do Projeto (apenas vinculados)",
         categoria_id: "Nome da Categoria",
         indicador: "Nome do indicador",
         observacao: "Observações (opcional)",
+        descricao_detalhada: "Descrição detalhada do indicador (opcional)", // ✅ NOVA INFORMAÇÃO
+        descricao_resumida: "Descrição resumida do indicador (opcional)",   // ✅ NOVA INFORMAÇÃO
         tipo_indicador: "Nome do tipo de indicador",
         subcategoria_id: "Nome da subcategoria",
         prazo_entrega_inicial: "Formato: AAAA-MM-DD",
@@ -223,12 +227,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         cell.font = { italic: true, color: { argb: "FF999999" } };
       });
 
-      // Adicionar dados de exemplo
+      // ✅ ADICIONAR DADOS DE EXEMPLO COM AS NOVAS COLUNAS
       worksheet.addRow({
         projeto_id: Object.values(projetos.idParaNome)[0] || "Nome do Projeto",
         categoria_id: Object.values(categorias.idParaNome)[0] || "Nome da Categoria",
         indicador: "Taxa de conversão",
         observacao: "Indicador mensal de performance",
+        descricao_detalhada: "Este indicador mede a eficácia da conversão de leads em clientes, considerando todo o funil de vendas desde o primeiro contato até o fechamento do negócio", // ✅ EXEMPLO DETALHADO
+        descricao_resumida: "Percentual de conversão de leads em clientes", // ✅ EXEMPLO RESUMIDO
         tipo_indicador: Object.values(tiposIndicador.idParaNome)[0] || "Nome do Tipo",
         subcategoria_id: Object.values(subcategorias.idParaNome)[0] || "Nome da Subcategoria",
         prazo_entrega_inicial: "2024-01-31",
@@ -352,7 +358,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
             headers.push(cell.value?.toString() || "");
           });
 
-          // Verificar se os cabeçalhos necessários estão presentes
+          // ✅ VERIFICAR SE OS CABEÇALHOS NECESSÁRIOS ESTÃO PRESENTES (incluindo os novos)
           const requiredHeaders = ["projeto_id", "categoria_id", "indicador", "tipo_indicador", "subcategoria_id"];
           for (const header of requiredHeaders) {
             if (!headers.includes(header)) {
@@ -490,12 +496,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
                 recorrencia = "sem recorrencia";
               }
 
-              // Criar objeto validado (removidas as colunas desnecessárias)
+              // ✅ CRIAR OBJETO VALIDADO COM AS NOVAS COLUNAS
               const item = {
                 projeto_id: projetoId,
                 categoria_id: categoriaId,
                 indicador: String(row.indicador || "").trim(),
                 observacao: String(row.observacao || "").trim() || null,
+                descricao_detalhada: String(row.descricao_detalhada || "").trim() || null, // ✅ NOVA COLUNA
+                descricao_resumida: String(row.descricao_resumida || "").trim() || null,   // ✅ NOVA COLUNA
                 tipo_indicador: tipoId,
                 subcategoria_id: subcategoriaId,
                 prazo_entrega_inicial: row.prazo_entrega_inicial ? new Date(row.prazo_entrega_inicial) : null,
@@ -602,6 +610,10 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         </p>
         <p className="text-blue-600 mb-4 text-sm">
           <strong>Importante:</strong> O template mostrará apenas os projetos aos quais você está vinculado.
+        </p>
+        {/* ✅ ATUALIZAR A DESCRIÇÃO PARA MENCIONAR AS NOVAS COLUNAS */}
+        <p className="text-blue-600 mb-4 text-sm">
+          <strong>Novidade:</strong> Agora você pode incluir <em>Descrição Detalhada</em> e <em>Descrição Resumida</em> para cada indicador (campos opcionais).
         </p>
         <button
           onClick={downloadTemplate}
