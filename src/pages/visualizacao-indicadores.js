@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com descrição resumida
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com busca aprimorada
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -64,6 +64,158 @@ export default function VisualizacaoIndicadores({ user }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
+
+  // ✅ NOVO: Estado para controlar tipo de busca e resultados
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // =====================================
+  // ✅ NOVA FUNÇÃO: Busca aprimorada que inclui descrições
+  // =====================================
+
+  const performAdvancedSearch = async (searchTerm) => {
+    if (!searchTerm.trim() || projetosVinculados.length === 0) {
+      return [];
+    }
+
+    try {
+      setSearchLoading(true);
+
+      // ✅ Buscar primeiro na tabela controle_indicador_geral
+      let indicadoresQuery = supabase
+        .from('controle_indicador_geral')
+        .select(`
+          *,
+          controle_indicador!inner(
+            id,
+            tipo_apresentacao,
+            descricao_detalhada,
+            descricao_resumida,
+            tipos_apresentacao(nome)
+          )
+        `)
+        .eq('visivel', true)
+        .not('indicador', 'is', null)
+        .not('indicador', 'eq', '')
+        .not('periodo_referencia', 'is', null)
+        .in('projeto_id', projetosVinculados);
+
+      // Aplicar filtros se existirem
+      if (projetoSelecionado) {
+        indicadoresQuery = indicadoresQuery.eq('projeto_id', projetoSelecionado);
+      }
+      
+      if (categoriaSelecionada) {
+        indicadoresQuery = indicadoresQuery.eq('categoria_id', categoriaSelecionada);
+      }
+
+      if (filtroImportantes) {
+        indicadoresQuery = indicadoresQuery.eq('importante', true);
+      }
+      if (filtroArquivados) {
+        indicadoresQuery = indicadoresQuery.eq('arquivado', true);
+      }
+
+      // ✅ Buscar no campo indicador (busca existente)
+      const { data: indicadoresData, error: indicadoresError } = await indicadoresQuery
+        .ilike('indicador', `%${searchTerm.trim()}%`)
+        .order('periodo_referencia', { ascending: false, nullsLast: true })
+        .order('created_at', { ascending: false });
+
+      if (indicadoresError) throw indicadoresError;
+
+      // ✅ Buscar também na tabela controle_indicador pelas descrições
+      const { data: controleData, error: controleError } = await supabase
+        .from('controle_indicador')
+        .select('id, descricao_detalhada, descricao_resumida')
+        .in('projeto_id', projetosVinculados)
+        .or(`descricao_detalhada.ilike.%${searchTerm.trim()}%,descricao_resumida.ilike.%${searchTerm.trim()}%`);
+
+      if (controleError) throw controleError;
+
+      // ✅ Se encontrou resultados nas descrições, buscar os indicadores correspondentes
+      let indicadoresPorDescricao = [];
+      if (controleData && controleData.length > 0) {
+        const controleIds = controleData.map(item => item.id);
+        
+        let descricaoQuery = supabase
+          .from('controle_indicador_geral')
+          .select(`
+            *,
+            controle_indicador!inner(
+              id,
+              tipo_apresentacao,
+              descricao_detalhada,
+              descricao_resumida,
+              tipos_apresentacao(nome)
+            )
+          `)
+          .eq('visivel', true)
+          .not('indicador', 'is', null)
+          .not('indicador', 'eq', '')
+          .not('periodo_referencia', 'is', null)
+          .in('projeto_id', projetosVinculados)
+          .in('id_controleindicador', controleIds);
+
+        // Aplicar os mesmos filtros
+        if (projetoSelecionado) {
+          descricaoQuery = descricaoQuery.eq('projeto_id', projetoSelecionado);
+        }
+        
+        if (categoriaSelecionada) {
+          descricaoQuery = descricaoQuery.eq('categoria_id', categoriaSelecionada);
+        }
+
+        if (filtroImportantes) {
+          descricaoQuery = descricaoQuery.eq('importante', true);
+        }
+        if (filtroArquivados) {
+          descricaoQuery = descricaoQuery.eq('arquivado', true);
+        }
+
+        const { data: descricaoIndicadores, error: descricaoError } = await descricaoQuery
+          .order('periodo_referencia', { ascending: false, nullsLast: true })
+          .order('created_at', { ascending: false });
+
+        if (descricaoError) throw descricaoError;
+        indicadoresPorDescricao = descricaoIndicadores || [];
+      }
+
+      // ✅ Combinar resultados e remover duplicatas
+      const todosIndicadores = [...(indicadoresData || []), ...indicadoresPorDescricao];
+      const indicadoresUnicos = {};
+      
+      todosIndicadores.forEach(indicador => {
+        const key = `${indicador.id_controleindicador}_${indicador.periodo_referencia}`;
+        if (!indicadoresUnicos[key] || 
+            new Date(indicador.periodo_referencia) > new Date(indicadoresUnicos[key].periodo_referencia)) {
+          indicadoresUnicos[key] = indicador;
+        }
+      });
+
+      // ✅ Agrupar por controle e pegar o mais recente
+      const indicadoresAgrupados = {};
+      Object.values(indicadoresUnicos).forEach(indicador => {
+        const controlId = indicador.id_controleindicador;
+        
+        if (!indicadoresAgrupados[controlId] || 
+            new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
+            indicadoresAgrupados[controlId] = indicador;
+        }
+      });
+
+      const resultadosFinais = Object.values(indicadoresAgrupados)
+        .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+
+      return resultadosFinais;
+
+    } catch (error) {
+      console.error('Erro na busca avançada:', error);
+      return [];
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO REALIZADO VS META
@@ -447,7 +599,6 @@ export default function VisualizacaoIndicadores({ user }) {
            indicador.controle_indicador.descricao_detalhada.trim() !== '';
   };
 
-  // ✅ NOVA FUNÇÃO: Verificar se deve mostrar descrição resumida
   const getDescricaoResumida = (indicador) => {
     const descricao = indicador.controle_indicador?.descricao_resumida;
     return descricao && descricao.trim() !== '' ? descricao.trim() : null;
@@ -462,7 +613,6 @@ export default function VisualizacaoIndicadores({ user }) {
               <h3 className="text-lg font-bold text-gray-900 mb-1">
                 {indicador.indicador || 'Sem indicador'}
               </h3>
-              {/* ✅ NOVA: Descrição resumida */}
               {getDescricaoResumida(indicador) && (
                 <p className="text-xs text-gray-400 leading-relaxed">
                   {getDescricaoResumida(indicador)}
@@ -662,7 +812,6 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
-  // ✅ MODIFICADO: Borda sempre azul
   const getBorderColor = (indicador) => {
     return 'border-blue-500';
   };
@@ -796,7 +945,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar indicadores incluindo descricao_resumida
+  // ✅ MODIFICADO: useEffect para busca aprimorada
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
@@ -808,7 +957,15 @@ export default function VisualizacaoIndicadores({ user }) {
           return;
         }
         
-        // ✅ MODIFICADO: Incluir descricao_resumida no select
+        // ✅ Se há termo de busca, usar busca avançada
+        if (searchTerm.trim()) {
+          const resultadosBusca = await performAdvancedSearch(searchTerm);
+          setIndicadores(resultadosBusca);
+          setLoading(false);
+          return;
+        }
+        
+        // ✅ Busca normal quando não há termo de pesquisa
         let query = supabase
           .from('controle_indicador_geral')
           .select(`
@@ -852,10 +1009,6 @@ export default function VisualizacaoIndicadores({ user }) {
         }
         if (filtroArquivados) {
           query = query.eq('arquivado', true);
-        }
-        
-        if (searchTerm.trim()) {
-          query = query.ilike('indicador', `%${searchTerm.trim()}%`);
         }
         
         query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
@@ -919,6 +1072,14 @@ export default function VisualizacaoIndicadores({ user }) {
   const getSectionSubtitle = () => {
     if (projetosVinculados.length === 0) {
       return 'Nenhum projeto vinculado encontrado';
+    }
+    
+    // ✅ MODIFICADO: Melhor mensagem para resultados de busca
+    if (searchTerm.trim()) {
+      if (searchLoading) {
+        return 'Buscando...';
+      }
+      return `${indicadores.length} resultado${indicadores.length !== 1 ? 's' : ''} encontrado${indicadores.length !== 1 ? 's' : ''} para "${searchTerm}"`;
     }
     
     if (activeTab === 'inicio') {
@@ -1152,12 +1313,17 @@ export default function VisualizacaoIndicadores({ user }) {
             <div className="flex items-center space-x-3">
               <div className="flex-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiSearch className="h-5 w-5 text-gray-400" />
+                  {/* ✅ MODIFICADO: Ícone de loading durante busca */}
+                  {searchLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+                  ) : (
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  )}
                 </div>
                 <input
                   type="text"
                   className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                  placeholder="Buscar indicadores..."
+                  placeholder="Buscar indicadores, descrições..." // ✅ MODIFICADO: Placeholder mais descritivo
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -1174,6 +1340,24 @@ export default function VisualizacaoIndicadores({ user }) {
                 <FiFilter className="w-5 h-5" />
               </button>
             </div>
+            
+            {/* ✅ NOVO: Indicador de busca ativa para mobile */}
+            {searchTerm.trim() && (
+              <div className="mt-3 flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <FiSearch className="w-4 h-4 text-blue-600 mr-2" />
+                  <span className="text-sm text-blue-700">
+                    Buscando por: <strong>"{searchTerm}"</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-1 hover:bg-blue-100 rounded"
+                >
+                  <FiX className="w-4 h-4 text-blue-600" />
+                </button>
+              </div>
+            )}
             
             {showFilters && (
               <div className="mt-4 space-y-3">
@@ -1254,7 +1438,7 @@ export default function VisualizacaoIndicadores({ user }) {
             )}
           </div>
 
-          {/* Desktop: Layout similar */}
+          {/* Desktop: Layout similar com busca melhorada */}
           <div className="hidden lg:block">
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
@@ -1266,12 +1450,17 @@ export default function VisualizacaoIndicadores({ user }) {
               <div className="flex-1 max-w-md lg:max-w-lg mx-4">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiSearch className="h-5 w-5 text-gray-400" />
+                    {/* ✅ MODIFICADO: Ícone de loading durante busca */}
+                    {searchLoading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+                    ) : (
+                      <FiSearch className="h-5 w-5 text-gray-400" />
+                    )}
                   </div>
                   <input
                     type="text"
                     className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                    placeholder="Buscar indicadores..."
+                    placeholder="Buscar indicadores, descrições detalhadas e resumidas..." // ✅ MODIFICADO: Placeholder mais descritivo
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -1394,6 +1583,25 @@ export default function VisualizacaoIndicadores({ user }) {
                 </div>
               </div>
             </div>
+            
+            {/* ✅ NOVO: Indicador de busca ativa para desktop */}
+            {searchTerm.trim() && (
+              <div className="mb-4 flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <FiSearch className="w-4 h-4 text-blue-600 mr-2" />
+                  <span className="text-sm text-blue-700">
+                    Buscando por: <strong>"{searchTerm}"</strong> 
+                    <span className="text-blue-600 ml-1">(nome, descrição detalhada e resumida)</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-1 hover:bg-blue-100 rounded transition-colors"
+                >
+                  <FiX className="w-4 h-4 text-blue-600" />
+                </button>
+              </div>
+            )}
             
             {showFilters && (
               <div className="space-y-3">
@@ -1544,7 +1752,7 @@ export default function VisualizacaoIndicadores({ user }) {
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
                 
-                {activeTab === 'inicio' && (
+                {activeTab === 'inicio' && !searchTerm.trim() && (
                   <button
                     onClick={() => setShowAllContent(!showAllContent)}
                     className="flex items-center text-gray-600 hover:text-gray-800"
@@ -1565,7 +1773,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 <p className="text-gray-600 text-sm mt-1">{getSectionSubtitle()}</p>
               </div>
               
-              {activeTab === 'inicio' && (
+              {activeTab === 'inicio' && !searchTerm.trim() && (
                 <button
                   onClick={() => setShowAllContent(!showAllContent)}
                   className="flex items-center text-gray-600 hover:text-gray-800"
@@ -1577,7 +1785,7 @@ export default function VisualizacaoIndicadores({ user }) {
             </div>
 
             {/* Conteúdo dos cards */}
-            {loading ? (
+            {loading || searchLoading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               </div>
@@ -1609,7 +1817,6 @@ export default function VisualizacaoIndicadores({ user }) {
                                   <h3 className="text-base font-bold text-gray-900 mb-1">
                                     {indicador.indicador || 'Sem indicador'}
                                   </h3>
-                                  {/* ✅ NOVA: Descrição resumida - Mobile */}
                                   {getDescricaoResumida(indicador) && (
                                     <p className="text-xs text-gray-400 leading-relaxed">
                                       {getDescricaoResumida(indicador)}
@@ -1649,47 +1856,25 @@ export default function VisualizacaoIndicadores({ user }) {
                                 return null;
                               })()}
                               
-                              {(isKPI || isGrafico) ? (
-                                <div className="flex items-center justify-between">
-                                  <div className="flex space-x-2">
-                                    {indicador.projeto_id && (
-                                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                        {projetos[indicador.projeto_id]}
-                                      </span>
-                                    )}
-                                    {indicador.categoria_id && (
-                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                        {categorias[indicador.categoria_id]}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="flex items-center text-gray-400 text-xs">
-                                    <FiCalendar className="w-3 h-3 mr-1" />
-                                    {formatDate(indicador)}
-                                  </div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex space-x-2">
+                                  {indicador.projeto_id && (
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                      {projetos[indicador.projeto_id]}
+                                    </span>
+                                  )}
+                                  {indicador.categoria_id && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                      {categorias[indicador.categoria_id]}
+                                    </span>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="flex items-center justify-between">
-                                  <div className="flex space-x-2">
-                                    {indicador.projeto_id && (
-                                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                        {projetos[indicador.projeto_id]}
-                                      </span>
-                                    )}
-                                    {indicador.categoria_id && (
-                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                        {categorias[indicador.categoria_id]}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="flex items-center text-gray-500 text-xs">
-                                    <FiCalendar className="w-3 h-3 mr-1" />
-                                    {formatDate(indicador)}
-                                  </div>
+                                
+                                <div className="flex items-center text-gray-400 text-xs">
+                                  <FiCalendar className="w-3 h-3 mr-1" />
+                                  {formatDate(indicador)}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </Link>
                         </div>
@@ -1697,7 +1882,10 @@ export default function VisualizacaoIndicadores({ user }) {
                     })
                   ) : (
                     <div className="py-8 text-center text-gray-500">
-                      Nenhum indicador encontrado
+                      {searchTerm.trim() ? 
+                        `Nenhum resultado encontrado para "${searchTerm}"` : 
+                        'Nenhum indicador encontrado'
+                      }
                     </div>
                   )}
                 </div>
@@ -1725,7 +1913,6 @@ export default function VisualizacaoIndicadores({ user }) {
                                           <h3 className="text-xl font-bold text-gray-900 mb-1">
                                             {indicador.indicador || 'Sem indicador'}
                                           </h3>
-                                          {/* ✅ NOVA: Descrição resumida - Desktop gráficos */}
                                           {getDescricaoResumida(indicador) && (
                                             <p className="text-sm text-gray-400 leading-relaxed">
                                               {getDescricaoResumida(indicador)}
@@ -1789,7 +1976,6 @@ export default function VisualizacaoIndicadores({ user }) {
                                           <h3 className="text-lg font-bold text-gray-900 mb-1">
                                             {indicador.indicador || 'Sem indicador'}
                                           </h3>
-                                          {/* ✅ NOVA: Descrição resumida - Desktop outros */}
                                           {getDescricaoResumida(indicador) && (
                                             <p className="text-sm text-gray-400 leading-relaxed">
                                               {getDescricaoResumida(indicador)}
@@ -1843,7 +2029,10 @@ export default function VisualizacaoIndicadores({ user }) {
                     })()
                   ) : (
                     <div className="py-8 text-center text-gray-500">
-                      Nenhum indicador encontrado
+                      {searchTerm.trim() ? 
+                        `Nenhum resultado encontrado para "${searchTerm}"` : 
+                        'Nenhum indicador encontrado'
+                      }
                     </div>
                   )}
                 </div>
