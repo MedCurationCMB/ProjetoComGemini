@@ -1,4 +1,4 @@
-// ✅ PDFPrinter COMPLETO - HTML/CSS com Cabeçalho Fixo em Todas as Páginas
+// ✅ PDFPrinter CORRIGIDO - Cabeçalho Fixo Funcional
 
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
@@ -111,7 +111,7 @@ const PDFPrinter = ({
     }
   };
 
-  // ✅ GERAR HTML COMPLETO COM CSS DE IMPRESSÃO E CABEÇALHO FIXO
+  // ✅ GERAR HTML COMPLETO COM CSS DE IMPRESSÃO CORRIGIDO
   const gerarHTMLCompleto = (kpis, periodoFiltro) => {
     const kpisHabilitados = [];
     
@@ -207,143 +207,136 @@ const PDFPrinter = ({
             line-height: 1.4;
             color: #1f2937;
             background: white;
+            font-size: 14px;
         }
         
-        /* ✅ CSS ESPECÍFICO PARA IMPRESSÃO COM CABEÇALHO FIXO */
+        /* ✅ CSS ESPECÍFICO PARA IMPRESSÃO - VERSÃO CORRIGIDA */
         @media print {
             body { 
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact;
-                font-size: 12px;
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important;
+                font-size: 12px !important;
+            }
+            
+            /* ✅ CONFIGURAÇÃO DE PÁGINA CORRIGIDA */
+            @page {
+                margin-top: 80px !important;
+                margin-bottom: 20px !important;
+                margin-left: 20px !important;
+                margin-right: 20px !important;
+                
+                /* ✅ CABEÇALHO RUNNING ELEMENT */
+                @top-center {
+                    content: element(header-content);
+                }
+            }
+            
+            /* ✅ CABEÇALHO FIXO - ABORDAGEM RUNNING ELEMENT */
+            .running-header {
+                position: running(header-content) !important;
+                text-align: center !important;
+                padding: 10px 20px !important;
+                background: white !important;
+                border-bottom: 2px solid #012060 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            
+            .running-header h1 {
+                color: #012060 !important;
+                font-size: 16px !important;
+                margin: 0 0 3px 0 !important;
+                font-weight: bold !important;
+            }
+            
+            .running-header h2 {
+                color: #374151 !important;
+                font-size: 14px !important;
+                margin: 0 0 3px 0 !important;
+                font-weight: normal !important;
+            }
+            
+            .running-header p {
+                color: #6B7280 !important;
+                font-size: 10px !important;
+                margin: 0 !important;
+            }
+            
+            /* ✅ ESCONDER CABEÇALHO ORIGINAL NA IMPRESSÃO */
+            .header-original {
+                display: none !important;
+            }
+            
+            /* ✅ CONTEÚDO PRINCIPAL */
+            .content-main {
+                margin-top: 0 !important;
                 padding-top: 0 !important;
             }
             
-            @page {
-                margin: 1cm 1.5cm 1.5cm 1.5cm; /* Margem superior reduzida */
-            }
-            
-            /* CABEÇALHO FIXO - VERSÃO CORRIGIDA */
-            .fixed-header {
-                display: block;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: white !important;
-                z-index: 1000;
-                padding: 10px 20px;
-                border-bottom: 2px solid #012060;
-                text-align: center;
-                height: auto;
-                min-height: 60px;
-                box-sizing: border-box;
-                page-break-after: avoid;
-                page-break-inside: avoid;
-            }
-            
-            .fixed-header h1,
-            .fixed-header h2,
-            .fixed-header p {
-                margin: 2px 0;
-                line-height: 1.2;
-                font-size: 12px;
-            }
-            
-            .fixed-header h1 {
-                font-size: 14px;
-                font-weight: bold;
-            }
-            
-            .content-with-header {
-                margin-top: 80px !important;
-                padding-top: 5px;
-            }
-            
-            /* GARANTE QUE O CONTEÚDO NÃO SEJA CORTADO */
+            /* ✅ MELHORIAS PARA SEÇÕES */
             .section {
                 page-break-inside: avoid;
+                margin-bottom: 20px !important;
             }
             
+            .section h3 {
+                page-break-after: avoid;
+            }
+            
+            /* ✅ MELHORIAS PARA TABELAS */
             table {
-                page-break-inside: auto;
+                page-break-inside: auto !important;
             }
             
             tr {
-                page-break-inside: avoid;
+                page-break-inside: avoid !important;
             }
             
-            /* MELHORIAS PARA TABELAS */
             td, th {
-                padding: 4px 8px !important;
-                font-size: 11px !important;
+                padding: 12px 16px !important;
+                font-size: 14px !important;
             }
             
+            /* ✅ ESCONDER ELEMENTOS DESNECESSÁRIOS */
             .no-print {
                 display: none !important;
             }
             
-            /* CABEÇALHO ORIGINAL (TELA) */
-            .header {
+            .print-button {
                 display: none !important;
             }
         }
         
+        /* ✅ ESTILOS PARA TELA */
         .container {
             max-width: 800px;
             margin: 0 auto;
             padding: 40px;
         }
         
-        /* ✅ CABEÇALHO FIXO PARA IMPRESSÃO */
-        .fixed-header {
-            display: none; /* Oculto por padrão */
-        }
-        
-        @media print {
-            .fixed-header {
-                display: block !important;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: white !important;
-                z-index: 1000;
-                padding: 15px 20px;
-                border-bottom: 3px solid #012060;
-                text-align: center;
-                box-shadow: none;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            
-            .content-with-header {
-                margin-top: 100px !important;
-            }
-        }
-        
-        /* ✅ CABEÇALHO ORIGINAL (TELA) */
-        .header {
+        /* ✅ CABEÇALHO PARA TELA */
+        .header-original {
             text-align: center;
             margin-bottom: 40px;
             border-bottom: 3px solid #012060;
             padding-bottom: 20px;
         }
         
-        .header h1 {
+        .header-original h1 {
             color: #012060;
             font-size: 28px;
             margin-bottom: 10px;
             font-weight: bold;
         }
         
-        .header h2 {
+        .header-original h2 {
             color: #374151;
             font-size: 20px;
             margin-bottom: 10px;
             font-weight: normal;
         }
         
-        .header p {
+        .header-original p {
             color: #6B7280;
             font-size: 14px;
         }
@@ -427,10 +420,41 @@ const PDFPrinter = ({
             line-height: 1.2;
         }
         
-        /* ✅ TABELA COM QUEBRA AUTOMÁTICA */
+        /* ✅ TABELA */
         .table-container {
             width: 100%;
             margin-bottom: 30px;
+        }
+        
+        /* ✅ GRÁFICO */
+        .chart-container {
+            background: #F9FAFB;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container h4 {
+            color: #374151;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .simple-chart {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        @media print {
+            .chart-container {
+                page-break-inside: avoid;
+                background: white !important;
+                border: 1px solid #E5E7EB !important;
+            }
         }
         
         table {
@@ -502,40 +526,30 @@ const PDFPrinter = ({
         .print-button:hover {
             background: #2563EB;
         }
-        
-        @media print {
-            .print-button { display: none; }
-        }
     </style>
 </head>
 <body>
     <!-- ✅ BOTÃO DE IMPRESSÃO (só aparece na tela) -->
     <button class="print-button no-print" onclick="window.print()">🖨️ Imprimir PDF</button>
     
-    <!-- ✅ CABEÇALHO FIXO PARA IMPRESSÃO -->
-    <div class="fixed-header">
-        <h1 style="color: #012060; font-size: 18px; margin-bottom: 5px; font-weight: bold;">
-            Relatório de Indicadores
-        </h1>
-        <h2 style="color: #374151; font-size: 14px; margin-bottom: 5px; font-weight: normal;">
-            ${nomeIndicador}
-        </h2>
-        <p style="color: #6B7280; font-size: 10px; margin: 0;">
-            Período: ${periodoFiltro} | Gerado em: ${dataGeracao}
-        </p>
+    <!-- ✅ CABEÇALHO RUNNING ELEMENT PARA IMPRESSÃO -->
+    <div class="running-header">
+        <h1>Relatório de Indicadores</h1>
+        <h2>${nomeIndicador}</h2>
+        <p>Período: ${periodoFiltro} | Gerado em: ${dataGeracao}</p>
     </div>
     
     <div class="container">
         <!-- ✅ CABEÇALHO ORIGINAL (só para tela) -->
-        <header class="header avoid-break">
+        <header class="header-original">
             <h1>Relatório de Indicadores</h1>
             <h2>${nomeIndicador}</h2>
             <p>Período: ${periodoFiltro} | Gerado em: ${dataGeracao}</p>
         </header>
 
-        <div class="content-with-header">
+        <div class="content-main">
             <!-- ✅ INFORMAÇÕES GERAIS -->
-            <section class="section avoid-break">
+            <section class="section">
                 <h3>Informações Gerais</h3>
                 <div class="info-grid">
                     <div class="info-card">
@@ -551,7 +565,7 @@ const PDFPrinter = ({
 
             ${kpisHabilitados.length > 0 ? `
             <!-- ✅ RESUMO DOS INDICADORES -->
-            <section class="section avoid-break">
+            <section class="section">
                 <h3>Resumo dos Indicadores</h3>
                 <div class="kpis-grid">
                     ${kpisHabilitados.map(kpi => `
@@ -564,6 +578,86 @@ const PDFPrinter = ({
                 </div>
             </section>
             ` : ''}
+
+            <!-- ✅ VISUALIZAÇÃO GRÁFICA -->
+            <section class="section">
+                <h3>Visualização Gráfica</h3>
+                <div class="chart-container">
+                    <h4>Valor Indicador (Realizado vs Meta)</h4>
+                    
+                    <!-- ✅ GRÁFICO SVG SIMPLES PARA PDF - LIMITADO A 10 MAIS RECENTES -->
+                    <div class="simple-chart">
+                        ${dadosGraficoCombinado.length > 0 ? `
+                            <svg width="100%" height="300" viewBox="0 0 800 300" style="border: 1px solid #E5E7EB; background: white;">
+                                <!-- Título do gráfico -->
+                                <text x="400" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#374151">
+                                    Realizado vs Meta por Período ${dadosGraficoCombinado.length > 10 ? '(10 mais recentes)' : ''}
+                                </text>
+                                
+                                <!-- Legenda -->
+                                <g transform="translate(300, 40)">
+                                    <rect x="0" y="0" width="12" height="12" fill="#3B82F6"/>
+                                    <text x="18" y="10" font-size="12" fill="#6B7280">Realizado</text>
+                                    <rect x="100" y="0" width="12" height="12" fill="#6B7280"/>
+                                    <text x="118" y="10" font-size="12" fill="#6B7280">Meta</text>
+                                </g>
+                                
+                                <!-- Dados do gráfico -->
+                                ${dadosGraficoCombinado.slice(-10).map((dados, index) => {
+                                    const dadosLimitados = dadosGraficoCombinado.slice(-10);
+                                    const maxValue = Math.max(
+                                        ...dadosLimitados.map(d => Math.max(d.realizadoApresentado || 0, d.metaApresentado || 0))
+                                    );
+                                    const x = 80 + (index * (640 / dadosLimitados.length));
+                                    const barWidth = Math.min(40, (640 / dadosLimitados.length) - 10);
+                                    const realizadoHeight = ((dados.realizadoApresentado || 0) / maxValue) * 180;
+                                    const metaHeight = ((dados.metaApresentado || 0) / maxValue) * 180;
+                                    const baseY = 250;
+                                    
+                                    return `
+                                        <!-- Barra Realizado -->
+                                        <rect x="${x}" y="${baseY - realizadoHeight}" 
+                                              width="${barWidth}" height="${realizadoHeight}" 
+                                              fill="#3B82F6" rx="2"/>
+                                        
+                                        <!-- Linha Meta -->
+                                        ${dados.metaApresentado > 0 ? `
+                                            <line x1="${x}" y1="${baseY - metaHeight}" 
+                                                  x2="${x + barWidth}" y2="${baseY - metaHeight}" 
+                                                  stroke="#6B7280" stroke-width="3"/>
+                                            <circle cx="${x + barWidth/2}" cy="${baseY - metaHeight}" 
+                                                    r="3" fill="#6B7280"/>
+                                        ` : ''}
+                                        
+                                        <!-- Valores -->
+                                        <text x="${x + barWidth/2}" y="${baseY - realizadoHeight - 5}" 
+                                              text-anchor="middle" font-size="10" fill="#374151">
+                                            ${(dados.realizadoApresentado || 0).toLocaleString('pt-BR')}
+                                        </text>
+                                        
+                                        <!-- Período -->
+                                        <text x="${x + barWidth/2}" y="${baseY + 15}" 
+                                              text-anchor="middle" font-size="8" fill="#6B7280">
+                                            ${dados.periodo.split('-')[0]}/${dados.periodo.split('-')[1]}
+                                        </text>
+                                        <text x="${x + barWidth/2}" y="${baseY + 26}" 
+                                              text-anchor="middle" font-size="8" fill="#6B7280">
+                                            20${dados.periodo.split('-')[2]}
+                                        </text>
+                                    `;
+                                }).join('')}
+                                
+                                <!-- Eixo X -->
+                                <line x1="70" y1="250" x2="730" y2="250" stroke="#E5E7EB" stroke-width="1"/>
+                            </svg>
+                        ` : `
+                            <div style="text-align: center; padding: 40px; color: #6B7280; border: 1px solid #E5E7EB;">
+                                Nenhum dado disponível para exibir o gráfico
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </section>
 
             <!-- ✅ DADOS DETALHADOS -->
             <section class="section">

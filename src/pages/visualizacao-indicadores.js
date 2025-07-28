@@ -39,6 +39,7 @@ import {
   FiInfo,
   FiEdit3
 } from 'react-icons/fi';
+import PDFPrinterIndicadores from '../components/PDFPrinterIndicadores';
 import { TfiPencil } from 'react-icons/tfi';
 
 export default function VisualizacaoIndicadores({ user }) {
@@ -68,6 +69,16 @@ export default function VisualizacaoIndicadores({ user }) {
   // ✅ NOVO: Estado para controlar tipo de busca e resultados
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // ✅ NOVA FUNÇÃO: Preparar filtros ativos para o PDF
+  const prepararFiltrosAtivos = () => {
+    return {
+      projeto: projetoSelecionado,
+      categoria: categoriaSelecionada,
+      importantes: filtroImportantes,
+      arquivados: filtroArquivados
+    };
+  };
 
   // =====================================
   // ✅ NOVA FUNÇÃO: Busca aprimorada que inclui descrições
@@ -1752,15 +1763,26 @@ export default function VisualizacaoIndicadores({ user }) {
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
                 
-                {activeTab === 'inicio' && !searchTerm.trim() && (
-                  <button
-                    onClick={() => setShowAllContent(!showAllContent)}
-                    className="flex items-center text-gray-600 hover:text-gray-800"
-                  >
-                    {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
-                    <span className="text-sm">Ver todos</span>
-                  </button>
-                )}
+                <div className="flex items-center space-x-2">
+                  {/* ✅ NOVO: Botão de impressão mobile */}
+                  <PDFPrinterIndicadores
+                    indicadores={indicadores}
+                    categorias={categorias}
+                    projetos={projetos}
+                    filtrosAtivos={prepararFiltrosAtivos()}
+                    termoBusca={searchTerm}
+                  />
+                  
+                  {activeTab === 'inicio' && !searchTerm.trim() && (
+                    <button
+                      onClick={() => setShowAllContent(!showAllContent)}
+                      className="flex items-center text-gray-600 hover:text-gray-800"
+                    >
+                      {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
+                      <span className="text-sm">Ver todos</span>
+                    </button>
+                  )}
+                </div>
               </div>
               
               <p className="text-gray-600 text-sm mb-6">{getSectionSubtitle()}</p>
@@ -1773,15 +1795,26 @@ export default function VisualizacaoIndicadores({ user }) {
                 <p className="text-gray-600 text-sm mt-1">{getSectionSubtitle()}</p>
               </div>
               
-              {activeTab === 'inicio' && !searchTerm.trim() && (
-                <button
-                  onClick={() => setShowAllContent(!showAllContent)}
-                  className="flex items-center text-gray-600 hover:text-gray-800"
-                >
-                  {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
-                  <span className="text-sm">Ver todos</span>
-                </button>
-              )}
+              <div className="flex items-center space-x-3">
+                {/* ✅ NOVO: Botão de impressão desktop */}
+                <PDFPrinterIndicadores
+                  indicadores={indicadores}
+                  categorias={categorias}
+                  projetos={projetos}
+                  filtrosAtivos={prepararFiltrosAtivos()}
+                  termoBusca={searchTerm}
+                />
+                
+                {activeTab === 'inicio' && !searchTerm.trim() && (
+                  <button
+                    onClick={() => setShowAllContent(!showAllContent)}
+                    className="flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
+                    <span className="text-sm">Ver todos</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Conteúdo dos cards */}
