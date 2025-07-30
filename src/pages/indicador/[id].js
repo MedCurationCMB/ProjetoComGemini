@@ -43,12 +43,15 @@ export default function IndicadorDetalhe({ user }) {
   const [todosMarcadosComoLidos, setTodosMarcadosComoLidos] = useState(false);
   const [atualizandoStatus, setAtualizandoStatus] = useState(false);
   
-  // Estados para controlar status geral
+  // ✅ MODIFICADO: Estado para controlar status apenas de leitura e arquivo
   const [statusGeral, setStatusGeral] = useState({
-    importante: false,
     ler_depois: false,
     arquivado: false
   });
+
+  // ✅ NOVO: Estado para controlar status de importante separadamente
+  const [isImportante, setIsImportante] = useState(false);
+  const [atualizandoImportante, setAtualizandoImportante] = useState(false);
 
   // Novo estado para controlar o modal de confirmação de arquivar
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -77,6 +80,110 @@ export default function IndicadorDetalhe({ user }) {
   // ✅ NOVO ESTADO PARA ANÁLISE DE IA
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
+
+  // =====================================
+  // ✅ NOVAS FUNÇÕES PARA GERENCIAR INDICADORES IMPORTANTES
+  // =====================================
+
+  // Verificar se o indicador está marcado como importante para o usuário atual
+  const verificarIndicadorImportante = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_importantes')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .eq('controle_indicador_id', controleIndicadorId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      return data !== null;
+    } catch (error) {
+      console.error('Erro ao verificar indicador importante:', error);
+      return false;
+    }
+  };
+
+  // Marcar indicador como importante
+  const marcarComoImportante = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_importantes')
+        .insert({
+          usuario_id: user.id,
+          controle_indicador_id: controleIndicadorId
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao marcar como importante:', error);
+      return false;
+    }
+  };
+
+  // Desmarcar indicador como importante
+  const desmarcarComoImportante = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_importantes')
+        .delete()
+        .eq('usuario_id', user.id)
+        .eq('controle_indicador_id', controleIndicadorId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao desmarcar como importante:', error);
+      return false;
+    }
+  };
+
+  // Função para alternar status de importante
+  const alternarStatusImportante = async () => {
+    if (atualizandoImportante || !id) return;
+    
+    try {
+      setAtualizandoImportante(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      const novoStatus = !isImportante;
+      let sucesso = false;
+      
+      if (novoStatus) {
+        // Marcar como importante
+        sucesso = await marcarComoImportante(parseInt(id));
+      } else {
+        // Desmarcar como importante
+        sucesso = await desmarcarComoImportante(parseInt(id));
+      }
+      
+      if (sucesso) {
+        setIsImportante(novoStatus);
+        const mensagem = novoStatus 
+          ? 'Indicador marcado como importante!' 
+          : 'Indicador removido dos importantes';
+        
+        toast.success(mensagem);
+      } else {
+        toast.error('Erro ao atualizar status do indicador');
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status importante:', error);
+      toast.error('Erro ao atualizar indicador');
+    } finally {
+      setAtualizandoImportante(false);
+    }
+  };
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO
@@ -642,7 +749,7 @@ export default function IndicadorDetalhe({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar dados dos indicadores E carregar configurações
+  // ✅ MODIFICADO: Buscar dados dos indicadores, carregar configurações E verificar status importante
   useEffect(() => {
     const fetchIndicadores = async () => {
       if (!id) return;
@@ -671,11 +778,11 @@ export default function IndicadorDetalhe({ user }) {
           setNomeIndicador('Indicador sem dados');
           setTodosMarcadosComoLidos(false);
           setStatusGeral({
-            importante: false,
             ler_depois: false,
             arquivado: false
           });
           setInfoGeral(null);
+          setIsImportante(false); // ✅ NOVO: Reset status importante
         } else {
           // Aplicar filtro de período
           const indicadoresFiltrados = filtrarPorPeriodo(dadosIndicadores);
@@ -688,10 +795,8 @@ export default function IndicadorDetalhe({ user }) {
           const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
           setTodosMarcadosComoLidos(todosLidos);
           
-          // Verificar status geral (importante, ler_depois, arquivado) (usar dados filtrados)
-          // Considera que o status está ativo se PELO MENOS UM registro estiver marcado
+          // ✅ MODIFICADO: Verificar status geral apenas para ler_depois e arquivado
           const statusGeral = {
-            importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
             ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
             arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
           };
@@ -720,6 +825,10 @@ export default function IndicadorDetalhe({ user }) {
           if (controleData) {
             setIndicadorBaseId(controleData.id);
             await carregarConfiguracoes(controleData.id);
+            
+            // ✅ NOVO: Verificar se o indicador está marcado como importante
+            const isImportanteStatus = await verificarIndicadorImportante(controleData.id);
+            setIsImportante(isImportanteStatus);
           }
         }
       } catch (error) {
@@ -730,11 +839,11 @@ export default function IndicadorDetalhe({ user }) {
         setNomeIndicador('Erro ao carregar indicador');
         setTodosMarcadosComoLidos(false);
         setStatusGeral({
-          importante: false,
           ler_depois: false,
           arquivado: false
         });
         setInfoGeral(null);
+        setIsImportante(false); // ✅ NOVO: Reset status importante
       } finally {
         setLoading(false);
       }
@@ -767,8 +876,8 @@ export default function IndicadorDetalhe({ user }) {
       const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
       setTodosMarcadosComoLidos(todosLidos);
       
+      // ✅ MODIFICADO: Status geral apenas para ler_depois e arquivado
       const statusGeral = {
-        importante: indicadoresFiltrados.some(indicador => indicador.importante === true),
         ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
         arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
       };
@@ -828,7 +937,7 @@ export default function IndicadorDetalhe({ user }) {
     }
   };
 
-  // Função para alternar status (importante, ler_depois, arquivado) de todos os indicadores
+  // ✅ MODIFICADO: Função para alternar status apenas de ler_depois e arquivado
   const alternarStatusTodos = async (campo, valorAtual) => {
     if (atualizandoStatus) return;
     
@@ -875,7 +984,6 @@ export default function IndicadorDetalhe({ user }) {
       
       // Mensagens específicas para cada ação
       const mensagens = {
-        importante: novoValor ? 'Marcado como importante!' : 'Removido dos importantes',
         ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois',
         arquivado: novoValor ? 'Indicadores arquivados!' : 'Indicadores desarquivados'
       };
@@ -1931,16 +2039,16 @@ export default function IndicadorDetalhe({ user }) {
         {/* ✅ MODIFICADO: Barra fixa inferior com botões de ação - Mobile */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-20">
           <div className="max-w-md mx-auto flex justify-center space-x-6">
-            {/* Botão Importante */}
+            {/* ✅ MODIFICADO: Botão Importante usando nova função */}
             <button
-              onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
-              disabled={atualizandoStatus}
+              onClick={alternarStatusImportante}
+              disabled={atualizandoImportante}
               className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
-                atualizandoStatus ? 'opacity-50' : ''
+                atualizandoImportante ? 'opacity-50' : ''
               }`}
             >
-              <FiStar className={`h-4 w-4 ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-xs font-medium ${statusGeral.importante ? 'text-blue-600' : 'text-gray-400'}`}>
+              <FiStar className={`h-4 w-4 ${isImportante ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${isImportante ? 'text-blue-600' : 'text-gray-400'}`}>
                 Importante
               </span>
             </button>
@@ -2121,14 +2229,14 @@ export default function IndicadorDetalhe({ user }) {
             <div className="flex items-center justify-end">
               {/* Botões de ação */}
               <div className="flex space-x-3">
-                {/* Botão Importante */}
+                {/* ✅ MODIFICADO: Botão Importante usando nova função */}
                 <button
-                  onClick={() => alternarStatusTodos('importante', statusGeral.importante)}
-                  disabled={atualizandoStatus}
+                  onClick={alternarStatusImportante}
+                  disabled={atualizandoImportante}
                   className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                    atualizandoStatus ? 'opacity-50' : ''
+                    atualizandoImportante ? 'opacity-50' : ''
                   } ${
-                    statusGeral.importante 
+                    isImportante 
                       ? 'text-blue-600' 
                       : 'text-gray-400 hover:text-gray-600'
                   }`}
