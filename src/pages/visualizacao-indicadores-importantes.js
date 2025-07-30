@@ -1,12 +1,20 @@
-// Arquivo: src/pages/visualizacao-indicadores-importantes.js - Versão Final com Menu
-import { useState, useEffect } from 'react';
+// Arquivo: src/pages/visualizacao-indicadores-importantes.js - Nova versão com tabela indicadores_importantes
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
-import { BarChart, Bar, XAxis, ResponsiveContainer, LabelList } from 'recharts';
+import { 
+  ComposedChart, 
+  Bar, 
+  Line, 
+  XAxis, 
+  ResponsiveContainer, 
+  LabelList,
+  Tooltip
+} from 'recharts';
 import { 
   FiArchive,
   FiSearch, 
@@ -17,8 +25,6 @@ import {
   FiStar, 
   FiClock,
   FiClipboard,
-  FiEye, 
-  FiEyeOff, 
   FiUser, 
   FiSettings, 
   FiLogOut,
@@ -28,9 +34,11 @@ import {
   FiCpu,
   FiList,
   FiTrendingUp,
-  FiEdit3
+  FiEdit3,
+  FiInfo
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
+import PDFPrinterIndicadores from '../components/PDFPrinterIndicadores';
 
 export default function VisualizacaoIndicadoresImportantes({ user }) {
   const router = useRouter();
@@ -50,16 +58,19 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
   const [filtroLerDepois, setFiltroLerDepois] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
 
-  // ✅ NOVO: Estado para controlar a navegação (importantes sempre ativo)
+  // Estado para controlar a navegação (importantes sempre ativo)
   const [activeTab, setActiveTab] = useState('importantes');
-  const [showAllContent, setShowAllContent] = useState(false);
+  
+  // Estados para modal de informação
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState('');
+  const [infoModalTitle, setInfoModalTitle] = useState('');
 
   // =====================================
   // FUNÇÕES PARA GRÁFICO ADAPTATIVO
   // =====================================
 
-  // Função para buscar dados do gráfico
-  const fetchGraficoData = async (idControleindicador) => {
+  const fetchGraficoRealizadoMeta = async (idControleindicador) => {
     try {
       const { data, error } = await supabase
         .from('controle_indicador_geral')
@@ -77,7 +88,39 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     }
   };
 
-  // Função para formatar data para gráfico (DD-MM-AA)
+  const prepararDadosGraficoCombinado = (dadosIndicadores) => {
+    if (!dadosIndicadores || dadosIndicadores.length === 0) return [];
+    
+    const dadosAgrupados = {};
+    
+    dadosIndicadores.forEach(indicador => {
+      const periodo = formatDateGrafico(indicador.periodo_referencia);
+      const periodoCompleto = indicador.periodo_referencia;
+      
+      if (!dadosAgrupados[periodo]) {
+        dadosAgrupados[periodo] = {
+          periodo,
+          periodoCompleto,
+          realizadoApresentado: 0,
+          realizadoIndicador: 0,
+          metaApresentado: 0,
+          metaIndicador: 0
+        };
+      }
+      
+      if (indicador.tipo_indicador === 1) { // Realizado
+        dadosAgrupados[periodo].realizadoApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
+      } else if (indicador.tipo_indicador === 2) { // Meta
+        dadosAgrupados[periodo].metaApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
+        dadosAgrupados[periodo].metaIndicador = parseFloat(indicador.valor_indicador) || 0;
+      }
+    });
+    
+    return Object.values(dadosAgrupados)
+      .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+  };
+
   const formatDateGrafico = (dateString) => {
     if (!dateString) return '';
     
@@ -93,68 +136,147 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     }
   };
 
-  // Função para calcular largura ideal por barra baseada na quantidade
+  const MAX_VISIBLE_BARS = 7;
+
   const calculateOptimalBarWidth = (dataLength, isMobile = false) => {
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
     if (isMobile) {
-      if (dataLength <= 3) return 60;
-      if (dataLength <= 5) return 45;
-      if (dataLength <= 8) return 35;
-      return 25;
+      if (effectiveDataLength <= 3) return 60;
+      if (effectiveDataLength <= 5) return 45;
+      if (effectiveDataLength <= 7) return 35;
+      return 35;
     } else {
-      if (dataLength <= 3) return 80;
-      if (dataLength <= 5) return 65;
-      if (dataLength <= 8) return 50;
-      if (dataLength <= 12) return 40;
-      return 30;
+      if (effectiveDataLength <= 3) return 80;
+      if (effectiveDataLength <= 5) return 65;
+      if (effectiveDataLength <= 7) return 50;
+      return 50;
     }
   };
 
-  // Função para calcular espaçamento entre barras baseado na quantidade
   const calculateBarSpacing = (dataLength, isMobile = false) => {
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
     if (isMobile) {
-      if (dataLength <= 3) return 15;
-      if (dataLength <= 5) return 10;
-      if (dataLength <= 8) return 5;
-      return 2;
+      if (effectiveDataLength <= 3) return 15;
+      if (effectiveDataLength <= 5) return 10;
+      if (effectiveDataLength <= 7) return 5;
+      return 5;
     } else {
-      if (dataLength <= 3) return 20;
-      if (dataLength <= 5) return 15;
-      if (dataLength <= 8) return 10;
-      if (dataLength <= 12) return 5;
-      return 2;
+      if (effectiveDataLength <= 3) return 20;
+      if (effectiveDataLength <= 5) return 15;
+      if (effectiveDataLength <= 7) return 10;
+      return 10;
     }
   };
 
-  // Função para calcular se precisa de scroll baseado na tela disponível
-  const calculateNeedsScroll = (dataLength, isMobile = false) => {
-    const maxBarsWithoutScroll = isMobile ? 6 : 10;
-    return dataLength > maxBarsWithoutScroll;
-  };
-
-  // Função para calcular largura total do container
   const calculateTotalWidth = (dataLength, isMobile = false) => {
-    const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
-    const spacing = calculateBarSpacing(dataLength, isMobile);
-    const margins = 20;
-    
-    const totalWidth = (barWidth + spacing) * dataLength + margins;
-    const minWidth = isMobile ? 300 : 500;
-    
-    return Math.max(totalWidth, minWidth);
+    if (dataLength <= MAX_VISIBLE_BARS) {
+      const barWidth = calculateOptimalBarWidth(dataLength, isMobile);
+      const spacing = calculateBarSpacing(dataLength, isMobile);
+      const margins = 40;
+      
+      const calculatedWidth = (barWidth + spacing) * dataLength + margins;
+      const minWidth = isMobile ? 320 : 400;
+      
+      return {
+        width: Math.max(calculatedWidth, minWidth),
+        needsScroll: false,
+        calculatedWidth: calculatedWidth,
+        visibleBars: dataLength
+      };
+    } 
+    else {
+      const barWidth = calculateOptimalBarWidth(MAX_VISIBLE_BARS, isMobile);
+      const spacing = calculateBarSpacing(MAX_VISIBLE_BARS, isMobile);
+      const margins = 40;
+      
+      const containerWidth = (barWidth + spacing) * MAX_VISIBLE_BARS + margins;
+      const totalContentWidth = (barWidth + spacing) * dataLength + margins;
+      
+      return {
+        width: containerWidth,
+        needsScroll: true,
+        calculatedWidth: totalContentWidth,
+        visibleBars: MAX_VISIBLE_BARS
+      };
+    }
   };
 
-  // Função para calcular barCategoryGap dinâmico
   const calculateCategoryGap = (dataLength) => {
-    if (dataLength <= 3) return "8%";
-    if (dataLength <= 5) return "5%";
-    if (dataLength <= 8) return "3%";
-    if (dataLength <= 12) return "1%";
-    return "2%";
+    const effectiveDataLength = Math.min(dataLength, MAX_VISIBLE_BARS);
+    
+    if (effectiveDataLength <= 3) return "8%";
+    if (effectiveDataLength <= 5) return "5%";
+    if (effectiveDataLength <= 7) return "3%";
+    return "3%";
   };
 
-  // =====================================
-  // COMPONENTE DO GRÁFICO ADAPTATIVO
-  // =====================================
+  const ScrollableChartContainer = ({ children, dataLength, isMobile = false }) => {
+    const scrollRef = useRef(null);
+    const [hasScrolled, setHasScrolled] = useState(false);
+
+    const { width, needsScroll, calculatedWidth, visibleBars } = calculateTotalWidth(dataLength, isMobile);
+
+    useEffect(() => {
+      if (scrollRef.current && !hasScrolled && needsScroll) {
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
+            setHasScrolled(true);
+          }
+        }, 100);
+      }
+    }, [needsScroll, hasScrolled]);
+    
+    return (
+      <div 
+        className="flex justify-center"
+        style={{
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch',
+          width: '100%',
+          maxWidth: '100%'
+        }}
+      >
+        <div 
+          ref={scrollRef}
+          className={needsScroll ? "overflow-x-auto" : ""}
+          style={{
+            width: needsScroll ? `${width}px` : 'auto',
+            maxWidth: needsScroll ? `${width}px` : '100%',
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div style={{ 
+            width: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            minWidth: needsScroll ? `${calculatedWidth}px` : `${width}px`,
+            margin: '0 auto'
+          }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
+          <p className="font-medium text-gray-900">{`Período: ${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {`${entry.name}: ${entry.value?.toLocaleString('pt-BR') || 0}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const GraficoBarrasAdaptativo = ({ indicador, isMobile = false }) => {
     const [graficoData, setGraficoData] = useState([]);
     const [loadingGrafico, setLoadingGrafico] = useState(true);
@@ -162,15 +284,9 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     useEffect(() => {
       const loadGraficoData = async () => {
         setLoadingGrafico(true);
-        const data = await fetchGraficoData(indicador.id_controleindicador);
-        
-        const dadosGrafico = data.map(item => ({
-          periodo: formatDateGrafico(item.periodo_referencia),
-          periodoCompleto: item.periodo_referencia,
-          valorApresentado: parseFloat(item.valor_indicador_apresentado) || 0,
-        })).sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
-        
-        setGraficoData(dadosGrafico);
+        const data = await fetchGraficoRealizadoMeta(indicador.id_controleindicador);
+        const dadosCombinados = prepararDadosGraficoCombinado(data);
+        setGraficoData(dadosCombinados);
         setLoadingGrafico(false);
       };
 
@@ -194,10 +310,8 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     }
 
     const dataLength = graficoData.length;
-    const needsScroll = calculateNeedsScroll(dataLength, isMobile);
-    const totalWidth = calculateTotalWidth(dataLength, isMobile);
-    const optimalBarWidth = calculateOptimalBarWidth(dataLength, isMobile);
     const categoryGap = calculateCategoryGap(dataLength);
+    const optimalBarWidth = calculateOptimalBarWidth(dataLength, isMobile);
     
     const altura = isMobile ? 120 : 160;
     const fontSize = isMobile ? 8 : 10;
@@ -205,70 +319,66 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
 
     return (
       <div className="mb-3">
-        <div className={needsScroll ? "overflow-x-auto" : ""}>
-          <div 
-            style={{ 
-              width: `${totalWidth}px`,
-              minWidth: `${totalWidth}px`,
-              margin: needsScroll ? '0' : '0 auto'
-            }}
-          >
-            <div style={{ height: altura }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={graficoData} 
-                  margin={{ 
-                    top: 25, 
-                    right: 10, 
-                    left: 10, 
-                    bottom: 5 
+        <ScrollableChartContainer dataLength={dataLength} isMobile={isMobile}>
+          <div style={{ height: altura }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart 
+                data={graficoData} 
+                margin={{ 
+                  top: 25, 
+                  right: 10, 
+                  left: 10, 
+                  bottom: 5 
+                }}
+                barCategoryGap={categoryGap}
+              >
+                <XAxis 
+                  dataKey="periodo" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ 
+                    fontSize: fontSize, 
+                    fill: '#6B7280',
+                    textAnchor: 'middle'
                   }}
-                  barCategoryGap={categoryGap}
+                  interval={0}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                
+                <Bar 
+                  dataKey="realizadoApresentado" 
+                  fill="#3B82F6" 
+                  name="Realizado"
+                  radius={[3, 3, 0, 0]}
                   maxBarSize={optimalBarWidth}
                 >
-                  <XAxis 
-                    dataKey="periodo" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ 
-                      fontSize: fontSize, 
-                      fill: '#6B7280',
-                      textAnchor: 'middle'
+                  <LabelList 
+                    dataKey="realizadoApresentado" 
+                    position="top" 
+                    style={{ 
+                      fontSize: `${labelFontSize}px`, 
+                      fill: '#374151',
+                      fontWeight: '500'
                     }}
-                    interval={0}
+                    formatter={(value) => {
+                      if (value === 0) return '0';
+                      return parseFloat(value).toLocaleString('pt-BR');
+                    }}
                   />
-                  <Bar 
-                    dataKey="valorApresentado" 
-                    fill="#3B82F6"
-                    radius={[3, 3, 0, 0]}
-                  >
-                    <LabelList 
-                      dataKey="valorApresentado" 
-                      position="top" 
-                      style={{ 
-                        fontSize: `${labelFontSize}px`, 
-                        fill: '#374151',
-                        fontWeight: '500'
-                      }}
-                      formatter={(value) => {
-                        if (value === 0) return '0';
-                        return parseFloat(value).toLocaleString('pt-BR');
-                      }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                </Bar>
+                <Line 
+                  type="monotone" 
+                  dataKey="metaApresentado" 
+                  stroke="#6B7280" 
+                  strokeWidth={isMobile ? 2 : 3}
+                  dot={{ fill: '#6B7280', strokeWidth: 2, r: isMobile ? 3 : 4 }}
+                  name="Meta"
+                  connectNulls={true}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-        
-        {needsScroll && (
-          <div className="text-center mt-1">
-            <span className="text-xs text-gray-400">
-              ← Deslize para ver mais períodos →
-            </span>
-          </div>
-        )}
+        </ScrollableChartContainer>
       </div>
     );
   };
@@ -314,112 +424,212 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     return { kpis, graficos, outros };
   };
 
-  // Layout responsivo de KPIs
-  const renderKPILayout = (kpis) => {
-    if (kpis.length === 0) return null;
-    const count = kpis.length;
+  // Função para exibir modal de informações detalhadas
+  const handleInfoClick = async (indicador, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      const { data, error } = await supabase
+        .from('controle_indicador')
+        .select('descricao_detalhada')
+        .eq('id', indicador.id_controleindicador)
+        .single();
+      
+      if (error) {
+        console.error('Erro ao buscar descrição detalhada:', error);
+        toast.error('Erro ao carregar informações');
+        return;
+      }
+      
+      if (data?.descricao_detalhada) {
+        setInfoModalTitle(indicador.indicador || 'Informações do Indicador');
+        setInfoModalContent(data.descricao_detalhada);
+        setShowInfoModal(true);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar informações:', error);
+      toast.error('Erro ao carregar informações');
+    }
+  };
 
-    const renderKPICard = (indicador, className = "") => (
-      <div key={indicador.id} className={className}>
-        <Link href={`/indicador/${indicador.id_controleindicador}`}>
-          <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
+  const shouldShowInfoIcon = (indicador) => {
+    return indicador.controle_indicador?.descricao_detalhada && 
+           indicador.controle_indicador.descricao_detalhada.trim() !== '';
+  };
+
+  const getDescricaoResumida = (indicador) => {
+    const descricao = indicador.controle_indicador?.descricao_resumida;
+    return descricao && descricao.trim() !== '' ? descricao.trim() : null;
+  };
+
+  const renderKPICard = (indicador, className = "") => (
+    <div key={indicador.id} className={className}>
+      <Link href={`/indicador/${indicador.id_controleindicador}`}>
+        <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex-1 pr-2">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
                 {indicador.indicador || 'Sem indicador'}
               </h3>
-              <div className="flex items-center space-x-2">
-                {getStatusIndicators(indicador)}
-                {shouldShowReadLaterIcon(indicador) && (
-                  <FiClock className="w-4 h-4 text-blue-600" />
-                )}
-              </div>
+              {getDescricaoResumida(indicador) && (
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  {getDescricaoResumida(indicador)}
+                </p>
+              )}
             </div>
-            
-            <div className="mb-4">
-              <div className="text-5xl font-bold text-black">
-                {formatarValorIndicador(indicador.valor_indicador_apresentado)}
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {indicador.projeto_id && (
-                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
-                    {projetos[indicador.projeto_id]}
-                  </span>
-                )}
-                {indicador.categoria_id && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
-                    {categorias[indicador.categoria_id]}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center text-gray-500 text-xs">
-                <FiCalendar className="w-3 h-3 mr-1" />
-                {formatDate(indicador)}
-              </div>
+            <div className="flex items-center space-x-2">
+              {getStatusIndicators(indicador)}
+              {shouldShowReadLaterIcon(indicador) && (
+                <FiClock className="w-4 h-4 text-blue-600" />
+              )}
+              {shouldShowInfoIcon(indicador) && (
+                <button
+                  onClick={(e) => handleInfoClick(indicador, e)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Ver informações detalhadas"
+                >
+                  <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                </button>
+              )}
             </div>
           </div>
-        </Link>
-      </div>
-    );
+          
+          <div className="mb-4">
+            <div className="text-5xl font-bold text-black">
+              {formatarValorIndicador(indicador.valor_indicador_apresentado)}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {indicador.projeto_id && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full whitespace-nowrap">
+                  {projetos[indicador.projeto_id]}
+                </span>
+              )}
+              {indicador.categoria_id && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full whitespace-nowrap">
+                  {categorias[indicador.categoria_id]}
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center text-gray-400 text-xs">
+              <FiCalendar className="w-3 h-3 mr-1" />
+              {formatDate(indicador)}
+            </div>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
 
-    // Mesma lógica de layout da página original
+  const renderKPILayout = (kpis) => {
+    if (kpis.length === 0) return null;
+
+    const count = kpis.length;
+
     switch (count) {
       case 1:
-        return <div className="grid grid-cols-1 gap-6 mb-6">{renderKPICard(kpis[0])}</div>;
+        return (
+          <div className="grid grid-cols-1 gap-6 mb-6">
+            {renderKPICard(kpis[0])}
+          </div>
+        );
       case 2:
-        return <div className="grid grid-cols-2 gap-6 mb-6">{kpis.map(kpi => renderKPICard(kpi))}</div>;
+        return (
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
       case 3:
-        return <div className="grid grid-cols-3 gap-6 mb-6">{kpis.map(kpi => renderKPICard(kpi))}</div>;
+        return (
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
       case 4:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-1 gap-6">{renderKPICard(kpis[3])}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+              {renderKPICard(kpis[3])}
+            </div>
           </div>
         );
       case 5:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-2 gap-6">{kpis.slice(3, 5).map(kpi => renderKPICard(kpi))}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              {kpis.slice(3, 5).map(kpi => renderKPICard(kpi))}
+            </div>
           </div>
         );
       case 6:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
           </div>
         );
       case 7:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-1 gap-6">{renderKPICard(kpis[6])}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+              {renderKPICard(kpis[6])}
+            </div>
           </div>
         );
       case 8:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-2 gap-6">{kpis.slice(6, 8).map(kpi => renderKPICard(kpi))}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              {kpis.slice(6, 8).map(kpi => renderKPICard(kpi))}
+            </div>
           </div>
         );
       case 9:
         return (
           <div className="space-y-6 mb-6">
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}</div>
-            <div className="grid grid-cols-3 gap-6">{kpis.slice(6, 9).map(kpi => renderKPICard(kpi))}</div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(0, 3).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(3, 6).map(kpi => renderKPICard(kpi))}
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {kpis.slice(6, 9).map(kpi => renderKPICard(kpi))}
+            </div>
           </div>
         );
       default:
-        return <div className="grid grid-cols-3 gap-6 mb-6">{kpis.map(kpi => renderKPICard(kpi))}</div>;
+        return (
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            {kpis.map(kpi => renderKPICard(kpi))}
+          </div>
+        );
     }
   };
 
@@ -462,7 +672,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
   };
 
   const getBorderColor = (indicador) => {
-    return indicador.lido ? 'border-gray-300' : 'border-blue-500';
+    return 'border-blue-500';
   };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -495,7 +705,6 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     router.push('/visualizacao-indicadores');
   };
 
-  // ✅ FUNÇÕES DE NAVEGAÇÃO (iguais à página principal)
   const handleInicioClick = () => {
     router.push('/inicio');
   };
@@ -512,20 +721,16 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     router.push('/controle-indicador-geral');
   };
 
-  // Componente customizado para ícone de grade
-  const GridIcon = () => (
-    <div className="w-5 h-5 grid grid-cols-3 gap-0.5">
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-      <div className="bg-current rounded-sm"></div>
-    </div>
-  );
+  // Função para preparar filtros ativos para o PDF
+  const prepararFiltrosAtivos = () => {
+    return {
+      projeto: projetoSelecionado,
+      categoria: categoriaSelecionada,
+      importantes: true, // Sempre true para esta página
+      lerDepois: filtroLerDepois,
+      arquivados: filtroArquivados
+    };
+  };
 
   // Carregar categorias, projetos e projetos vinculados
   useEffect(() => {
@@ -612,9 +817,9 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
     }
   }, [user]);
 
-  // ✅ BUSCAR INDICADORES IMPORTANTES (filtro automático aplicado)
+  // ✅ NOVA FUNÇÃO: Buscar indicadores importantes usando a tabela indicadores_importantes
   useEffect(() => {
-    const fetchIndicadores = async () => {
+    const fetchIndicadoresImportantes = async () => {
       try {
         setLoading(true);
         
@@ -624,13 +829,45 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
           return;
         }
         
+        // ✅ BUSCAR PELA NOVA TABELA indicadores_importantes
         let query = supabase
+          .from('indicadores_importantes')
+          .select(`
+            id,
+            controle_indicador_id,
+            controle_indicador!inner(
+              id,
+              tipo_apresentacao,
+              descricao_detalhada,
+              descricao_resumida,
+              tipos_apresentacao(nome)
+            )
+          `)
+          .eq('usuario_id', user.id);
+
+        const { data: indicadoresImportantesData, error: importantesError } = await query;
+
+        if (importantesError) throw importantesError;
+
+        if (!indicadoresImportantesData || indicadoresImportantesData.length === 0) {
+          setIndicadores([]);
+          setLoading(false);
+          return;
+        }
+
+        // Extrair IDs dos controle_indicador que são importantes para este usuário
+        const controleIndicadorIds = indicadoresImportantesData.map(item => item.controle_indicador_id);
+
+        // ✅ BUSCAR OS DADOS DOS INDICADORES na controle_indicador_geral
+        let indicadoresQuery = supabase
           .from('controle_indicador_geral')
           .select(`
             *,
             controle_indicador!inner(
               id,
               tipo_apresentacao,
+              descricao_detalhada,
+              descricao_resumida,
               tipos_apresentacao(nome)
             )
           `)
@@ -639,40 +876,40 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
           .not('indicador', 'eq', '')
           .not('periodo_referencia', 'is', null)
           .in('projeto_id', projetosVinculados)
-          .eq('importante', true); // ✅ FILTRO AUTOMÁTICO PARA IMPORTANTES
+          .in('id_controleindicador', controleIndicadorIds); // ✅ FILTRAR pelos importantes
           
         // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
-          query = query.eq('projeto_id', projetoSelecionado);
+          indicadoresQuery = indicadoresQuery.eq('projeto_id', projetoSelecionado);
         }
         
         if (categoriaSelecionada) {
-          query = query.eq('categoria_id', categoriaSelecionada);
+          indicadoresQuery = indicadoresQuery.eq('categoria_id', categoriaSelecionada);
         }
 
         // Aplicar filtros avançados adicionais
         if (filtroLerDepois) {
-          query = query.eq('ler_depois', true);
+          indicadoresQuery = indicadoresQuery.eq('ler_depois', true);
         }
         if (filtroArquivados) {
-          query = query.eq('arquivado', true);
+          indicadoresQuery = indicadoresQuery.eq('arquivado', true);
         }
         
         // Aplicar termo de pesquisa se existir
         if (searchTerm.trim()) {
-          query = query.ilike('indicador', `%${searchTerm.trim()}%`);
+          indicadoresQuery = indicadoresQuery.ilike('indicador', `%${searchTerm.trim()}%`);
         }
         
-        query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
+        indicadoresQuery = indicadoresQuery.order('periodo_referencia', { ascending: false, nullsLast: true })
             .order('created_at', { ascending: false });
 
-        const { data, error } = await query;
+        const { data: indicadoresData, error: indicadoresError } = await indicadoresQuery;
 
-        if (error) throw error;
+        if (indicadoresError) throw indicadoresError;
 
         // Agrupar por id_controleindicador e manter apenas o mais recente
         const indicadoresAgrupados = {};
-        (data || []).forEach(indicador => {
+        (indicadoresData || []).forEach(indicador => {
           const controlId = indicador.id_controleindicador;
           
           if (!indicadoresAgrupados[controlId] || 
@@ -686,14 +923,15 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
 
         setIndicadores(indicadoresFinais);
       } catch (error) {
-        console.error('Erro ao buscar indicadores:', error);
+        console.error('Erro ao buscar indicadores importantes:', error);
+        toast.error('Erro ao carregar indicadores importantes');
       } finally {
         setLoading(false);
       }
     };
 
     if (user && projetosVinculados.length >= 0) {
-      fetchIndicadores();
+      fetchIndicadoresImportantes();
     }
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, filtroLerDepois, filtroArquivados, projetosVinculados]);
 
@@ -716,11 +954,10 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
       );
     }
     
-    if (indicador.importante) {
-      indicators.push(
-        <FiStar key="importante" className="w-4 h-4 text-blue-600" />
-      );
-    }
+    // ✅ SEMPRE MOSTRAR A ESTRELA (já que todos são importantes)
+    indicators.push(
+      <FiStar key="importante" className="w-4 h-4 text-yellow-500" />
+    );
     
     if (indicador.arquivado) {
       indicators.push(
@@ -763,13 +1000,70 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
+      {/* ✅ CSS para melhorar a scrollbar */}
+      <style jsx>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          height: 6px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+      `}</style>
+
+      {/* Modal de Informação */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {infoModalTitle}
+              </h3>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {infoModalContent}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Mobile */}
           <div className="lg:hidden">
             <div className="flex items-center justify-between mb-4">
-              {/* ✅ SEM BOTÃO VOLTAR - apenas logo */}
+              {/* Logo */}
               <LogoDisplay 
                 className=""
                 fallbackText="Importantes"
@@ -995,7 +1289,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
           {/* Desktop */}
           <div className="hidden lg:block">
             <div className="flex items-center justify-between mb-4">
-              {/* ✅ SEM BOTÃO VOLTAR - apenas logo */}
+              {/* Logo */}
               <LogoDisplay 
                 className=""
                 fallbackText="Indicadores Importantes"
@@ -1221,7 +1515,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="lg:flex lg:space-x-8">
-          {/* ✅ SIDEBAR DE NAVEGAÇÃO - Desktop (igual à página principal) */}
+          {/* SIDEBAR DE NAVEGAÇÃO - Desktop */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
@@ -1238,7 +1532,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                 </button>
 
                 <button
-                  onClick={() => {}} // ✅ ATIVO - não redireciona
+                  onClick={() => {}} // ATIVO - não redireciona
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'importantes'
                       ? 'bg-blue-100 text-blue-700'
@@ -1278,18 +1572,59 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            {/* Cabeçalho da seção */}
-            <div className="mb-6">
-              <div className="flex items-center mb-2">
-                <FiStar className="w-6 h-6 text-yellow-500 mr-2" />
-                <h2 className="text-2xl lg:text-3xl font-bold text-black">Indicadores Importantes</h2>
+            {/* Mobile: Cabeçalho da seção */}
+            <div className="lg:hidden">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center">
+                  <FiStar className="w-6 h-6 text-yellow-500 mr-2" />
+                  <h2 className="text-2xl font-bold text-black">Importantes</h2>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  {/* Botão de impressão */}
+                  <PDFPrinterIndicadores
+                    indicadores={indicadores}
+                    categorias={categorias}
+                    projetos={projetos}
+                    filtrosAtivos={prepararFiltrosAtivos()}
+                    termoBusca={searchTerm}
+                  />
+                </div>
               </div>
-              <p className="text-gray-600 text-sm">
+              
+              <p className="text-gray-600 text-sm mb-6">
                 {projetosVinculados.length === 0 
                   ? 'Nenhum projeto vinculado encontrado' 
                   : `${indicadores.length} indicadores importantes encontrados`
                 }
               </p>
+            </div>
+
+            {/* Desktop: Cabeçalho da seção */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
+              <div>
+                <div className="flex items-center mb-2">
+                  <FiStar className="w-7 h-7 text-yellow-500 mr-3" />
+                  <h2 className="text-2xl lg:text-3xl font-bold text-black">Indicadores Importantes</h2>
+                </div>
+                <p className="text-gray-600 text-sm mt-1">
+                  {projetosVinculados.length === 0 
+                    ? 'Nenhum projeto vinculado encontrado' 
+                    : `${indicadores.length} indicadores importantes encontrados`
+                  }
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                {/* Botão de impressão desktop */}
+                <PDFPrinterIndicadores
+                  indicadores={indicadores}
+                  categorias={categorias}
+                  projetos={projetos}
+                  filtrosAtivos={prepararFiltrosAtivos()}
+                  termoBusca={searchTerm}
+                />
+              </div>
             </div>
 
             {/* Conteúdo dos cards */}
@@ -1314,12 +1649,15 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum indicador importante encontrado</h3>
                 <p className="text-gray-500 max-w-md mx-auto">
-                  Não há indicadores marcados como importantes no momento. Marque indicadores como importantes na página principal para vê-los aqui.
+                  {searchTerm.trim() ? 
+                    `Nenhum resultado encontrado para "${searchTerm}" nos seus indicadores importantes.` :
+                    'Não há indicadores marcados como importantes no momento. Marque indicadores como importantes na página principal para vê-los aqui.'
+                  }
                 </p>
               </div>
             ) : (
               <div>
-                {/* Mobile */}
+                {/* Mobile: Layout com descrição resumida */}
                 <div className="lg:hidden">
                   {indicadores.map((indicador, index) => {
                     const isKPI = isKpiOrNull(indicador);
@@ -1330,13 +1668,29 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                         <Link href={`/indicador/${indicador.id_controleindicador}`}>
                           <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow`}>
                             <div className="flex justify-between items-start mb-2">
-                              <h3 className="text-base font-bold text-gray-900 flex-1 pr-2">
-                                {indicador.indicador || 'Sem indicador'}
-                              </h3>
+                              <div className="flex-1 pr-2">
+                                <h3 className="text-base font-bold text-gray-900 mb-1">
+                                  {indicador.indicador || 'Sem indicador'}
+                                </h3>
+                                {getDescricaoResumida(indicador) && (
+                                  <p className="text-xs text-gray-400 leading-relaxed">
+                                    {getDescricaoResumida(indicador)}
+                                  </p>
+                                )}
+                              </div>
                               <div className="flex items-center space-x-2">
                                 {getStatusIndicators(indicador)}
                                 {shouldShowReadLaterIcon(indicador) && (
                                   <FiClock className="w-4 h-4 text-blue-600" />
+                                )}
+                                {shouldShowInfoIcon(indicador) && (
+                                  <button
+                                    onClick={(e) => handleInfoClick(indicador, e)}
+                                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                    title="Ver informações detalhadas"
+                                  >
+                                    <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -1353,50 +1707,29 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                               } else if (isGrafico) {
                                 return <GraficoBarrasAdaptativo indicador={indicador} isMobile={true} />;
                               }
+                              
                               return null;
                             })()}
                             
-                            {(isKPI || isGrafico) ? (
-                              <div className="flex items-center justify-between">
-                                <div className="flex space-x-2">
-                                  {indicador.projeto_id && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                      {projetos[indicador.projeto_id]}
-                                    </span>
-                                  )}
-                                  {indicador.categoria_id && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                      {categorias[indicador.categoria_id]}
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="flex items-center text-gray-500 text-xs">
-                                  <FiCalendar className="w-3 h-3 mr-1" />
-                                  {formatDate(indicador)}
-                                </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex space-x-2">
+                                {indicador.projeto_id && (
+                                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                    {projetos[indicador.projeto_id]}
+                                  </span>
+                                )}
+                                {indicador.categoria_id && (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    {categorias[indicador.categoria_id]}
+                                  </span>
+                                )}
                               </div>
-                            ) : (
-                              <div className="flex items-center justify-between">
-                                <div className="flex space-x-2">
-                                  {indicador.projeto_id && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                      {projetos[indicador.projeto_id]}
-                                    </span>
-                                  )}
-                                  {indicador.categoria_id && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                      {categorias[indicador.categoria_id]}
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="flex items-center text-gray-500 text-xs">
-                                  <FiCalendar className="w-3 h-3 mr-1" />
-                                  {formatDate(indicador)}
-                                </div>
+                              
+                              <div className="flex items-center text-gray-400 text-xs">
+                                <FiCalendar className="w-3 h-3 mr-1" />
+                                {formatDate(indicador)}
                               </div>
-                            )}
+                            </div>
                           </div>
                         </Link>
                       </div>
@@ -1404,15 +1737,17 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                   })}
                 </div>
 
-                {/* Desktop */}
+                {/* Desktop: Layout com sistema KPI responsivo e descrição resumida */}
                 <div className="hidden lg:block">
                   {(() => {
                     const { kpis, graficos, outros } = separarIndicadoresPorTipo(indicadores);
                     
                     return (
                       <div>
+                        {/* Seção de KPIs com layout responsivo */}
                         {kpis.length > 0 && renderKPILayout(kpis)}
                         
+                        {/* Seção de gráficos de barras */}
                         {graficos.length > 0 && (
                           <div className="space-y-6 mb-6">
                             {graficos.map((indicador) => (
@@ -1420,13 +1755,29 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                                 <Link href={`/indicador/${indicador.id_controleindicador}`}>
                                   <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                                     <div className="flex justify-between items-start mb-3">
-                                      <h3 className="text-xl font-bold text-gray-900 flex-1 pr-2">
-                                        {indicador.indicador || 'Sem indicador'}
-                                      </h3>
+                                      <div className="flex-1 pr-2">
+                                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                                          {indicador.indicador || 'Sem indicador'}
+                                        </h3>
+                                        {getDescricaoResumida(indicador) && (
+                                          <p className="text-sm text-gray-400 leading-relaxed">
+                                            {getDescricaoResumida(indicador)}
+                                          </p>
+                                        )}
+                                      </div>
                                       <div className="flex items-center space-x-2">
                                         {getStatusIndicators(indicador)}
                                         {shouldShowReadLaterIcon(indicador) && (
                                           <FiClock className="w-4 h-4 text-blue-600" />
+                                        )}
+                                        {shouldShowInfoIcon(indicador) && (
+                                          <button
+                                            onClick={(e) => handleInfoClick(indicador, e)}
+                                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                            title="Ver informações detalhadas"
+                                          >
+                                            <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                          </button>
                                         )}
                                       </div>
                                     </div>
@@ -1447,7 +1798,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                                         )}
                                       </div>
                                       
-                                      <div className="flex items-center text-gray-500 text-sm">
+                                      <div className="flex items-center text-gray-400 text-sm">
                                         <FiCalendar className="w-4 h-4 mr-1" />
                                         {formatDate(indicador)}
                                       </div>
@@ -1459,6 +1810,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                           </div>
                         )}
                         
+                        {/* Seção de outros tipos */}
                         {outros.length > 0 && (
                           <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
                             {outros.map((indicador) => (
@@ -1466,13 +1818,29 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                                 <Link href={`/indicador/${indicador.id_controleindicador}`}>
                                   <div className={`bg-white rounded-lg border-l-4 ${getBorderColor(indicador)} p-4 shadow-sm hover:shadow-md transition-shadow h-full`}>
                                     <div className="flex justify-between items-start mb-3">
-                                      <h3 className="text-lg font-bold text-gray-900 flex-1 pr-2">
-                                        {indicador.indicador || 'Sem indicador'}
-                                      </h3>
+                                      <div className="flex-1 pr-2">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                          {indicador.indicador || 'Sem indicador'}
+                                        </h3>
+                                        {getDescricaoResumida(indicador) && (
+                                          <p className="text-sm text-gray-400 leading-relaxed">
+                                            {getDescricaoResumida(indicador)}
+                                          </p>
+                                        )}
+                                      </div>
                                       <div className="flex items-center space-x-2">
                                         {getStatusIndicators(indicador)}
                                         {shouldShowReadLaterIcon(indicador) && (
                                           <FiClock className="w-4 h-4 text-blue-600" />
+                                        )}
+                                        {shouldShowInfoIcon(indicador) && (
+                                          <button
+                                            onClick={(e) => handleInfoClick(indicador, e)}
+                                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                                            title="Ver informações detalhadas"
+                                          >
+                                            <FiInfo className="w-4 h-4 text-gray-600 hover:text-blue-600" />
+                                          </button>
                                         )}
                                       </div>
                                     </div>
@@ -1491,7 +1859,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
                                         )}
                                       </div>
                                       
-                                      <div className="flex items-center justify-end text-gray-500 text-xs">
+                                      <div className="flex items-center justify-end text-gray-400 text-xs">
                                         <FiCalendar className="w-3 h-3 mr-1" />
                                         {formatDate(indicador)}
                                       </div>
@@ -1512,11 +1880,11 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
         </div>
       </div>
 
-      {/* ✅ BARRA DE NAVEGAÇÃO INFERIOR - Mobile (igual à página principal) */}
+      {/* BARRA DE NAVEGAÇÃO INFERIOR - Mobile */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
-            onClick={handleInicioClick}
+            onClick={handleIndicadoresClick}
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'inicio'
                 ? 'text-blue-600'
@@ -1528,7 +1896,7 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
           </button>
 
           <button
-            onClick={() => {}} // ✅ ATIVO - não redireciona
+            onClick={() => {}} // ATIVO - não redireciona
             className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 rounded-lg transition-colors ${
               activeTab === 'importantes'
                 ? 'text-blue-600'
@@ -1569,11 +1937,14 @@ export default function VisualizacaoIndicadoresImportantes({ user }) {
       <div className="lg:hidden pb-16"></div>
 
       {/* Overlay para fechar menus quando clicar fora */}
-      {showMenu && (
+      {(showMenu || showInfoModal) && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
           onClick={() => {
             setShowMenu(false);
+            if (!showInfoModal) {
+              setShowMenu(false);
+            }
           }}
         />
       )}

@@ -43,15 +43,16 @@ export default function IndicadorDetalhe({ user }) {
   const [todosMarcadosComoLidos, setTodosMarcadosComoLidos] = useState(false);
   const [atualizandoStatus, setAtualizandoStatus] = useState(false);
   
-  // ✅ MODIFICADO: Estado para controlar status apenas de leitura e arquivo
+  // ✅ MODIFICADO: Estado para controlar status apenas de leitura
   const [statusGeral, setStatusGeral] = useState({
-    ler_depois: false,
-    arquivado: false
+    ler_depois: false
   });
 
-  // ✅ NOVO: Estado para controlar status de importante separadamente
+  // ✅ NOVO: Estados para controlar status importantes e arquivados separadamente
   const [isImportante, setIsImportante] = useState(false);
+  const [isArquivado, setIsArquivado] = useState(false);
   const [atualizandoImportante, setAtualizandoImportante] = useState(false);
+  const [atualizandoArquivado, setAtualizandoArquivado] = useState(false);
 
   // Novo estado para controlar o modal de confirmação de arquivar
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -182,6 +183,135 @@ export default function IndicadorDetalhe({ user }) {
       toast.error('Erro ao atualizar indicador');
     } finally {
       setAtualizandoImportante(false);
+    }
+  };
+
+  // =====================================
+  // ✅ NOVAS FUNÇÕES PARA GERENCIAR INDICADORES ARQUIVADOS
+  // =====================================
+
+  // Verificar se o indicador está marcado como arquivado para o usuário atual
+  const verificarIndicadorArquivado = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_arquivados')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .eq('controle_indicador_id', controleIndicadorId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      return data !== null;
+    } catch (error) {
+      console.error('Erro ao verificar indicador arquivado:', error);
+      return false;
+    }
+  };
+
+  // Marcar indicador como arquivado
+  const marcarComoArquivado = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_arquivados')
+        .insert({
+          usuario_id: user.id,
+          controle_indicador_id: controleIndicadorId
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao marcar como arquivado:', error);
+      return false;
+    }
+  };
+
+  // Desmarcar indicador como arquivado
+  const desmarcarComoArquivado = async (controleIndicadorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_arquivados')
+        .delete()
+        .eq('usuario_id', user.id)
+        .eq('controle_indicador_id', controleIndicadorId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao desmarcar como arquivado:', error);
+      return false;
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Alternar status de arquivado
+  const alternarStatusArquivado = async () => {
+    if (atualizandoArquivado || !id) return;
+    
+    // Se for arquivar e não está arquivado, mostrar confirmação
+    if (!isArquivado) {
+      setShowArchiveConfirm(true);
+      return;
+    }
+    
+    // Se já está arquivado, desarquivar diretamente
+    try {
+      setAtualizandoArquivado(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      const sucesso = await desmarcarComoArquivado(parseInt(id));
+      
+      if (sucesso) {
+        setIsArquivado(false);
+        toast.success('Indicador desarquivado!');
+      } else {
+        toast.error('Erro ao desarquivar indicador');
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status arquivado:', error);
+      toast.error('Erro ao atualizar indicador');
+    } finally {
+      setAtualizandoArquivado(false);
+    }
+  };
+
+  // ✅ MODIFICADA: Função para confirmar o arquivamento
+  const confirmarArquivamento = async () => {
+    setShowArchiveConfirm(false);
+    
+    try {
+      setAtualizandoArquivado(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+      
+      const sucesso = await marcarComoArquivado(parseInt(id));
+      
+      if (sucesso) {
+        setIsArquivado(true);
+        toast.success('Indicador arquivado!');
+      } else {
+        toast.error('Erro ao arquivar indicador');
+      }
+    } catch (error) {
+      console.error('Erro ao arquivar indicador:', error);
+      toast.error('Erro ao arquivar indicador');
+    } finally {
+      setAtualizandoArquivado(false);
     }
   };
 
@@ -749,7 +879,7 @@ export default function IndicadorDetalhe({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: Buscar dados dos indicadores, carregar configurações E verificar status importante
+  // ✅ MODIFICADO: Buscar dados dos indicadores, carregar configurações E verificar status importante/arquivado
   useEffect(() => {
     const fetchIndicadores = async () => {
       if (!id) return;
@@ -778,11 +908,11 @@ export default function IndicadorDetalhe({ user }) {
           setNomeIndicador('Indicador sem dados');
           setTodosMarcadosComoLidos(false);
           setStatusGeral({
-            ler_depois: false,
-            arquivado: false
+            ler_depois: false
           });
           setInfoGeral(null);
           setIsImportante(false); // ✅ NOVO: Reset status importante
+          setIsArquivado(false);  // ✅ NOVO: Reset status arquivado
         } else {
           // Aplicar filtro de período
           const indicadoresFiltrados = filtrarPorPeriodo(dadosIndicadores);
@@ -795,10 +925,9 @@ export default function IndicadorDetalhe({ user }) {
           const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
           setTodosMarcadosComoLidos(todosLidos);
           
-          // ✅ MODIFICADO: Verificar status geral apenas para ler_depois e arquivado
+          // ✅ MODIFICADO: Verificar status geral apenas para ler_depois
           const statusGeral = {
-            ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
-            arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
+            ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true)
           };
           setStatusGeral(statusGeral);
           
@@ -829,6 +958,10 @@ export default function IndicadorDetalhe({ user }) {
             // ✅ NOVO: Verificar se o indicador está marcado como importante
             const isImportanteStatus = await verificarIndicadorImportante(controleData.id);
             setIsImportante(isImportanteStatus);
+
+            // ✅ NOVO: Verificar se o indicador está marcado como arquivado
+            const isArquivadoStatus = await verificarIndicadorArquivado(controleData.id);
+            setIsArquivado(isArquivadoStatus);
           }
         }
       } catch (error) {
@@ -839,11 +972,11 @@ export default function IndicadorDetalhe({ user }) {
         setNomeIndicador('Erro ao carregar indicador');
         setTodosMarcadosComoLidos(false);
         setStatusGeral({
-          ler_depois: false,
-          arquivado: false
+          ler_depois: false
         });
         setInfoGeral(null);
         setIsImportante(false); // ✅ NOVO: Reset status importante
+        setIsArquivado(false);  // ✅ NOVO: Reset status arquivado
       } finally {
         setLoading(false);
       }
@@ -876,10 +1009,9 @@ export default function IndicadorDetalhe({ user }) {
       const todosLidos = indicadoresFiltrados.every(indicador => indicador.lido === true);
       setTodosMarcadosComoLidos(todosLidos);
       
-      // ✅ MODIFICADO: Status geral apenas para ler_depois e arquivado
+      // ✅ MODIFICADO: Status geral apenas para ler_depois
       const statusGeral = {
-        ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true),
-        arquivado: indicadoresFiltrados.some(indicador => indicador.arquivado === true)
+        ler_depois: indicadoresFiltrados.some(indicador => indicador.ler_depois === true)
       };
       setStatusGeral(statusGeral);
     }
@@ -937,15 +1069,9 @@ export default function IndicadorDetalhe({ user }) {
     }
   };
 
-  // ✅ MODIFICADO: Função para alternar status apenas de ler_depois e arquivado
+  // ✅ MODIFICADO: Função para alternar status apenas de ler_depois
   const alternarStatusTodos = async (campo, valorAtual) => {
     if (atualizandoStatus) return;
-    
-    // Se for arquivar e não está arquivado, mostrar confirmação
-    if (campo === 'arquivado' && !valorAtual) {
-      setShowArchiveConfirm(true);
-      return;
-    }
     
     try {
       setAtualizandoStatus(true);
@@ -984,60 +1110,13 @@ export default function IndicadorDetalhe({ user }) {
       
       // Mensagens específicas para cada ação
       const mensagens = {
-        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois',
-        arquivado: novoValor ? 'Indicadores arquivados!' : 'Indicadores desarquivados'
+        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois'
       };
       
       toast.success(mensagens[campo]);
     } catch (error) {
       console.error(`Erro ao alterar ${campo}:`, error);
       toast.error('Erro ao atualizar indicadores');
-    } finally {
-      setAtualizandoStatus(false);
-    }
-  };
-
-  // Função para confirmar o arquivamento
-  const confirmarArquivamento = async () => {
-    setShowArchiveConfirm(false);
-    
-    try {
-      setAtualizandoStatus(true);
-      
-      // Obter o token de acesso do usuário atual
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error('Você precisa estar logado para esta ação');
-        return;
-      }
-      
-      // Atualizar TODOS os registros com o mesmo id_controleindicador - definir arquivado como TRUE
-      const { data, error } = await supabase
-        .from('controle_indicador_geral')
-        .update({ arquivado: true })
-        .eq('id_controleindicador', id)
-        .select();
-      
-      if (error) throw error;
-      
-      // Atualizar o estado local
-      setIndicadores(prev => 
-        prev.map(ind => ({ ...ind, arquivado: true }))
-      );
-      
-      // Atualizar dados originais também
-      setIndicadoresOriginais(prev => 
-        prev.map(ind => ({ ...ind, arquivado: true }))
-      );
-      
-      // Atualizar status geral
-      setStatusGeral(prev => ({ ...prev, arquivado: true }));
-      
-      toast.success('Indicadores arquivados!');
-    } catch (error) {
-      console.error('Erro ao arquivar indicadores:', error);
-      toast.error('Erro ao arquivar indicadores');
     } finally {
       setAtualizandoStatus(false);
     }
@@ -1650,10 +1729,10 @@ export default function IndicadorDetalhe({ user }) {
             </div>
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Arquivar Indicadores
+                Arquivar Indicador
               </h3>
               <p className="text-sm text-gray-500 mb-6">
-                Tem certeza que deseja arquivar todos os períodos deste indicador? Você poderá encontrá-los na seção "Arquivados".
+                Tem certeza que deseja arquivar este indicador? Você poderá encontrá-lo na seção "Arquivados".
               </p>
               <div className="flex space-x-3">
                 <button
@@ -2020,7 +2099,7 @@ export default function IndicadorDetalhe({ user }) {
               filtroPeriodo={filtroPeriodo}
               dataInicio={dataInicio}
               dataFim={dataFim}
-              dadosGraficoCombinado={dadosGraficoCombinado} // ✅ ADICIONADO
+              dadosGraficoCombinado={dadosGraficoCombinado}
             />
           </div>
 
@@ -2067,16 +2146,16 @@ export default function IndicadorDetalhe({ user }) {
               </span>
             </button>
 
-            {/* Botão Arquivar */}
+            {/* ✅ MODIFICADO: Botão Arquivar usando nova função */}
             <button
-              onClick={() => alternarStatusTodos('arquivado', statusGeral.arquivado)}
-              disabled={atualizandoStatus}
+              onClick={alternarStatusArquivado}
+              disabled={atualizandoArquivado}
               className={`flex flex-col items-center space-y-0.5 py-1.5 px-2 transition-colors ${
-                atualizandoStatus ? 'opacity-50' : ''
+                atualizandoArquivado ? 'opacity-50' : ''
               }`}
             >
-              <FiArchive className={`h-4 w-4 ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-xs font-medium ${statusGeral.arquivado ? 'text-blue-600' : 'text-gray-400'}`}>
+              <FiArchive className={`h-4 w-4 ${isArquivado ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-xs font-medium ${isArquivado ? 'text-blue-600' : 'text-gray-400'}`}>
                 Arquivar
               </span>
             </button>
@@ -2261,14 +2340,14 @@ export default function IndicadorDetalhe({ user }) {
                   <span className="font-medium">Ler Depois</span>
                 </button>
 
-                {/* Botão Arquivar */}
+                {/* ✅ MODIFICADO: Botão Arquivar usando nova função */}
                 <button
-                  onClick={() => alternarStatusTodos('arquivado', statusGeral.arquivado)}
-                  disabled={atualizandoStatus}
+                  onClick={alternarStatusArquivado}
+                  disabled={atualizandoArquivado}
                   className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
-                    atualizandoStatus ? 'opacity-50' : ''
+                    atualizandoArquivado ? 'opacity-50' : ''
                   } ${
-                    statusGeral.arquivado 
+                    isArquivado 
                       ? 'text-blue-600' 
                       : 'text-gray-400 hover:text-gray-600'
                   }`}
@@ -2444,7 +2523,7 @@ export default function IndicadorDetalhe({ user }) {
               filtroPeriodo={filtroPeriodo}
               dataInicio={dataInicio}
               dataFim={dataFim}
-              dadosGraficoCombinado={dadosGraficoCombinado} // ✅ ADICIONADO
+              dadosGraficoCombinado={dadosGraficoCombinado}
             />
             
             <button
