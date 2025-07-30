@@ -1,4 +1,5 @@
 // ✅ PDFPrinterIndicadores - Componente para imprimir lista de indicadores agrupados por projeto e categoria
+// MODIFICADO: Apenas botão de impressão com ícone cinza, sem texto
 
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
@@ -160,9 +161,6 @@ const PDFPrinterIndicadores = ({
       </svg>
     `;
   };
-
-  // ✅ FUNÇÃO: Gerar tabela de dados - REMOVIDA
-  // Não precisamos mais da tabela, apenas do gráfico
 
   // ✅ FUNÇÃO: Verificar se é KPI
   const isKpiOrNull = (indicador) => {
@@ -540,9 +538,6 @@ const PDFPrinterIndicadores = ({
             stroke-width: 1;
         }
         
-        /* ✅ TABELA DE DADOS - REMOVIDA */
-        /* Tabela não é mais necessária */
-        
         .grafico-info {
             font-size: 10px;
             color: #9CA3AF;
@@ -711,76 +706,24 @@ const PDFPrinterIndicadores = ({
     }
   };
 
-  // ✅ FUNÇÃO: Download como HTML
-  const gerarHTMLDownload = async () => {
-    if (gerando) return;
-
-    try {
-      setGerando(true);
-      toast.loading('Gerando arquivo HTML...', { id: 'pdf-generation' });
-
-      const htmlCompleto = await gerarHTMLCompleto();
-
-      const blob = new Blob([htmlCompleto], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `relatorio_indicadores_${new Date().toISOString().split('T')[0]}.html`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      window.URL.revokeObjectURL(url);
-
-      toast.success('Arquivo HTML baixado! Abra no navegador e use Ctrl+P para PDF', { id: 'pdf-generation' });
-    } catch (error) {
-      console.error('Erro ao gerar HTML:', error);
-      toast.error('Erro ao gerar arquivo HTML', { id: 'pdf-generation' });
-    } finally {
-      setGerando(false);
-    }
-  };
-
+  // ✅ MODIFICADO: Retorna apenas o botão de impressão com ícone cinza
   return (
-    <div className="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
-      {/* ✅ BOTÃO PRINCIPAL: Impressão Nativa */}
-      <button
-        onClick={gerarPDFNativo}
-        disabled={gerando || !indicadores || indicadores.length === 0}
-        className={`flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors text-sm w-full lg:w-auto ${
-          gerando || !indicadores || indicadores.length === 0
-            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-            : 'bg-orange-600 text-white hover:bg-orange-700'
-        }`}
-      >
-        {gerando ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Preparando...
-          </>
-        ) : (
-          <>
-            <FiFileText className="mr-2 h-4 w-4" />
-            Imprimir Relatório
-          </>
-        )}
-      </button>
-
-      {/* ✅ BOTÃO ALTERNATIVO: Download HTML */}
-      <button
-        onClick={gerarHTMLDownload}
-        disabled={gerando || !indicadores || indicadores.length === 0}
-        className={`flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors text-sm w-full lg:w-auto ${
-          gerando || !indicadores || indicadores.length === 0
-            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
-      >
-        📄 Baixar HTML
-      </button>
-    </div>
+    <button
+      onClick={gerarPDFNativo}
+      disabled={gerando || !indicadores || indicadores.length === 0}
+      className={`flex items-center text-gray-600 hover:text-gray-800 transition-colors ${
+        gerando || !indicadores || indicadores.length === 0
+          ? 'opacity-50 cursor-not-allowed'
+          : 'cursor-pointer'
+      }`}
+      title="Imprimir Relatório"
+    >
+      {gerando ? (
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+      ) : (
+        <FiFileText className="w-5 h-5" />
+      )}
+    </button>
   );
 };
 

@@ -1764,7 +1764,7 @@ export default function VisualizacaoIndicadores({ user }) {
                 <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
                 
                 <div className="flex items-center space-x-2">
-                  {/* ✅ NOVO: Botão de impressão mobile */}
+                  {/* ✅ MODIFICADO: Apenas botão de impressão com ícone cinza */}
                   <PDFPrinterIndicadores
                     indicadores={indicadores}
                     categorias={categorias}
@@ -1772,16 +1772,6 @@ export default function VisualizacaoIndicadores({ user }) {
                     filtrosAtivos={prepararFiltrosAtivos()}
                     termoBusca={searchTerm}
                   />
-                  
-                  {activeTab === 'inicio' && !searchTerm.trim() && (
-                    <button
-                      onClick={() => setShowAllContent(!showAllContent)}
-                      className="flex items-center text-gray-600 hover:text-gray-800"
-                    >
-                      {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
-                      <span className="text-sm">Ver todos</span>
-                    </button>
-                  )}
                 </div>
               </div>
               
@@ -1804,16 +1794,6 @@ export default function VisualizacaoIndicadores({ user }) {
                   filtrosAtivos={prepararFiltrosAtivos()}
                   termoBusca={searchTerm}
                 />
-                
-                {activeTab === 'inicio' && !searchTerm.trim() && (
-                  <button
-                    onClick={() => setShowAllContent(!showAllContent)}
-                    className="flex items-center text-gray-600 hover:text-gray-800"
-                  >
-                    {showAllContent ? <FiEyeOff className="w-5 h-5 mr-1" /> : <FiEye className="w-5 h-5 mr-1" />}
-                    <span className="text-sm">Ver todos</span>
-                  </button>
-                )}
               </div>
             </div>
 
