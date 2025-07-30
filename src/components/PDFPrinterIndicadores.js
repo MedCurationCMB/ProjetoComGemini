@@ -691,13 +691,12 @@ const PDFPrinterIndicadores = ({
       printWindow.document.write(htmlCompleto);
       printWindow.document.close();
       
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-          toast.success('Relatório enviado para impressão!', { id: 'pdf-generation' });
-          setGerando(false);
-        }, 500);
-      };
+      // ✅ Para o loading imediatamente após abrir a nova aba
+      toast.success('Relatório aberto em nova aba!', { id: 'pdf-generation' });
+      setGerando(false);
+      
+      // ✅ REMOVIDO: Não abre mais a impressão automaticamente
+      // O usuário deve clicar no botão "Imprimir PDF" na nova aba
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
