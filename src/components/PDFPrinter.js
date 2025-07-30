@@ -1,4 +1,4 @@
-// ✅ PDFPrinter CORRIGIDO - Cabeçalho Fixo Funcional
+// ✅ PDFPrinter CORRIGIDO - Cabeçalho Fixo Funcional + Loading + Sem Impressão Automática
 
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
@@ -23,7 +23,7 @@ const PDFPrinter = ({
 }) => {
   const [gerando, setGerando] = useState(false);
 
-  // ✅ ABORDAGEM 1: HTML + CSS com window.print()
+  // ✅ FUNÇÃO CORRIGIDA: Loading e sem impressão automática
   const gerarPDFNativo = () => {
     if (gerando) return;
 
@@ -42,16 +42,12 @@ const PDFPrinter = ({
       printWindow.document.write(htmlCompleto);
       printWindow.document.close();
       
-      // ✅ AGUARDAR CARREGAMENTO E IMPRIMIR
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-          // printWindow.close(); // Opcional: fechar após imprimir
-          
-          toast.success('Relatório enviado para impressão!', { id: 'pdf-generation' });
-          setGerando(false);
-        }, 500);
-      };
+      // ✅ Para o loading imediatamente após abrir a nova aba
+      toast.success('Relatório aberto em nova aba!', { id: 'pdf-generation' });
+      setGerando(false);
+      
+      // ✅ REMOVIDO: Não abre mais a impressão automaticamente
+      // O usuário deve clicar no botão "Imprimir PDF" na nova aba
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
