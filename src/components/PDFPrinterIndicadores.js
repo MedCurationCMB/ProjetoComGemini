@@ -385,27 +385,25 @@ const PDFPrinterIndicadores = ({
             font-size: 14px;
         }
         
-        /* ✅ GRUPO PROJETO/CATEGORIA */
+        /* ✅ GRUPO PROJETO/CATEGORIA SEM CARD */
         .grupo-projeto-categoria {
             margin-bottom: 40px;
         }
         
-        .grupo-header {
-            background: #F3F4F6;
-            padding: 15px 20px;
-            border-radius: 8px;
+        .grupo-header-simples {
             margin-bottom: 20px;
-            border-left: 4px solid #012060;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E7EB;
         }
         
-        .grupo-header h2 {
+        .grupo-header-simples h2 {
             color: #012060;
             font-size: 20px;
             margin-bottom: 5px;
             font-weight: bold;
         }
         
-        .grupo-header p {
+        .grupo-header-simples p {
             color: #6B7280;
             font-size: 14px;
         }
@@ -611,16 +609,15 @@ const PDFPrinterIndicadores = ({
         <div class="content-with-header">
             ${gruposIndicadores.map((grupo, index) => `
                 <div class="grupo-projeto-categoria">
-                    <!-- ✅ CABEÇALHO DO GRUPO -->
-                    <div class="grupo-header">
+                    <!-- ✅ CABEÇALHO DO GRUPO SEM CARD -->
+                    <div class="grupo-header-simples">
                         <h2>${grupo.projeto.nome}</h2>
                         <p>${grupo.categoria.nome}</p>
                     </div>
                     
                     ${grupo.kpis.length > 0 ? `
-                        <!-- ✅ SEÇÃO DE KPIs -->
+                        <!-- ✅ SEÇÃO DE KPIs SEM TÍTULO -->
                         <div class="section kpis-section">
-                            <h3>Indicadores (${grupo.kpis.length})</h3>
                             <div class="kpis-grid">
                                 ${grupo.kpis.map(kpi => `
                                     <div class="kpi-card">
@@ -638,9 +635,8 @@ const PDFPrinterIndicadores = ({
                     ` : ''}
                     
                     ${grupo.graficos.length > 0 ? `
-                        <!-- ✅ SEÇÃO DE GRÁFICOS -->
+                        <!-- ✅ SEÇÃO DE GRÁFICOS SEM TÍTULO -->
                         <div class="section graficos-section">
-                            <h3>Gráficos (${grupo.graficos.length})</h3>
                             <div class="graficos-grid">
                                 ${grupo.graficos.map(grafico => {
                                     const dadosGrafico = dadosGraficos[grafico.id_controleindicador] || [];
