@@ -89,7 +89,7 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Verificar se o documento está arquivado para o usuário
+  // Função: Verificar se o documento está arquivado para o usuário
   const verificarSeEstaArquivado = async (documentoId, userId) => {
     try {
       const { data, error } = await supabase
@@ -104,6 +104,25 @@ export default function DocumentoDetalhe({ user }) {
       return !!data; // Retorna true se encontrou registro, false caso contrário
     } catch (error) {
       console.error('Erro ao verificar se está arquivado:', error);
+      return false;
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Verificar se o documento está marcado para ler depois pelo usuário
+  const verificarSeELerDepois = async (documentoId, userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('medcuration_lerdepois')
+        .select('id')
+        .eq('usuario_id', userId)
+        .eq('controle_conteudo_geral_id', documentoId)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      return !!data; // Retorna true se encontrou registro, false caso contrário
+    } catch (error) {
+      console.error('Erro ao verificar se é ler depois:', error);
       return false;
     }
   };
@@ -130,14 +149,18 @@ export default function DocumentoDetalhe({ user }) {
         // Verificar se o documento é importante para este usuário
         const eImportante = await verificarSeEImportante(data.id, session.user.id);
         
-        // ✅ NOVO: Verificar se o documento está arquivado para este usuário
+        // Verificar se o documento está arquivado para este usuário
         const estaArquivado = await verificarSeEstaArquivado(data.id, session.user.id);
+        
+        // ✅ NOVO: Verificar se o documento está marcado para ler depois por este usuário
+        const eLerDepois = await verificarSeELerDepois(data.id, session.user.id);
         
         // Adicionar os status ao documento
         setDocumento({ 
           ...data, 
           importante: eImportante,
-          arquivado: estaArquivado  // ✅ NOVO: Status de arquivado personalizado por usuário
+          arquivado: estaArquivado,
+          ler_depois: eLerDepois  // ✅ NOVO: Status de ler depois personalizado por usuário
         });
       } catch (error) {
         console.error('Erro ao buscar documento:', error);
@@ -241,7 +264,7 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Gerenciar arquivados
+  // Função: Gerenciar arquivados
   const toggleArquivado = async () => {
     if (!documento || atualizandoStatus) return;
     
@@ -282,50 +305,57 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
-  // Função para alternar status (apenas ler_depois agora)
-  const alternarStatus = async (campo, valorAtual) => {
+  // ✅ NOVA FUNÇÃO: Gerenciar ler depois
+  const toggleLerDepois = async () => {
     if (!documento || atualizandoStatus) return;
     
     try {
       setAtualizandoStatus(true);
       
-      // Obter o token de acesso do usuário atual
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         toast.error('Você precisa estar logado para esta ação');
         return;
       }
-      
-      const novoValor = !valorAtual;
-      
-      // Atualizar o documento no Supabase
-      const { data, error } = await supabase
-        .from('controle_conteudo_geral')
-        .update({ [campo]: novoValor })
-        .eq('id', documento.id)
-        .select();
-      
-      if (error) throw error;
-      
-      // Atualizar o estado local
-      setDocumento(prev => ({ ...prev, [campo]: novoValor }));
-      
-      // Mensagens específicas para cada ação
-      const mensagens = {
-        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois'
-      };
-      
-      toast.success(mensagens[campo]);
+
+      if (documento.ler_depois) {
+        // Se já está marcado para ler depois, remover da tabela
+        const { error } = await supabase
+          .from('medcuration_lerdepois')
+          .delete()
+          .eq('usuario_id', session.user.id)
+          .eq('controle_conteudo_geral_id', documento.id);
+        
+        if (error) throw error;
+        
+        // Atualizar o estado local
+        setDocumento(prev => ({ ...prev, ler_depois: false }));
+        toast.success('Removido de ler depois');
+      } else {
+        // Se não está marcado para ler depois, adicionar à tabela
+        const { error } = await supabase
+          .from('medcuration_lerdepois')
+          .insert({
+            usuario_id: session.user.id,
+            controle_conteudo_geral_id: documento.id
+          });
+        
+        if (error) throw error;
+        
+        // Atualizar o estado local
+        setDocumento(prev => ({ ...prev, ler_depois: true }));
+        toast.success('Adicionado para ler depois!');
+      }
     } catch (error) {
-      console.error(`Erro ao alterar ${campo}:`, error);
+      console.error('Erro ao alterar status de ler depois:', error);
       toast.error('Erro ao atualizar documento');
     } finally {
       setAtualizandoStatus(false);
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Confirmar arquivamento
+  // Função para confirmar arquivamento
   const confirmarArquivamento = async () => {
     setShowArchiveConfirm(false);
     
@@ -571,9 +601,9 @@ export default function DocumentoDetalhe({ user }) {
               </span>
             </button>
 
-            {/* Botão Ler Depois */}
+            {/* ✅ BOTÃO LER DEPOIS ATUALIZADO - Mobile */}
             <button
-              onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+              onClick={toggleLerDepois}
               disabled={atualizandoStatus}
               className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
@@ -585,7 +615,7 @@ export default function DocumentoDetalhe({ user }) {
               </span>
             </button>
 
-            {/* ✅ BOTÃO ARQUIVAR ATUALIZADO */}
+            {/* Botão Arquivar */}
             <button
               onClick={toggleArquivado}
               disabled={atualizandoStatus}
@@ -664,9 +694,9 @@ export default function DocumentoDetalhe({ user }) {
                   <span className="font-medium">Importante</span>
                 </button>
 
-                {/* Botão Ler Depois */}
+                {/* ✅ BOTÃO LER DEPOIS ATUALIZADO - Desktop */}
                 <button
-                  onClick={() => alternarStatus('ler_depois', documento.ler_depois)}
+                  onClick={toggleLerDepois}
                   disabled={atualizandoStatus}
                   className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
                     atualizandoStatus ? 'opacity-50' : ''
@@ -680,7 +710,7 @@ export default function DocumentoDetalhe({ user }) {
                   <span className="font-medium">Ler Depois</span>
                 </button>
 
-                {/* ✅ BOTÃO ARQUIVAR ATUALIZADO - Desktop */}
+                {/* Botão Arquivar - Desktop */}
                 <button
                   onClick={toggleArquivado}
                   disabled={atualizandoStatus}

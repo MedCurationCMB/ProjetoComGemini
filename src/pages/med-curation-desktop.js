@@ -1,4 +1,4 @@
-// Arquivo: src/pages/med-curation-desktop.js - Versão completa com filtro de arquivados
+// Arquivo: src/pages/med-curation-desktop.js - Versão completa com filtros avançados incluindo ler depois
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -44,6 +44,10 @@ export default function MedCurationDesktop({ user }) {
   const [filtroLerDepois, setFiltroLerDepois] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
+  // Estados para controlar documentos do usuário
+  const [documentosArquivadosUsuario, setDocumentosArquivadosUsuario] = useState([]);
+  const [documentosLerDepoisUsuario, setDocumentosLerDepoisUsuario] = useState([]);
+  
   // Estados para controlar a navegação
   const [activeTab, setActiveTab] = useState('inicio');
   const [showAllContent, setShowAllContent] = useState(false);
@@ -88,6 +92,46 @@ export default function MedCurationDesktop({ user }) {
     }
   };
 
+  // ✅ FUNÇÃO: Buscar documentos arquivados do usuário
+  const fetchDocumentosArquivadosUsuario = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('medcuration_arquivados')
+        .select('controle_conteudo_geral_id')
+        .eq('usuario_id', userId);
+
+      if (error) throw error;
+
+      const idsArquivados = data.map(item => item.controle_conteudo_geral_id);
+      setDocumentosArquivadosUsuario(idsArquivados);
+      
+      return idsArquivados;
+    } catch (error) {
+      console.error('Erro ao buscar documentos arquivados do usuário:', error);
+      return [];
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Buscar documentos "ler depois" do usuário
+  const fetchDocumentosLerDepoisUsuario = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('medcuration_lerdepois')
+        .select('controle_conteudo_geral_id')
+        .eq('usuario_id', userId);
+
+      if (error) throw error;
+
+      const idsLerDepois = data.map(item => item.controle_conteudo_geral_id);
+      setDocumentosLerDepoisUsuario(idsLerDepois);
+      
+      return idsLerDepois;
+    } catch (error) {
+      console.error('Erro ao buscar documentos ler depois do usuário:', error);
+      return [];
+    }
+  };
+
   // Função para determinar a cor da borda baseada no status de leitura
   const getBorderColor = (documento) => {
     return documento.lido ? 'border-gray-300' : 'border-blue-500';
@@ -112,11 +156,15 @@ export default function MedCurationDesktop({ user }) {
     }
   };
 
-  // Carregar categorias, projetos e projetos vinculados
+  // ✅ MODIFICADO: Carregar categorias, projetos, projetos vinculados, documentos arquivados e ler depois
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
         const projetoIds = await fetchProjetosVinculados(user.id);
+        
+        // ✅ Carregar documentos arquivados e ler depois do usuário
+        await fetchDocumentosArquivadosUsuario(user.id);
+        await fetchDocumentosLerDepoisUsuario(user.id);
         
         if (projetoIds.length > 0) {
           const { data: categoriasComControles, error: categoriasControlesError } = await supabase
@@ -207,7 +255,7 @@ export default function MedCurationDesktop({ user }) {
     }
   }, [user]);
 
-  // ✅ NOVA FUNÇÃO: Buscar documentos com verificação de arquivados
+  // ✅ MODIFICADO: Buscar documentos com verificação de arquivados e ler depois
   useEffect(() => {
     const fetchDocumentos = async () => {
       try {
@@ -222,17 +270,6 @@ export default function MedCurationDesktop({ user }) {
         
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
-        
-        // ✅ NOVA LÓGICA: Buscar documentos arquivados para este usuário
-        const { data: documentosArquivadosData, error: arquivadosError } = await supabase
-          .from('medcuration_arquivados')
-          .select('controle_conteudo_geral_id')
-          .eq('usuario_id', session.user.id);
-        
-        if (arquivadosError) throw arquivadosError;
-        
-        // IDs dos documentos arquivados pelo usuário
-        const idsArquivados = documentosArquivadosData?.map(item => item.controle_conteudo_geral_id) || [];
         
         // ✅ BUSCAR IMPORTANTES PARA O USUÁRIO
         const { data: documentosImportantesData, error: importantesError } = await supabase
@@ -263,15 +300,15 @@ export default function MedCurationDesktop({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // ✅ NOVA LÓGICA: Aplicar filtros baseados na aba ativa e arquivados
+        // ✅ NOVA LÓGICA: Aplicar filtros baseados na aba ativa e filtros especiais
         switch (activeTab) {
           case 'inicio':
             if (!showAllContent) {
               query = query.eq('lido', false);
             }
             // ✅ IMPORTANTE: Excluir arquivados nas outras seções
-            if (idsArquivados.length > 0) {
-              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            if (!filtroArquivados && documentosArquivadosUsuario.length > 0) {
+              query = query.not('id', 'in', `(${documentosArquivadosUsuario.join(',')})`);
             }
             break;
           case 'importantes':
@@ -284,15 +321,22 @@ export default function MedCurationDesktop({ user }) {
               return;
             }
             // ✅ IMPORTANTE: Excluir arquivados dos importantes
-            if (idsArquivados.length > 0) {
-              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            if (!filtroArquivados && documentosArquivadosUsuario.length > 0) {
+              query = query.not('id', 'in', `(${documentosArquivadosUsuario.join(',')})`);
             }
             break;
           case 'ler_depois':
-            query = query.eq('ler_depois', true);
+            // ✅ NOVA LÓGICA: Mostrar apenas documentos marcados para ler depois pelo usuário
+            if (documentosLerDepoisUsuario.length > 0) {
+              query = query.in('id', documentosLerDepoisUsuario);
+            } else {
+              setDocumentos([]);
+              setLoading(false);
+              return;
+            }
             // ✅ IMPORTANTE: Excluir arquivados de ler depois
-            if (idsArquivados.length > 0) {
-              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            if (!filtroArquivados && documentosArquivadosUsuario.length > 0) {
+              query = query.not('id', 'in', `(${documentosArquivadosUsuario.join(',')})`);
             }
             break;
           case 'ver_todos':
@@ -307,24 +351,33 @@ export default function MedCurationDesktop({ user }) {
               }
             }
             if (filtroLerDepois) {
-              query = query.eq('ler_depois', true);
-            }
-            if (filtroArquivados) {
-              // ✅ MOSTRAR APENAS ARQUIVADOS
-              if (idsArquivados.length > 0) {
-                query = query.in('id', idsArquivados);
+              if (documentosLerDepoisUsuario.length > 0) {
+                query = query.in('id', documentosLerDepoisUsuario);
               } else {
                 setDocumentos([]);
                 setLoading(false);
                 return;
               }
-            } else {
-              // ✅ EXCLUIR ARQUIVADOS quando não está filtrando por arquivados
-              if (idsArquivados.length > 0) {
-                query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
-              }
             }
             break;
+        }
+        
+        // ✅ NOVA LÓGICA: Filtro de arquivados baseado no usuário
+        if (filtroArquivados) {
+          // Se filtro arquivados está ATIVO, mostrar apenas os arquivados pelo usuário
+          if (documentosArquivadosUsuario.length > 0) {
+            query = query.in('id', documentosArquivadosUsuario);
+          } else {
+            // Se não há documentos arquivados, retornar vazio
+            setDocumentos([]);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // ✅ COMPORTAMENTO PADRÃO: EXCLUIR documentos arquivados pelo usuário (apenas na aba ver_todos)
+          if (activeTab === 'ver_todos' && documentosArquivadosUsuario.length > 0) {
+            query = query.not('id', 'in', `(${documentosArquivadosUsuario.join(',')})`);
+          }
         }
         
         // Aplicar termo de pesquisa se existir
@@ -340,11 +393,12 @@ export default function MedCurationDesktop({ user }) {
         
         if (error) throw error;
         
-        // ✅ PROCESSAR DOCUMENTOS PARA INCLUIR STATUS DE IMPORTANTE E ARQUIVADO
+        // ✅ PROCESSAR DOCUMENTOS PARA INCLUIR STATUS DE IMPORTANTE, ARQUIVADO E LER DEPOIS
         const documentosProcessados = data?.map(doc => ({
           ...doc,
           importante: idsImportantes.includes(doc.id),
-          arquivado: idsArquivados.includes(doc.id)
+          arquivado: documentosArquivadosUsuario.includes(doc.id),
+          ler_depois: documentosLerDepoisUsuario.includes(doc.id)
         })) || [];
         
         setDocumentos(documentosProcessados);
@@ -354,6 +408,8 @@ export default function MedCurationDesktop({ user }) {
           documentosProcessados.filter(d => d.importante).length);
         console.log('Documentos arquivados para o usuário:', 
           documentosProcessados.filter(d => d.arquivado).length);
+        console.log('Documentos ler depois para o usuário:', 
+          documentosProcessados.filter(d => d.ler_depois).length);
         
       } catch (error) {
         console.error('Erro ao buscar documentos:', error);
@@ -362,10 +418,13 @@ export default function MedCurationDesktop({ user }) {
       }
     };
 
-    if (user && projetosVinculados.length >= 0) {
+    // ✅ MODIFICADO: Aguardar carregamento dos documentos arquivados e ler depois
+    if (user && projetosVinculados.length >= 0 && 
+        documentosArquivadosUsuario !== null && 
+        documentosLerDepoisUsuario !== null) {
       fetchDocumentos();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados, documentosArquivadosUsuario, documentosLerDepoisUsuario]);
 
   // ✅ ATUALIZADA: Limpar filtros incluindo arquivados
   const clearFilters = () => {
@@ -396,16 +455,34 @@ export default function MedCurationDesktop({ user }) {
     }
   };
 
-  // Obter subtítulo da seção
+  // ✅ MODIFICADA: Obter subtítulo da seção com informação sobre filtros
   const getSectionSubtitle = () => {
     if (projetosVinculados.length === 0) {
       return 'Nenhum projeto vinculado encontrado';
     }
     
-    if (activeTab === 'inicio') {
-      return showAllContent ? 'Todos os Conteúdos' : 'Conteúdos não lidos';
+    // ✅ MODIFICADO: Melhor mensagem para resultados de busca
+    if (searchTerm.trim()) {
+      let filtroTexto = '';
+      if (filtroArquivados) filtroTexto = ' nos arquivados';
+      else if (filtroLerDepois) filtroTexto = ' nos marcados para ler depois';
+      else if (filtroImportantes) filtroTexto = ' nos importantes';
+      
+      return `${documentos.length} resultado${documentos.length !== 1 ? 's' : ''} encontrado${documentos.length !== 1 ? 's' : ''} para "${searchTerm}"${filtroTexto}`;
     }
-    return `${documentos.length} conteúdos encontrados`;
+    
+    if (activeTab === 'inicio') {
+      const filtroTexto = filtroArquivados ? ' (Arquivados)' : '';
+      return showAllContent ? `Todos os Conteúdos${filtroTexto}` : `Conteúdos não lidos${filtroTexto}`;
+    }
+    
+    // ✅ NOVO: Indicar quando está mostrando filtros especiais
+    let filtroTexto = '';
+    if (filtroArquivados) filtroTexto = ' arquivados';
+    else if (filtroLerDepois && activeTab !== 'ler_depois') filtroTexto = ' para ler depois';
+    else if (filtroImportantes && activeTab !== 'importantes') filtroTexto = ' importantes';
+    
+    return `${documentos.length} conteúdo${documentos.length !== 1 ? 's' : ''}${filtroTexto} encontrado${documentos.length !== 1 ? 's' : ''}`;
   };
 
   // ✅ ATUALIZADA: Obter indicadores de status do documento
@@ -419,24 +496,24 @@ export default function MedCurationDesktop({ user }) {
       );
     }
     
-    // ✅ NOVA LÓGICA: Verificar se é importante usando a propriedade processada
+    // ✅ Verificar se é importante usando a propriedade processada
     if (documento.importante) {
       indicators.push(
         <FiStar key="importante" className="w-4 h-4 text-blue-600" />
       );
     }
     
-    // ✅ NOVA LÓGICA: Verificar se está arquivado usando a propriedade processada
-    if (documento.arquivado) {
+    // ✅ Mostrar ícone de arquivo apenas quando filtro arquivados está ativo
+    if (filtroArquivados && documento.arquivado) {
       indicators.push(
-        <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
+        <FiArchive key="arquivado" className="w-4 h-4 text-green-600" />
       );
     }
     
     return indicators;
   };
 
-  // Função para verificar se deve mostrar ícone de ler depois
+  // ✅ ATUALIZADA: Função para verificar se deve mostrar ícone de ler depois
   const shouldShowReadLaterIcon = (documento) => {
     return documento.ler_depois;
   };
@@ -605,6 +682,24 @@ export default function MedCurationDesktop({ user }) {
               </button>
             </div>
             
+            {/* ✅ Indicador de busca ativa para mobile */}
+            {searchTerm.trim() && (
+              <div className="mt-3 flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <FiSearch className="w-4 h-4 text-blue-600 mr-2" />
+                  <span className="text-sm text-blue-700">
+                    Buscando por: <strong>"{searchTerm}"</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-1 hover:bg-blue-100 rounded"
+                >
+                  <FiX className="w-4 h-4 text-blue-600" />
+                </button>
+              </div>
+            )}
+            
             {/* Terceira linha: Filtros (aparecem quando showFilters é true) */}
             {showFilters && (
               <div className="mt-4 space-y-3">
@@ -653,7 +748,7 @@ export default function MedCurationDesktop({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ ATUALIZADA: Filtros Avançados - apenas na aba "Ver Todos" */}
+                {/* ✅ FILTROS AVANÇADOS - apenas na aba "Ver Todos" */}
                 {activeTab === 'ver_todos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
@@ -684,7 +779,6 @@ export default function MedCurationDesktop({ user }) {
                         Ler Depois
                       </button>
                       
-                      {/* ✅ NOVO: Botão de Arquivados */}
                       <button
                         onClick={() => setFiltroArquivados(!filtroArquivados)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -791,6 +885,24 @@ export default function MedCurationDesktop({ user }) {
               </div>
             </div>
             
+            {/* ✅ Indicador de busca ativa para desktop */}
+            {searchTerm.trim() && (
+              <div className="mb-4 flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <FiSearch className="w-4 h-4 text-blue-600 mr-2" />
+                  <span className="text-sm text-blue-700">
+                    Buscando por: <strong>"{searchTerm}"</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-1 hover:bg-blue-100 rounded transition-colors"
+                >
+                  <FiX className="w-4 h-4 text-blue-600" />
+                </button>
+              </div>
+            )}
+            
             {/* Segunda linha: Filtros (aparecem quando showFilters é true) */}
             {showFilters && (
               <div className="space-y-3">
@@ -839,7 +951,7 @@ export default function MedCurationDesktop({ user }) {
                   )}
                 </div>
                 
-                {/* ✅ ATUALIZADA: Filtros Avançados - apenas na aba "Ver Todos" */}
+                {/* ✅ FILTROS AVANÇADOS - apenas na aba "Ver Todos" */}
                 {activeTab === 'ver_todos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
@@ -870,7 +982,6 @@ export default function MedCurationDesktop({ user }) {
                         Ler Depois
                       </button>
                       
-                      {/* ✅ NOVO: Botão de Arquivados */}
                       <button
                         onClick={() => setFiltroArquivados(!filtroArquivados)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -954,7 +1065,7 @@ export default function MedCurationDesktop({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            {/* Mobile: Cabeçalho da seção igual ao mobile */}
+            {/* Mobile: Cabeçalho da seção */}
             <div className="lg:hidden">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl font-bold text-black">{getSectionTitle()}</h2>
@@ -974,7 +1085,7 @@ export default function MedCurationDesktop({ user }) {
               <p className="text-gray-600 text-sm mb-6">{getSectionSubtitle()}</p>
             </div>
 
-            {/* Desktop: Cabeçalho da seção original */}
+            {/* Desktop: Cabeçalho da seção */}
             <div className="hidden lg:flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl lg:text-3xl font-bold text-black">{getSectionTitle()}</h2>
@@ -1107,7 +1218,22 @@ export default function MedCurationDesktop({ user }) {
                   ) : (
                     !destaqueDoc && (
                       <div className="py-8 text-center text-gray-500">
-                        Nenhum conteúdo encontrado
+                        {/* ✅ MODIFICADO: Mensagem melhorada com diferentes tipos de filtros */}
+                        {searchTerm.trim() ? 
+                          (() => {
+                            let filtroTexto = '';
+                            if (filtroArquivados) filtroTexto = ' nos arquivados';
+                            else if (filtroLerDepois) filtroTexto = ' nos marcados para ler depois';
+                            else if (filtroImportantes) filtroTexto = ' nos importantes';
+                            return `Nenhum resultado encontrado para "${searchTerm}"${filtroTexto}`;
+                          })() : 
+                          (() => {
+                            if (filtroArquivados) return 'Nenhum conteúdo arquivado encontrado';
+                            if (activeTab === 'ler_depois') return 'Nenhum conteúdo marcado para ler depois encontrado';
+                            if (activeTab === 'importantes') return 'Nenhum conteúdo importante encontrado';
+                            return 'Nenhum conteúdo encontrado';
+                          })()
+                        }
                       </div>
                     )
                   )}
@@ -1215,7 +1341,22 @@ export default function MedCurationDesktop({ user }) {
                     ) : (
                       !destaqueDoc && (
                         <div className="lg:col-span-2 xl:col-span-3 py-8 text-center text-gray-500">
-                          Nenhum conteúdo encontrado
+                          {/* ✅ MODIFICADO: Mensagem melhorada com diferentes tipos de filtros */}
+                          {searchTerm.trim() ? 
+                            (() => {
+                              let filtroTexto = '';
+                              if (filtroArquivados) filtroTexto = ' nos arquivados';
+                              else if (filtroLerDepois) filtroTexto = ' nos marcados para ler depois';
+                              else if (filtroImportantes) filtroTexto = ' nos importantes';
+                              return `Nenhum resultado encontrado para "${searchTerm}"${filtroTexto}`;
+                            })() : 
+                            (() => {
+                              if (filtroArquivados) return 'Nenhum conteúdo arquivado encontrado';
+                              if (activeTab === 'ler_depois') return 'Nenhum conteúdo marcado para ler depois encontrado';
+                              if (activeTab === 'importantes') return 'Nenhum conteúdo importante encontrado';
+                              return 'Nenhum conteúdo encontrado';
+                            })()
+                          }
                         </div>
                       )
                     )}
