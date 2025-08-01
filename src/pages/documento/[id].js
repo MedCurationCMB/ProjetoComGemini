@@ -17,7 +17,7 @@ export default function DocumentoDetalhe({ user }) {
   const [marcandoComoLido, setMarcandoComoLido] = useState(false);
   const [atualizandoStatus, setAtualizandoStatus] = useState(false);
   
-  // Novo estado para controlar o modal de confirmação de arquivar
+  // Estado para controlar o modal de confirmação de arquivar
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
@@ -70,6 +70,44 @@ export default function DocumentoDetalhe({ user }) {
     }
   }, [user]);
 
+  // Função para verificar se o documento é importante para o usuário
+  const verificarSeEImportante = async (documentoId, userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('medcuration_importantes')
+        .select('id')
+        .eq('usuario_id', userId)
+        .eq('controle_conteudo_geral_id', documentoId)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      return !!data; // Retorna true se encontrou registro, false caso contrário
+    } catch (error) {
+      console.error('Erro ao verificar se é importante:', error);
+      return false;
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Verificar se o documento está arquivado para o usuário
+  const verificarSeEstaArquivado = async (documentoId, userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('medcuration_arquivados')
+        .select('id')
+        .eq('usuario_id', userId)
+        .eq('controle_conteudo_geral_id', documentoId)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      return !!data; // Retorna true se encontrou registro, false caso contrário
+    } catch (error) {
+      console.error('Erro ao verificar se está arquivado:', error);
+      return false;
+    }
+  };
+
   // Buscar dados do documento
   useEffect(() => {
     const fetchDocumento = async () => {
@@ -77,6 +115,9 @@ export default function DocumentoDetalhe({ user }) {
       
       try {
         setLoading(true);
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
         
         const { data, error } = await supabase
           .from('controle_conteudo_geral')
@@ -86,10 +127,21 @@ export default function DocumentoDetalhe({ user }) {
         
         if (error) throw error;
         
-        setDocumento(data);
+        // Verificar se o documento é importante para este usuário
+        const eImportante = await verificarSeEImportante(data.id, session.user.id);
+        
+        // ✅ NOVO: Verificar se o documento está arquivado para este usuário
+        const estaArquivado = await verificarSeEstaArquivado(data.id, session.user.id);
+        
+        // Adicionar os status ao documento
+        setDocumento({ 
+          ...data, 
+          importante: eImportante,
+          arquivado: estaArquivado  // ✅ NOVO: Status de arquivado personalizado por usuário
+        });
       } catch (error) {
         console.error('Erro ao buscar documento:', error);
-        router.push('/med-curation-mobile');
+        router.push('/med-curation-desktop');
       } finally {
         setLoading(false);
       }
@@ -138,15 +190,101 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
-  // Função para alternar status (importante, ler_depois, arquivado)
-  const alternarStatus = async (campo, valorAtual) => {
+  // Função específica para gerenciar importantes
+  const toggleImportante = async () => {
     if (!documento || atualizandoStatus) return;
     
-    // Se for arquivar e o documento não está arquivado, mostrar confirmação
-    if (campo === 'arquivado' && !valorAtual) {
+    try {
+      setAtualizandoStatus(true);
+      
+      // Obter o token de acesso do usuário atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+
+      if (documento.importante) {
+        // Se já é importante, remover da tabela
+        const { error } = await supabase
+          .from('medcuration_importantes')
+          .delete()
+          .eq('usuario_id', session.user.id)
+          .eq('controle_conteudo_geral_id', documento.id);
+        
+        if (error) throw error;
+        
+        // Atualizar o estado local
+        setDocumento(prev => ({ ...prev, importante: false }));
+        toast.success('Removido dos importantes');
+      } else {
+        // Se não é importante, adicionar à tabela
+        const { error } = await supabase
+          .from('medcuration_importantes')
+          .insert({
+            usuario_id: session.user.id,
+            controle_conteudo_geral_id: documento.id
+          });
+        
+        if (error) throw error;
+        
+        // Atualizar o estado local
+        setDocumento(prev => ({ ...prev, importante: true }));
+        toast.success('Marcado como importante!');
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status de importante:', error);
+      toast.error('Erro ao atualizar documento');
+    } finally {
+      setAtualizandoStatus(false);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Gerenciar arquivados
+  const toggleArquivado = async () => {
+    if (!documento || atualizandoStatus) return;
+    
+    // Se não está arquivado, mostrar confirmação
+    if (!documento.arquivado) {
       setShowArchiveConfirm(true);
       return;
     }
+    
+    // Se já está arquivado, desarquivar diretamente
+    try {
+      setAtualizandoStatus(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Você precisa estar logado para esta ação');
+        return;
+      }
+
+      // Remover da tabela de arquivados
+      const { error } = await supabase
+        .from('medcuration_arquivados')
+        .delete()
+        .eq('usuario_id', session.user.id)
+        .eq('controle_conteudo_geral_id', documento.id);
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setDocumento(prev => ({ ...prev, arquivado: false }));
+      toast.success('Documento desarquivado');
+    } catch (error) {
+      console.error('Erro ao desarquivar documento:', error);
+      toast.error('Erro ao atualizar documento');
+    } finally {
+      setAtualizandoStatus(false);
+    }
+  };
+
+  // Função para alternar status (apenas ler_depois agora)
+  const alternarStatus = async (campo, valorAtual) => {
+    if (!documento || atualizandoStatus) return;
     
     try {
       setAtualizandoStatus(true);
@@ -175,9 +313,7 @@ export default function DocumentoDetalhe({ user }) {
       
       // Mensagens específicas para cada ação
       const mensagens = {
-        importante: novoValor ? 'Marcado como importante!' : 'Removido dos importantes',
-        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois',
-        arquivado: novoValor ? 'Documento arquivado!' : 'Documento desarquivado'
+        ler_depois: novoValor ? 'Adicionado para ler depois!' : 'Removido de ler depois'
       };
       
       toast.success(mensagens[campo]);
@@ -189,14 +325,13 @@ export default function DocumentoDetalhe({ user }) {
     }
   };
 
-  // Função para confirmar o arquivamento
+  // ✅ NOVA FUNÇÃO: Confirmar arquivamento
   const confirmarArquivamento = async () => {
     setShowArchiveConfirm(false);
     
     try {
       setAtualizandoStatus(true);
       
-      // Obter o token de acesso do usuário atual
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -204,12 +339,13 @@ export default function DocumentoDetalhe({ user }) {
         return;
       }
       
-      // Atualizar o documento no Supabase - definir arquivado como TRUE
-      const { data, error } = await supabase
-        .from('controle_conteudo_geral')
-        .update({ arquivado: true })
-        .eq('id', documento.id)
-        .select();
+      // Adicionar à tabela de arquivados
+      const { error } = await supabase
+        .from('medcuration_arquivados')
+        .insert({
+          usuario_id: session.user.id,
+          controle_conteudo_geral_id: documento.id
+        });
       
       if (error) throw error;
       
@@ -408,7 +544,7 @@ export default function DocumentoDetalhe({ user }) {
             </button>
           )}
 
-          {/* Novo botão Voltar para Início */}
+          {/* Botão Voltar para Início */}
           <button
             onClick={voltarParaInicio}
             className="w-full py-3 rounded-md flex items-center justify-center font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
@@ -423,7 +559,7 @@ export default function DocumentoDetalhe({ user }) {
           <div className="max-w-md mx-auto flex justify-center space-x-8">
             {/* Botão Importante */}
             <button
-              onClick={() => alternarStatus('importante', documento.importante)}
+              onClick={toggleImportante}
               disabled={atualizandoStatus}
               className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
@@ -449,9 +585,9 @@ export default function DocumentoDetalhe({ user }) {
               </span>
             </button>
 
-            {/* Botão Arquivar */}
+            {/* ✅ BOTÃO ARQUIVAR ATUALIZADO */}
             <button
-              onClick={() => alternarStatus('arquivado', documento.arquivado)}
+              onClick={toggleArquivado}
               disabled={atualizandoStatus}
               className={`flex flex-col items-center space-y-0.5 py-1.5 px-3 transition-colors ${
                 atualizandoStatus ? 'opacity-50' : ''
@@ -514,7 +650,7 @@ export default function DocumentoDetalhe({ user }) {
               <div className="flex space-x-3">
                 {/* Botão Importante */}
                 <button
-                  onClick={() => alternarStatus('importante', documento.importante)}
+                  onClick={toggleImportante}
                   disabled={atualizandoStatus}
                   className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
                     atualizandoStatus ? 'opacity-50' : ''
@@ -544,9 +680,9 @@ export default function DocumentoDetalhe({ user }) {
                   <span className="font-medium">Ler Depois</span>
                 </button>
 
-                {/* Botão Arquivar */}
+                {/* ✅ BOTÃO ARQUIVAR ATUALIZADO - Desktop */}
                 <button
-                  onClick={() => alternarStatus('arquivado', documento.arquivado)}
+                  onClick={toggleArquivado}
                   disabled={atualizandoStatus}
                   className={`flex items-center space-x-1 px-3 py-1.5 rounded-md transition-colors text-sm ${
                     atualizandoStatus ? 'opacity-50' : ''

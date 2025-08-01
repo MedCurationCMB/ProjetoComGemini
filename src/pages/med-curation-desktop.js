@@ -1,4 +1,4 @@
-// Arquivo: src/pages/med-curation-desktop.js - Versão atualizada usando prazo_entrega
+// Arquivo: src/pages/med-curation-desktop.js - Versão completa com filtro de arquivados
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -32,7 +32,7 @@ export default function MedCurationDesktop({ user }) {
   const [loading, setLoading] = useState(true);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]); // Novo estado para projetos vinculados
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -45,8 +45,8 @@ export default function MedCurationDesktop({ user }) {
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
   // Estados para controlar a navegação
-  const [activeTab, setActiveTab] = useState('inicio'); // 'inicio', 'importantes', 'ler_depois', 'ver_todos'
-  const [showAllContent, setShowAllContent] = useState(false); // Para o toggle "Ver todos" na seção Início
+  const [activeTab, setActiveTab] = useState('inicio');
+  const [showAllContent, setShowAllContent] = useState(false);
 
   // Função para buscar dados de apresentação
   const fetchApresentacaoVariaveis = async () => {
@@ -57,7 +57,6 @@ export default function MedCurationDesktop({ user }) {
       
       if (error) throw error;
       
-      // Converter array em objeto para fácil acesso por nome_variavel
       const apresentacaoObj = {};
       data.forEach(item => {
         apresentacaoObj[item.nome_variavel] = item.nome_apresentacao;
@@ -79,7 +78,6 @@ export default function MedCurationDesktop({ user }) {
       
       if (error) throw error;
       
-      // Extrair apenas os IDs dos projetos
       const projetoIds = data.map(item => item.projeto_id);
       setProjetosVinculados(projetoIds);
       
@@ -118,22 +116,18 @@ export default function MedCurationDesktop({ user }) {
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
-        // Buscar projetos vinculados primeiro
         const projetoIds = await fetchProjetosVinculados(user.id);
         
-        // ✅ LÓGICA CORRIGIDA: Buscar categorias de controles visíveis E de projetos vinculados
         if (projetoIds.length > 0) {
-          // Buscar quais categorias têm controles visíveis EM PROJETOS VINCULADOS
           const { data: categoriasComControles, error: categoriasControlesError } = await supabase
             .from('controle_conteudo_geral')
             .select('categoria_id')
             .eq('visivel', true)
-            .in('projeto_id', projetoIds) // ✅ NOVA RESTRIÇÃO: apenas projetos vinculados
-            .not('categoria_id', 'is', null); // Excluir registros sem categoria
+            .in('projeto_id', projetoIds)
+            .not('categoria_id', 'is', null);
           
           if (categoriasControlesError) throw categoriasControlesError;
           
-          // Extrair IDs únicos de categorias que têm controles visíveis em projetos vinculados
           const categoriasComControlesVisiveis = [...new Set(
             categoriasComControles.map(item => item.categoria_id)
           )];
@@ -141,17 +135,15 @@ export default function MedCurationDesktop({ user }) {
           console.log('Projetos vinculados:', projetoIds);
           console.log('Categorias com controles visíveis em projetos vinculados:', categoriasComControlesVisiveis);
           
-          // Buscar apenas as categorias que atendem aos dois critérios
           if (categoriasComControlesVisiveis.length > 0) {
             const { data: categoriasData, error: categoriasError } = await supabase
               .from('categorias')
               .select('id, nome')
-              .in('id', categoriasComControlesVisiveis) // Apenas categorias com controles visíveis em projetos vinculados
+              .in('id', categoriasComControlesVisiveis)
               .order('nome');
             
             if (categoriasError) throw categoriasError;
             
-            // Converter array em objeto para fácil acesso por ID
             const categoriasObj = {};
             categoriasData.forEach(cat => {
               categoriasObj[cat.id] = cat.nome;
@@ -160,39 +152,33 @@ export default function MedCurationDesktop({ user }) {
             setCategorias(categoriasObj);
             console.log('Categorias carregadas para dropdown:', categoriasData?.length || 0);
           } else {
-            // Se não há categorias que atendem aos critérios, definir como objeto vazio
             setCategorias({});
             console.log('Nenhuma categoria possui controles visíveis em projetos vinculados');
           }
           
-          // ✅ LÓGICA DOS PROJETOS (mantida igual)
-          // Buscar quais projetos têm controles visíveis
           const { data: projetosComControles, error: controlesError } = await supabase
             .from('controle_conteudo_geral')
             .select('projeto_id')
             .eq('visivel', true)
-            .in('projeto_id', projetoIds); // Apenas dos projetos vinculados
+            .in('projeto_id', projetoIds);
           
           if (controlesError) throw controlesError;
           
-          // Extrair IDs únicos de projetos que têm controles visíveis
           const projetosComControlesVisiveis = [...new Set(
             projetosComControles.map(item => item.projeto_id)
           )];
           
           console.log('Projetos com controles visíveis:', projetosComControlesVisiveis);
           
-          // Buscar apenas os projetos que estão nas duas listas
           if (projetosComControlesVisiveis.length > 0) {
             const { data: projetosData, error: projetosError } = await supabase
               .from('projetos')
               .select('id, nome')
-              .in('id', projetosComControlesVisiveis) // Apenas projetos com controles visíveis
+              .in('id', projetosComControlesVisiveis)
               .order('nome');
             
             if (projetosError) throw projetosError;
             
-            // Converter array em objeto para fácil acesso por ID
             const projetosObj = {};
             projetosData.forEach(proj => {
               projetosObj[proj.id] = proj.nome;
@@ -201,12 +187,10 @@ export default function MedCurationDesktop({ user }) {
             setProjetos(projetosObj);
             console.log('Projetos carregados para dropdown:', projetosData?.length || 0);
           } else {
-            // Se não há projetos com controles visíveis, definir como objeto vazio
             setProjetos({});
             console.log('Nenhum projeto vinculado possui controles visíveis');
           }
         } else {
-          // Se não há projetos vinculados, não há categorias nem projetos para mostrar
           setCategorias({});
           setProjetos({});
           console.log('Usuário não possui projetos vinculados');
@@ -223,7 +207,7 @@ export default function MedCurationDesktop({ user }) {
     }
   }, [user]);
 
-  // Buscar documentos com base nos filtros e navegação
+  // ✅ NOVA FUNÇÃO: Buscar documentos com verificação de arquivados
   useEffect(() => {
     const fetchDocumentos = async () => {
       try {
@@ -236,15 +220,39 @@ export default function MedCurationDesktop({ user }) {
           return;
         }
         
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        // ✅ NOVA LÓGICA: Buscar documentos arquivados para este usuário
+        const { data: documentosArquivadosData, error: arquivadosError } = await supabase
+          .from('medcuration_arquivados')
+          .select('controle_conteudo_geral_id')
+          .eq('usuario_id', session.user.id);
+        
+        if (arquivadosError) throw arquivadosError;
+        
+        // IDs dos documentos arquivados pelo usuário
+        const idsArquivados = documentosArquivadosData?.map(item => item.controle_conteudo_geral_id) || [];
+        
+        // ✅ BUSCAR IMPORTANTES PARA O USUÁRIO
+        const { data: documentosImportantesData, error: importantesError } = await supabase
+          .from('medcuration_importantes')
+          .select('controle_conteudo_geral_id')
+          .eq('usuario_id', session.user.id);
+        
+        if (importantesError) throw importantesError;
+        
+        const idsImportantes = documentosImportantesData?.map(item => item.controle_conteudo_geral_id) || [];
+        
         // Iniciar a consulta com filtros básicos obrigatórios
         let query = supabase
           .from('controle_conteudo_geral')
           .select('*')
-          .eq('visivel', true)  // ← PRIMEIRO: verificar se é visível
-          .not('texto_analise', 'is', null)  // ← SEGUNDO: não pode ser null
-          .not('texto_analise', 'eq', '')    // ← TERCEIRO: não pode ser string vazia
-          .not('texto_analise', 'eq', '<p></p>')  // ← QUARTO: não pode ser parágrafo vazio
-          .in('projeto_id', projetosVinculados); // ← NOVO: Filtrar apenas projetos vinculados
+          .eq('visivel', true)
+          .not('texto_analise', 'is', null)
+          .not('texto_analise', 'eq', '')
+          .not('texto_analise', 'eq', '<p></p>')
+          .in('projeto_id', projetosVinculados);
           
         // Aplicar filtros de projeto e categoria se selecionados
         if (projetoSelecionado) {
@@ -255,31 +263,66 @@ export default function MedCurationDesktop({ user }) {
           query = query.eq('categoria_id', categoriaSelecionada);
         }
         
-        // Aplicar filtros baseados na aba ativa
+        // ✅ NOVA LÓGICA: Aplicar filtros baseados na aba ativa e arquivados
         switch (activeTab) {
           case 'inicio':
             if (!showAllContent) {
-              // Mostrar apenas não lidos
               query = query.eq('lido', false);
             }
-            // Se showAllContent for true, mostra todos (sem filtro adicional)
+            // ✅ IMPORTANTE: Excluir arquivados nas outras seções
+            if (idsArquivados.length > 0) {
+              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            }
             break;
           case 'importantes':
-            query = query.eq('importante', true);
+            // Mostrar apenas importantes do usuário
+            if (idsImportantes.length > 0) {
+              query = query.in('id', idsImportantes);
+            } else {
+              setDocumentos([]);
+              setLoading(false);
+              return;
+            }
+            // ✅ IMPORTANTE: Excluir arquivados dos importantes
+            if (idsArquivados.length > 0) {
+              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            }
             break;
           case 'ler_depois':
             query = query.eq('ler_depois', true);
+            // ✅ IMPORTANTE: Excluir arquivados de ler depois
+            if (idsArquivados.length > 0) {
+              query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+            }
             break;
           case 'ver_todos':
-            // Aplicar filtros avançados se estiverem ativos
+            // ✅ NOVA LÓGICA: Filtros avançados
             if (filtroImportantes) {
-              query = query.eq('importante', true);
+              if (idsImportantes.length > 0) {
+                query = query.in('id', idsImportantes);
+              } else {
+                setDocumentos([]);
+                setLoading(false);
+                return;
+              }
             }
             if (filtroLerDepois) {
               query = query.eq('ler_depois', true);
             }
             if (filtroArquivados) {
-              query = query.eq('arquivado', true);
+              // ✅ MOSTRAR APENAS ARQUIVADOS
+              if (idsArquivados.length > 0) {
+                query = query.in('id', idsArquivados);
+              } else {
+                setDocumentos([]);
+                setLoading(false);
+                return;
+              }
+            } else {
+              // ✅ EXCLUIR ARQUIVADOS quando não está filtrando por arquivados
+              if (idsArquivados.length > 0) {
+                query = query.not('id', 'in', `(${idsArquivados.join(',')})`);
+              }
             }
             break;
         }
@@ -289,8 +332,7 @@ export default function MedCurationDesktop({ user }) {
           query = query.ilike('texto_analise', `%${searchTerm.trim()}%`);
         }
         
-        // ALTERAÇÃO: Ordenar por prazo_entrega se existir, caso contrário por created_at
-        // Primeiro tentativa: ordenar por prazo_entrega (nulls last) e depois por created_at
+        // Ordenação
         query = query.order('prazo_entrega', { ascending: false, nullsLast: true })
                      .order('created_at', { ascending: false });
         
@@ -298,7 +340,21 @@ export default function MedCurationDesktop({ user }) {
         
         if (error) throw error;
         
-        setDocumentos(data || []);
+        // ✅ PROCESSAR DOCUMENTOS PARA INCLUIR STATUS DE IMPORTANTE E ARQUIVADO
+        const documentosProcessados = data?.map(doc => ({
+          ...doc,
+          importante: idsImportantes.includes(doc.id),
+          arquivado: idsArquivados.includes(doc.id)
+        })) || [];
+        
+        setDocumentos(documentosProcessados);
+        
+        console.log('Documentos carregados:', documentosProcessados.length);
+        console.log('Documentos importantes para o usuário:', 
+          documentosProcessados.filter(d => d.importante).length);
+        console.log('Documentos arquivados para o usuário:', 
+          documentosProcessados.filter(d => d.arquivado).length);
+        
       } catch (error) {
         console.error('Erro ao buscar documentos:', error);
       } finally {
@@ -306,12 +362,12 @@ export default function MedCurationDesktop({ user }) {
       }
     };
 
-    if (user && projetosVinculados.length >= 0) { // Permitir execução mesmo se não há projetos vinculados
+    if (user && projetosVinculados.length >= 0) {
       fetchDocumentos();
     }
   }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroLerDepois, filtroArquivados, projetosVinculados]);
 
-  // Limpar filtros
+  // ✅ ATUALIZADA: Limpar filtros incluindo arquivados
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
@@ -321,7 +377,7 @@ export default function MedCurationDesktop({ user }) {
     setShowFilters(false);
   };
 
-  // Verificar se há filtros ativos
+  // ✅ ATUALIZADA: Verificar se há filtros ativos incluindo arquivados
   const hasActiveFilters = categoriaSelecionada || projetoSelecionado || filtroImportantes || filtroLerDepois || filtroArquivados;
 
   // Obter título da seção
@@ -352,7 +408,7 @@ export default function MedCurationDesktop({ user }) {
     return `${documentos.length} conteúdos encontrados`;
   };
 
-  // Obter indicadores de status do documento
+  // ✅ ATUALIZADA: Obter indicadores de status do documento
   const getStatusIndicators = (documento) => {
     const indicators = [];
     
@@ -363,14 +419,14 @@ export default function MedCurationDesktop({ user }) {
       );
     }
     
-    // Adicionar estrela se é importante
+    // ✅ NOVA LÓGICA: Verificar se é importante usando a propriedade processada
     if (documento.importante) {
       indicators.push(
         <FiStar key="importante" className="w-4 h-4 text-blue-600" />
       );
     }
     
-    // Adicionar ícone de arquivo se está arquivado
+    // ✅ NOVA LÓGICA: Verificar se está arquivado usando a propriedade processada
     if (documento.arquivado) {
       indicators.push(
         <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
@@ -388,7 +444,7 @@ export default function MedCurationDesktop({ user }) {
   // Obter documento de destaque (mais recente)
   const getDestaqueDocument = () => {
     if (activeTab === 'inicio' && documentos.length > 0) {
-      return documentos[0]; // O primeiro já é o mais recente devido à ordenação
+      return documentos[0];
     }
     return null;
   };
@@ -396,14 +452,13 @@ export default function MedCurationDesktop({ user }) {
   // Obter documentos sem o destaque
   const getRegularDocuments = () => {
     if (activeTab === 'inicio' && documentos.length > 0) {
-      return documentos.slice(1); // Remove o primeiro (destaque)
+      return documentos.slice(1);
     }
     return documentos;
   };
 
-  // ALTERAÇÃO: Formatar data - priorizar prazo_entrega, fallback para created_at
+  // Formatar data - priorizar prazo_entrega, fallback para created_at
   const formatDate = (documento) => {
-    // Priorizar prazo_entrega se existir, caso contrário usar created_at
     const dateString = documento.prazo_entrega || documento.created_at;
     
     if (!dateString) return '';
@@ -598,7 +653,7 @@ export default function MedCurationDesktop({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Ver Todos" */}
+                {/* ✅ ATUALIZADA: Filtros Avançados - apenas na aba "Ver Todos" */}
                 {activeTab === 'ver_todos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
@@ -629,6 +684,7 @@ export default function MedCurationDesktop({ user }) {
                         Ler Depois
                       </button>
                       
+                      {/* ✅ NOVO: Botão de Arquivados */}
                       <button
                         onClick={() => setFiltroArquivados(!filtroArquivados)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -783,7 +839,7 @@ export default function MedCurationDesktop({ user }) {
                   )}
                 </div>
                 
-                {/* Filtros Avançados - apenas na aba "Ver Todos" */}
+                {/* ✅ ATUALIZADA: Filtros Avançados - apenas na aba "Ver Todos" */}
                 {activeTab === 'ver_todos' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
@@ -814,6 +870,7 @@ export default function MedCurationDesktop({ user }) {
                         Ler Depois
                       </button>
                       
+                      {/* ✅ NOVO: Botão de Arquivados */}
                       <button
                         onClick={() => setFiltroArquivados(!filtroArquivados)}
                         className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${

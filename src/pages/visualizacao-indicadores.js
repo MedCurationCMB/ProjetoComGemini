@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com busca aprimorada
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com controle de indicadores arquivados
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -59,6 +59,9 @@ export default function VisualizacaoIndicadores({ user }) {
   const [filtroImportantes, setFiltroImportantes] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   
+  // ✅ NOVO: Estado para controlar indicadores arquivados do usuário
+  const [indicadoresArquivadosUsuario, setIndicadoresArquivadosUsuario] = useState([]);
+  
   const [activeTab, setActiveTab] = useState('inicio');
   const [showAllContent, setShowAllContent] = useState(false);
 
@@ -81,7 +84,31 @@ export default function VisualizacaoIndicadores({ user }) {
   };
 
   // =====================================
-  // ✅ NOVA FUNÇÃO: Busca aprimorada que inclui descrições
+  // ✅ NOVA FUNÇÃO: Buscar indicadores arquivados do usuário
+  // =====================================
+  
+  const fetchIndicadoresArquivadosUsuario = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicadores_arquivados')
+        .select('controle_indicador_id')
+        .eq('usuario_id', userId);
+
+      if (error) throw error;
+
+      // Retornar array de IDs dos indicadores arquivados pelo usuário
+      const idsArquivados = data.map(item => item.controle_indicador_id);
+      setIndicadoresArquivadosUsuario(idsArquivados);
+      
+      return idsArquivados;
+    } catch (error) {
+      console.error('Erro ao buscar indicadores arquivados do usuário:', error);
+      return [];
+    }
+  };
+
+  // =====================================
+  // ✅ FUNÇÃO MODIFICADA: Busca aprimorada com filtro de arquivados
   // =====================================
 
   const performAdvancedSearch = async (searchTerm) => {
@@ -123,8 +150,16 @@ export default function VisualizacaoIndicadores({ user }) {
       if (filtroImportantes) {
         indicadoresQuery = indicadoresQuery.eq('importante', true);
       }
+
+      // ✅ MODIFICADO: Filtro de arquivados baseado no usuário
       if (filtroArquivados) {
-        indicadoresQuery = indicadoresQuery.eq('arquivado', true);
+        // Se filtro arquivados está ATIVO, mostrar apenas os arquivados pelo usuário
+        indicadoresQuery = indicadoresQuery.in('id_controleindicador', indicadoresArquivadosUsuario);
+      } else {
+        // Se filtro arquivados está INATIVO, EXCLUIR os arquivados pelo usuário
+        if (indicadoresArquivadosUsuario.length > 0) {
+          indicadoresQuery = indicadoresQuery.not('id_controleindicador', 'in', `(${indicadoresArquivadosUsuario.join(',')})`);
+        }
       }
 
       // ✅ Buscar no campo indicador (busca existente)
@@ -180,8 +215,14 @@ export default function VisualizacaoIndicadores({ user }) {
         if (filtroImportantes) {
           descricaoQuery = descricaoQuery.eq('importante', true);
         }
+
+        // ✅ MODIFICADO: Aplicar filtro de arquivados também na busca por descrição
         if (filtroArquivados) {
-          descricaoQuery = descricaoQuery.eq('arquivado', true);
+          descricaoQuery = descricaoQuery.in('id_controleindicador', indicadoresArquivadosUsuario);
+        } else {
+          if (indicadoresArquivadosUsuario.length > 0) {
+            descricaoQuery = descricaoQuery.not('id_controleindicador', 'in', `(${indicadoresArquivadosUsuario.join(',')})`);
+          }
         }
 
         const { data: descricaoIndicadores, error: descricaoError } = await descricaoQuery
@@ -872,10 +913,14 @@ export default function VisualizacaoIndicadores({ user }) {
     router.push('/visualizacao-indicadores-importantes');
   };
 
+  // ✅ MODIFICADO: useEffect para carregar dados iniciais incluindo indicadores arquivados
   useEffect(() => {
     const fetchCategoriasProjetos = async () => {
       try {
         const projetoIds = await fetchProjetosVinculados(user.id);
+        
+        // ✅ NOVO: Carregar indicadores arquivados do usuário
+        await fetchIndicadoresArquivadosUsuario(user.id);
         
         if (projetoIds.length > 0) {
           const { data: categoriasComControles, error: categoriasControlesError } = await supabase
@@ -956,7 +1001,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: useEffect para busca aprimorada
+  // ✅ MODIFICADO: useEffect principal com lógica de filtro de arquivados
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
@@ -1018,8 +1063,23 @@ export default function VisualizacaoIndicadores({ user }) {
         if (filtroImportantes) {
           query = query.eq('importante', true);
         }
+
+        // ✅ NOVA LÓGICA: Filtro de arquivados baseado no usuário
         if (filtroArquivados) {
-          query = query.eq('arquivado', true);
+          // Se filtro arquivados está ATIVO, mostrar apenas os arquivados pelo usuário
+          if (indicadoresArquivadosUsuario.length > 0) {
+            query = query.in('id_controleindicador', indicadoresArquivadosUsuario);
+          } else {
+            // Se não há indicadores arquivados, retornar vazio
+            setIndicadores([]);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // ✅ COMPORTAMENTO PADRÃO: EXCLUIR indicadores arquivados pelo usuário
+          if (indicadoresArquivadosUsuario.length > 0) {
+            query = query.not('id_controleindicador', 'in', `(${indicadoresArquivadosUsuario.join(',')})`);
+          }
         }
         
         query = query.order('periodo_referencia', { ascending: false, nullsLast: true })
@@ -1050,10 +1110,11 @@ export default function VisualizacaoIndicadores({ user }) {
       }
     };
 
-    if (user && projetosVinculados.length >= 0) {
+    // ✅ MODIFICADO: Aguardar carregamento dos indicadores arquivados
+    if (user && projetosVinculados.length >= 0 && indicadoresArquivadosUsuario !== null) {
       fetchIndicadores();
     }
-  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroArquivados, projetosVinculados]);
+  }, [user, searchTerm, categoriaSelecionada, projetoSelecionado, activeTab, showAllContent, filtroImportantes, filtroArquivados, projetosVinculados, indicadoresArquivadosUsuario]);
 
   const clearFilters = () => {
     setCategoriaSelecionada('');
@@ -1080,6 +1141,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   };
 
+  // ✅ MODIFICADO: Subtitle melhorado com informação sobre filtros
   const getSectionSubtitle = () => {
     if (projetosVinculados.length === 0) {
       return 'Nenhum projeto vinculado encontrado';
@@ -1090,13 +1152,18 @@ export default function VisualizacaoIndicadores({ user }) {
       if (searchLoading) {
         return 'Buscando...';
       }
-      return `${indicadores.length} resultado${indicadores.length !== 1 ? 's' : ''} encontrado${indicadores.length !== 1 ? 's' : ''} para "${searchTerm}"`;
+      const filtroTexto = filtroArquivados ? ' nos arquivados' : '';
+      return `${indicadores.length} resultado${indicadores.length !== 1 ? 's' : ''} encontrado${indicadores.length !== 1 ? 's' : ''} para "${searchTerm}"${filtroTexto}`;
     }
     
     if (activeTab === 'inicio') {
-      return showAllContent ? 'Todos os Indicadores' : 'Indicadores disponíveis';
+      const filtroTexto = filtroArquivados ? ' (Arquivados)' : '';
+      return showAllContent ? `Todos os Indicadores${filtroTexto}` : `Indicadores disponíveis${filtroTexto}`;
     }
-    return `${indicadores.length} indicadores encontrados`;
+    
+    // ✅ NOVO: Indicar quando está mostrando arquivados
+    const filtroTexto = filtroArquivados ? ' arquivados' : '';
+    return `${indicadores.length} indicador${indicadores.length !== 1 ? 'es' : ''}${filtroTexto} encontrado${indicadores.length !== 1 ? 's' : ''}`;
   };
 
   const getStatusIndicators = (indicador) => {
@@ -1108,9 +1175,10 @@ export default function VisualizacaoIndicadores({ user }) {
       );
     }
     
-    if (indicador.arquivado) {
+    // ✅ MODIFICADO: Mostrar ícone de arquivo apenas quando filtro arquivados está ativo
+    if (filtroArquivados && indicadoresArquivadosUsuario.includes(indicador.id_controleindicador)) {
       indicators.push(
-        <FiArchive key="arquivado" className="w-4 h-4 text-blue-600" />
+        <FiArchive key="arquivado" className="w-4 h-4 text-green-600" />
       );
     }
     
@@ -1436,7 +1504,7 @@ export default function VisualizacaoIndicadores({ user }) {
                       onClick={() => setFiltroArquivados(!filtroArquivados)}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                         filtroArquivados 
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
@@ -1895,9 +1963,10 @@ export default function VisualizacaoIndicadores({ user }) {
                     })
                   ) : (
                     <div className="py-8 text-center text-gray-500">
+                      {/* ✅ MODIFICADO: Mensagem melhorada para indicadores arquivados */}
                       {searchTerm.trim() ? 
-                        `Nenhum resultado encontrado para "${searchTerm}"` : 
-                        'Nenhum indicador encontrado'
+                        `Nenhum resultado encontrado para "${searchTerm}"${filtroArquivados ? ' nos arquivados' : ''}` : 
+                        filtroArquivados ? 'Nenhum indicador arquivado encontrado' : 'Nenhum indicador encontrado'
                       }
                     </div>
                   )}
@@ -2042,9 +2111,10 @@ export default function VisualizacaoIndicadores({ user }) {
                     })()
                   ) : (
                     <div className="py-8 text-center text-gray-500">
+                      {/* ✅ MODIFICADO: Mensagem melhorada para indicadores arquivados */}
                       {searchTerm.trim() ? 
-                        `Nenhum resultado encontrado para "${searchTerm}"` : 
-                        'Nenhum indicador encontrado'
+                        `Nenhum resultado encontrado para "${searchTerm}"${filtroArquivados ? ' nos arquivados' : ''}` : 
+                        filtroArquivados ? 'Nenhum indicador arquivado encontrado' : 'Nenhum indicador encontrado'
                       }
                     </div>
                   )}
