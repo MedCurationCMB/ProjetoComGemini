@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 
 const ControleIndicadorTable = ({ user }) => {
@@ -228,6 +228,13 @@ const ControleIndicadorTable = ({ user }) => {
     } catch (e) {
       return 'Data inválida';
     }
+  };
+
+  // Função para truncar texto longo
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return '-';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   // Função para lidar com o sucesso da adição de linha
@@ -473,6 +480,12 @@ const ControleIndicadorTable = ({ user }) => {
                 Indicador
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Descrição Resumida
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Descrição Detalhada
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Subcategoria
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -507,6 +520,38 @@ const ControleIndicadorTable = ({ user }) => {
                       <p className="font-medium">{item.indicador}</p>
                       {item.observacao && (
                         <p className="text-xs text-gray-500 mt-1">{item.observacao}</p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="max-w-xs">
+                      {item.descricao_resumida ? (
+                        <div className="group relative">
+                          <p className="text-sm">{truncateText(item.descricao_resumida, 80)}</p>
+                          {item.descricao_resumida.length > 80 && (
+                            <div className="absolute z-10 invisible group-hover:visible bg-gray-800 text-white text-xs rounded p-2 mt-1 w-64 break-words">
+                              {item.descricao_resumida}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">Não informado</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="max-w-xs">
+                      {item.descricao_detalhada ? (
+                        <div className="group relative">
+                          <p className="text-sm">{truncateText(item.descricao_detalhada, 80)}</p>
+                          {item.descricao_detalhada.length > 80 && (
+                            <div className="absolute z-10 invisible group-hover:visible bg-gray-800 text-white text-xs rounded p-2 mt-1 w-64 break-words">
+                              {item.descricao_detalhada}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">Não informado</span>
                       )}
                     </div>
                   </td>
@@ -569,7 +614,7 @@ const ControleIndicadorTable = ({ user }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="9" className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan="11" className="px-6 py-8 text-center text-sm text-gray-500">
                   {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
@@ -622,6 +667,24 @@ const ControleIndicadorTable = ({ user }) => {
               
               {item.observacao && (
                 <p className="text-sm text-gray-600 mb-3">{item.observacao}</p>
+              )}
+
+              {/* Descrições */}
+              {(item.descricao_resumida || item.descricao_detalhada) && (
+                <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                  {item.descricao_resumida && (
+                    <div className="mb-2">
+                      <p className="text-xs font-medium text-gray-600 mb-1">Descrição Resumida:</p>
+                      <p className="text-sm text-gray-900">{item.descricao_resumida}</p>
+                    </div>
+                  )}
+                  {item.descricao_detalhada && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Descrição Detalhada:</p>
+                      <p className="text-sm text-gray-900">{item.descricao_detalhada}</p>
+                    </div>
+                  )}
+                </div>
               )}
               
               <div className="space-y-2 mb-3">

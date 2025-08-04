@@ -1,4 +1,4 @@
-// src/components/AdicionarLinhaIndicadorGeralDialog.js - Versão Corrigida com Rolagem Vertical
+// src/components/AdicionarLinhaIndicadorGeralDialog.js - Com Valor Apresentado e Unidade
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
@@ -12,8 +12,18 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   categorias, 
   projetos, 
   tiposIndicador, 
-  subcategorias 
+  subcategorias,
+  tiposUnidadeIndicador // ✅ NOVO: Adicionado prop
 }) => {
+  const formatarValorIndicador = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    
+    return num.toLocaleString('pt-BR');
+  };
+
   const router = useRouter();
   const [step, setStep] = useState(1); // 1: escolha recorrente, 2: formulário
   const [isRecorrente, setIsRecorrente] = useState(null);
@@ -23,7 +33,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
-  // Campos para formulário não recorrente
+  // Campos para formulário não recorrente - ✅ ADICIONADOS NOVOS CAMPOS
   const [novaLinha, setNovaLinha] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -34,6 +44,8 @@ const AdicionarLinhaIndicadorGeralDialog = ({
     prazo_entrega_inicial: '',
     descricao_detalhada: '',
     descricao_resumida: '',
+    valor_indicador_apresentado: '', // ✅ NOVO
+    tipo_unidade_indicador: '', // ✅ NOVO
     obrigatorio: false
   });
 
@@ -199,7 +211,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           return;
         }
         
-        // Preparar dados para inserção na tabela controle_indicador (BASE)
+        // ✅ NOVO: Preparar dados para inserção incluindo novos campos
         const dadosInsercao = {
           projeto_id: novaLinha.projeto_id,
           categoria_id: novaLinha.categoria_id,
@@ -216,6 +228,19 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           obrigatorio: novaLinha.obrigatorio,
           tem_documento: false
         };
+
+        // ✅ NOVO: Adicionar valor_indicador_apresentado se preenchido
+        if (novaLinha.valor_indicador_apresentado && novaLinha.valor_indicador_apresentado !== '') {
+          const valorNumerico = parseFloat(novaLinha.valor_indicador_apresentado);
+          if (!isNaN(valorNumerico)) {
+            dadosInsercao.valor_indicador_apresentado = valorNumerico;
+          }
+        }
+
+        // ✅ NOVO: Adicionar tipo_unidade_indicador se selecionado
+        if (novaLinha.tipo_unidade_indicador && novaLinha.tipo_unidade_indicador !== '') {
+          dadosInsercao.tipo_unidade_indicador = parseInt(novaLinha.tipo_unidade_indicador);
+        }
         
         // Inserir na tabela controle_indicador (BASE)
         const { data, error } = await supabase
@@ -370,7 +395,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 </div>
               </>
             ) : (
-              // ✅ CORREÇÃO: Formulário para novas linhas não recorrentes com melhor espaçamento
+              // ✅ NOVO: Formulário para novas linhas não recorrentes COM NOVOS CAMPOS
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -507,6 +532,54 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* ✅ NOVO CAMPO: Valor Apresentado */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Valor Apresentado <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="valor_indicador_apresentado"
+                    value={novaLinha.valor_indicador_apresentado}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Digite o valor do indicador (ex: 15.75)"
+                  />
+                  {/* ✅ PREVIEW FORMATADO */}
+                  {novaLinha.valor_indicador_apresentado && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      <strong>Preview:</strong> {formatarValorIndicador(novaLinha.valor_indicador_apresentado)}
+                    </p>
+                  )}
+                  <p className="mt-1 text-sm text-gray-500">
+                    Valor numérico que será apresentado para este indicador.
+                  </p>
+                </div>
+
+                {/* ✅ NOVO CAMPO: Unidade do Indicador */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Unidade do Indicador <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <select
+                    name="tipo_unidade_indicador"
+                    value={novaLinha.tipo_unidade_indicador}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione uma unidade</option>
+                    {Object.entries(tiposUnidadeIndicador).map(([id, nome]) => (
+                      <option key={id} value={id}>
+                        {nome}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Unidade de medida para este indicador (ex: %, R$, unidades).
+                  </p>
                 </div>
                 
                 <div>

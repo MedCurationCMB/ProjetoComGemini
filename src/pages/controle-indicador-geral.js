@@ -23,7 +23,8 @@ import {
   FiList,
   FiFolder,
   FiTrendingUp,
-  FiEdit3
+  FiEdit3,
+  FiChevronDown
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -34,6 +35,14 @@ export default function CopiaControleIndicadorGeral({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // ✅ NOVO: Termo de busca
+  
+  // ✅ NOVOS ESTADOS: Filtros por projeto e categoria
+  const [projetos, setProjetos] = useState({});
+  const [categorias, setCategorias] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
+  const [filtroProjetoId, setFiltroProjetoId] = useState('');
+  const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+  
   const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
     const hoje = new Date();
     const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
@@ -56,6 +65,87 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
   // ✅ NOVO: Estado para controlar a navegação (fixo em 'registros')
   const [activeTab] = useState('registros');
+
+  // ✅ NOVOS EFEITOS: Carregar projetos e categorias quando o usuário estiver disponível
+  useEffect(() => {
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) {
+      fetchCategorias();
+      fetchProjetos();
+    }
+  }, [projetosVinculados]);
+
+  // ✅ NOVA FUNÇÃO: Buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Buscar APENAS os projetos vinculados ao usuário
+  const fetchProjetos = async () => {
+    try {
+      if (projetosVinculados.length === 0) {
+        setProjetos({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('*')
+        .in('id', projetosVinculados);
+      
+      if (error) throw error;
+      
+      const projetosObj = {};
+      data.forEach(proj => {
+        projetosObj[proj.id] = proj.nome;
+      });
+      
+      setProjetos(projetosObj);
+      console.log('Projetos carregados:', projetosObj);
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Buscar todas as categorias
+  const fetchCategorias = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const categoriasObj = {};
+      data.forEach(cat => {
+        categoriasObj[cat.id] = cat.nome;
+      });
+      
+      setCategorias(categoriasObj);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
 
   // ✅ NOVAS FUNÇÕES DE NAVEGAÇÃO
   const handleIndicadoresClick = () => {
@@ -166,71 +256,82 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // Função para gerar texto descritivo baseado nos filtros
+  // ✅ FUNÇÃO ATUALIZADA: Gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
-    // ✅ PARA ABA PENDENTES: Não mostrar filtros de prazo pois são ignorados
-    if (abaAtiva === 'pendentes') {
-      let textoBase = getDescricaoAba();
-      
-      if (searchTerm) {
-        textoBase += ` • Busca: "${searchTerm}"`;
-      }
-      
-      return textoBase;
-    }
-
-    if (!filtrosPrazo.periodo) {
-      return getDescricaoAba();
-    }
-
-    let dataInicio, dataFim;
-
-    if (filtrosPrazo.periodo === 'personalizado') {
-      if (!filtrosPrazo.data_inicio || !filtrosPrazo.data_fim) {
-        return getDescricaoAba();
-      }
-      dataInicio = filtrosPrazo.data_inicio;
-      dataFim = filtrosPrazo.data_fim;
-    } else {
-      const periodo = calcularPeriodo(filtrosPrazo.periodo);
-      dataInicio = periodo.dataInicio;
-      dataFim = periodo.dataFim;
-    }
-
-    const formatarData = (dataString) => {
-      const partes = dataString.split('-');
-      return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    };
-
     let textoBase = getDescricaoAba();
-    let textoPeriodo = ` • Prazo: ${formatarData(dataInicio)} a ${formatarData(dataFim)}`;
-    
-    if (filtroValorPendente) {
-      textoPeriodo += ' • Apenas sem valor apresentado';
+    let filtrosAplicados = [];
+
+    // ✅ NOVOS FILTROS: Projeto e Categoria
+    if (filtroProjetoId && projetos[filtroProjetoId]) {
+      filtrosAplicados.push(`Projeto: ${projetos[filtroProjetoId]}`);
+    }
+
+    if (filtroCategoriaId && categorias[filtroCategoriaId]) {
+      filtrosAplicados.push(`Categoria: ${categorias[filtroCategoriaId]}`);
+    }
+
+    // ✅ PARA ABA PENDENTES: Não mostrar filtros de prazo pois são ignorados
+    if (abaAtiva !== 'pendentes') {
+      if (!filtrosPrazo.periodo) {
+        // Não adicionar filtro de prazo
+      } else {
+        let dataInicio, dataFim;
+
+        if (filtrosPrazo.periodo === 'personalizado') {
+          if (filtrosPrazo.data_inicio && filtrosPrazo.data_fim) {
+            dataInicio = filtrosPrazo.data_inicio;
+            dataFim = filtrosPrazo.data_fim;
+          }
+        } else {
+          const periodo = calcularPeriodo(filtrosPrazo.periodo);
+          dataInicio = periodo.dataInicio;
+          dataFim = periodo.dataFim;
+        }
+
+        if (dataInicio && dataFim) {
+          const formatarData = (dataString) => {
+            const partes = dataString.split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+          };
+          filtrosAplicados.push(`Prazo: ${formatarData(dataInicio)} a ${formatarData(dataFim)}`);
+        }
+      }
+
+      if (filtroValorPendente) {
+        filtrosAplicados.push('Apenas sem valor apresentado');
+      }
     }
     
     if (searchTerm) {
-      textoPeriodo += ` • Busca: "${searchTerm}"`;
+      filtrosAplicados.push(`Busca: "${searchTerm}"`);
     }
 
-    return textoBase + textoPeriodo;
+    if (filtrosAplicados.length > 0) {
+      return textoBase + ' • ' + filtrosAplicados.join(' • ');
+    }
+
+    return textoBase;
   };
 
-  // Verificar se há filtros ativos
+  // ✅ FUNÇÃO ATUALIZADA: Verificar se há filtros ativos
   const hasFiltrosAtivos = () => {
-    // ✅ PARA ABA PENDENTES: Só considerar busca como filtro ativo
+    // ✅ PARA ABA PENDENTES: Só considerar busca, projeto e categoria como filtros ativos
     if (abaAtiva === 'pendentes') {
-      return searchTerm.trim() !== '';
+      return searchTerm.trim() !== '' || 
+             filtroProjetoId !== '' || 
+             filtroCategoriaId !== '';
     }
 
     return filtroValorPendente || 
            searchTerm.trim() !== '' ||
+           filtroProjetoId !== '' ||
+           filtroCategoriaId !== '' ||
            filtrosPrazo.periodo !== '30dias' ||
            filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
            filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
   };
 
-  // Função para limpar filtros
+  // ✅ FUNÇÃO ATUALIZADA: Limpar filtros
   const limparFiltros = () => {
     const periodoPadrao = calcularPeriodo('30dias');
     setFiltrosPrazo({
@@ -240,6 +341,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
     });
     setFiltroValorPendente(false);
     setSearchTerm(''); // ✅ NOVO: Limpar busca
+    setFiltroProjetoId(''); // ✅ NOVO: Limpar projeto
+    setFiltroCategoriaId(''); // ✅ NOVO: Limpar categoria
     setShowFilters(false);
   };
 
@@ -431,6 +534,43 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 </div>
 
                 <div className="space-y-3">
+                  {/* ✅ NOVOS FILTROS: Projeto e Categoria - Mobile */}
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Filtro por Projeto */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Projeto</label>
+                      <select
+                        value={filtroProjetoId}
+                        onChange={(e) => setFiltroProjetoId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os projetos</option>
+                        {Object.entries(projetos).map(([id, nome]) => (
+                          <option key={id} value={id}>
+                            {nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Categoria */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
+                      <select
+                        value={filtroCategoriaId}
+                        onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todas as categorias</option>
+                        {Object.entries(categorias).map(([id, nome]) => (
+                          <option key={id} value={id}>
+                            {nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Filtro por Valor Pendente */}
                   <div>
                     <div className="flex items-center">
@@ -544,6 +684,67 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* ✅ NOVOS FILTROS PARA ABA PENDENTES: Apenas Projeto e Categoria */}
+            {showFilters && abaAtiva === 'pendentes' && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  {hasFiltrosAtivos() && (
+                    <button
+                      onClick={limparFiltros}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Filtro por Projeto */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Projeto</label>
+                      <select
+                        value={filtroProjetoId}
+                        onChange={(e) => setFiltroProjetoId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os projetos</option>
+                        {Object.entries(projetos).map(([id, nome]) => (
+                          <option key={id} value={id}>
+                            {nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Categoria */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
+                      <select
+                        value={filtroCategoriaId}
+                        onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todas as categorias</option>
+                        {Object.entries(categorias).map(([id, nome]) => (
+                          <option key={id} value={id}>
+                            {nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                    <p className="text-xs text-blue-700">
+                      💡 <strong>Aba Pendentes:</strong> Filtros de prazo e valor pendente são ignorados nesta visualização, pois já mostra apenas indicadores sem valor apresentado.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -699,7 +900,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </div>
             </div>
 
-            {/* Filtros Desktop - Ocultar para aba Pendentes */}
+            {/* ✅ FILTROS DESKTOP PARA ABAS NORMAIS - Ocultar para aba Pendentes */}
             {showFilters && abaAtiva !== 'pendentes' && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
@@ -714,7 +915,40 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* ✅ NOVOS FILTROS: Projeto e Categoria - Desktop */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Projeto</label>
+                    <select
+                      value={filtroProjetoId}
+                      onChange={(e) => setFiltroProjetoId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todos os projetos</option>
+                      {Object.entries(projetos).map(([id, nome]) => (
+                        <option key={id} value={id}>
+                          {nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Categoria</label>
+                    <select
+                      value={filtroCategoriaId}
+                      onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todas as categorias</option>
+                      {Object.entries(categorias).map(([id, nome]) => (
+                        <option key={id} value={id}>
+                          {nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Filtro por Valor Pendente */}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Filtrar por Pendência</label>
@@ -829,6 +1063,65 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       Período Personalizado
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ✅ FILTROS DESKTOP PARA ABA PENDENTES: Apenas Projeto e Categoria */}
+            {showFilters && abaAtiva === 'pendentes' && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  {hasFiltrosAtivos() && (
+                    <button
+                      onClick={limparFiltros}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Filtro por Projeto */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Projeto</label>
+                    <select
+                      value={filtroProjetoId}
+                      onChange={(e) => setFiltroProjetoId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todos os projetos</option>
+                      {Object.entries(projetos).map(([id, nome]) => (
+                        <option key={id} value={id}>
+                          {nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Categoria */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Categoria</label>
+                    <select
+                      value={filtroCategoriaId}
+                      onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todas as categorias</option>
+                      {Object.entries(categorias).map(([id, nome]) => (
+                        <option key={id} value={id}>
+                          {nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-700">
+                    💡 <strong>Aba Pendentes:</strong> Filtros de prazo e valor pendente são ignorados nesta visualização, pois já mostra apenas indicadores sem valor apresentado.
+                  </p>
                 </div>
               </div>
             )}
@@ -1127,7 +1420,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ COMPONENTE DA TABELA: Passando searchTerm como filtro */}
+                {/* ✅ COMPONENTE DA TABELA: Passando os novos filtros */}
                 <CopiaControleIndicadorGeralTable 
                   user={user} 
                   filtroTipoIndicador={abaAtiva}
@@ -1136,6 +1429,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   filtrosPrazo={abaAtiva === 'pendentes' ? null : filtrosPrazo} // ✅ IGNORAR filtros de prazo para aba Pendentes
                   setFiltrosPrazo={setFiltrosPrazo}
                   searchTerm={searchTerm} // ✅ NOVO: Passar termo de busca
+                  filtroProjetoId={filtroProjetoId} // ✅ NOVO: Passar filtro de projeto
+                  filtroCategoriaId={filtroCategoriaId} // ✅ NOVO: Passar filtro de categoria
                 />
               </div>
             </div>

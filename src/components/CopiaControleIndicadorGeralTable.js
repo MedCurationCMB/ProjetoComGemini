@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Versão Sem Botão Criar Linha Base
+// Componente CopiaControleIndicadorGeralTable.js - Com coluna Tipo Indicador em Todos e Pendentes
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -19,7 +19,7 @@ const CopiaControleIndicadorGeralTable = ({
   setFiltrosPrazo,
   searchTerm = ''
 }) => {
-  // ✅ NOVA FUNÇÃO: Formatar valores numéricos para padrão brasileiro
+  // ✅ FUNÇÃO: Formatar valores numéricos para padrão brasileiro
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
     
@@ -231,14 +231,14 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // ✅ ATUALIZADA: Aplicar filtro por tipo de indicador incluindo nova aba Pendentes
+  // Aplicar filtro por tipo de indicador incluindo nova aba Pendentes
   const aplicarFiltroTipoIndicador = (query) => {
     if (filtroTipoIndicador === 'realizado') {
       return query.eq('tipo_indicador', 1); // Tipo 1 = Realizado
     } else if (filtroTipoIndicador === 'meta') {
       return query.eq('tipo_indicador', 2); // Tipo 2 = Meta
     } else if (filtroTipoIndicador === 'pendentes') {
-      // ✅ NOVA: Para aba Pendentes, não filtrar por tipo, mas forçar valor pendente
+      // Para aba Pendentes, não filtrar por tipo, mas forçar valor pendente
       return query.is('valor_indicador_apresentado', null);
     }
     // Para 'todos', não aplicar filtro adicional
@@ -247,7 +247,7 @@ const CopiaControleIndicadorGeralTable = ({
 
   // Aplicar filtro por valor pendente
   const aplicarFiltroValorPendente = (query) => {
-    // ✅ ATUALIZADA: Para aba Pendentes, o filtro já é aplicado em aplicarFiltroTipoIndicador
+    // Para aba Pendentes, o filtro já é aplicado em aplicarFiltroTipoIndicador
     if (filtroTipoIndicador === 'pendentes') {
       return query; // Já filtrado na função anterior
     }
@@ -258,9 +258,9 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // ✅ ATUALIZADA: Aplicar filtros de prazo - IGNORAR para aba Pendentes
+  // Aplicar filtros de prazo - IGNORAR para aba Pendentes
   const aplicarFiltrosPrazo = (query) => {
-    // ✅ NOVA: Para aba Pendentes, ignorar filtros de prazo
+    // Para aba Pendentes, ignorar filtros de prazo
     if (filtroTipoIndicador === 'pendentes') {
       return query; // Não aplicar filtros de prazo
     }
@@ -289,7 +289,7 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // ✅ NOVA: Aplicar filtro de busca por termo
+  // Aplicar filtro de busca por termo
   const aplicarFiltroBusca = (query) => {
     if (!searchTerm || searchTerm.trim() === '') {
       return query;
@@ -434,6 +434,45 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
+  // ✅ FUNÇÃO: Renderizar badge do tipo de indicador
+  const renderTipoIndicadorBadge = (tipoIndicadorId) => {
+    const tipo = tiposIndicador[tipoIndicadorId];
+    
+    if (!tipo) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Não definido
+        </span>
+      );
+    }
+    
+    // Cores diferentes para cada tipo
+    if (tipo.toLowerCase().includes('realizado')) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          {tipo}
+        </span>
+      );
+    } else if (tipo.toLowerCase().includes('meta')) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          {tipo}
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {tipo}
+        </span>
+      );
+    }
+  };
+
+  // ✅ FUNÇÃO: Verificar se deve mostrar coluna Tipo Indicador
+  const mostrarColunaTipoIndicador = () => {
+    return filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes';
+  };
+
   // Função para lidar com o sucesso da adição de linha
   const handleAdicionarLinhaSuccess = () => {
     setShowAdicionarLinhaDialog(false);
@@ -504,7 +543,7 @@ const CopiaControleIndicadorGeralTable = ({
   return (
     <div>
 
-      {/* Botões de Ação em estilo moderno - REMOVIDO BOTÃO CRIAR LINHA BASE */}
+      {/* Botões de Ação em estilo moderno */}
       <div className="mb-6 bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Ações Disponíveis</h3>
@@ -647,7 +686,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* TABELA com estilo moderno e formatação PT-BR */}
+      {/* ✅ TABELA ATUALIZADA: com coluna Tipo Indicador nas abas "todos" e "pendentes" */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -673,6 +712,13 @@ const CopiaControleIndicadorGeralTable = ({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Categoria
                 </th>
+                
+                {/* ✅ COLUNA TIPO INDICADOR - agora nas abas "todos" e "pendentes" */}
+                {mostrarColunaTipoIndicador() && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tipo Indicador
+                  </th>
+                )}
                 
                 {/* INDICADOR */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -738,6 +784,13 @@ const CopiaControleIndicadorGeralTable = ({
                       </div>
                     </td>
                     
+                    {/* ✅ COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
+                    {mostrarColunaTipoIndicador() && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {renderTipoIndicadorBadge(item.tipo_indicador)}
+                      </td>
+                    )}
+                    
                     {/* INDICADOR */}
                     <td className="px-6 py-4 text-sm text-gray-900">
                       <div className="max-w-sm" title={item.indicador}>
@@ -768,7 +821,7 @@ const CopiaControleIndicadorGeralTable = ({
                       </div>
                     </td>
                     
-                    {/* ✅ VALOR APRESENTADO - COM FORMATAÇÃO PT-BR */}
+                    {/* VALOR APRESENTADO - COM FORMATAÇÃO PT-BR */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.valor_indicador_apresentado ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -792,7 +845,7 @@ const CopiaControleIndicadorGeralTable = ({
                       )}
                     </td>
                     
-                    {/* ✅ VALOR CALCULADO - COM FORMATAÇÃO PT-BR */}
+                    {/* VALOR CALCULADO - COM FORMATAÇÃO PT-BR */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.valor_indicador ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -841,11 +894,11 @@ const CopiaControleIndicadorGeralTable = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan="11" className="px-6 py-8 text-center text-sm text-gray-500">
+                  {/* ✅ COLSPAN DINÂMICO: 12 quando mostrar coluna Tipo Indicador, 11 quando não */}
+                  <td colSpan={mostrarColunaTipoIndicador() ? "12" : "11"} className="px-6 py-8 text-center text-sm text-gray-500">
                     <div className="flex flex-col items-center">
                       <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
                       <div>
-                        {/* ✅ NOVA: Mensagem adaptada para o filtro por tipo incluindo Pendentes */}
                         {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
                         {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
                         {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
@@ -860,7 +913,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* ✅ ATUALIZADA: Informações adicionais - SEM REFERÊNCIA AO BOTÃO CRIAR LINHA BASE */}
+      {/* Informações adicionais */}
       {controles.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
@@ -878,6 +931,9 @@ const CopiaControleIndicadorGeralTable = ({
                 <li>• <strong>Campos editáveis:</strong> Indicador, Observação, Prazo, Período de Referência, Valor Apresentado, Unidade e Obrigatório</li>
                 <li>• <strong>Respeita filtros:</strong> Todas as opções trabalham apenas com os dados visíveis na tabela</li>
                 <li>• <strong>✅ Formatação PT-BR:</strong> Valores numéricos são exibidos no formato brasileiro (ex: 1.234,56)</li>
+                {mostrarColunaTipoIndicador() && (
+                  <li>• <strong>📊 Coluna Tipo Indicador:</strong> Visualize facilmente se o indicador é "Meta" ou "Realizado" com badges coloridos</li>
+                )}
                 {filtroTipoIndicador === 'pendentes' && (
                   <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado (independente da data)</li>
                 )}
@@ -897,6 +953,11 @@ const CopiaControleIndicadorGeralTable = ({
                 <p className="text-xs text-blue-600 mt-1">
                   <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade
                 </p>
+                {mostrarColunaTipoIndicador() && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    <strong>🏷️ Tipos:</strong> Verde = Realizado, Laranja = Meta, Azul = Outros tipos
+                  </p>
+                )}
               </div>
             </div>
           </div>

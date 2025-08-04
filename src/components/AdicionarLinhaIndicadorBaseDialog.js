@@ -1,5 +1,5 @@
-// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Atualizada com Novos Campos
-import React, { useState } from 'react';
+// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Atualizada com Tipo de Unidade do Indicador
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiX, FiCheck } from 'react-icons/fi';
@@ -11,7 +11,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   projetos, 
   subcategorias 
 }) => {
-  // Estado inicial do formulário - REMOVIDO tipo_indicador + ADICIONADOS novos campos
+  // Estado inicial do formulário - ADICIONADO tipo_unidade_indicador
   const [formData, setFormData] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -20,6 +20,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     descricao_detalhada: '',
     descricao_resumida: '',
     subcategoria_id: '',
+    tipo_unidade_indicador: '', // ✅ NOVO CAMPO OBRIGATÓRIO
     prazo_entrega_inicial: '',
     recorrencia: 'sem recorrencia',
     tempo_recorrencia: '',
@@ -28,6 +29,35 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   });
   
   const [loading, setLoading] = useState(false);
+  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({}); // ✅ NOVO STATE
+
+  // ✅ NOVO useEffect: Buscar tipos de unidade do indicador
+  useEffect(() => {
+    fetchTiposUnidadeIndicador();
+  }, []);
+
+  // ✅ NOVA FUNÇÃO: Buscar tipos de unidade do indicador
+  const fetchTiposUnidadeIndicador = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_unidade_indicador')
+        .select('*')
+        .order('tipo', { ascending: true });
+      
+      if (error) throw error;
+      
+      const tiposObj = {};
+      data.forEach(tipo => {
+        tiposObj[tipo.id] = tipo.tipo;
+      });
+      
+      setTiposUnidadeIndicador(tiposObj);
+      console.log('Tipos de unidade do indicador carregados:', tiposObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de unidade do indicador:', error);
+      toast.error('Erro ao carregar tipos de unidade do indicador');
+    }
+  };
 
   // Função para lidar com mudanças nos campos do formulário
   const handleInputChange = (e) => {
@@ -57,8 +87,8 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     try {
       setLoading(true);
       
-      // Validar campos obrigatórios - REMOVIDO tipo_indicador da validação
-      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || !formData.subcategoria_id) {
+      // ✅ VALIDAÇÃO ATUALIZADA: Incluir tipo_unidade_indicador como obrigatório
+      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || !formData.subcategoria_id || !formData.tipo_unidade_indicador) {
         toast.error('Por favor, preencha todos os campos obrigatórios');
         setLoading(false);
         return;
@@ -79,7 +109,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         }
       }
       
-      // Preparar dados para inserção - REMOVIDO tipo_indicador + ADICIONADOS novos campos
+      // ✅ PREPARAR DADOS: Incluir tipo_unidade_indicador
       const dadosInsercao = {
         projeto_id: formData.projeto_id,
         categoria_id: formData.categoria_id,
@@ -87,8 +117,8 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         observacao: formData.observacao.trim() || null,
         descricao_detalhada: formData.descricao_detalhada.trim() || null,
         descricao_resumida: formData.descricao_resumida.trim() || null,
-        // tipo_indicador: REMOVIDO - será definido automaticamente pela função
         subcategoria_id: parseInt(formData.subcategoria_id),
+        tipo_unidade_indicador: parseInt(formData.tipo_unidade_indicador), // ✅ NOVO CAMPO
         prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
         recorrencia: formData.recorrencia,
         tempo_recorrencia: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.tempo_recorrencia) : null,
@@ -131,7 +161,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      {/* ✅ ADICIONADO: Container com max-height e overflow para rolagem */}
+      {/* Container com max-height e overflow para rolagem */}
       <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Criar Linha Base de Indicador</h2>
@@ -225,6 +255,51 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             />
           </div>
           
+          {/* Segunda linha: Subcategoria e Tipo de Unidade do Indicador */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Subcategoria */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subcategoria <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="subcategoria_id"
+                value={formData.subcategoria_id}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Selecione uma subcategoria</option>
+                {Object.entries(subcategorias).map(([id, nome]) => (
+                  <option key={id} value={id}>
+                    {nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* ✅ NOVO CAMPO: Tipo de Unidade do Indicador */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Unidade <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tipo_unidade_indicador"
+                value={formData.tipo_unidade_indicador}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Selecione o tipo de unidade</option>
+                {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
+                  <option key={id} value={id}>
+                    {tipo}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
           {/* Observação */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -240,7 +315,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             />
           </div>
           
-          {/* ✅ NOVOS CAMPOS: Descrição Detalhada */}
+          {/* Descrição Detalhada */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Descrição Detalhada <span className="text-gray-400 text-xs">(opcional)</span>
@@ -255,7 +330,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             />
           </div>
           
-          {/* ✅ NOVOS CAMPOS: Descrição Resumida */}
+          {/* Descrição Resumida */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Descrição Resumida <span className="text-gray-400 text-xs">(opcional)</span>
@@ -268,29 +343,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               rows="2"
               placeholder="Digite uma descrição resumida do indicador"
             />
-          </div>
-          
-          {/* REMOVIDO: Tipo de Indicador - agora é automático */}
-          
-          {/* Subcategoria */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subcategoria <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="subcategoria_id"
-              value={formData.subcategoria_id}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="">Selecione uma subcategoria</option>
-              {Object.entries(subcategorias).map(([id, nome]) => (
-                <option key={id} value={id}>
-                  {nome}
-                </option>
-              ))}
-            </select>
           </div>
           
           {/* Prazo inicial */}
@@ -399,7 +451,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             </label>
           </div>
           
-          {/* ✅ BOTÕES: Rodapé normal (sem sticky) */}
+          {/* Botões: Rodapé normal (sem sticky) */}
           <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"

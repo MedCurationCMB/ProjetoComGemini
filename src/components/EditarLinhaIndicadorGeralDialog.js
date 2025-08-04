@@ -1,4 +1,4 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js - Versão corrigida
+// src/components/EditarLinhaIndicadorGeralDialog.js - Versão sem subcategoria e sem edição do indicador
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -22,9 +22,9 @@ const EditarLinhaIndicadorGeralDialog = ({
     
     return num.toLocaleString('pt-BR');
   };
+  
   const [formData, setFormData] = useState({
     prazo_entrega: '',
-    indicador: '',
     observacao: '',
     valor_indicador_apresentado: '',
     tipo_unidade_indicador: '',
@@ -66,12 +66,11 @@ const EditarLinhaIndicadorGeralDialog = ({
     }
   };
 
-  // Carrega os dados iniciais do item de controle
+  // Carrega os dados iniciais do item de controle - SEM INDICADOR
   useEffect(() => {
     if (controleItem) {
       setFormData({
         prazo_entrega: formatDateForInput(controleItem.prazo_entrega),
-        indicador: controleItem.indicador || '',
         observacao: controleItem.observacao || '',
         valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
         tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
@@ -173,7 +172,7 @@ const EditarLinhaIndicadorGeralDialog = ({
     setFile(selectedFile);
   };
 
-  // Função para lidar com mudanças nos campos do formulário
+  // Função para lidar com mudanças nos campos do formulário - SEM INDICADOR
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -182,7 +181,7 @@ const EditarLinhaIndicadorGeralDialog = ({
     }));
   };
 
-  // Salvar as alterações
+  // Salvar as alterações - SEM INDICADOR
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -194,16 +193,9 @@ const EditarLinhaIndicadorGeralDialog = ({
         return;
       }
       
-      if (!formData.indicador.trim()) {
-        toast.error('Por favor, preencha o indicador');
-        setLoading(false);
-        return;
-      }
-      
-      // Preparar dados para atualização
+      // Preparar dados para atualização - SEM INDICADOR
       const dadosAtualizacao = {
         prazo_entrega: formData.prazo_entrega,
-        indicador: formData.indicador?.trim() || null,
         observacao: formData.observacao?.trim() || null,
         valor_indicador_apresentado: formData.valor_indicador_apresentado 
           ? parseFloat(formData.valor_indicador_apresentado) 
@@ -494,12 +486,19 @@ const EditarLinhaIndicadorGeralDialog = ({
                 <p><strong>Projeto:</strong> {projetos[controleItem?.projeto_id] || 'N/A'}</p>
                 <p><strong>Categoria:</strong> {categorias[controleItem?.categoria_id] || 'N/A'}</p>
                 <p><strong>Tipo Indicador:</strong> {tiposIndicador[controleItem?.tipo_indicador] || 'N/A'}</p>
-                <p><strong>Subcategoria:</strong> {subcategorias[controleItem?.subcategoria_id] || 'N/A'}</p>
+                {/* ✅ REMOVIDO: Linha da subcategoria */}
                 <p><strong>ID Base:</strong> {controleItem?.id_controleindicador || 'N/A'}</p>
                 <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
                 {/* ✅ ADICIONAR VALORES FORMATADOS */}
                 <p><strong>Valor Apresentado Atual:</strong> {formatarValorIndicador(controleItem?.valor_indicador_apresentado) || 'Não informado'}</p>
                 <p><strong>Valor Calculado Atual:</strong> {formatarValorIndicador(controleItem?.valor_indicador) || 'Não calculado'}</p>
+                
+                {/* ✅ ADICIONAR: Mostrar indicador atual (não editável) */}
+                <div className="mt-3 p-3 bg-yellow-50 rounded-md border border-yellow-100">
+                  <h4 className="font-medium text-yellow-800 mb-1">Indicador (não editável)</h4>
+                  <p className="text-sm text-yellow-700"><strong>{controleItem?.indicador || 'N/A'}</strong></p>
+                  <p className="text-xs text-yellow-600 mt-1">O nome do indicador não pode ser alterado neste diálogo.</p>
+                </div>
                 
                 {documentoAtual && (
                   <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-100">
@@ -547,22 +546,7 @@ const EditarLinhaIndicadorGeralDialog = ({
                 </p>
               </div>
               
-              {/* Indicador */}
-              <div>
-                <label htmlFor="indicador" className="block text-sm font-medium text-gray-700 mb-1">
-                  Indicador <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="indicador"
-                  name="indicador"
-                  value={formData.indicador}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Digite o nome do indicador"
-                />
-              </div>
+              {/* ✅ REMOVIDO: Campo Indicador (não editável) */}
               
               {/* Observação */}
               <div>

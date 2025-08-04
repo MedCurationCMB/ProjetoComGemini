@@ -27,11 +27,10 @@ const AtualizacaoInlineIndicadorDialog = ({
   const [loading, setLoading] = useState(false);
   const [alteracoesPendentes, setAlteracoesPendentes] = useState(new Set());
 
-  // Inicializar dados editáveis
+  // Inicializar dados editáveis - SEM INDICADOR nos campos editáveis
   useEffect(() => {
     const dadosIniciais = dadosTabela.map(item => ({
       id: item.id,
-      indicador: item.indicador || '',
       observacao: item.observacao || '',
       prazo_entrega: item.prazo_entrega || '',
       periodo_referencia: item.periodo_referencia || '',
@@ -39,6 +38,7 @@ const AtualizacaoInlineIndicadorDialog = ({
       tipo_unidade_indicador: item.tipo_unidade_indicador || '',
       obrigatorio: item.obrigatorio || false,
       // Campos não editáveis para exibição
+      indicador: item.indicador || '', // ✅ MOVIDO para não editável
       projeto_nome: projetos[item.projeto_id] || 'N/A',
       categoria_nome: categorias[item.categoria_id] || 'N/A',
       subcategoria_nome: subcategorias[item.subcategoria_id] || 'N/A'
@@ -47,7 +47,7 @@ const AtualizacaoInlineIndicadorDialog = ({
     setDadosEditaveis(dadosIniciais);
   }, [dadosTabela, projetos, categorias, subcategorias]);
 
-  // Função para lidar com mudanças nos campos
+  // Função para lidar com mudanças nos campos - SEM INDICADOR
   const handleInputChange = (index, field, value) => {
     setDadosEditaveis(prev => {
       const novoDados = [...prev];
@@ -82,15 +82,12 @@ const AtualizacaoInlineIndicadorDialog = ({
     }
   };
 
-  // Função para validar dados antes de salvar
+  // Função para validar dados antes de salvar - SEM INDICADOR
   const validarDados = () => {
     const erros = [];
     
     dadosEditaveis.forEach((item, index) => {
-      // Validar indicador obrigatório
-      if (!item.indicador.trim()) {
-        erros.push(`Linha ${index + 1}: Indicador não pode estar vazio`);
-      }
+      // ✅ REMOVIDO: Validação do indicador (não é mais editável)
       
       // Validar valor se preenchido
       if (item.valor_indicador_apresentado && item.valor_indicador_apresentado !== '') {
@@ -113,7 +110,7 @@ const AtualizacaoInlineIndicadorDialog = ({
     return erros;
   };
 
-  // Função para salvar todas as alterações
+  // Função para salvar todas as alterações - SEM INDICADOR
   const salvarAlteracoes = async () => {
     try {
       setLoading(true);
@@ -132,9 +129,8 @@ const AtualizacaoInlineIndicadorDialog = ({
       // Atualizar apenas os itens que foram modificados
       for (const item of dadosEditaveis) {
         try {
-          // Preparar dados para atualização
+          // Preparar dados para atualização - SEM INDICADOR
           const dadosAtualizacao = {
-            indicador: item.indicador.trim(),
             observacao: item.observacao?.trim() || null,
             prazo_entrega: item.prazo_entrega || null,
             periodo_referencia: item.periodo_referencia || null,
@@ -210,7 +206,10 @@ const AtualizacaoInlineIndicadorDialog = ({
                 Total de registros: {dadosEditaveis.length}
               </p>
               <p className="text-sm text-blue-700">
-                Campos editáveis: Indicador, Observação, Prazo Entrega, Período Referência, Valor Apresentado, Tipo Unidade, Obrigatório
+                Campos editáveis: Observação, Prazo Entrega, Período Referência, Valor Apresentado, Tipo Unidade, Obrigatório
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>⚠️ Campos não editáveis:</strong> ID, Projeto, Categoria, Indicador
               </p>
             </div>
           </div>
@@ -224,13 +223,13 @@ const AtualizacaoInlineIndicadorDialog = ({
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-16">ID</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Projeto</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Categoria</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Indicador *</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Observação</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Prazo Entrega</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Período Ref.</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Valor</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Tipo Unidade</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Obrigatório</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Indicador</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Observação *</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Prazo Entrega *</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Período Ref. *</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Valor *</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Tipo Unidade *</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Obrigatório *</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -249,15 +248,11 @@ const AtualizacaoInlineIndicadorDialog = ({
                     <div className="truncate">{item.categoria_nome}</div>
                   </td>
                   
-                  {/* Indicador (editável) */}
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={item.indicador}
-                      onChange={(e) => handleInputChange(index, 'indicador', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Digite o indicador"
-                    />
+                  {/* ✅ INDICADOR (NÃO EDITÁVEL) */}
+                  <td className="px-3 py-2 text-sm text-gray-600" title={item.indicador}>
+                    <div className="truncate bg-gray-100 px-2 py-1 rounded">
+                      {item.indicador}
+                    </div>
                   </td>
                   
                   {/* Observação (editável) */}
@@ -346,8 +341,9 @@ const AtualizacaoInlineIndicadorDialog = ({
         <div className="mt-6 border-t border-gray-200 pt-4">
           {/* Legenda */}
           <div className="mb-4 text-sm text-gray-600">
-            <p><span className="text-red-500">*</span> Campos obrigatórios</p>
+            <p><span className="text-red-500">*</span> Campos editáveis marcados com asterisco</p>
             <p className="mt-1">💡 Linhas com fundo amarelo possuem alterações pendentes</p>
+            <p className="mt-1">🔒 <strong>Campos protegidos:</strong> ID, Projeto, Categoria e Indicador não podem ser alterados</p>
           </div>
           
           {/* Botões */}

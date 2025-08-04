@@ -13,6 +13,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
   const [categorias, setCategorias] = useState({});
   const [tiposIndicador, setTiposIndicador] = useState({});
   const [subcategorias, setSubcategorias] = useState({});
+  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({}); // ✅ NOVO STATE
   const [loading, setLoading] = useState(true);
 
   // Buscar projetos vinculados e dados relacionados ao carregar o componente
@@ -57,7 +58,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
     return withoutAccents.toLowerCase().trim().replace(/\s+/g, " ");
   };
 
-  // Função para buscar APENAS projetos vinculados e dados relacionados
+  // ✅ FUNÇÃO ATUALIZADA: Buscar APENAS projetos vinculados e TODOS os dados relacionados
   const fetchDadosCompletos = async () => {
     try {
       setLoading(true);
@@ -68,6 +69,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         setCategorias({ nomeParaId: {}, idParaNome: {}, lista: [] });
         setTiposIndicador({ nomeParaId: {}, idParaNome: {}, lista: [] });
         setSubcategorias({ nomeParaId: {}, idParaNome: {}, lista: [] });
+        setTiposUnidadeIndicador({ nomeParaId: {}, idParaNome: {}, lista: [] }); // ✅ NOVO
         setLoading(false);
         return;
       }
@@ -101,6 +103,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
 
       if (subcategoriasError) throw subcategoriasError;
 
+      // ✅ NOVO: Buscar tipos de unidade do indicador
+      const { data: tiposUnidadeData, error: tiposUnidadeError } = await supabase
+        .from("tipos_unidade_indicador")
+        .select("id, tipo")
+        .order('tipo', { ascending: true });
+
+      if (tiposUnidadeError) throw tiposUnidadeError;
+
       // Criar mapeamentos para projetos
       const projetosNomeParaId = {};
       const projetosIdParaNome = {};
@@ -133,6 +143,14 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         subcategoriasIdParaNome[sub.id] = sub.nome;
       });
 
+      // ✅ NOVO: Criar mapeamentos para tipos de unidade do indicador
+      const tiposUnidadeNomeParaId = {};
+      const tiposUnidadeIdParaNome = {};
+      tiposUnidadeData.forEach((tipo) => {
+        tiposUnidadeNomeParaId[tipo.tipo.toLowerCase()] = tipo.id;
+        tiposUnidadeIdParaNome[tipo.id] = tipo.tipo;
+      });
+
       setProjetos({
         nomeParaId: projetosNomeParaId,
         idParaNome: projetosIdParaNome,
@@ -156,8 +174,15 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         idParaNome: subcategoriasIdParaNome,
         lista: subcategoriasData,
       });
+
+      // ✅ NOVO: Definir tipos de unidade do indicador
+      setTiposUnidadeIndicador({
+        nomeParaId: tiposUnidadeNomeParaId,
+        idParaNome: tiposUnidadeIdParaNome,
+        lista: tiposUnidadeData,
+      });
       
-      console.log('Dados carregados para template de indicadores');
+      console.log('Dados carregados para template de indicadores (incluindo tipos de unidade)');
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Não foi possível carregar os dados necessários");
@@ -166,7 +191,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
     }
   };
 
-  // Função para gerar e baixar o template Excel
+  // ✅ FUNÇÃO ATUALIZADA: Gerar template Excel com tipo de unidade do indicador
   const downloadTemplate = async () => {
     try {
       if (projetosVinculados.length === 0) {
@@ -178,7 +203,8 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         Object.keys(projetos).length === 0 ||
         Object.keys(categorias).length === 0 ||
         Object.keys(tiposIndicador).length === 0 ||
-        Object.keys(subcategorias).length === 0
+        Object.keys(subcategorias).length === 0 ||
+        Object.keys(tiposUnidadeIndicador).length === 0 // ✅ NOVA VERIFICAÇÃO
       ) {
         toast.error("Aguarde o carregamento dos dados");
         return;
@@ -188,16 +214,17 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Template Indicadores");
 
-      // ✅ DEFINIR CABEÇALHOS COM AS NOVAS COLUNAS
+      // ✅ DEFINIR CABEÇALHOS COM TIPO DE UNIDADE DO INDICADOR
       worksheet.columns = [
         { header: "projeto_id", key: "projeto_id", width: 20 },
         { header: "categoria_id", key: "categoria_id", width: 20 },
         { header: "indicador", key: "indicador", width: 40 },
         { header: "observacao", key: "observacao", width: 40 },
-        { header: "descricao_detalhada", key: "descricao_detalhada", width: 50 }, // ✅ NOVA COLUNA
-        { header: "descricao_resumida", key: "descricao_resumida", width: 40 },   // ✅ NOVA COLUNA
+        { header: "descricao_detalhada", key: "descricao_detalhada", width: 50 },
+        { header: "descricao_resumida", key: "descricao_resumida", width: 40 },
         { header: "tipo_indicador", key: "tipo_indicador", width: 20 },
         { header: "subcategoria_id", key: "subcategoria_id", width: 20 },
+        { header: "tipo_unidade_indicador", key: "tipo_unidade_indicador", width: 25 }, // ✅ NOVA COLUNA
         { header: "prazo_entrega_inicial", key: "prazo_entrega_inicial", width: 15 },
         { header: "recorrencia", key: "recorrencia", width: 15 },
         { header: "tempo_recorrencia", key: "tempo_recorrencia", width: 15 },
@@ -205,16 +232,17 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         { header: "obrigatorio", key: "obrigatorio", width: 12 },
       ];
 
-      // ✅ ADICIONAR LINHA DE INFORMAÇÃO COM AS NOVAS COLUNAS
+      // ✅ ADICIONAR LINHA DE INFORMAÇÃO COM TIPO DE UNIDADE
       const infoRow = worksheet.addRow({
         projeto_id: "Nome do Projeto (apenas vinculados)",
         categoria_id: "Nome da Categoria",
         indicador: "Nome do indicador",
         observacao: "Observações (opcional)",
-        descricao_detalhada: "Descrição detalhada do indicador (opcional)", // ✅ NOVA INFORMAÇÃO
-        descricao_resumida: "Descrição resumida do indicador (opcional)",   // ✅ NOVA INFORMAÇÃO
+        descricao_detalhada: "Descrição detalhada do indicador (opcional)",
+        descricao_resumida: "Descrição resumida do indicador (opcional)",
         tipo_indicador: "Nome do tipo de indicador",
         subcategoria_id: "Nome da subcategoria",
+        tipo_unidade_indicador: "Nome do tipo de unidade (Ex: Percentual, Valor, Quantidade)", // ✅ NOVA INFORMAÇÃO
         prazo_entrega_inicial: "Formato: AAAA-MM-DD",
         recorrencia: "dia, mês, ano, sem recorrencia",
         tempo_recorrencia: "Número inteiro",
@@ -227,16 +255,17 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         cell.font = { italic: true, color: { argb: "FF999999" } };
       });
 
-      // ✅ ADICIONAR DADOS DE EXEMPLO COM AS NOVAS COLUNAS
+      // ✅ ADICIONAR DADOS DE EXEMPLO COM TIPO DE UNIDADE
       worksheet.addRow({
         projeto_id: Object.values(projetos.idParaNome)[0] || "Nome do Projeto",
         categoria_id: Object.values(categorias.idParaNome)[0] || "Nome da Categoria",
         indicador: "Taxa de conversão",
         observacao: "Indicador mensal de performance",
-        descricao_detalhada: "Este indicador mede a eficácia da conversão de leads em clientes, considerando todo o funil de vendas desde o primeiro contato até o fechamento do negócio", // ✅ EXEMPLO DETALHADO
-        descricao_resumida: "Percentual de conversão de leads em clientes", // ✅ EXEMPLO RESUMIDO
+        descricao_detalhada: "Este indicador mede a eficácia da conversão de leads em clientes, considerando todo o funil de vendas desde o primeiro contato até o fechamento do negócio",
+        descricao_resumida: "Percentual de conversão de leads em clientes",
         tipo_indicador: Object.values(tiposIndicador.idParaNome)[0] || "Nome do Tipo",
         subcategoria_id: Object.values(subcategorias.idParaNome)[0] || "Nome da Subcategoria",
+        tipo_unidade_indicador: Object.values(tiposUnidadeIndicador.idParaNome)[0] || "Percentual", // ✅ EXEMPLO
         prazo_entrega_inicial: "2024-01-31",
         recorrencia: "mês",
         tempo_recorrencia: 1,
@@ -295,7 +324,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
     setFile(selectedFile);
   };
 
-  // Função para fazer upload e processar o arquivo Excel
+  // ✅ FUNÇÃO ATUALIZADA: Upload e processar Excel com tipo de unidade
   const uploadExcel = async (e) => {
     e.preventDefault();
 
@@ -309,12 +338,13 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
       return;
     }
 
-    // Verificar se os mapeamentos estão disponíveis
+    // ✅ VERIFICAÇÃO ATUALIZADA: Incluir tipos de unidade do indicador
     if (
       Object.keys(projetos.nomeParaId || {}).length === 0 ||
       Object.keys(categorias.nomeParaId || {}).length === 0 ||
       Object.keys(tiposIndicador.nomeParaId || {}).length === 0 ||
-      Object.keys(subcategorias.nomeParaId || {}).length === 0
+      Object.keys(subcategorias.nomeParaId || {}).length === 0 ||
+      Object.keys(tiposUnidadeIndicador.nomeParaId || {}).length === 0 // ✅ NOVA VERIFICAÇÃO
     ) {
       toast.error("Dados não carregados. Recarregue a página.");
       return;
@@ -358,8 +388,8 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
             headers.push(cell.value?.toString() || "");
           });
 
-          // ✅ VERIFICAR SE OS CABEÇALHOS NECESSÁRIOS ESTÃO PRESENTES (incluindo os novos)
-          const requiredHeaders = ["projeto_id", "categoria_id", "indicador", "tipo_indicador", "subcategoria_id"];
+          // ✅ VERIFICAÇÃO ATUALIZADA: Incluir tipo_unidade_indicador como obrigatório
+          const requiredHeaders = ["projeto_id", "categoria_id", "indicador", "tipo_indicador", "subcategoria_id", "tipo_unidade_indicador"];
           for (const header of requiredHeaders) {
             if (!headers.includes(header)) {
               throw new Error(`Cabeçalho obrigatório "${header}" não encontrado no arquivo`);
@@ -393,7 +423,7 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
             throw new Error("A planilha não contém dados válidos");
           }
 
-          // Criar mapeamentos normalizados
+          // ✅ CRIAR MAPEAMENTOS NORMALIZADOS INCLUINDO TIPOS DE UNIDADE
           const normalizedProjetoMap = {};
           Object.entries(projetos.nomeParaId || {}).forEach(([nome, id]) => {
             normalizedProjetoMap[normalizeText(nome)] = id;
@@ -414,7 +444,13 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
             normalizedSubcategoriaMap[normalizeText(nome)] = id;
           });
 
-          // Validar os dados e converter nomes para IDs
+          // ✅ NOVO: Mapeamento para tipos de unidade do indicador
+          const normalizedTipoUnidadeMap = {};
+          Object.entries(tiposUnidadeIndicador.nomeParaId || {}).forEach(([tipo, id]) => {
+            normalizedTipoUnidadeMap[normalizeText(tipo)] = id;
+          });
+
+          // ✅ VALIDAÇÃO ATUALIZADA: Incluir tipo de unidade do indicador
           const validatedData = [];
           const errors = [];
 
@@ -463,6 +499,15 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
                 throw new Error(`Subcategoria "${subcategoriaNome}" não encontrada (linha ${rowNumber})`);
               }
 
+              // ✅ NOVO: Converter nome do tipo de unidade do indicador para ID
+              const tipoUnidadeNome = String(row.tipo_unidade_indicador || "").trim();
+              const normalizedTipoUnidadeNome = normalizeText(tipoUnidadeNome);
+              const tipoUnidadeId = normalizedTipoUnidadeMap[normalizedTipoUnidadeNome];
+
+              if (!tipoUnidadeId) {
+                throw new Error(`Tipo de unidade do indicador "${tipoUnidadeNome}" não encontrado (linha ${rowNumber})`);
+              }
+
               // Processar o campo obrigatório
               const obrigatorioText = normalizeText(String(row.obrigatorio || ""));
               let obrigatorio;
@@ -496,16 +541,17 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
                 recorrencia = "sem recorrencia";
               }
 
-              // ✅ CRIAR OBJETO VALIDADO COM AS NOVAS COLUNAS
+              // ✅ CRIAR OBJETO VALIDADO COM TIPO DE UNIDADE DO INDICADOR
               const item = {
                 projeto_id: projetoId,
                 categoria_id: categoriaId,
                 indicador: String(row.indicador || "").trim(),
                 observacao: String(row.observacao || "").trim() || null,
-                descricao_detalhada: String(row.descricao_detalhada || "").trim() || null, // ✅ NOVA COLUNA
-                descricao_resumida: String(row.descricao_resumida || "").trim() || null,   // ✅ NOVA COLUNA
+                descricao_detalhada: String(row.descricao_detalhada || "").trim() || null,
+                descricao_resumida: String(row.descricao_resumida || "").trim() || null,
                 tipo_indicador: tipoId,
                 subcategoria_id: subcategoriaId,
+                tipo_unidade_indicador: tipoUnidadeId, // ✅ NOVO CAMPO
                 prazo_entrega_inicial: row.prazo_entrega_inicial ? new Date(row.prazo_entrega_inicial) : null,
                 recorrencia: recorrencia,
                 tempo_recorrencia: row.tempo_recorrencia ? parseInt(row.tempo_recorrencia) : null,
@@ -611,9 +657,9 @@ const UploadExcelIndicadorTemplate = ({ user }) => {
         <p className="text-blue-600 mb-4 text-sm">
           <strong>Importante:</strong> O template mostrará apenas os projetos aos quais você está vinculado.
         </p>
-        {/* ✅ ATUALIZAR A DESCRIÇÃO PARA MENCIONAR AS NOVAS COLUNAS */}
+        {/* ✅ ATUALIZAR DESCRIÇÃO PARA MENCIONAR TIPO DE UNIDADE */}
         <p className="text-blue-600 mb-4 text-sm">
-          <strong>Novidade:</strong> Agora você pode incluir <em>Descrição Detalhada</em> e <em>Descrição Resumida</em> para cada indicador (campos opcionais).
+          <strong>Novidade:</strong> Agora você deve incluir obrigatoriamente o <em>Tipo de Unidade do Indicador</em> (Ex: Percentual, Valor, Quantidade), além das <em>Descrições Detalhada e Resumida</em> (opcionais).
         </p>
         <button
           onClick={downloadTemplate}
