@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo, FiTrash2 } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo, FiTrash2, FiEdit } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 import DeleteIndicadorDialog from './DeleteIndicadorDialog';
+import EdicaoInlineControleIndicadorDialog from './EdicaoInlineControleIndicadorDialog';
 
 const ControleIndicadorTable = ({ user }) => {
   const [controles, setControles] = useState([]);
@@ -11,11 +12,13 @@ const ControleIndicadorTable = ({ user }) => {
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [subcategorias, setSubcategorias] = useState({});
+  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
   const [loading, setLoading] = useState(true);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEdicaoDialog, setShowEdicaoDialog] = useState(false);
   const [indicadorToDelete, setIndicadorToDelete] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +34,7 @@ const ControleIndicadorTable = ({ user }) => {
       fetchCategorias();
       fetchProjetos();
       fetchSubcategorias();
+      fetchTiposUnidadeIndicador();
       fetchControles();
     }
   }, [projetosVinculados, filtroProjetoId, filtroCategoriaId, searchTerm]);
@@ -119,6 +123,28 @@ const ControleIndicadorTable = ({ user }) => {
       setSubcategorias(subcategoriasObj);
     } catch (error) {
       console.error('Erro ao carregar subcategorias:', error);
+    }
+  };
+
+  // Buscar tipos de unidade do indicador
+  const fetchTiposUnidadeIndicador = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_unidade_indicador')
+        .select('*')
+        .order('tipo', { ascending: true });
+      
+      if (error) throw error;
+      
+      const tiposObj = {};
+      data.forEach(tipo => {
+        tiposObj[tipo.id] = tipo.tipo;
+      });
+      
+      setTiposUnidadeIndicador(tiposObj);
+      console.log('Tipos de unidade do indicador carregados:', tiposObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de unidade do indicador:', error);
     }
   };
 
@@ -260,6 +286,17 @@ const ControleIndicadorTable = ({ user }) => {
     fetchControles();
   };
 
+  // Função para abrir modal de edição
+  const handleEditClick = () => {
+    setShowEdicaoDialog(true);
+  };
+
+  // Função para lidar com o sucesso da edição
+  const handleEdicaoSuccess = () => {
+    setShowEdicaoDialog(false);
+    fetchControles();
+  };
+
   // Limpar filtros
   const limparFiltros = () => {
     setFiltroProjetoId('');
@@ -330,6 +367,19 @@ const ControleIndicadorTable = ({ user }) => {
             Adicionar
           </button>
         </div>
+
+        {/* Botão de edição em massa - Mobile */}
+        {controles.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={handleEditClick}
+              className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-sm font-medium"
+            >
+              <FiEdit className="mr-2" />
+              Editar em Massa
+            </button>
+          </div>
+        )}
 
         {showFilters && (
           <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
@@ -410,13 +460,26 @@ const ControleIndicadorTable = ({ user }) => {
             </button>
           </div>
 
-          <button
-            onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-sm font-medium ml-4"
-          >
-            <FiPlus className="mr-2" />
-            Adicionar Linha de Indicador
-          </button>
+          <div className="flex items-center space-x-3 ml-4">
+            {/* Botão de edição em massa - Desktop */}
+            {controles.length > 0 && (
+              <button
+                onClick={handleEditClick}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
+              >
+                <FiEdit className="mr-2" />
+                Editar em Massa
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowAdicionarLinhaDialog(true)}
+              className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
+            >
+              <FiPlus className="mr-2" />
+              Adicionar Linha de Indicador
+            </button>
+          </div>
         </div>
 
         {showFilters && (
@@ -490,6 +553,19 @@ const ControleIndicadorTable = ({ user }) => {
         />
       )}
 
+      {/* Modal para edição inline */}
+      {showEdicaoDialog && (
+        <EdicaoInlineControleIndicadorDialog
+          onClose={() => setShowEdicaoDialog(false)}
+          onSuccess={handleEdicaoSuccess}
+          dadosTabela={controles}
+          categorias={categorias}
+          projetos={projetos}
+          subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
       {/* Tabela de Controle - Desktop */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
@@ -515,6 +591,9 @@ const ControleIndicadorTable = ({ user }) => {
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Subcategoria
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Tipo Unidade
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Prazo Inicial
@@ -590,6 +669,9 @@ const ControleIndicadorTable = ({ user }) => {
                     {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {tiposUnidadeIndicador[item.tipo_unidade_indicador] || 'Tipo indisponível'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <FiCalendar className="mr-1 text-gray-400" />
                       {formatDate(item.prazo_entrega_inicial)}
@@ -631,7 +713,7 @@ const ControleIndicadorTable = ({ user }) => {
                       
                       return (
                         <div className="text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex-items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {totalLinhas} linhas
                           </span>
                           <div className="text-xs text-gray-500 mt-1">
@@ -642,20 +724,21 @@ const ControleIndicadorTable = ({ user }) => {
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <button
-                      onClick={() => handleDeleteClick(item)}
-                      className="inline-flex items-center px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 text-xs font-medium rounded-md transition-colors"
-                      title="Excluir indicador"
-                    >
-                      <FiTrash2 className="mr-1 h-3 w-3" />
-                      Excluir
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="inline-flex items-center px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 text-xs font-medium rounded-md transition-colors"
+                        title="Excluir indicador"
+                      >
+                        <FiTrash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="12" className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan="13" className="px-6 py-8 text-center text-sm text-gray-500">
                   {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
@@ -751,6 +834,11 @@ const ControleIndicadorTable = ({ user }) => {
                 <div className="flex items-center text-sm">
                   <span className="font-medium text-gray-600 w-20">Subcategoria:</span>
                   <span className="text-gray-900">{subcategorias[item.subcategoria_id] || 'Indisponível'}</span>
+                </div>
+
+                <div className="flex items-center text-sm">
+                  <span className="font-medium text-gray-600 w-20">Tipo Unidade:</span>
+                  <span className="text-gray-900">{tiposUnidadeIndicador[item.tipo_unidade_indicador] || 'Indisponível'}</span>
                 </div>
               </div>
               
