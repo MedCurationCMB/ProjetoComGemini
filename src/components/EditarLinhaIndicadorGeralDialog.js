@@ -1,4 +1,4 @@
-// src/components/EditarLinhaIndicadorGeralDialog.js - Versão sem subcategoria e sem edição do indicador
+// src/components/EditarLinhaIndicadorGeralDialog.js - SEM SUBCATEGORIA
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -11,8 +11,7 @@ const EditarLinhaIndicadorGeralDialog = ({
   categorias, 
   projetos, 
   tiposIndicador, 
-  subcategorias, 
-  tiposUnidadeIndicador 
+  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
 }) => {
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -27,7 +26,6 @@ const EditarLinhaIndicadorGeralDialog = ({
     prazo_entrega: '',
     observacao: '',
     valor_indicador_apresentado: '',
-    tipo_unidade_indicador: '',
     periodo_referencia: '',
     obrigatorio: false
   });
@@ -73,7 +71,6 @@ const EditarLinhaIndicadorGeralDialog = ({
         prazo_entrega: formatDateForInput(controleItem.prazo_entrega),
         observacao: controleItem.observacao || '',
         valor_indicador_apresentado: controleItem.valor_indicador_apresentado || '',
-        tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
         periodo_referencia: formatDateForInput(controleItem.periodo_referencia),
         obrigatorio: controleItem.obrigatorio || false
       });
@@ -203,13 +200,6 @@ const EditarLinhaIndicadorGeralDialog = ({
         periodo_referencia: formData.periodo_referencia || null,
         obrigatorio: formData.obrigatorio
       };
-
-      // Incluir tipo_unidade_indicador apenas se foi selecionado
-      if (formData.tipo_unidade_indicador) {
-        dadosAtualizacao.tipo_unidade_indicador = parseInt(formData.tipo_unidade_indicador);
-      } else {
-        dadosAtualizacao.tipo_unidade_indicador = null;
-      }
       
       // Atualizar o item de controle de indicador geral
       const { data, error } = await supabase
@@ -485,7 +475,9 @@ const EditarLinhaIndicadorGeralDialog = ({
                 <h3 className="font-medium text-gray-700 mb-2">Detalhes do Item</h3>
                 <p><strong>Projeto:</strong> {projetos[controleItem?.projeto_id] || 'N/A'}</p>
                 <p><strong>Categoria:</strong> {categorias[controleItem?.categoria_id] || 'N/A'}</p>
+                <p><strong>Descrição Resumida:</strong> {controleItem?.descricao_resumida || 'Não informado'}</p>
                 <p><strong>Tipo Indicador:</strong> {tiposIndicador[controleItem?.tipo_indicador] || 'N/A'}</p>
+                <p><strong>Tipo Unidade:</strong> {tiposUnidadeIndicador[controleItem?.tipo_unidade_indicador] || 'Não definido'}</p>
                 {/* ✅ REMOVIDO: Linha da subcategoria */}
                 <p><strong>ID Base:</strong> {controleItem?.id_controleindicador || 'N/A'}</p>
                 <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
@@ -587,30 +579,6 @@ const EditarLinhaIndicadorGeralDialog = ({
                 )}
                 <p className="mt-1 text-sm text-gray-500">
                   Este é o valor numérico que será apresentado para o indicador.
-                </p>
-              </div>
-              
-              {/* Tipo de Unidade do Indicador */}
-              <div>
-                <label htmlFor="tipo_unidade_indicador" className="block text-sm font-medium text-gray-700 mb-1">
-                  Unidade do Indicador
-                </label>
-                <select
-                  id="tipo_unidade_indicador"
-                  name="tipo_unidade_indicador"
-                  value={formData.tipo_unidade_indicador}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Selecione uma unidade</option>
-                  {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
-                    <option key={id} value={id}>
-                      {tipo}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-sm text-gray-500">
-                  Selecione a unidade de medida para este indicador.
                 </p>
               </div>
 

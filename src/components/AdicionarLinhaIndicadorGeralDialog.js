@@ -1,4 +1,4 @@
-// src/components/AdicionarLinhaIndicadorGeralDialog.js - Com Valor Apresentado e Unidade
+// src/components/AdicionarLinhaIndicadorGeralDialog.js - SEM SUBCATEGORIA
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
@@ -12,8 +12,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   categorias, 
   projetos, 
   tiposIndicador, 
-  subcategorias,
-  tiposUnidadeIndicador // ✅ NOVO: Adicionado prop
+  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
 }) => {
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -33,19 +32,18 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
-  // Campos para formulário não recorrente - ✅ ADICIONADOS NOVOS CAMPOS
+  // Campos para formulário não recorrente - ✅ REMOVIDO: subcategoria_id
   const [novaLinha, setNovaLinha] = useState({
     projeto_id: '',
     categoria_id: '',
     indicador: '',
     observacao: '',
     tipo_indicador: '',
-    subcategoria_id: '',
     prazo_entrega_inicial: '',
     descricao_detalhada: '',
     descricao_resumida: '',
-    valor_indicador_apresentado: '', // ✅ NOVO
-    tipo_unidade_indicador: '', // ✅ NOVO
+    valor_indicador_apresentado: '', 
+    tipo_unidade_indicador: '', 
     obrigatorio: false
   });
 
@@ -168,7 +166,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
             novaPrazoEntrega.setFullYear(novaPrazoEntrega.getFullYear() + (linhaBase.tempo_recorrencia || 1));
           }
           
-          // Criar registro para a nova linha
+          // Criar registro para a nova linha - ✅ REMOVIDO: subcategoria_id
           novasLinhas.push({
             id_controleindicador: linhaBaseId,
             projeto_id: linhaBase.projeto_id,
@@ -176,7 +174,6 @@ const AdicionarLinhaIndicadorGeralDialog = ({
             indicador: linhaBase.indicador,
             observacao: linhaBase.observacao,
             tipo_indicador: linhaBase.tipo_indicador,
-            subcategoria_id: linhaBase.subcategoria_id,
             prazo_entrega_inicial: linhaBase.prazo_entrega_inicial,
             prazo_entrega: novaPrazoEntrega.toISOString().split('T')[0],
             recorrencia: linhaBase.recorrencia,
@@ -204,21 +201,20 @@ const AdicionarLinhaIndicadorGeralDialog = ({
         
       } else {
         // Adicionar uma nova linha não recorrente na tabela controle_indicador (BASE)
-        // Validar campos obrigatórios
-        if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador || !novaLinha.subcategoria_id) {
+        // ✅ REMOVIDO: validação de subcategoria_id
+        if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador) {
           toast.error('Por favor, preencha todos os campos obrigatórios');
           setLoading(false);
           return;
         }
         
-        // ✅ NOVO: Preparar dados para inserção incluindo novos campos
+        // ✅ REMOVIDO: subcategoria_id dos dados de inserção
         const dadosInsercao = {
           projeto_id: novaLinha.projeto_id,
           categoria_id: novaLinha.categoria_id,
           indicador: novaLinha.indicador.trim(),
           observacao: novaLinha.observacao.trim() || null,
           tipo_indicador: parseInt(novaLinha.tipo_indicador),
-          subcategoria_id: parseInt(novaLinha.subcategoria_id),
           prazo_entrega_inicial: novaLinha.prazo_entrega_inicial || null,
           descricao_detalhada: novaLinha.descricao_detalhada.trim() || null,
           descricao_resumida: novaLinha.descricao_resumida.trim() || null,
@@ -229,7 +225,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           tem_documento: false
         };
 
-        // ✅ NOVO: Adicionar valor_indicador_apresentado se preenchido
+        // ✅ Adicionar valor_indicador_apresentado se preenchido
         if (novaLinha.valor_indicador_apresentado && novaLinha.valor_indicador_apresentado !== '') {
           const valorNumerico = parseFloat(novaLinha.valor_indicador_apresentado);
           if (!isNaN(valorNumerico)) {
@@ -237,7 +233,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           }
         }
 
-        // ✅ NOVO: Adicionar tipo_unidade_indicador se selecionado
+        // ✅ Adicionar tipo_unidade_indicador se selecionado
         if (novaLinha.tipo_unidade_indicador && novaLinha.tipo_unidade_indicador !== '') {
           dadosInsercao.tipo_unidade_indicador = parseInt(novaLinha.tipo_unidade_indicador);
         }
@@ -268,7 +264,6 @@ const AdicionarLinhaIndicadorGeralDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      {/* ✅ CORREÇÃO: Container principal com max-height e overflow-y-auto */}
       <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Adicionar Linha de Indicador</h2>
@@ -395,7 +390,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                 </div>
               </>
             ) : (
-              // ✅ NOVO: Formulário para novas linhas não recorrentes COM NOVOS CAMPOS
+              // ✅ Formulário para novas linhas não recorrentes SEM SUBCATEGORIA
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -514,27 +509,9 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subcategoria <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="subcategoria_id"
-                    value={novaLinha.subcategoria_id}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Selecione uma subcategoria</option>
-                    {Object.entries(subcategorias).map(([id, nome]) => (
-                      <option key={id} value={id}>
-                        {nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* ✅ REMOVIDO: Campo Subcategoria */}
 
-                {/* ✅ NOVO CAMPO: Valor Apresentado */}
+                {/* ✅ CAMPO: Valor Apresentado */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Valor Apresentado <span className="text-gray-400 text-xs">(opcional)</span>
@@ -559,7 +536,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   </p>
                 </div>
 
-                {/* ✅ NOVO CAMPO: Unidade do Indicador */}
+                {/* ✅ CAMPO: Unidade do Indicador */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Unidade do Indicador <span className="text-gray-400 text-xs">(opcional)</span>
@@ -611,7 +588,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
               </div>
             )}
             
-            {/* ✅ CORREÇÃO: Rodapé com botões normal (sem sticky) */}
+            {/* Rodapé com botões */}
             <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between">
               <button
                 onClick={() => setStep(1)}

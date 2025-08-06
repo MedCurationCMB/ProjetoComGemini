@@ -1,4 +1,4 @@
-// src/components/AtualizacaoInlineIndicadorDialog.js
+// src/components/AtualizacaoInlineIndicadorDialog.js - SEM SUBCATEGORIA
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -11,8 +11,7 @@ const AtualizacaoInlineIndicadorDialog = ({
   categorias,
   projetos,
   tiposIndicador,
-  subcategorias,
-  tiposUnidadeIndicador
+  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
 }) => {
 
   const formatarValorIndicador = (valor) => {
@@ -35,17 +34,17 @@ const AtualizacaoInlineIndicadorDialog = ({
       prazo_entrega: item.prazo_entrega || '',
       periodo_referencia: item.periodo_referencia || '',
       valor_indicador_apresentado: item.valor_indicador_apresentado || '',
-      tipo_unidade_indicador: item.tipo_unidade_indicador || '',
       obrigatorio: item.obrigatorio || false,
       // Campos não editáveis para exibição
       indicador: item.indicador || '', // ✅ MOVIDO para não editável
       projeto_nome: projetos[item.projeto_id] || 'N/A',
       categoria_nome: categorias[item.categoria_id] || 'N/A',
-      subcategoria_nome: subcategorias[item.subcategoria_id] || 'N/A'
+      descricao_resumida: item.descricao_resumida || ''
+      // ✅ REMOVIDO: subcategoria_nome
     }));
     
     setDadosEditaveis(dadosIniciais);
-  }, [dadosTabela, projetos, categorias, subcategorias]);
+  }, [dadosTabela, projetos, categorias]); // ✅ REMOVIDO: subcategorias dependency
 
   // Função para lidar com mudanças nos campos - SEM INDICADOR
   const handleInputChange = (index, field, value) => {
@@ -137,9 +136,6 @@ const AtualizacaoInlineIndicadorDialog = ({
             valor_indicador_apresentado: item.valor_indicador_apresentado 
               ? parseFloat(item.valor_indicador_apresentado) 
               : null,
-            tipo_unidade_indicador: item.tipo_unidade_indicador 
-              ? parseInt(item.tipo_unidade_indicador) 
-              : null,
             obrigatorio: item.obrigatorio
           };
           
@@ -215,7 +211,7 @@ const AtualizacaoInlineIndicadorDialog = ({
           </div>
         </div>
 
-        {/* Tabela editável */}
+        {/* ✅ TABELA EDITÁVEL SEM SUBCATEGORIA */}
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
           <table className="min-w-full bg-white">
             <thead className="bg-gray-50 sticky top-0">
@@ -223,12 +219,12 @@ const AtualizacaoInlineIndicadorDialog = ({
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-16">ID</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Projeto</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Categoria</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Descrição Resumida</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Indicador</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Observação *</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Prazo Entrega *</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Período Ref. *</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Valor *</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-40">Tipo Unidade *</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Obrigatório *</th>
               </tr>
             </thead>
@@ -246,6 +242,13 @@ const AtualizacaoInlineIndicadorDialog = ({
                   {/* Categoria (não editável) */}
                   <td className="px-3 py-2 text-sm text-gray-600" title={item.categoria_nome}>
                     <div className="truncate">{item.categoria_nome}</div>
+                  </td>
+
+                  {/* Descrição Resumida (não editável) */}
+                  <td className="px-3 py-2 text-sm text-gray-600" title={item.descricao_resumida}>
+                    <div className="truncate bg-gray-100 px-2 py-1 rounded">
+                      {item.descricao_resumida || '-'}
+                    </div>
                   </td>
                   
                   {/* ✅ INDICADOR (NÃO EDITÁVEL) */}
@@ -302,22 +305,6 @@ const AtualizacaoInlineIndicadorDialog = ({
                         Preview: {formatarValorIndicador(item.valor_indicador_apresentado)}
                       </div>
                     )}
-                  </td>
-                  
-                  {/* Tipo Unidade (editável) */}
-                  <td className="px-3 py-2">
-                    <select
-                      value={item.tipo_unidade_indicador}
-                      onChange={(e) => handleInputChange(index, 'tipo_unidade_indicador', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Selecione</option>
-                      {Object.entries(tiposUnidadeIndicador).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
                   </td>
                   
                   {/* Obrigatório (editável) */}

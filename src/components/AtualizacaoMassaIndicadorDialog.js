@@ -1,4 +1,4 @@
-// src/components/AtualizacaoMassaIndicadorDialog.js
+// src/components/AtualizacaoMassaIndicadorDialog.js - SEM SUBCATEGORIA
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -12,8 +12,7 @@ const AtualizacaoMassaIndicadorDialog = ({
   categorias,
   projetos,
   tiposIndicador,
-  subcategorias,
-  tiposUnidadeIndicador
+  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
 }) => {
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -75,7 +74,7 @@ const AtualizacaoMassaIndicadorDialog = ({
     }
   };
 
-  // Função para gerar e baixar a planilha Excel
+  // Função para gerar e baixar a planilha Excel - ✅ SEM SUBCATEGORIA
   const gerarPlanilhaExcel = async () => {
     try {
       setLoading(true);
@@ -84,17 +83,17 @@ const AtualizacaoMassaIndicadorDialog = ({
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Indicadores');
       
-      // Definir colunas
+      // ✅ Definir colunas SEM SUBCATEGORIA
       worksheet.columns = [
         { header: 'ID (NÃO MODIFICAR)', key: 'id', width: 20 },
         { header: 'Projeto (NÃO MODIFICAR)', key: 'projeto', width: 25 },
         { header: 'Categoria (NÃO MODIFICAR)', key: 'categoria', width: 25 },
+        { header: 'Descrição Resumida (NÃO MODIFICAR)', key: 'descricao_resumida', width: 40 },
         { header: 'Indicador', key: 'indicador', width: 40 },
         { header: 'Observação', key: 'observacao', width: 40 },
         { header: 'Prazo Entrega (YYYY-MM-DD)', key: 'prazo_entrega', width: 25 },
         { header: 'Período Referência (YYYY-MM-DD)', key: 'periodo_referencia', width: 25 },
         { header: 'Valor Apresentado', key: 'valor_indicador_apresentado', width: 20 },
-        { header: 'Tipo Unidade Indicador', key: 'tipo_unidade_indicador', width: 25 },
         { header: 'Obrigatório (true/false)', key: 'obrigatorio', width: 20 }
       ];
       
@@ -126,16 +125,17 @@ const AtualizacaoMassaIndicadorDialog = ({
           }
         }
         
+        // ✅ Adicionar linha SEM SUBCATEGORIA
         worksheet.addRow({
           id: item.id,
           projeto: projetos[item.projeto_id] || 'N/A',
           categoria: categorias[item.categoria_id] || 'N/A',
+          descricao_resumida: item.descricao_resumida || '',
           indicador: item.indicador || '',
           observacao: item.observacao || '',
           prazo_entrega: item.prazo_entrega || '',
           periodo_referencia: periodoReferencia,
           valor_indicador_apresentado: item.valor_indicador_apresentado || '',
-          tipo_unidade_indicador: tiposUnidadeIndicador[item.tipo_unidade_indicador] || '',
           obrigatorio: item.obrigatorio ? 'true' : 'false'
         });
       });
@@ -227,7 +227,7 @@ const AtualizacaoMassaIndicadorDialog = ({
     }
   };
 
-  // Função para processar o arquivo Excel enviado
+  // Função para processar o arquivo Excel enviado - ✅ SEM SUBCATEGORIA
   const processarArquivoExcel = async () => {
     if (!file) {
       toast.error('Selecione um arquivo Excel');
@@ -254,7 +254,7 @@ const AtualizacaoMassaIndicadorDialog = ({
         if (rowNumber === 1) return; // Pular cabeçalho
         
         const id = row.getCell(1).value;
-        const indicador = row.getCell(4).value;
+        const indicador = row.getCell(4).value; // ✅ Ajustado índice após remover subcategoria
         const observacao = row.getCell(5).value;
         const prazo_entrega = row.getCell(6).value;
         const periodo_referencia = row.getCell(7).value;
@@ -307,25 +307,6 @@ const AtualizacaoMassaIndicadorDialog = ({
             erros.push(`Linha ${rowNumber}: Valor Apresentado deve ser um número válido`);
             return;
           }
-        }
-        
-        // Validar tipo_unidade_indicador
-        let tipo_unidade_id = null;
-        if (tipo_unidade_indicador && tipo_unidade_indicador.toString().trim() !== '') {
-          const textoDigitado = tipo_unidade_indicador.toString().trim();
-          
-          // Buscar pelo nome exato (case-insensitive) na tabela tipos_unidade_indicador
-          const tipoEncontrado = Object.entries(tiposUnidadeIndicador).find(
-            ([id, nome]) => nome.toLowerCase() === textoDigitado.toLowerCase()
-          );
-          
-          if (!tipoEncontrado) {
-            erros.push(`Linha ${rowNumber}: Tipo Unidade "${textoDigitado}" não foi encontrado. Tipos válidos: ${Object.values(tiposUnidadeIndicador).join(', ')}`);
-            return;
-          }
-          
-          // Pegar o ID correspondente ao nome encontrado
-          tipo_unidade_id = parseInt(tipoEncontrado[0]);
         }
         
         // Validar obrigatório
@@ -391,7 +372,6 @@ const AtualizacaoMassaIndicadorDialog = ({
               prazo_entrega: item.prazo_entrega,
               periodo_referencia: item.periodo_referencia,
               valor_indicador_apresentado: item.valor_indicador_apresentado,
-              tipo_unidade_indicador: item.tipo_unidade_indicador,
               obrigatorio: item.obrigatorio
             })
             .eq('id', item.id);
@@ -704,17 +684,17 @@ const AtualizacaoMassaIndicadorDialog = ({
               </div>
             </div>
 
-            {/* Preview dos dados */}
+            {/* Preview dos dados - ✅ SEM SUBCATEGORIA */}
             <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
               <table className="min-w-full bg-white">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Indicador</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição Resumida</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo Entrega</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período Referência</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo Unidade</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Obrigatório</th>
                   </tr>
                 </thead>
@@ -725,18 +705,18 @@ const AtualizacaoMassaIndicadorDialog = ({
                       <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.indicador}>
                         {item.indicador}
                       </td>
+                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.descricao_resumida}>
+                        {item.descricao_resumida || '-'}
+                      </td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.periodo_referencia || '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado ? formatarValorIndicador(item.valor_indicador_apresentado) : '-'}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">
-                        {item.tipo_unidade_indicador ? tiposUnidadeIndicador[item.tipo_unidade_indicador] || '-' : '-'}
-                      </td>
                       <td className="px-3 py-2 text-sm text-gray-900">{item.obrigatorio ? 'Sim' : 'Não'}</td>
                     </tr>
                   ))}
                   {dadosParaAtualizar.length > 20 && (
                     <tr>
-                      <td colSpan="7" className="px-3 py-2 text-sm text-gray-500 text-center">
+                      <td colSpan="8" className="px-3 py-2 text-sm text-gray-500 text-center">
                         ... e mais {dadosParaAtualizar.length - 20} registro(s)
                       </td>
                     </tr>

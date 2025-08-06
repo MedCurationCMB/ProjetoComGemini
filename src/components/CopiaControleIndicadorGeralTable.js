@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - Com coluna Tipo Indicador em Todos e Pendentes
+// Componente CopiaControleIndicadorGeralTable.js - SEM COLUNA SUBCATEGORIA
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -34,7 +34,7 @@ const CopiaControleIndicadorGeralTable = ({
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [tiposIndicador, setTiposIndicador] = useState({});
-  const [subcategorias, setSubcategorias] = useState({});
+  // ✅ REMOVIDO: subcategorias state
   const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
   const [loading, setLoading] = useState(true);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
@@ -58,7 +58,7 @@ const CopiaControleIndicadorGeralTable = ({
       fetchCategorias();
       fetchProjetos();
       fetchTiposIndicador();
-      fetchSubcategorias();
+      // ✅ REMOVIDO: fetchSubcategorias();
       fetchTiposUnidadeIndicador();
       fetchControles();
     }
@@ -191,25 +191,7 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // Buscar subcategorias
-  const fetchSubcategorias = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('subcategorias')
-        .select('*');
-      
-      if (error) throw error;
-      
-      const subcategoriasObj = {};
-      data.forEach(sub => {
-        subcategoriasObj[sub.id] = sub.nome;
-      });
-      
-      setSubcategorias(subcategoriasObj);
-    } catch (error) {
-      console.error('Erro ao carregar subcategorias:', error);
-    }
-  };
+  // ✅ REMOVIDO: fetchSubcategorias function
 
   // Buscar tipos de unidade de indicador
   const fetchTiposUnidadeIndicador = async () => {
@@ -607,7 +589,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* Modal para adicionar linha de indicador geral */}
+      {/* Modal para adicionar linha de indicador geral - ✅ REMOVIDO: subcategorias prop */}
       {showAdicionarLinhaDialog && (
         <AdicionarLinhaIndicadorGeralDialog
           onClose={() => setShowAdicionarLinhaDialog(false)}
@@ -615,12 +597,11 @@ const CopiaControleIndicadorGeralTable = ({
           categorias={categorias}
           projetos={projetos}
           tiposIndicador={tiposIndicador}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
-      {/* Modal para atualização em massa (planilha) */}
+      {/* Modal para atualização em massa (planilha) - ✅ REMOVIDO: subcategorias prop */}
       {showAtualizacaoMassaDialog && (
         <AtualizacaoMassaIndicadorDialog
           onClose={() => setShowAtualizacaoMassaDialog(false)}
@@ -629,12 +610,11 @@ const CopiaControleIndicadorGeralTable = ({
           categorias={categorias}
           projetos={projetos}
           tiposIndicador={tiposIndicador}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
-      {/* Modal para atualização inline */}
+      {/* Modal para atualização inline - ✅ REMOVIDO: subcategorias prop */}
       {showAtualizacaoInlineDialog && (
         <AtualizacaoInlineIndicadorDialog
           onClose={() => setShowAtualizacaoInlineDialog(false)}
@@ -643,12 +623,11 @@ const CopiaControleIndicadorGeralTable = ({
           categorias={categorias}
           projetos={projetos}
           tiposIndicador={tiposIndicador}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
-      {/* Modal para editar linha de indicador geral */}
+      {/* Modal para editar linha de indicador geral - ✅ REMOVIDO: subcategorias prop */}
       {editarItemId && (
         <EditarLinhaIndicadorGeralDialog
           controleItem={controles.find(item => item.id === editarItemId)}
@@ -657,12 +636,11 @@ const CopiaControleIndicadorGeralTable = ({
           categorias={categorias}
           projetos={projetos}
           tiposIndicador={tiposIndicador}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
 
-      {/* Modal para anexar documento */}
+      {/* Modal para anexar documento - ✅ REMOVIDO: subcategorias prop */}
       {anexarDocumentoId && (
         <AnexarDocumentoIndicadorDialog
           controleId={anexarDocumentoId} 
@@ -672,7 +650,6 @@ const CopiaControleIndicadorGeralTable = ({
           categorias={categorias}
           projetos={projetos}
           tiposIndicador={tiposIndicador}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
         />
       )}
@@ -686,7 +663,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* ✅ TABELA ATUALIZADA: com coluna Tipo Indicador nas abas "todos" e "pendentes" */}
+      {/* ✅ TABELA ATUALIZADA: SEM COLUNA SUBCATEGORIA */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -712,8 +689,13 @@ const CopiaControleIndicadorGeralTable = ({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Categoria
                 </th>
+
+                {/* DESCRIÇÃO RESUMIDA */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Descrição Resumida
+                </th>
                 
-                {/* ✅ COLUNA TIPO INDICADOR - agora nas abas "todos" e "pendentes" */}
+                {/* ✅ COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
                 {mostrarColunaTipoIndicador() && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tipo Indicador
@@ -725,10 +707,7 @@ const CopiaControleIndicadorGeralTable = ({
                   Indicador
                 </th>
                 
-                {/* SUBCATEGORIA */}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subcategoria
-                </th>
+                {/* ✅ REMOVIDO: SUBCATEGORIA */}
                 
                 {/* PRAZO ATUAL */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -783,7 +762,14 @@ const CopiaControleIndicadorGeralTable = ({
                         {categorias[item.categoria_id] || 'Categoria indisponível'}
                       </div>
                     </td>
-                    
+
+                    {/* DESCRIÇÃO RESUMIDA */}
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div className="max-w-sm truncate" title={item.descricao_resumida || 'Sem descrição'}>
+                        {item.descricao_resumida || '-'}
+                      </div>
+                    </td>
+                                        
                     {/* ✅ COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
                     {mostrarColunaTipoIndicador() && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -798,12 +784,7 @@ const CopiaControleIndicadorGeralTable = ({
                       </div>
                     </td>
                     
-                    {/* SUBCATEGORIA */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="max-w-xs truncate" title={subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}>
-                        {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
-                      </div>
-                    </td>
+                    {/* ✅ REMOVIDO: SUBCATEGORIA */}
                     
                     {/* PRAZO ATUAL */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -894,8 +875,8 @@ const CopiaControleIndicadorGeralTable = ({
                 ))
               ) : (
                 <tr>
-                  {/* ✅ COLSPAN DINÂMICO: 12 quando mostrar coluna Tipo Indicador, 11 quando não */}
-                  <td colSpan={mostrarColunaTipoIndicador() ? "12" : "11"} className="px-6 py-8 text-center text-sm text-gray-500">
+                  {/* ✅ COLSPAN ATUALIZADO: 11 quando mostrar coluna Tipo Indicador, 10 quando não (removemos subcategoria) */}
+                  <td colSpan={mostrarColunaTipoIndicador() ? "11" : "10"} className="px-6 py-8 text-center text-sm text-gray-500">
                     <div className="flex flex-col items-center">
                       <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
                       <div>
