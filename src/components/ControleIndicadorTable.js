@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo, FiTrash2 } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
+import DeleteIndicadorDialog from './DeleteIndicadorDialog';
 
 const ControleIndicadorTable = ({ user }) => {
   const [controles, setControles] = useState([]);
@@ -14,6 +15,8 @@ const ControleIndicadorTable = ({ user }) => {
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [indicadorToDelete, setIndicadorToDelete] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -244,6 +247,19 @@ const ControleIndicadorTable = ({ user }) => {
     toast.success('Operação concluída com sucesso!');
   };
 
+  // Função para abrir modal de exclusão
+  const handleDeleteClick = (indicador) => {
+    setIndicadorToDelete(indicador);
+    setShowDeleteDialog(true);
+  };
+
+  // Função para lidar com o sucesso da exclusão
+  const handleDeleteSuccess = () => {
+    setShowDeleteDialog(false);
+    setIndicadorToDelete(null);
+    fetchControles();
+  };
+
   // Limpar filtros
   const limparFiltros = () => {
     setFiltroProjetoId('');
@@ -462,6 +478,18 @@ const ControleIndicadorTable = ({ user }) => {
         />
       )}
 
+      {/* Modal para confirmar exclusão */}
+      {showDeleteDialog && indicadorToDelete && (
+        <DeleteIndicadorDialog
+          indicador={indicadorToDelete}
+          onClose={() => setShowDeleteDialog(false)}
+          onSuccess={handleDeleteSuccess}
+          projetos={projetos}
+          categorias={categorias}
+          subcategorias={subcategorias}
+        />
+      )}
+
       {/* Tabela de Controle - Desktop */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
@@ -499,6 +527,9 @@ const ControleIndicadorTable = ({ user }) => {
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Linhas Criadas
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Ações
               </th>
             </tr>
           </thead>
@@ -610,11 +641,21 @@ const ControleIndicadorTable = ({ user }) => {
                       );
                     })()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      onClick={() => handleDeleteClick(item)}
+                      className="inline-flex items-center px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 text-xs font-medium rounded-md transition-colors"
+                      title="Excluir indicador"
+                    >
+                      <FiTrash2 className="mr-1 h-3 w-3" />
+                      Excluir
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="11" className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan="12" className="px-6 py-8 text-center text-sm text-gray-500">
                   {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
@@ -662,6 +703,15 @@ const ControleIndicadorTable = ({ user }) => {
                       </span>
                     );
                   })()}
+
+                  {/* Botão de excluir no mobile */}
+                  <button
+                    onClick={() => handleDeleteClick(item)}
+                    className="p-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-md transition-colors"
+                    title="Excluir indicador"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
               
