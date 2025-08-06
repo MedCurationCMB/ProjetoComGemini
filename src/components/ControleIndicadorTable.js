@@ -5,6 +5,7 @@ import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo,
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 import DeleteIndicadorDialog from './DeleteIndicadorDialog';
 import EdicaoInlineControleIndicadorDialog from './EdicaoInlineControleIndicadorDialog';
+import EditarLinhaIndicadorDialog from './EditarLinhaIndicadorDialog'; // ✅ NOVO IMPORT
 
 const ControleIndicadorTable = ({ user }) => {
   const [controles, setControles] = useState([]);
@@ -19,7 +20,9 @@ const ControleIndicadorTable = ({ user }) => {
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEdicaoDialog, setShowEdicaoDialog] = useState(false);
+  const [showEditarDialog, setShowEditarDialog] = useState(false); // ✅ NOVO STATE
   const [indicadorToDelete, setIndicadorToDelete] = useState(null);
+  const [indicadorToEdit, setIndicadorToEdit] = useState(null); // ✅ NOVO STATE
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -286,12 +289,25 @@ const ControleIndicadorTable = ({ user }) => {
     fetchControles();
   };
 
-  // Função para abrir modal de edição
-  const handleEditClick = () => {
+  // ✅ NOVA FUNÇÃO: Abrir modal de edição individual
+  const handleEditClick = (indicador) => {
+    setIndicadorToEdit(indicador);
+    setShowEditarDialog(true);
+  };
+
+  // ✅ NOVA FUNÇÃO: Lidar com o sucesso da edição individual
+  const handleEditSuccess = () => {
+    setShowEditarDialog(false);
+    setIndicadorToEdit(null);
+    fetchControles();
+  };
+
+  // Função para abrir modal de edição em massa
+  const handleEdicaoMassaClick = () => {
     setShowEdicaoDialog(true);
   };
 
-  // Função para lidar com o sucesso da edição
+  // Função para lidar com o sucesso da edição em massa
   const handleEdicaoSuccess = () => {
     setShowEdicaoDialog(false);
     fetchControles();
@@ -372,7 +388,7 @@ const ControleIndicadorTable = ({ user }) => {
         {controles.length > 0 && (
           <div className="mb-4">
             <button
-              onClick={handleEditClick}
+              onClick={handleEdicaoMassaClick}
               className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-sm font-medium"
             >
               <FiEdit className="mr-2" />
@@ -464,7 +480,7 @@ const ControleIndicadorTable = ({ user }) => {
             {/* Botão de edição em massa - Desktop */}
             {controles.length > 0 && (
               <button
-                onClick={handleEditClick}
+                onClick={handleEdicaoMassaClick}
                 className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
               >
                 <FiEdit className="mr-2" />
@@ -553,12 +569,25 @@ const ControleIndicadorTable = ({ user }) => {
         />
       )}
 
-      {/* Modal para edição inline */}
+      {/* Modal para edição inline em massa */}
       {showEdicaoDialog && (
         <EdicaoInlineControleIndicadorDialog
           onClose={() => setShowEdicaoDialog(false)}
           onSuccess={handleEdicaoSuccess}
           dadosTabela={controles}
+          categorias={categorias}
+          projetos={projetos}
+          subcategorias={subcategorias}
+          tiposUnidadeIndicador={tiposUnidadeIndicador}
+        />
+      )}
+
+      {/* ✅ NOVO MODAL: Edição individual */}
+      {showEditarDialog && indicadorToEdit && (
+        <EditarLinhaIndicadorDialog
+          controleItem={indicadorToEdit}
+          onClose={() => setShowEditarDialog(false)}
+          onSuccess={handleEditSuccess}
           categorias={categorias}
           projetos={projetos}
           subcategorias={subcategorias}
@@ -725,6 +754,15 @@ const ControleIndicadorTable = ({ user }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center space-x-2">
+                      {/* ✅ NOVO BOTÃO: Editar individual */}
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        className="inline-flex items-center px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 text-xs font-medium rounded-md transition-colors"
+                        title="Editar indicador"
+                      >
+                        <FiEdit className="h-3 w-3" />
+                      </button>
+                      
                       <button
                         onClick={() => handleDeleteClick(item)}
                         className="inline-flex items-center px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 text-xs font-medium rounded-md transition-colors"
@@ -787,14 +825,26 @@ const ControleIndicadorTable = ({ user }) => {
                     );
                   })()}
 
-                  {/* Botão de excluir no mobile */}
-                  <button
-                    onClick={() => handleDeleteClick(item)}
-                    className="p-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-md transition-colors"
-                    title="Excluir indicador"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
+                  {/* ✅ Botões de ação no mobile */}
+                  <div className="flex items-center space-x-1">
+                    {/* Botão de editar individual no mobile */}
+                    <button
+                      onClick={() => handleEditClick(item)}
+                      className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 rounded-md transition-colors"
+                      title="Editar indicador"
+                    >
+                      <FiEdit className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Botão de excluir no mobile */}
+                    <button
+                      onClick={() => handleDeleteClick(item)}
+                      className="p-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-md transition-colors"
+                      title="Excluir indicador"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
               
