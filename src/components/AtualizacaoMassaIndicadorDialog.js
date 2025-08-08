@@ -1,4 +1,4 @@
-// src/components/AtualizacaoMassaIndicadorDialog.js - SEM SUBCATEGORIA
+// src/components/AtualizacaoMassaIndicadorDialog.js - COMPLETO FINAL (TIPO UNIDADE NÃO EDITÁVEL)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -12,7 +12,7 @@ const AtualizacaoMassaIndicadorDialog = ({
   categorias,
   projetos,
   tiposIndicador,
-  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
+  tiposUnidadeIndicador
 }) => {
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -74,7 +74,7 @@ const AtualizacaoMassaIndicadorDialog = ({
     }
   };
 
-  // Função para gerar e baixar a planilha Excel - ✅ SEM SUBCATEGORIA
+  // ✅ FUNÇÃO ATUALIZADA: Gerar planilha Excel COM TIPO UNIDADE NÃO EDITÁVEL
   const gerarPlanilhaExcel = async () => {
     try {
       setLoading(true);
@@ -83,13 +83,16 @@ const AtualizacaoMassaIndicadorDialog = ({
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Indicadores');
       
-      // ✅ Definir colunas SEM SUBCATEGORIA
+      // ✅ DEFINIR COLUNAS COM TIPO UNIDADE NÃO EDITÁVEL
       worksheet.columns = [
         { header: 'ID (NÃO MODIFICAR)', key: 'id', width: 20 },
         { header: 'Projeto (NÃO MODIFICAR)', key: 'projeto', width: 25 },
         { header: 'Categoria (NÃO MODIFICAR)', key: 'categoria', width: 25 },
+        { header: 'Tipo Indicador (NÃO MODIFICAR)', key: 'tipo_indicador', width: 20 },
+        { header: 'Indicador (NÃO MODIFICAR)', key: 'indicador', width: 40 },
         { header: 'Descrição Resumida (NÃO MODIFICAR)', key: 'descricao_resumida', width: 40 },
-        { header: 'Indicador', key: 'indicador', width: 40 },
+        { header: 'Descrição Detalhada (NÃO MODIFICAR)', key: 'descricao_detalhada', width: 50 },
+        { header: 'Tipo Unidade (NÃO MODIFICAR)', key: 'tipo_unidade_indicador', width: 25 }, // ✅ AGORA NÃO EDITÁVEL
         { header: 'Observação', key: 'observacao', width: 40 },
         { header: 'Prazo Entrega (YYYY-MM-DD)', key: 'prazo_entrega', width: 25 },
         { header: 'Período Referência (YYYY-MM-DD)', key: 'periodo_referencia', width: 25 },
@@ -104,6 +107,31 @@ const AtualizacaoMassaIndicadorDialog = ({
         pattern: 'solid',
         fgColor: { argb: 'FFE6F3FF' }
       };
+      
+      // ✅ FORMATAR COLUNAS NÃO EDITÁVEIS (CINZA CLARO) - INCLUINDO TIPO UNIDADE
+      const colunasNaoEditaveis = [1, 2, 3, 4, 5, 6, 7, 8]; // ID, Projeto, Categoria, Tipo Indicador, Indicador, Desc. Resumida, Desc. Detalhada, Tipo Unidade
+      colunasNaoEditaveis.forEach(colIndex => {
+        const column = worksheet.getColumn(colIndex);
+        column.eachCell((cell, rowNumber) => {
+          if (rowNumber === 1) {
+            // Cabeçalho - manter cor azul mas com texto mais destacado
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFD6EAF8' } // Azul mais claro para colunas protegidas
+            };
+            cell.font = { bold: true, color: { argb: 'FF1F4E79' } }; // Azul escuro
+          } else {
+            // Dados - fundo cinza claro para indicar "somente leitura"
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF8F9FA' } // Cinza muito claro
+            };
+            cell.font = { color: { argb: 'FF6C757D' } }; // Texto cinza
+          }
+        });
+      });
       
       // Adicionar dados com preenchimento automático opcional
       let registrosPreenchidos = 0;
@@ -125,18 +153,35 @@ const AtualizacaoMassaIndicadorDialog = ({
           }
         }
         
-        // ✅ Adicionar linha SEM SUBCATEGORIA
+        // ✅ ADICIONAR LINHA COM TIPO UNIDADE COMO SOMENTE LEITURA
         worksheet.addRow({
           id: item.id,
           projeto: projetos[item.projeto_id] || 'N/A',
           categoria: categorias[item.categoria_id] || 'N/A',
-          descricao_resumida: item.descricao_resumida || '',
+          tipo_indicador: tiposIndicador[item.tipo_indicador] || 'N/A',
           indicador: item.indicador || '',
+          descricao_resumida: item.descricao_resumida || '',
+          descricao_detalhada: item.descricao_detalhada || '',
+          tipo_unidade_indicador: tiposUnidadeIndicador[item.tipo_unidade_indicador] || '', // ✅ SOMENTE LEITURA
           observacao: item.observacao || '',
           prazo_entrega: item.prazo_entrega || '',
           periodo_referencia: periodoReferencia,
           valor_indicador_apresentado: item.valor_indicador_apresentado || '',
           obrigatorio: item.obrigatorio ? 'true' : 'false'
+        });
+      });
+      
+      // Aplicar cor de fundo para colunas não editáveis nos dados
+      dadosTabela.forEach((item, rowIndex) => {
+        const excelRowIndex = rowIndex + 2; // +2 porque começamos na linha 2 (linha 1 é cabeçalho)
+        colunasNaoEditaveis.forEach(colIndex => {
+          const cell = worksheet.getCell(excelRowIndex, colIndex);
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF8F9FA' } // Cinza muito claro
+          };
+          cell.font = { color: { argb: 'FF6C757D' } }; // Texto cinza
         });
       });
       
@@ -156,14 +201,14 @@ const AtualizacaoMassaIndicadorDialog = ({
       const instrucoes = workbook.addWorksheet('INSTRUÇÕES');
       instrucoes.addRow(['INSTRUÇÕES PARA ATUALIZAÇÃO EM MASSA']);
       instrucoes.addRow([]);
-      instrucoes.addRow(['1. NÃO modifique as colunas marcadas como "NÃO MODIFICAR"']);
+      instrucoes.addRow(['1. NÃO modifique as colunas marcadas como "NÃO MODIFICAR" (fundo cinza claro)']);
+      instrucoes.addRow(['   - ID, Projeto, Categoria, Tipo Indicador, Indicador, Descrições e Tipo Unidade são SOMENTE LEITURA']); // ✅ ATUALIZADO
+      instrucoes.addRow([]);
       instrucoes.addRow(['2. Você pode editar apenas:']);
-      instrucoes.addRow(['   - Indicador']);
       instrucoes.addRow(['   - Observação']);
       instrucoes.addRow(['   - Prazo Entrega (formato: YYYY-MM-DD, ex: 2024-12-31)']);
       instrucoes.addRow(['   - Período Referência (formato: YYYY-MM-DD, ex: 2024-12-31)']);
       instrucoes.addRow(['   - Valor Apresentado (apenas números, ex: 15.75)']);
-      instrucoes.addRow(['   - Tipo Unidade Indicador (use exatamente um dos valores disponíveis)']);
       instrucoes.addRow(['   - Obrigatório (apenas "true" ou "false")']);
       instrucoes.addRow([]);
       
@@ -176,13 +221,13 @@ const AtualizacaoMassaIndicadorDialog = ({
         instrucoes.addRow([]);
       }
       
-      instrucoes.addRow(['3. Tipos de Unidade Disponíveis:']);
-      
-      // Adicionar lista de tipos de unidade
-      Object.values(tiposUnidadeIndicador).forEach(tipo => {
-        instrucoes.addRow([`   - ${tipo}`]);
-      });
-      
+      instrucoes.addRow(['3. ✅ COLUNAS DE VISUALIZAÇÃO (SOMENTE LEITURA):']);
+      instrucoes.addRow(['   - Tipo Indicador: Mostra se é "Meta" ou "Realizado"']);
+      instrucoes.addRow(['   - Indicador: Nome do indicador (não modificável)']);
+      instrucoes.addRow(['   - Descrição Resumida: Permite visualizar a descrição resumida do indicador']);
+      instrucoes.addRow(['   - Descrição Detalhada: Permite visualizar a descrição completa do indicador']);
+      instrucoes.addRow(['   - Tipo Unidade: Mostra a unidade do indicador (ex: Percentual, Valor, etc.)']); // ✅ ATUALIZADO
+      instrucoes.addRow(['   - Estas colunas são SOMENTE PARA LEITURA (fundo cinza claro)']);
       instrucoes.addRow([]);
       instrucoes.addRow(['4. Salve o arquivo e faça o upload na próxima etapa']);
       
@@ -200,8 +245,8 @@ const AtualizacaoMassaIndicadorDialog = ({
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
       const nomeArquivo = preencherPeriodoAutomatico && registrosPreenchidos > 0 
-        ? `indicadores_com_preenchimento_${timestamp}.xlsx`
-        : `indicadores_${timestamp}.xlsx`;
+        ? `indicadores_completo_com_preenchimento_${timestamp}.xlsx`
+        : `indicadores_completo_${timestamp}.xlsx`;
       link.download = nomeArquivo;
       document.body.appendChild(link);
       link.click();
@@ -214,7 +259,7 @@ const AtualizacaoMassaIndicadorDialog = ({
       if (preencherPeriodoAutomatico && registrosPreenchidos > 0) {
         toast.success(`Planilha baixada com ${registrosPreenchidos} período(s) preenchido(s) automaticamente!`);
       } else {
-        toast.success('Planilha baixada com sucesso!');
+        toast.success('Planilha completa baixada - Tipo Unidade protegido contra edição!');
       }
       
       setStep(2);
@@ -227,7 +272,7 @@ const AtualizacaoMassaIndicadorDialog = ({
     }
   };
 
-  // Função para processar o arquivo Excel enviado - ✅ SEM SUBCATEGORIA
+  // ✅ FUNÇÃO ATUALIZADA: Processar arquivo Excel SEM TIPO UNIDADE (NÃO EDITÁVEL)
   const processarArquivoExcel = async () => {
     if (!file) {
       toast.error('Selecione um arquivo Excel');
@@ -254,13 +299,12 @@ const AtualizacaoMassaIndicadorDialog = ({
         if (rowNumber === 1) return; // Pular cabeçalho
         
         const id = row.getCell(1).value;
-        const indicador = row.getCell(4).value; // ✅ Ajustado índice após remover subcategoria
-        const observacao = row.getCell(5).value;
-        const prazo_entrega = row.getCell(6).value;
-        const periodo_referencia = row.getCell(7).value;
-        const valor_indicador_apresentado = row.getCell(8).value;
-        const tipo_unidade_indicador = row.getCell(9).value;
-        const obrigatorio = row.getCell(10).value;
+        // ✅ IGNORAR CÉLULAS 4, 5, 6, 7 E 8 (Tipo Indicador, Indicador, Descrições, Tipo Unidade) - elas são somente leitura
+        const observacao = row.getCell(9).value; // ✅ AJUSTADO: agora é coluna 9
+        const prazo_entrega = row.getCell(10).value; // ✅ AJUSTADO: agora é coluna 10
+        const periodo_referencia = row.getCell(11).value; // ✅ AJUSTADO: agora é coluna 11
+        const valor_indicador_apresentado = row.getCell(12).value; // ✅ AJUSTADO: agora é coluna 12
+        const obrigatorio = row.getCell(13).value; // ✅ AJUSTADO: agora é coluna 13
         
         // Validações
         if (!id) {
@@ -268,10 +312,7 @@ const AtualizacaoMassaIndicadorDialog = ({
           return;
         }
         
-        if (!indicador || indicador.toString().trim() === '') {
-          erros.push(`Linha ${rowNumber}: Indicador não pode estar vazio`);
-          return;
-        }
+        // ✅ REMOVIDO: Validação do indicador e tipo_unidade_indicador (não são mais editáveis)
         
         // Validar data de prazo_entrega
         let prazo_entrega_formatado = null;
@@ -309,6 +350,8 @@ const AtualizacaoMassaIndicadorDialog = ({
           }
         }
         
+        // ✅ REMOVIDO: Validação do tipo_unidade_indicador (não é mais editável)
+        
         // Validar obrigatório
         let obrigatorio_bool = false;
         if (obrigatorio !== null && obrigatorio !== undefined && obrigatorio !== '') {
@@ -323,14 +366,15 @@ const AtualizacaoMassaIndicadorDialog = ({
           }
         }
         
+        // ✅ DADOS PROCESSADOS SEM indicador e tipo_unidade_indicador (não editáveis)
         dadosProcessados.push({
           id: parseInt(id),
-          indicador: indicador.toString().trim(),
+          // indicador: removido (não editável)
+          // tipo_unidade_indicador: removido (não editável)
           observacao: observacao ? observacao.toString().trim() : null,
           prazo_entrega: prazo_entrega_formatado,
           periodo_referencia: periodo_referencia_formatado,
           valor_indicador_apresentado: valor_numerico,
-          tipo_unidade_indicador: tipo_unidade_id,
           obrigatorio: obrigatorio_bool
         });
       });
@@ -354,7 +398,7 @@ const AtualizacaoMassaIndicadorDialog = ({
     }
   };
 
-  // Função para executar a atualização em massa
+  // ✅ FUNÇÃO ATUALIZADA: Executar atualização SEM indicador e tipo_unidade_indicador
   const executarAtualizacao = async () => {
     try {
       setLoading(true);
@@ -364,16 +408,19 @@ const AtualizacaoMassaIndicadorDialog = ({
       
       for (const item of dadosParaAtualizar) {
         try {
+          const updateData = {
+            // indicador: removido (não editável)
+            // tipo_unidade_indicador: removido (não editável)
+            observacao: item.observacao,
+            prazo_entrega: item.prazo_entrega,
+            periodo_referencia: item.periodo_referencia,
+            valor_indicador_apresentado: item.valor_indicador_apresentado,
+            obrigatorio: item.obrigatorio
+          };
+          
           const { error } = await supabase
             .from('controle_indicador_geral')
-            .update({
-              indicador: item.indicador,
-              observacao: item.observacao,
-              prazo_entrega: item.prazo_entrega,
-              periodo_referencia: item.periodo_referencia,
-              valor_indicador_apresentado: item.valor_indicador_apresentado,
-              obrigatorio: item.obrigatorio
-            })
+            .update(updateData)
             .eq('id', item.id);
             
           if (error) throw error;
@@ -471,12 +518,14 @@ const AtualizacaoMassaIndicadorDialog = ({
               </div>
             </div>
 
+            {/* ✅ INFORMAÇÃO ATUALIZADA: Tipo Unidade agora não editável */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-medium text-gray-900 mb-2">Dados que serão incluídos na planilha:</h4>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>• Total de registros: <strong>{dadosTabela.length}</strong></p>
-                <p>• Colunas editáveis: Indicador, Observação, Prazo Entrega, Período Referência, Valor Apresentado, Tipo Unidade, Obrigatório</p>
-                <p>• Colunas protegidas: ID, Projeto, Categoria (não modificar)</p>
+                <p>• ✅ <strong>Colunas de visualização:</strong> Tipo Indicador, Indicador, Descrições, Tipo Unidade (somente leitura)</p>
+                <p>• Colunas editáveis: Observação, Prazo Entrega, Período Referência, Valor Apresentado, Obrigatório</p>
+                <p>• Colunas protegidas: ID, Projeto, Categoria, Tipo Indicador, Indicador, Descrições, Tipo Unidade (não modificar)</p>
               </div>
             </div>
 
@@ -565,6 +614,10 @@ const AtualizacaoMassaIndicadorDialog = ({
                   <h3 className="font-medium text-green-900">Enviar Planilha Modificada</h3>
                   <p className="text-sm text-green-700 mt-1">
                     Agora faça as modificações necessárias na planilha baixada e envie o arquivo de volta.
+                  </p>
+                  {/* ✅ INFORMAÇÃO ATUALIZADA: Incluindo Tipo Unidade como não editável */}
+                  <p className="text-sm text-green-700 mt-2">
+                    <strong>💡 Lembre-se:</strong> As colunas "Tipo Indicador", "Indicador", "Descrições" e "Tipo Unidade" são apenas para visualização (fundo cinza claro) e não devem ser modificadas.
                   </p>
                 </div>
               </div>
@@ -684,45 +737,92 @@ const AtualizacaoMassaIndicadorDialog = ({
               </div>
             </div>
 
-            {/* Preview dos dados - ✅ SEM SUBCATEGORIA */}
+            {/* ✅ PREVIEW DOS DADOS: SEM TIPO UNIDADE NAS COLUNAS EDITÁVEIS */}
             <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
               <table className="min-w-full bg-white">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Indicador</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição Resumida</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo Entrega</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período Referência</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo Unidade</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período Ref.</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Obrigatório</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {dadosParaAtualizar.slice(0, 20).map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.id}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.indicador}>
-                        {item.indicador}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.descricao_resumida}>
-                        {item.descricao_resumida || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.periodo_referencia || '-'}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado ? formatarValorIndicador(item.valor_indicador_apresentado) : '-'}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item.obrigatorio ? 'Sim' : 'Não'}</td>
-                    </tr>
-                  ))}
+                  {dadosParaAtualizar.slice(0, 20).map((item) => {
+                    // ✅ BUSCAR OS DADOS ORIGINAIS PARA MOSTRAR AS INFORMAÇÕES NÃO EDITÁVEIS
+                    const itemOriginal = dadosTabela.find(original => original.id === item.id);
+                    
+                    return (
+                      <tr key={item.id}>
+                        <td className="px-3 py-2 text-sm text-gray-900">{item.id}</td>
+                        <td className="px-3 py-2 text-sm text-gray-500">
+                          {itemOriginal ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              tiposIndicador[itemOriginal.tipo_indicador]?.toLowerCase().includes('realizado') 
+                                ? 'bg-green-100 text-green-800'
+                                : tiposIndicador[itemOriginal.tipo_indicador]?.toLowerCase().includes('meta')
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {tiposIndicador[itemOriginal.tipo_indicador] || 'N/A'}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500 max-w-xs truncate" title={itemOriginal?.indicador || 'Sem indicador'}>
+                          {itemOriginal?.indicador || '-'}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500">
+                          {itemOriginal ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {tiposUnidadeIndicador[itemOriginal.tipo_unidade_indicador] || 'N/A'}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500 max-w-xs truncate" title={itemOriginal?.descricao_resumida || 'Sem descrição'}>
+                          {itemOriginal?.descricao_resumida || '-'}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{item.prazo_entrega || '-'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{item.periodo_referencia || '-'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{item.valor_indicador_apresentado ? formatarValorIndicador(item.valor_indicador_apresentado) : '-'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">
+                          {item.obrigatorio ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Sim
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              Não
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {dadosParaAtualizar.length > 20 && (
                     <tr>
-                      <td colSpan="8" className="px-3 py-2 text-sm text-gray-500 text-center">
+                      <td colSpan="9" className="px-3 py-2 text-sm text-gray-500 text-center">
                         ... e mais {dadosParaAtualizar.length - 20} registro(s)
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* ✅ INFORMAÇÃO ATUALIZADA: Incluindo Tipo Unidade como não editável */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                💡 <strong>Observação:</strong> As colunas "Tipo Indicador", "Indicador", "Tipo Unidade", "Descrição Resumida" e "Descrição Detalhada" são exibidas apenas para sua referência e não serão atualizadas no banco de dados.
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                ✅ <strong>Campos atualizados:</strong> Observação, Prazo Entrega, Período Referência, Valor Apresentado e Obrigatório.
+              </p>
             </div>
 
             <div className="flex justify-between">
