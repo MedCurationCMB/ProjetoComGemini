@@ -1,10 +1,9 @@
-// src/components/AdicionarLinhaIndicadorGeralDialog.js - SEM SUBCATEGORIA
+// src/components/AdicionarLinhaIndicadorGeralDialog.js - COMPLETO COM PARES META/REALIZADO
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiX, FiCheck, FiCalendar, FiDatabase } from 'react-icons/fi';
-import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 
 const AdicionarLinhaIndicadorGeralDialog = ({ 
   onClose, 
@@ -12,7 +11,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   categorias, 
   projetos, 
   tiposIndicador, 
-  tiposUnidadeIndicador // ✅ REMOVIDO: subcategorias prop
+  tiposUnidadeIndicador
 }) => {
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
@@ -32,7 +31,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
   const [loading, setLoading] = useState(false);
   const [loadingLinhasBase, setLoadingLinhasBase] = useState(false);
   
-  // Campos para formulário não recorrente - ✅ REMOVIDO: subcategoria_id
+  // Campos para formulário não recorrente
   const [novaLinha, setNovaLinha] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -103,7 +102,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
       setLoading(true);
       
       if (isRecorrente) {
-        // Adicionar linhas recorrentes
+        // ✅ MODIFICADO: Adicionar linhas recorrentes em PARES (Meta + Realizado)
         if (!linhaBaseId) {
           toast.error('Por favor, selecione uma linha base');
           setLoading(false);
@@ -151,8 +150,20 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           ultimoDataPrazo = new Date(linhaBase.prazo_entrega_inicial);
         }
         
-        // 3. Calcular as novas datas com base na recorrência
+        // ✅ MODIFICADO: Calcular as novas datas e criar PARES (Meta + Realizado)
         const novasLinhas = [];
+        
+        // ✅ NOVO: Buscar IDs dos tipos Meta e Realizado
+        const tipoMeta = Object.keys(tiposIndicador).find(id => 
+          tiposIndicador[id].toLowerCase().includes('meta')
+        );
+        const tipoRealizado = Object.keys(tiposIndicador).find(id => 
+          tiposIndicador[id].toLowerCase().includes('realizado')
+        );
+
+        // Fallback caso não encontre os tipos nos nomes
+        const tipoMetaId = tipoMeta ? parseInt(tipoMeta) : 2; // Padrão 2 para Meta
+        const tipoRealizadoId = tipoRealizado ? parseInt(tipoRealizado) : 1; // Padrão 1 para Realizado
         
         for (let i = 0; i < repeticoesValue; i++) {
           // Calcular próxima data com base na recorrência
@@ -166,23 +177,48 @@ const AdicionarLinhaIndicadorGeralDialog = ({
             novaPrazoEntrega.setFullYear(novaPrazoEntrega.getFullYear() + (linhaBase.tempo_recorrencia || 1));
           }
           
-          // Criar registro para a nova linha - ✅ REMOVIDO: subcategoria_id
+          const dataFormatada = novaPrazoEntrega.toISOString().split('T')[0];
+          
+          // ✅ NOVO: Criar linha META
           novasLinhas.push({
             id_controleindicador: linhaBaseId,
             projeto_id: linhaBase.projeto_id,
             categoria_id: linhaBase.categoria_id,
             indicador: linhaBase.indicador,
             observacao: linhaBase.observacao,
-            tipo_indicador: linhaBase.tipo_indicador,
+            tipo_indicador: tipoMetaId, // Tipo Meta
             prazo_entrega_inicial: linhaBase.prazo_entrega_inicial,
-            prazo_entrega: novaPrazoEntrega.toISOString().split('T')[0],
+            prazo_entrega: dataFormatada,
             recorrencia: linhaBase.recorrencia,
             tempo_recorrencia: linhaBase.tempo_recorrencia,
             obrigatorio: linhaBase.obrigatorio,
             visivel: true,
             valor_indicador_apresentado: null,
-            tipo_unidade_indicador: null,
-            valor_indicador: null
+            tipo_unidade_indicador: linhaBase.tipo_unidade_indicador, // ✅ COPIAR da linha base
+            valor_indicador: null,
+            descricao_detalhada: linhaBase.descricao_detalhada || null,
+            descricao_resumida: linhaBase.descricao_resumida || null
+          });
+          
+          // ✅ NOVO: Criar linha REALIZADO
+          novasLinhas.push({
+            id_controleindicador: linhaBaseId,
+            projeto_id: linhaBase.projeto_id,
+            categoria_id: linhaBase.categoria_id,
+            indicador: linhaBase.indicador,
+            observacao: linhaBase.observacao,
+            tipo_indicador: tipoRealizadoId, // Tipo Realizado
+            prazo_entrega_inicial: linhaBase.prazo_entrega_inicial,
+            prazo_entrega: dataFormatada,
+            recorrencia: linhaBase.recorrencia,
+            tempo_recorrencia: linhaBase.tempo_recorrencia,
+            obrigatorio: linhaBase.obrigatorio,
+            visivel: true,
+            valor_indicador_apresentado: null,
+            tipo_unidade_indicador: linhaBase.tipo_unidade_indicador, // ✅ COPIAR da linha base
+            valor_indicador: null,
+            descricao_detalhada: linhaBase.descricao_detalhada || null,
+            descricao_resumida: linhaBase.descricao_resumida || null
           });
           
           // Atualizar a data para a próxima iteração
@@ -197,18 +233,19 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           
         if (inserirError) throw inserirError;
         
-        toast.success(`${novasLinhasInseridas.length} novas linhas adicionadas com sucesso!`);
+        // ✅ MODIFICADO: Mensagem mais clara sobre pares criados
+        const totalLinhas = novasLinhasInseridas.length;
+        const pares = totalLinhas / 2;
+        toast.success(`${totalLinhas} novas linhas adicionadas com sucesso! (${pares} pares de Meta + Realizado)`);
         
       } else {
         // Adicionar uma nova linha não recorrente na tabela controle_indicador (BASE)
-        // ✅ REMOVIDO: validação de subcategoria_id
         if (!novaLinha.projeto_id || !novaLinha.categoria_id || !novaLinha.indicador || !novaLinha.tipo_indicador) {
           toast.error('Por favor, preencha todos os campos obrigatórios');
           setLoading(false);
           return;
         }
         
-        // ✅ REMOVIDO: subcategoria_id dos dados de inserção
         const dadosInsercao = {
           projeto_id: novaLinha.projeto_id,
           categoria_id: novaLinha.categoria_id,
@@ -218,14 +255,14 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           prazo_entrega_inicial: novaLinha.prazo_entrega_inicial || null,
           descricao_detalhada: novaLinha.descricao_detalhada.trim() || null,
           descricao_resumida: novaLinha.descricao_resumida.trim() || null,
-          recorrencia: 'sem recorrencia', // ← Sempre "sem recorrencia"
+          recorrencia: 'sem recorrencia',
           tempo_recorrencia: null,
           repeticoes: 0,
           obrigatorio: novaLinha.obrigatorio,
           tem_documento: false
         };
 
-        // ✅ Adicionar valor_indicador_apresentado se preenchido
+        // Adicionar valor_indicador_apresentado se preenchido
         if (novaLinha.valor_indicador_apresentado && novaLinha.valor_indicador_apresentado !== '') {
           const valorNumerico = parseFloat(novaLinha.valor_indicador_apresentado);
           if (!isNaN(valorNumerico)) {
@@ -233,7 +270,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
           }
         }
 
-        // ✅ Adicionar tipo_unidade_indicador se selecionado
+        // Adicionar tipo_unidade_indicador se selecionado
         if (novaLinha.tipo_unidade_indicador && novaLinha.tipo_unidade_indicador !== '') {
           dadosInsercao.tipo_unidade_indicador = parseInt(novaLinha.tipo_unidade_indicador);
         }
@@ -343,7 +380,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
         ) : (
           <div className="space-y-4">
             {isRecorrente ? (
-              // Formulário para linhas recorrentes
+              // ✅ MODIFICADO: Formulário para linhas recorrentes com explicação sobre pares
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -386,11 +423,30 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                       }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="Ex: 3"
                   />
+                  {/* ✅ NOVA: Explicação sobre pares Meta + Realizado */}
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-700">
+                      <strong>📊 Criação em Pares:</strong> Para cada repetição, serão criadas <strong>2 linhas</strong> com a mesma data:
+                    </p>
+                    <ul className="text-sm text-green-700 mt-1 space-y-1">
+                      <li>• 1 linha tipo <strong>Meta</strong></li>
+                      <li>• 1 linha tipo <strong>Realizado</strong></li>
+                    </ul>
+                    {numRepeticoes && parseInt(numRepeticoes) > 0 && (
+                      <p className="text-sm text-green-800 mt-2 font-medium">
+                        🎯 Com {numRepeticoes} repetição(ões), serão criadas <strong>{parseInt(numRepeticoes) * 2} linhas</strong> no total
+                      </p>
+                    )}
+                    <p className="text-xs text-green-600 mt-2">
+                      💡 A unidade do indicador da linha base será copiada para ambas as linhas
+                    </p>
+                  </div>
                 </div>
               </>
             ) : (
-              // ✅ Formulário para novas linhas não recorrentes SEM SUBCATEGORIA
+              // Formulário para novas linhas não recorrentes
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -509,9 +565,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   </select>
                 </div>
                 
-                {/* ✅ REMOVIDO: Campo Subcategoria */}
-
-                {/* ✅ CAMPO: Valor Apresentado */}
+                {/* Valor Apresentado */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Valor Apresentado <span className="text-gray-400 text-xs">(opcional)</span>
@@ -525,7 +579,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Digite o valor do indicador (ex: 15.75)"
                   />
-                  {/* ✅ PREVIEW FORMATADO */}
+                  {/* Preview formatado */}
                   {novaLinha.valor_indicador_apresentado && (
                     <p className="mt-1 text-xs text-gray-500">
                       <strong>Preview:</strong> {formatarValorIndicador(novaLinha.valor_indicador_apresentado)}
@@ -536,7 +590,7 @@ const AdicionarLinhaIndicadorGeralDialog = ({
                   </p>
                 </div>
 
-                {/* ✅ CAMPO: Unidade do Indicador */}
+                {/* Unidade do Indicador */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Unidade do Indicador <span className="text-gray-400 text-xs">(opcional)</span>
