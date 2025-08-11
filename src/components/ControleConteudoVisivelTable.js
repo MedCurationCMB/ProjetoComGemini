@@ -1,0 +1,612 @@
+// src/components/ControleConteudoVisivelTable.js
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabaseClient';
+import { toast } from 'react-hot-toast';
+import { FiCalendar, FiCheck, FiX, FiMail, FiChevronUp, FiChevronDown, FiFolder, FiSend } from 'react-icons/fi';
+import ConfirmarEnvioEmailDialog from './ConfirmarEnvioEmailDialog';
+import ConfirmarEnvioEmailMultiploDialog from './ConfirmarEnvioEmailMultiploDialog';
+
+const ControleConteudoVisivelTable = ({ 
+  user, 
+  filtroProjetoId, 
+  filtroCategoriaId, 
+  setFiltroProjetoId, 
+  setFiltroCategoriaId 
+}) => {
+  const [controles, setControles] = useState([]);
+  const [categorias, setCategorias] = useState({});
+  const [projetos, setProjetos] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [ordenacao, setOrdenacao] = useState({ campo: 'id', direcao: 'asc' });
+  const [emailItemId, setEmailItemId] = useState(null);
+  
+  // Estados para seleção múltipla
+  const [itensSelecionados, setItensSelecionados] = useState([]);
+  const [showEmailMultiploDialog, setShowEmailMultiploDialog] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) {
+      fetchCategorias();
+      fetchProjetos();
+      fetchControles();
+    }
+  }, [projetosVinculados, filtroProjetoId, filtroCategoriaId]);
+
+  // Função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
+
+  // Buscar todas as categorias
+  const fetchCategorias = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const categoriasObj = {};
+      data.forEach(cat => {
+        categoriasObj[cat.id] = cat.nome;
+      });
+      
+      setCategorias(categoriasObj);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
+
+  // Buscar apenas os projetos vinculados ao usuário
+  const fetchProjetos = async () => {
+    try {
+      if (projetosVinculados.length === 0) {
+        setProjetos({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('*')
+        .in('id', projetosVinculados);
+      
+      if (error) throw error;
+      
+      const projetosObj = {};
+      data.forEach(proj => {
+        projetosObj[proj.id] = proj.nome;
+      });
+      
+      setProjetos(projetosObj);
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+    }
+  };
+
+  // Buscar os dados de controle_conteudo_geral_visivel
+  const fetchControles = async () => {
+    try {
+      setLoading(true);
+      
+      if (projetosVinculados.length === 0) {
+        setControles([]);
+        setLoading(false);
+        return;
+      }
+      
+      let query = supabase
+        .from('controle_conteudo_geral_visivel')
+        .select('*')
+        .in('projeto_id', projetosVinculados);
+      
+      // Aplicar filtros se estiverem definidos
+      if (filtroProjetoId && filtroProjetoId.trim() !== '') {
+        query = query.eq('projeto_id', filtroProjetoId);
+      }
+      
+      if (filtroCategoriaId && filtroCategoriaId.trim() !== '') {
+        query = query.eq('categoria_id', filtroCategoriaId);
+      }
+      
+      // Aplicar ordenação
+      if (ordenacao.campo === 'id_controleconteudo') {
+        query = query.order('id_controleconteudo', { 
+          ascending: ordenacao.direcao === 'asc',
+          nullsFirst: ordenacao.direcao === 'asc'
+        });
+      } else if (ordenacao.campo === 'data_email_recente') {
+        query = query.order('data_email_recente', { 
+          ascending: ordenacao.direcao === 'asc',
+          nullsFirst: ordenacao.direcao === 'desc' // Nulls por último quando desc
+        });
+      } else {
+        query = query.order(ordenacao.campo, { 
+          ascending: ordenacao.direcao === 'asc' 
+        });
+      }
+      
+      // Adicionar ordenação secundária para garantir consistência
+      if (ordenacao.campo !== 'id') {
+        query = query.order('id', { ascending: true });
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      setControles(Array.isArray(data) ? data : []);
+      
+      // Limpar seleções quando os dados mudarem
+      setItensSelecionados([]);
+      
+    } catch (error) {
+      toast.error('Erro ao carregar dados de controle visível');
+      console.error('Erro ao carregar controles visíveis:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para alternar a ordenação
+  const handleToggleOrdenacao = (campo) => {
+    if (ordenacao.campo === campo) {
+      // Se já estiver ordenando por este campo, inverte a direção
+      setOrdenacao({
+        campo: campo,
+        direcao: ordenacao.direcao === 'asc' ? 'desc' : 'asc'
+      });
+    } else {
+      // Se for um novo campo, começa com ascendente
+      setOrdenacao({
+        campo: campo,
+        direcao: 'asc'
+      });
+    }
+  };
+
+  // Efeito para refazer a busca quando a ordenação mudar
+  useEffect(() => {
+    if (!loading && projetosVinculados.length >= 0) {
+      fetchControles();
+    }
+  }, [ordenacao]);
+
+  // Função chamada quando o email é enviado com sucesso
+  const handleEmailEnviado = () => {
+    // Recarregar os dados da tabela para refletir a data atualizada
+    fetchControles();
+    setEmailItemId(null);
+  };
+
+  // Função chamada quando o email múltiplo é enviado com sucesso
+  const handleEmailMultiploEnviado = () => {
+    // Recarregar os dados da tabela para refletir as datas atualizadas
+    fetchControles();
+    setShowEmailMultiploDialog(false);
+    setItensSelecionados([]);
+  };
+
+  // Funções para seleção múltipla
+  const handleSelecionarItem = (itemId) => {
+    setItensSelecionados(prev => {
+      if (prev.includes(itemId)) {
+        return prev.filter(id => id !== itemId);
+      } else {
+        return [...prev, itemId];
+      }
+    });
+  };
+
+  const handleSelecionarTodos = () => {
+    if (itensSelecionados.length === controles.length) {
+      // Se todos estão selecionados, desmarcar todos
+      setItensSelecionados([]);
+    } else {
+      // Selecionar todos os itens que têm id_original válido
+      const itensValidos = controles
+        .filter(item => item.id_original)
+        .map(item => item.id);
+      setItensSelecionados(itensValidos);
+    }
+  };
+
+  // Filtrar apenas itens selecionados que têm id_original
+  const itensValidosSelecionados = controles.filter(item => 
+    itensSelecionados.includes(item.id) && item.id_original
+  );
+
+  // Formata a data para exibição
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    
+    try {
+      // Adiciona T00:00:00 se a string não incluir horário
+      const dateWithTime = dateString.includes('T') ? dateString : dateString + 'T00:00:00';
+      const date = new Date(dateWithTime);
+      
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return 'Data inválida';
+    }
+  };
+
+  // Aplicar filtros
+  const aplicarFiltros = () => {
+    fetchControles();
+  };
+
+  // Limpar filtros
+  const limparFiltros = () => {
+    setFiltroProjetoId('');
+    setFiltroCategoriaId('');
+    // Refetch sem filtros
+    setTimeout(fetchControles, 0);
+  };
+
+  // Componente para exibir o ícone de ordenação
+  const OrdenacaoIcon = ({ campo }) => {
+    if (ordenacao.campo !== campo) return null;
+    
+    return ordenacao.direcao === 'asc' 
+      ? <FiChevronUp className="ml-1 inline-block" /> 
+      : <FiChevronDown className="ml-1 inline-block" />;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-32">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Se não há projetos vinculados, mostrar mensagem informativa
+  if (projetosVinculados.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FiFolder className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+        <p className="text-gray-500 max-w-md mx-auto">
+          Você não está vinculado a nenhum projeto. Entre em contato com o administrador para vincular você a projetos relevantes.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Filtros */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-medium">Filtros</h3>
+          
+          {/* Informação sobre a tabela */}
+          <div className="text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-md">
+            Exibindo apenas itens visíveis
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Projeto (apenas projetos vinculados)
+            </label>
+            <select
+              value={filtroProjetoId || ''}
+              onChange={(e) => setFiltroProjetoId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Todos os projetos vinculados</option>
+              {Object.entries(projetos).map(([uuid, nome]) => (
+                <option key={uuid} value={uuid}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Categoria
+            </label>
+            <select
+              value={filtroCategoriaId || ''}
+              onChange={(e) => setFiltroCategoriaId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Todas as categorias</option>
+              {Object.entries(categorias).map(([uuid, nome]) => (
+                <option key={uuid} value={uuid}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-end space-x-2">
+            <button 
+              onClick={aplicarFiltros}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Aplicar
+            </button>
+            <button 
+              onClick={limparFiltros}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de ações para seleção múltipla */}
+      {controles.length > 0 && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 p-4 rounded-lg">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSelecionarTodos}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {itensSelecionados.length === controles.filter(item => item.id_original).length 
+                  ? 'Desmarcar Todos' 
+                  : 'Selecionar Todos'
+                }
+              </button>
+              
+              {itensSelecionados.length > 0 && (
+                <span className="text-blue-700">
+                  {itensSelecionados.length} item(ns) selecionado(s)
+                </span>
+              )}
+            </div>
+            
+            {itensValidosSelecionados.length > 0 && (
+              <button
+                onClick={() => setShowEmailMultiploDialog(true)}
+                className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                <FiSend className="mr-2" />
+                Enviar Email em Lote ({itensValidosSelecionados.length})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal para confirmar envio de email individual */}
+      {emailItemId && (
+        <ConfirmarEnvioEmailDialog
+          controleItem={controles.find(item => item.id === emailItemId)}
+          onClose={() => setEmailItemId(null)}
+          onConfirm={handleEmailEnviado}
+          categorias={categorias}
+          projetos={projetos}
+          user={user}
+        />
+      )}
+
+      {/* Modal para confirmar envio de email múltiplo */}
+      {showEmailMultiploDialog && (
+        <ConfirmarEnvioEmailMultiploDialog
+          itensControle={itensValidosSelecionados}
+          onClose={() => setShowEmailMultiploDialog(false)}
+          onConfirm={handleEmailMultiploEnviado}
+          categorias={categorias}
+          projetos={projetos}
+          user={user}
+        />
+      )}
+
+      {/* Tabela de Controle Visível */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300">
+          <thead>
+            <tr>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  checked={controles.filter(item => item.id_original).length > 0 && 
+                           itensSelecionados.length === controles.filter(item => item.id_original).length}
+                  onChange={handleSelecionarTodos}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+              </th>
+              <th 
+                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleToggleOrdenacao('id')}
+              >
+                <div className="flex items-center">
+                  ID
+                  <OrdenacaoIcon campo="id" />
+                </div>
+              </th>
+              <th 
+                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleToggleOrdenacao('id_controleconteudo')}
+              >
+                <div className="flex items-center">
+                  Base ID
+                  <OrdenacaoIcon campo="id_controleconteudo" />
+                </div>
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Projeto
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Categoria
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Descrição
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Prazo Inicial
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Prazo Atual
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Recorrência
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Obrigatório
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Status
+              </th>
+              <th 
+                className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleToggleOrdenacao('data_email_recente')}
+              >
+                <div className="flex items-center">
+                  Email Recente
+                  <OrdenacaoIcon campo="data_email_recente" />
+                </div>
+              </th>
+              <th className="px-6 py-3 bg-gray-100 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-300">
+            {controles.length > 0 ? (
+              controles.map((item) => (
+                <tr key={item.id} className={itensSelecionados.includes(item.id) ? 'bg-blue-50' : ''}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={itensSelecionados.includes(item.id)}
+                      onChange={() => handleSelecionarItem(item.id)}
+                      disabled={!item.id_original}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.id_controleconteudo || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {projetos[item.projeto_id] || 'Projeto indisponível'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {categorias[item.categoria_id] || 'Categoria indisponível'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.descricao}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex items-center">
+                      <FiCalendar className="mr-1 text-gray-400" />
+                      {formatDate(item.prazo_entrega_inicial)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex items-center">
+                      <FiCalendar className="mr-1 text-blue-500" />
+                      {formatDate(item.prazo_entrega)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.recorrencia ? (
+                      <span>
+                        {item.recorrencia}
+                        {item.tempo_recorrencia ? ` (${item.tempo_recorrencia})` : ''}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.obrigatorio ? (
+                      <span className="text-green-600 flex items-center">
+                        <FiCheck className="mr-1" />
+                        Sim
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 flex items-center">
+                        <FiX className="mr-1" />
+                        Não
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {item.tem_documento ? (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Documento Anexado
+                      </span>
+                    ) : (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Sem Documento
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex items-center">
+                      <FiMail className="mr-1 text-blue-500" />
+                      <span className={`${item.data_email_recente ? 'text-gray-900' : 'text-gray-400 italic'}`}>
+                        {formatDate(item.data_email_recente)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {item.id_original ? (
+                      <button
+                        onClick={() => setEmailItemId(item.id)}
+                        className="text-green-600 hover:text-green-900 flex items-center transition-colors"
+                        title="Enviar Email Individual"
+                      >
+                        <FiMail className="mr-1" />
+                        Enviar Email
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">
+                        Sem ID original
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="13" className="px-6 py-4 text-center text-sm text-gray-500">
+                  Nenhum item visível encontrado para os projetos vinculados
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default ControleConteudoVisivelTable;
