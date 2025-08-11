@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - SEM COLUNA SUBCATEGORIA
+// Componente CopiaControleIndicadorGeralTable.js - COM FILTRO TIPO INDICADOR
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -17,9 +17,12 @@ const CopiaControleIndicadorGeralTable = ({
   setFiltroValorPendente,
   filtrosPrazo,
   setFiltrosPrazo,
-  searchTerm = ''
+  searchTerm = '',
+  filtroProjetoId = '',
+  filtroCategoriaId = '',
+  filtroTipoIndicadorId = '' // ✅ NOVO
 }) => {
-  // ✅ FUNÇÃO: Formatar valores numéricos para padrão brasileiro
+  // Função: Formatar valores numéricos para padrão brasileiro
   const formatarValorIndicador = (valor) => {
     if (valor === null || valor === undefined || valor === '') return '-';
     
@@ -34,11 +37,10 @@ const CopiaControleIndicadorGeralTable = ({
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [tiposIndicador, setTiposIndicador] = useState({});
-  // ✅ REMOVIDO: subcategorias state
   const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
   const [loading, setLoading] = useState(true);
-  const [filtroProjetoId, setFiltroProjetoId] = useState('');
-  const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+  const [filtroProjetoIdLocal, setFiltroProjetoIdLocal] = useState('');
+  const [filtroCategoriaIdLocal, setFiltroCategoriaIdLocal] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showAtualizacaoMassaDialog, setShowAtualizacaoMassaDialog] = useState(false);
   const [showAtualizacaoInlineDialog, setShowAtualizacaoInlineDialog] = useState(false);
@@ -58,7 +60,6 @@ const CopiaControleIndicadorGeralTable = ({
       fetchCategorias();
       fetchProjetos();
       fetchTiposIndicador();
-      // ✅ REMOVIDO: fetchSubcategorias();
       fetchTiposUnidadeIndicador();
       fetchControles();
     }
@@ -69,7 +70,7 @@ const CopiaControleIndicadorGeralTable = ({
     if (!loading && projetosVinculados.length >= 0) {
       fetchControles();
     }
-  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm]);
+  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm, filtroProjetoId, filtroCategoriaId, filtroTipoIndicadorId]); // ✅ ADICIONADO filtroTipoIndicadorId
 
   // Função para calcular período
   const calcularPeriodo = (tipo) => {
@@ -191,8 +192,6 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // ✅ REMOVIDO: fetchSubcategorias function
-
   // Buscar tipos de unidade de indicador
   const fetchTiposUnidadeIndicador = async () => {
     try {
@@ -227,6 +226,15 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
+  // ✅ NOVA FUNÇÃO: Aplicar filtro por tipo indicador customizado (para abas Todos e Pendentes)
+  const aplicarFiltroTipoIndicadorCustom = (query) => {
+    // Só aplicar este filtro nas abas "todos" e "pendentes"
+    if ((filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes') && filtroTipoIndicadorId) {
+      return query.eq('tipo_indicador', filtroTipoIndicadorId);
+    }
+    return query;
+  };
+
   // Aplicar filtro por valor pendente
   const aplicarFiltroValorPendente = (query) => {
     // Para aba Pendentes, o filtro já é aplicado em aplicarFiltroTipoIndicador
@@ -240,13 +248,8 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // Aplicar filtros de prazo - IGNORAR para aba Pendentes
+  // Aplicar filtros de prazo
   const aplicarFiltrosPrazo = (query) => {
-    // Para aba Pendentes, ignorar filtros de prazo
-    if (filtroTipoIndicador === 'pendentes') {
-      return query; // Não aplicar filtros de prazo
-    }
-
     if (!filtrosPrazo) return query;
 
     let dataInicio, dataFim;
@@ -302,6 +305,7 @@ const CopiaControleIndicadorGeralTable = ({
       query = aplicarFiltroValorPendente(query);
       query = aplicarFiltrosPrazo(query);
       query = aplicarFiltroBusca(query);
+      query = aplicarFiltroTipoIndicadorCustom(query); // ✅ NOVO
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -416,7 +420,7 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // ✅ FUNÇÃO: Renderizar badge do tipo de indicador
+  // Função: Renderizar badge do tipo de indicador
   const renderTipoIndicadorBadge = (tipoIndicadorId) => {
     const tipo = tiposIndicador[tipoIndicadorId];
     
@@ -450,7 +454,7 @@ const CopiaControleIndicadorGeralTable = ({
     }
   };
 
-  // ✅ FUNÇÃO: Verificar se deve mostrar coluna Tipo Indicador
+  // Função: Verificar se deve mostrar coluna Tipo Indicador
   const mostrarColunaTipoIndicador = () => {
     return filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes';
   };
@@ -589,7 +593,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* Modal para adicionar linha de indicador geral - ✅ REMOVIDO: subcategorias prop */}
+      {/* Modal para adicionar linha de indicador geral */}
       {showAdicionarLinhaDialog && (
         <AdicionarLinhaIndicadorGeralDialog
           onClose={() => setShowAdicionarLinhaDialog(false)}
@@ -601,7 +605,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* Modal para atualização em massa (planilha) - ✅ REMOVIDO: subcategorias prop */}
+      {/* Modal para atualização em massa (planilha) */}
       {showAtualizacaoMassaDialog && (
         <AtualizacaoMassaIndicadorDialog
           onClose={() => setShowAtualizacaoMassaDialog(false)}
@@ -614,7 +618,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* Modal para atualização inline - ✅ REMOVIDO: subcategorias prop */}
+      {/* Modal para atualização inline */}
       {showAtualizacaoInlineDialog && (
         <AtualizacaoInlineIndicadorDialog
           onClose={() => setShowAtualizacaoInlineDialog(false)}
@@ -627,7 +631,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* Modal para editar linha de indicador geral - ✅ REMOVIDO: subcategorias prop */}
+      {/* Modal para editar linha de indicador geral */}
       {editarItemId && (
         <EditarLinhaIndicadorGeralDialog
           controleItem={controles.find(item => item.id === editarItemId)}
@@ -640,7 +644,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* Modal para anexar documento - ✅ REMOVIDO: subcategorias prop */}
+      {/* Modal para anexar documento */}
       {anexarDocumentoId && (
         <AnexarDocumentoIndicadorDialog
           controleId={anexarDocumentoId} 
@@ -663,7 +667,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* ✅ TABELA ATUALIZADA: SEM COLUNA SUBCATEGORIA */}
+      {/* TABELA ATUALIZADA: SEM COLUNA SUBCATEGORIA */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -695,7 +699,7 @@ const CopiaControleIndicadorGeralTable = ({
                   Descrição Resumida
                 </th>
                 
-                {/* ✅ COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
+                {/* COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
                 {mostrarColunaTipoIndicador() && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tipo Indicador
@@ -707,11 +711,15 @@ const CopiaControleIndicadorGeralTable = ({
                   Indicador
                 </th>
                 
-                {/* ✅ REMOVIDO: SUBCATEGORIA */}
-                
-                {/* PRAZO ATUAL */}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Prazo Atual
+                {/* ✅ PRAZO ATUAL - COM ORDENAÇÃO ADICIONADA */}
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleToggleOrdenacao('prazo_entrega')}
+                >
+                  <div className="flex items-center">
+                    Prazo Atual
+                    <OrdenacaoIcon campo="prazo_entrega" />
+                  </div>
                 </th>
                 
                 {/* PERÍODO DE REFERÊNCIA */}
@@ -770,7 +778,7 @@ const CopiaControleIndicadorGeralTable = ({
                       </div>
                     </td>
                                         
-                    {/* ✅ COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
+                    {/* COLUNA TIPO INDICADOR - nas abas "todos" e "pendentes" */}
                     {mostrarColunaTipoIndicador() && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {renderTipoIndicadorBadge(item.tipo_indicador)}
@@ -783,8 +791,6 @@ const CopiaControleIndicadorGeralTable = ({
                         {item.indicador}
                       </div>
                     </td>
-                    
-                    {/* ✅ REMOVIDO: SUBCATEGORIA */}
                     
                     {/* PRAZO ATUAL */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -875,7 +881,7 @@ const CopiaControleIndicadorGeralTable = ({
                 ))
               ) : (
                 <tr>
-                  {/* ✅ COLSPAN ATUALIZADO: 11 quando mostrar coluna Tipo Indicador, 10 quando não (removemos subcategoria) */}
+                  {/* COLSPAN ATUALIZADO: 11 quando mostrar coluna Tipo Indicador, 10 quando não */}
                   <td colSpan={mostrarColunaTipoIndicador() ? "11" : "10"} className="px-6 py-8 text-center text-sm text-gray-500">
                     <div className="flex flex-col items-center">
                       <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
@@ -916,7 +922,11 @@ const CopiaControleIndicadorGeralTable = ({
                   <li>• <strong>📊 Coluna Tipo Indicador:</strong> Visualize facilmente se o indicador é "Meta" ou "Realizado" com badges coloridos</li>
                 )}
                 {filtroTipoIndicador === 'pendentes' && (
-                  <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado (independente da data)</li>
+                  <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado</li>
+                )}
+                {/* ✅ NOVA INFORMAÇÃO: Filtro Tipo Indicador */}
+                {(filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes') && filtroTipoIndicadorId && (
+                  <li>• <strong>🏷️ Filtro Tipo Indicador:</strong> Aplicado filtro por tipo "{tiposIndicador[filtroTipoIndicadorId]}"</li>
                 )}
               </ul>
               <div className="mt-3 p-3 bg-white rounded-md border border-blue-200">
@@ -926,10 +936,14 @@ const CopiaControleIndicadorGeralTable = ({
                 <p className="text-xs text-blue-600 mt-1">
                   Baseado nos filtros aplicados: {filtroTipoIndicador} • 
                   {filtroTipoIndicador === 'pendentes' 
-                    ? 'Apenas sem valor apresentado (sem filtro de prazo)' 
+                    ? `Apenas sem valor apresentado • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}` 
                     : `${filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}`
                   }
                   {searchTerm && ` • Busca: "${searchTerm}"`}
+                  {filtroProjetoId && projetos[filtroProjetoId] && ` • Projeto: ${projetos[filtroProjetoId]}`}
+                  {filtroCategoriaId && categorias[filtroCategoriaId] && ` • Categoria: ${categorias[filtroCategoriaId]}`}
+                  {/* ✅ NOVO: Mostrar filtro tipo indicador aplicado */}
+                  {filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId] && ` • Tipo: ${tiposIndicador[filtroTipoIndicadorId]}`}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   <strong>💰 Formatação:</strong> Valores numéricos são exibidos no padrão brasileiro para melhor legibilidade

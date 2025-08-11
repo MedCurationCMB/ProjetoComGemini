@@ -34,14 +34,16 @@ export default function CopiaControleIndicadorGeral({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filtroValorPendente, setFiltroValorPendente] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); // ✅ NOVO: Termo de busca
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // ✅ NOVOS ESTADOS: Filtros por projeto e categoria
+  // Estados para filtros
   const [projetos, setProjetos] = useState({});
   const [categorias, setCategorias] = useState({});
+  const [tiposIndicador, setTiposIndicador] = useState({}); // ✅ NOVO
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+  const [filtroTipoIndicadorId, setFiltroTipoIndicadorId] = useState(''); // ✅ NOVO
   
   const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
     const hoje = new Date();
@@ -63,10 +65,9 @@ export default function CopiaControleIndicadorGeral({ user }) {
     };
   });
 
-  // ✅ NOVO: Estado para controlar a navegação (fixo em 'registros')
   const [activeTab] = useState('registros');
 
-  // ✅ NOVOS EFEITOS: Carregar projetos e categorias quando o usuário estiver disponível
+  // Efeitos para carregar dados
   useEffect(() => {
     if (user?.id) {
       fetchProjetosVinculados();
@@ -77,10 +78,11 @@ export default function CopiaControleIndicadorGeral({ user }) {
     if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
+      fetchTiposIndicador(); // ✅ NOVO
     }
   }, [projetosVinculados]);
 
-  // ✅ NOVA FUNÇÃO: Buscar projetos vinculados ao usuário
+  // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
     try {
       const { data, error } = await supabase
@@ -100,7 +102,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Buscar APENAS os projetos vinculados ao usuário
+  // Buscar APENAS os projetos vinculados ao usuário
   const fetchProjetos = async () => {
     try {
       if (projetosVinculados.length === 0) {
@@ -127,7 +129,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Buscar todas as categorias
+  // Buscar todas as categorias
   const fetchCategorias = async () => {
     try {
       const { data, error } = await supabase
@@ -147,7 +149,27 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // ✅ NOVAS FUNÇÕES DE NAVEGAÇÃO
+  // ✅ NOVA FUNÇÃO: Buscar tipos de indicador
+  const fetchTiposIndicador = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_indicador')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const tiposObj = {};
+      data.forEach(tipo => {
+        tiposObj[tipo.id] = tipo.tipo;
+      });
+      
+      setTiposIndicador(tiposObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de indicador:', error);
+    }
+  };
+
+  // Funções de navegação
   const handleIndicadoresClick = () => {
     router.push('/visualizacao-indicadores');
   };
@@ -228,7 +250,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   }, [user, router]);
 
-  // ✅ NOVA FUNÇÃO: Obter título da aba ativa com nova aba Pendentes
+  // Função para obter título da aba ativa
   const getTituloAba = () => {
     switch (abaAtiva) {
       case 'realizado':
@@ -242,7 +264,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Obter descrição da aba ativa com nova aba Pendentes
+  // Função para obter descrição da aba ativa
   const getDescricaoAba = () => {
     switch (abaAtiva) {
       case 'realizado':
@@ -250,7 +272,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
       case 'meta':
         return 'Visualizando apenas indicadores do tipo "Meta"';
       case 'pendentes':
-        return 'Visualizando apenas indicadores sem valor apresentado (independente da data)';
+        return 'Visualizando apenas indicadores sem valor apresentado';
       default:
         return 'Visualizando todos os tipos de indicadores';
     }
@@ -261,7 +283,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     let textoBase = getDescricaoAba();
     let filtrosAplicados = [];
 
-    // ✅ NOVOS FILTROS: Projeto e Categoria
+    // Filtros de Projeto e Categoria
     if (filtroProjetoId && projetos[filtroProjetoId]) {
       filtrosAplicados.push(`Projeto: ${projetos[filtroProjetoId]}`);
     }
@@ -270,36 +292,40 @@ export default function CopiaControleIndicadorGeral({ user }) {
       filtrosAplicados.push(`Categoria: ${categorias[filtroCategoriaId]}`);
     }
 
-    // ✅ PARA ABA PENDENTES: Não mostrar filtros de prazo pois são ignorados
-    if (abaAtiva !== 'pendentes') {
-      if (!filtrosPrazo.periodo) {
-        // Não adicionar filtro de prazo
+    // ✅ NOVO FILTRO: Tipo Indicador (apenas nas abas Todos e Pendentes)
+    if ((abaAtiva === 'todos' || abaAtiva === 'pendentes') && filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId]) {
+      filtrosAplicados.push(`Tipo: ${tiposIndicador[filtroTipoIndicadorId]}`);
+    }
+
+    // Filtros de prazo (aplicados em todas as abas)
+    if (!filtrosPrazo.periodo) {
+      // Não adicionar filtro de prazo
+    } else {
+      let dataInicio, dataFim;
+
+      if (filtrosPrazo.periodo === 'personalizado') {
+        if (filtrosPrazo.data_inicio && filtrosPrazo.data_fim) {
+          dataInicio = filtrosPrazo.data_inicio;
+          dataFim = filtrosPrazo.data_fim;
+        }
       } else {
-        let dataInicio, dataFim;
-
-        if (filtrosPrazo.periodo === 'personalizado') {
-          if (filtrosPrazo.data_inicio && filtrosPrazo.data_fim) {
-            dataInicio = filtrosPrazo.data_inicio;
-            dataFim = filtrosPrazo.data_fim;
-          }
-        } else {
-          const periodo = calcularPeriodo(filtrosPrazo.periodo);
-          dataInicio = periodo.dataInicio;
-          dataFim = periodo.dataFim;
-        }
-
-        if (dataInicio && dataFim) {
-          const formatarData = (dataString) => {
-            const partes = dataString.split('-');
-            return `${partes[2]}/${partes[1]}/${partes[0]}`;
-          };
-          filtrosAplicados.push(`Prazo: ${formatarData(dataInicio)} a ${formatarData(dataFim)}`);
-        }
+        const periodo = calcularPeriodo(filtrosPrazo.periodo);
+        dataInicio = periodo.dataInicio;
+        dataFim = periodo.dataFim;
       }
 
-      if (filtroValorPendente) {
-        filtrosAplicados.push('Apenas sem valor apresentado');
+      if (dataInicio && dataFim) {
+        const formatarData = (dataString) => {
+          const partes = dataString.split('-');
+          return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        };
+        filtrosAplicados.push(`Prazo: ${formatarData(dataInicio)} a ${formatarData(dataFim)}`);
       }
+    }
+
+    // Filtro de valor pendente (apenas para abas que não sejam Pendentes)
+    if (abaAtiva !== 'pendentes' && filtroValorPendente) {
+      filtrosAplicados.push('Apenas sem valor apresentado');
     }
     
     if (searchTerm) {
@@ -315,20 +341,22 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
   // ✅ FUNÇÃO ATUALIZADA: Verificar se há filtros ativos
   const hasFiltrosAtivos = () => {
-    // ✅ PARA ABA PENDENTES: Só considerar busca, projeto e categoria como filtros ativos
+    // Base dos filtros comuns
+    const filtrosComuns = searchTerm.trim() !== '' ||
+                         filtroProjetoId !== '' ||
+                         filtroCategoriaId !== '' ||
+                         filtrosPrazo.periodo !== '30dias' ||
+                         filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
+                         filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
+
+    // ✅ FILTRO TIPO INDICADOR: para abas Todos e Pendentes
+    const filtroTipo = (abaAtiva === 'todos' || abaAtiva === 'pendentes') && filtroTipoIndicadorId !== '';
+
     if (abaAtiva === 'pendentes') {
-      return searchTerm.trim() !== '' || 
-             filtroProjetoId !== '' || 
-             filtroCategoriaId !== '';
+      return filtrosComuns || filtroTipo;
     }
 
-    return filtroValorPendente || 
-           searchTerm.trim() !== '' ||
-           filtroProjetoId !== '' ||
-           filtroCategoriaId !== '' ||
-           filtrosPrazo.periodo !== '30dias' ||
-           filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
-           filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
+    return filtroValorPendente || filtrosComuns || filtroTipo;
   };
 
   // ✅ FUNÇÃO ATUALIZADA: Limpar filtros
@@ -340,19 +368,20 @@ export default function CopiaControleIndicadorGeral({ user }) {
       data_fim: periodoPadrao.dataFim
     });
     setFiltroValorPendente(false);
-    setSearchTerm(''); // ✅ NOVO: Limpar busca
-    setFiltroProjetoId(''); // ✅ NOVO: Limpar projeto
-    setFiltroCategoriaId(''); // ✅ NOVO: Limpar categoria
+    setSearchTerm('');
+    setFiltroProjetoId('');
+    setFiltroCategoriaId('');
+    setFiltroTipoIndicadorId(''); // ✅ NOVO
     setShowFilters(false);
   };
 
-  // ✅ NOVA FUNÇÃO: Lidar com mudança de aba
+  // Função para lidar com mudança de aba
   const handleAbaChange = (novaAba) => {
     setAbaAtiva(novaAba);
     
-    // ✅ Para aba Pendentes, limpar filtros de prazo já que são ignorados
+    // Para aba Pendentes, limpar apenas o filtro de valor pendente (redundante)
     if (novaAba === 'pendentes') {
-      setFiltroValorPendente(false); // Filtro redundante na aba Pendentes
+      setFiltroValorPendente(false);
     }
   };
 
@@ -371,7 +400,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* ✅ MOBILE: Header similar ao visualizacao-indicadores */}
+          {/* MOBILE: Header */}
           <div className="lg:hidden">
             {/* Primeira linha: Logo e Menu */}
             <div className="flex items-center justify-between mb-4">
@@ -487,7 +516,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </div>
             </div>
             
-            {/* ✅ NOVA Segunda linha: Busca e Filtro */}
+            {/* Segunda linha: Busca e Filtro */}
             <div className="flex items-center space-x-3 mb-4">
               <div className="flex-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -502,24 +531,21 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 />
               </div>
               
-              {/* ✅ FILTROS: Desabilitar para aba Pendentes */}
+              {/* Botão de filtro */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                disabled={abaAtiva === 'pendentes'}
                 className={`p-3 rounded-lg transition-colors ${
-                  abaAtiva === 'pendentes'
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : showFilters || hasFiltrosAtivos() 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  showFilters || hasFiltrosAtivos() 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 <FiFilter className="w-5 h-5" />
               </button>
             </div>
 
-            {/* ✅ MOBILE: Filtros melhorados - Ocultar para aba Pendentes */}
-            {showFilters && abaAtiva !== 'pendentes' && (
+            {/* ✅ MOBILE: Filtros com novo filtro Tipo Indicador */}
+            {showFilters && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
@@ -534,7 +560,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 </div>
 
                 <div className="space-y-3">
-                  {/* ✅ NOVOS FILTROS: Projeto e Categoria - Mobile */}
+                  {/* Filtros: Projeto, Categoria e Tipo Indicador */}
                   <div className="grid grid-cols-1 gap-3">
                     {/* Filtro por Projeto */}
                     <div>
@@ -569,27 +595,49 @@ export default function CopiaControleIndicadorGeral({ user }) {
                         ))}
                       </select>
                     </div>
+
+                    {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas nas abas Todos e Pendentes */}
+                    {(abaAtiva === 'todos' || abaAtiva === 'pendentes') && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Tipo Indicador</label>
+                        <select
+                          value={filtroTipoIndicadorId}
+                          onChange={(e) => setFiltroTipoIndicadorId(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Todos os tipos</option>
+                          {Object.entries(tiposIndicador).map(([id, tipo]) => (
+                            <option key={id} value={id}>
+                              {tipo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Filtro por Valor Pendente */}
-                  <div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="filtroValorPendenteMobile"
-                        checked={filtroValorPendente}
-                        onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="filtroValorPendenteMobile" className="ml-2 block text-sm text-gray-700">
-                        Apenas sem valor apresentado
-                      </label>
+                  {/* Filtro por Valor Pendente - Ocultar apenas na aba Pendentes */}
+                  {abaAtiva !== 'pendentes' && (
+                    <div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="filtroValorPendenteMobile"
+                          checked={filtroValorPendente}
+                          onChange={(e) => setFiltroValorPendente(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="filtroValorPendenteMobile" className="ml-2 block text-sm text-gray-700">
+                          Apenas sem valor apresentado
+                        </label>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Filtro de Período */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">Filtro por Prazo</label>
+                    
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
@@ -687,70 +735,9 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 </div>
               </div>
             )}
-
-            {/* ✅ NOVOS FILTROS PARA ABA PENDENTES: Apenas Projeto e Categoria */}
-            {showFilters && abaAtiva === 'pendentes' && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
-                  {hasFiltrosAtivos() && (
-                    <button
-                      onClick={limparFiltros}
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Limpar filtros
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3">
-                    {/* Filtro por Projeto */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Projeto</label>
-                      <select
-                        value={filtroProjetoId}
-                        onChange={(e) => setFiltroProjetoId(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Todos os projetos</option>
-                        {Object.entries(projetos).map(([id, nome]) => (
-                          <option key={id} value={id}>
-                            {nome}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Filtro por Categoria */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
-                      <select
-                        value={filtroCategoriaId}
-                        onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Todas as categorias</option>
-                        {Object.entries(categorias).map(([id, nome]) => (
-                          <option key={id} value={id}>
-                            {nome}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <p className="text-xs text-blue-700">
-                      💡 <strong>Aba Pendentes:</strong> Filtros de prazo e valor pendente são ignorados nesta visualização, pois já mostra apenas indicadores sem valor apresentado.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* ✅ DESKTOP: Header melhorado com busca */}
+          {/* DESKTOP: Header */}
           <div className="hidden lg:block">
             {/* Primeira linha: Logo, Busca e Menu */}
             <div className="flex items-center justify-between mb-4">
@@ -760,7 +747,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 showFallback={true}
               />
               
-              {/* ✅ NOVA: Barra de busca - Desktop */}
+              {/* Barra de busca - Desktop */}
               <div className="flex-1 max-w-md lg:max-w-lg mx-4">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -778,16 +765,13 @@ export default function CopiaControleIndicadorGeral({ user }) {
               
               {/* Controles à direita - Desktop */}
               <div className="flex items-center space-x-3">
-                {/* Botão de filtro - Desabilitar para aba Pendentes */}
+                {/* Botão de filtro */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  disabled={abaAtiva === 'pendentes'}
                   className={`p-3 rounded-lg transition-colors ${
-                    abaAtiva === 'pendentes'
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : showFilters || hasFiltrosAtivos() 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    showFilters || hasFiltrosAtivos() 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   <FiFilter className="w-5 h-5" />
@@ -900,8 +884,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </div>
             </div>
 
-            {/* ✅ FILTROS DESKTOP PARA ABAS NORMAIS - Ocultar para aba Pendentes */}
-            {showFilters && abaAtiva !== 'pendentes' && (
+            {/* ✅ FILTROS DESKTOP - Com novo filtro Tipo Indicador */}
+            {showFilters && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
@@ -915,8 +899,13 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* ✅ NOVOS FILTROS: Projeto e Categoria - Desktop */}
+                {/* Grid adaptativo baseado na aba ativa */}
+                <div className={`grid gap-4 ${
+                  (abaAtiva === 'todos' || abaAtiva === 'pendentes') 
+                    ? 'grid-cols-1 md:grid-cols-4' 
+                    : 'grid-cols-1 md:grid-cols-3'
+                }`}>
+                  {/* Filtro por Projeto */}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Projeto</label>
                     <select
@@ -933,6 +922,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     </select>
                   </div>
 
+                  {/* Filtro por Categoria */}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Categoria</label>
                     <select
@@ -949,22 +939,43 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     </select>
                   </div>
 
-                  {/* Filtro por Valor Pendente */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Filtrar por Pendência</label>
-                    <div className="flex items-center mt-2">
-                      <input
-                        type="checkbox"
-                        id="filtroValorPendenteDesktop"
-                        checked={filtroValorPendente}
-                        onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="filtroValorPendenteDesktop" className="ml-2 block text-sm text-gray-700">
-                        Apenas sem valor apresentado
-                      </label>
+                  {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas nas abas Todos e Pendentes */}
+                  {(abaAtiva === 'todos' || abaAtiva === 'pendentes') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Tipo Indicador</label>
+                      <select
+                        value={filtroTipoIndicadorId}
+                        onChange={(e) => setFiltroTipoIndicadorId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os tipos</option>
+                        {Object.entries(tiposIndicador).map(([id, tipo]) => (
+                          <option key={id} value={id}>
+                            {tipo}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Filtro por Valor Pendente - Ocultar apenas na aba Pendentes */}
+                  {abaAtiva !== 'pendentes' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Filtrar por Pendência</label>
+                      <div className="flex items-center mt-2">
+                        <input
+                          type="checkbox"
+                          id="filtroValorPendenteDesktop"
+                          checked={filtroValorPendente}
+                          onChange={(e) => setFiltroValorPendente(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="filtroValorPendenteDesktop" className="ml-2 block text-sm text-gray-700">
+                          Apenas sem valor apresentado
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Campos de data personalizada */}
                   {filtrosPrazo.periodo === 'personalizado' && (
@@ -994,6 +1005,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 {/* Filtro de Período */}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-600 mb-2">Filtro por Prazo</label>
+                  
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
@@ -1066,65 +1078,6 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 </div>
               </div>
             )}
-
-            {/* ✅ FILTROS DESKTOP PARA ABA PENDENTES: Apenas Projeto e Categoria */}
-            {showFilters && abaAtiva === 'pendentes' && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
-                  {hasFiltrosAtivos() && (
-                    <button
-                      onClick={limparFiltros}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      Limpar filtros
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Filtro por Projeto */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Projeto</label>
-                    <select
-                      value={filtroProjetoId}
-                      onChange={(e) => setFiltroProjetoId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todos os projetos</option>
-                      {Object.entries(projetos).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filtro por Categoria */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Categoria</label>
-                    <select
-                      value={filtroCategoriaId}
-                      onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todas as categorias</option>
-                      {Object.entries(categorias).map(([id, nome]) => (
-                        <option key={id} value={id}>
-                          {nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <p className="text-sm text-blue-700">
-                    💡 <strong>Aba Pendentes:</strong> Filtros de prazo e valor pendente são ignorados nesta visualização, pois já mostra apenas indicadores sem valor apresentado.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1132,7 +1085,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="lg:flex lg:space-x-8">
-          {/* ✅ NOVO: Sidebar de navegação - Desktop apenas */}
+          {/* Sidebar de navegação - Desktop apenas */}
           <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <nav className="space-y-2">
@@ -1188,7 +1141,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            {/* ✅ MOBILE: Cabeçalho da seção */}
+            {/* MOBILE: Cabeçalho da seção */}
             <div className="lg:hidden">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl font-bold text-black">Controle de Indicadores Geral</h2>
@@ -1197,7 +1150,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
               <p className="text-gray-600 text-sm mb-6">{gerarTextoDescritivo()}</p>
             </div>
 
-            {/* ✅ DESKTOP: Cabeçalho da seção */}
+            {/* DESKTOP: Cabeçalho da seção */}
             <div className="hidden lg:block">
               <div className="mb-6">
                 <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Indicadores Geral</h1>
@@ -1213,7 +1166,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
             {/* Sistema de Abas */}
             <div className="bg-white rounded-lg shadow-md mb-6">
               <div className="border-b border-gray-200">
-                {/* ✅ MOBILE: Navegação por abas horizontal com scroll - NOVA ABA PENDENTES */}
+                {/* MOBILE: Navegação por abas horizontal com scroll */}
                 <div className="lg:hidden">
                   <div className="overflow-x-auto">
                     <nav className="-mb-px flex space-x-6 px-4" aria-label="Tabs">
@@ -1268,7 +1221,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                         )}
                       </button>
 
-                      {/* ✅ NOVA ABA: Pendentes */}
+                      {/* Aba: Pendentes */}
                       <button
                         onClick={() => handleAbaChange('pendentes')}
                         className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
@@ -1288,7 +1241,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ DESKTOP: Navegação por abas normal - NOVA ABA PENDENTES */}
+                {/* DESKTOP: Navegação por abas normal */}
                 <div className="hidden lg:block">
                   <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                     {/* Aba: Todos */}
@@ -1342,7 +1295,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       )}
                     </button>
 
-                    {/* ✅ NOVA ABA: Pendentes */}
+                    {/* Aba: Pendentes */}
                     <button
                       onClick={() => handleAbaChange('pendentes')}
                       className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
@@ -1364,7 +1317,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
               {/* Conteúdo da Aba Ativa */}
               <div className="p-4 lg:p-6">
-                {/* ✅ MOBILE: Cabeçalho de aba compacto - NOVA ABA PENDENTES */}
+                {/* MOBILE: Cabeçalho de aba compacto */}
                 <div className="lg:hidden mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">
                     {getTituloAba()}
@@ -1391,7 +1344,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ DESKTOP: Cabeçalho de aba completo - NOVA ABA PENDENTES */}
+                {/* DESKTOP: Cabeçalho de aba completo */}
                 <div className="hidden lg:block mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-1">
                     {getTituloAba()}
@@ -1414,23 +1367,24 @@ export default function CopiaControleIndicadorGeral({ user }) {
                         {abaAtiva === 'todos' && 'Mostrando todos os tipos de indicadores'}
                         {abaAtiva === 'realizado' && 'Filtrando apenas indicadores do tipo "Realizado"'}
                         {abaAtiva === 'meta' && 'Filtrando apenas indicadores do tipo "Meta"'}
-                        {abaAtiva === 'pendentes' && 'Mostrando apenas indicadores sem valor apresentado (independente da data)'}
+                        {abaAtiva === 'pendentes' && 'Mostrando apenas indicadores sem valor apresentado'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* ✅ COMPONENTE DA TABELA: Passando os novos filtros */}
+                {/* ✅ COMPONENTE DA TABELA: Com novo filtro Tipo Indicador */}
                 <CopiaControleIndicadorGeralTable 
                   user={user} 
                   filtroTipoIndicador={abaAtiva}
-                  filtroValorPendente={abaAtiva === 'pendentes' ? true : filtroValorPendente} // ✅ FORÇAR true para aba Pendentes
+                  filtroValorPendente={abaAtiva === 'pendentes' ? true : filtroValorPendente}
                   setFiltroValorPendente={setFiltroValorPendente}
-                  filtrosPrazo={abaAtiva === 'pendentes' ? null : filtrosPrazo} // ✅ IGNORAR filtros de prazo para aba Pendentes
+                  filtrosPrazo={filtrosPrazo}
                   setFiltrosPrazo={setFiltrosPrazo}
-                  searchTerm={searchTerm} // ✅ NOVO: Passar termo de busca
-                  filtroProjetoId={filtroProjetoId} // ✅ NOVO: Passar filtro de projeto
-                  filtroCategoriaId={filtroCategoriaId} // ✅ NOVO: Passar filtro de categoria
+                  searchTerm={searchTerm}
+                  filtroProjetoId={filtroProjetoId}
+                  filtroCategoriaId={filtroCategoriaId}
+                  filtroTipoIndicadorId={filtroTipoIndicadorId} // ✅ NOVO
                 />
               </div>
             </div>
@@ -1438,7 +1392,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
         </div>
       </div>
 
-      {/* ✅ NOVO: Barra de navegação inferior - Mobile apenas */}
+      {/* Barra de navegação inferior - Mobile apenas */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 z-30">
         <div className="flex justify-around">
           <button
