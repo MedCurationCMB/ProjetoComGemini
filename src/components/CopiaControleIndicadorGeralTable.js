@@ -226,10 +226,10 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // ✅ NOVA FUNÇÃO: Aplicar filtro por tipo indicador customizado (para abas Todos e Pendentes)
+  // ✅ FUNÇÃO: Aplicar filtro por tipo indicador customizado (apenas para aba Pendentes)
   const aplicarFiltroTipoIndicadorCustom = (query) => {
-    // Só aplicar este filtro nas abas "todos" e "pendentes"
-    if ((filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes') && filtroTipoIndicadorId) {
+    // Só aplicar este filtro na aba "pendentes"
+    if (filtroTipoIndicador === 'pendentes' && filtroTipoIndicadorId) {
       return query.eq('tipo_indicador', filtroTipoIndicadorId);
     }
     return query;
@@ -924,8 +924,8 @@ const CopiaControleIndicadorGeralTable = ({
                 {filtroTipoIndicador === 'pendentes' && (
                   <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado</li>
                 )}
-                {/* ✅ NOVA INFORMAÇÃO: Filtro Tipo Indicador */}
-                {(filtroTipoIndicador === 'todos' || filtroTipoIndicador === 'pendentes') && filtroTipoIndicadorId && (
+                {/* ✅ INFORMAÇÃO: Filtro Tipo Indicador */}
+                {filtroTipoIndicador === 'pendentes' && filtroTipoIndicadorId && (
                   <li>• <strong>🏷️ Filtro Tipo Indicador:</strong> Aplicado filtro por tipo "{tiposIndicador[filtroTipoIndicadorId]}"</li>
                 )}
               </ul>

@@ -292,8 +292,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
       filtrosAplicados.push(`Categoria: ${categorias[filtroCategoriaId]}`);
     }
 
-    // ✅ NOVO FILTRO: Tipo Indicador (apenas nas abas Todos e Pendentes)
-    if ((abaAtiva === 'todos' || abaAtiva === 'pendentes') && filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId]) {
+    // ✅ FILTRO: Tipo Indicador (apenas na aba Pendentes)
+    if (abaAtiva === 'pendentes' && filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId]) {
       filtrosAplicados.push(`Tipo: ${tiposIndicador[filtroTipoIndicadorId]}`);
     }
 
@@ -349,8 +349,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
                          filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
                          filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
 
-    // ✅ FILTRO TIPO INDICADOR: para abas Todos e Pendentes
-    const filtroTipo = (abaAtiva === 'todos' || abaAtiva === 'pendentes') && filtroTipoIndicadorId !== '';
+    // ✅ FILTRO TIPO INDICADOR: apenas para aba Pendentes
+    const filtroTipo = abaAtiva === 'pendentes' && filtroTipoIndicadorId !== '';
 
     if (abaAtiva === 'pendentes') {
       return filtrosComuns || filtroTipo;
@@ -596,8 +596,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       </select>
                     </div>
 
-                    {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas nas abas Todos e Pendentes */}
-                    {(abaAtiva === 'todos' || abaAtiva === 'pendentes') && (
+                    {/* ✅ NOVO FILTRO: Tipo Indicador - Apena na aba Pendentes */}
+                    {abaAtiva === 'pendentes' && (
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Tipo Indicador</label>
                         <select
@@ -901,7 +901,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
 
                 {/* Grid adaptativo baseado na aba ativa */}
                 <div className={`grid gap-4 ${
-                  (abaAtiva === 'todos' || abaAtiva === 'pendentes') 
+                  abaAtiva === 'pendentes' 
                     ? 'grid-cols-1 md:grid-cols-4' 
                     : 'grid-cols-1 md:grid-cols-3'
                 }`}>
@@ -939,8 +939,8 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     </select>
                   </div>
 
-                  {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas nas abas Todos e Pendentes */}
-                  {(abaAtiva === 'todos' || abaAtiva === 'pendentes') && (
+                  {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas na aba Pendentes */}
+                  {abaAtiva === 'pendentes' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">Tipo Indicador</label>
                       <select
