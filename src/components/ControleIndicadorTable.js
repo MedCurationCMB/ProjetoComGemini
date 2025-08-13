@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiFilter, FiSearch, FiInfo, FiTrash2, FiEdit } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiX, FiPlus, FiFolder, FiInfo, FiTrash2, FiEdit } from 'react-icons/fi';
 import AdicionarLinhaIndicadorBaseDialog from './AdicionarLinhaIndicadorBaseDialog';
 import DeleteIndicadorDialog from './DeleteIndicadorDialog';
 import EdicaoInlineControleIndicadorDialog from './EdicaoInlineControleIndicadorDialog';
-import EditarLinhaIndicadorDialog from './EditarLinhaIndicadorDialog'; // ✅ NOVO IMPORT
+import EditarLinhaIndicadorDialog from './EditarLinhaIndicadorDialog';
 
-const ControleIndicadorTable = ({ user }) => {
+const ControleIndicadorTable = ({ 
+  user, 
+  searchTerm = '', 
+  filtroProjetoId = '', 
+  filtroCategoriaId = '' 
+}) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
@@ -15,16 +20,12 @@ const ControleIndicadorTable = ({ user }) => {
   const [subcategorias, setSubcategorias] = useState({});
   const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
   const [loading, setLoading] = useState(true);
-  const [filtroProjetoId, setFiltroProjetoId] = useState('');
-  const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEdicaoDialog, setShowEdicaoDialog] = useState(false);
-  const [showEditarDialog, setShowEditarDialog] = useState(false); // ✅ NOVO STATE
+  const [showEditarDialog, setShowEditarDialog] = useState(false);
   const [indicadorToDelete, setIndicadorToDelete] = useState(null);
-  const [indicadorToEdit, setIndicadorToEdit] = useState(null); // ✅ NOVO STATE
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [indicadorToEdit, setIndicadorToEdit] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -177,9 +178,15 @@ const ControleIndicadorTable = ({ user }) => {
         query = query.eq('categoria_id', filtroCategoriaId);
       }
 
-      // Aplicar filtro de busca
+      // Aplicar filtro de busca expandido para múltiplos campos
       if (searchTerm.trim()) {
-        query = query.ilike('indicador', `%${searchTerm.trim()}%`);
+        const termo = searchTerm.trim();
+        query = query.or(
+          `indicador.ilike.%${termo}%,` +
+          `observacao.ilike.%${termo}%,` +
+          `descricao_resumida.ilike.%${termo}%,` +
+          `descricao_detalhada.ilike.%${termo}%`
+        );
       }
       
       const { data, error } = await query;
@@ -289,13 +296,13 @@ const ControleIndicadorTable = ({ user }) => {
     fetchControles();
   };
 
-  // ✅ NOVA FUNÇÃO: Abrir modal de edição individual
+  // Função para abrir modal de edição individual
   const handleEditClick = (indicador) => {
     setIndicadorToEdit(indicador);
     setShowEditarDialog(true);
   };
 
-  // ✅ NOVA FUNÇÃO: Lidar com o sucesso da edição individual
+  // Função para lidar com o sucesso da edição individual
   const handleEditSuccess = () => {
     setShowEditarDialog(false);
     setIndicadorToEdit(null);
@@ -312,16 +319,6 @@ const ControleIndicadorTable = ({ user }) => {
     setShowEdicaoDialog(false);
     fetchControles();
   };
-
-  // Limpar filtros
-  const limparFiltros = () => {
-    setFiltroProjetoId('');
-    setFiltroCategoriaId('');
-    setSearchTerm('');
-    setShowFilters(false);
-  };
-
-  const hasActiveFilters = filtroProjetoId || filtroCategoriaId || searchTerm.trim();
 
   if (loading) {
     return (
@@ -348,202 +345,27 @@ const ControleIndicadorTable = ({ user }) => {
 
   return (
     <div>
-      {/* Header com busca e filtros - Mobile */}
-      <div className="lg:hidden mb-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-              placeholder="Buscar indicadores..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-3 rounded-lg transition-colors ${
-              showFilters || hasActiveFilters 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <FiFilter className="w-5 h-5" />
-          </button>
-
+      {/* Botões de Ação */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => setShowAdicionarLinhaDialog(true)}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg text-sm font-medium"
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
           >
             <FiPlus className="mr-2" />
-            Adicionar
+            Adicionar Linha de Indicador
           </button>
-        </div>
 
-        {/* Botão de edição em massa - Mobile */}
-        {controles.length > 0 && (
-          <div className="mb-4">
+          {controles.length > 0 && (
             <button
               onClick={handleEdicaoMassaClick}
-              className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-sm font-medium"
+              className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
             >
               <FiEdit className="mr-2" />
               Editar em Massa
             </button>
-          </div>
-        )}
-
-        {showFilters && (
-          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Projeto
-                </label>
-                <select
-                  value={filtroProjetoId}
-                  onChange={(e) => setFiltroProjetoId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todos os projetos</option>
-                  {Object.entries(projetos).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Categoria
-                </label>
-                <select
-                  value={filtroCategoriaId}
-                  onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todas as categorias</option>
-                  {Object.entries(categorias).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            {hasActiveFilters && (
-              <div className="flex justify-center">
-                <button
-                  onClick={limparFiltros}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Limpar Filtros
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Header com busca e filtros - Desktop */}
-      <div className="hidden lg:block mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4 flex-1">
-            <div className="flex-1 max-w-md relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FiSearch className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                placeholder="Buscar indicadores..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-3 rounded-lg transition-colors ${
-                showFilters || hasActiveFilters 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <FiFilter className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-3 ml-4">
-            {/* Botão de edição em massa - Desktop */}
-            {controles.length > 0 && (
-              <button
-                onClick={handleEdicaoMassaClick}
-                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
-              >
-                <FiEdit className="mr-2" />
-                Editar em Massa
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowAdicionarLinhaDialog(true)}
-              className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-sm font-medium"
-            >
-              <FiPlus className="mr-2" />
-              Adicionar Linha de Indicador
-            </button>
-          </div>
+          )}
         </div>
-
-        {showFilters && (
-          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-end space-x-4">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Projeto (apenas projetos vinculados)
-                </label>
-                <select
-                  value={filtroProjetoId}
-                  onChange={(e) => setFiltroProjetoId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todos os projetos vinculados</option>
-                  {Object.entries(projetos).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Categoria
-                </label>
-                <select
-                  value={filtroCategoriaId}
-                  onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todas as categorias</option>
-                  {Object.entries(categorias).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {hasActiveFilters && (
-                <button
-                  onClick={limparFiltros}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
-                >
-                  Limpar Filtros
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal para adicionar linha de indicador */}
@@ -582,7 +404,7 @@ const ControleIndicadorTable = ({ user }) => {
         />
       )}
 
-      {/* ✅ NOVO MODAL: Edição individual */}
+      {/* Modal para edição individual */}
       {showEditarDialog && indicadorToEdit && (
         <EditarLinhaIndicadorDialog
           controleItem={indicadorToEdit}
@@ -754,7 +576,7 @@ const ControleIndicadorTable = ({ user }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center space-x-2">
-                      {/* ✅ NOVO BOTÃO: Editar individual */}
+                      {/* Botão para editar individual */}
                       <button
                         onClick={() => handleEditClick(item)}
                         className="inline-flex items-center px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 text-xs font-medium rounded-md transition-colors"
@@ -825,9 +647,8 @@ const ControleIndicadorTable = ({ user }) => {
                     );
                   })()}
 
-                  {/* ✅ Botões de ação no mobile */}
+                  {/* Botões de ação no mobile */}
                   <div className="flex items-center space-x-1">
-                    {/* Botão de editar individual no mobile */}
                     <button
                       onClick={() => handleEditClick(item)}
                       className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 rounded-md transition-colors"
@@ -836,7 +657,6 @@ const ControleIndicadorTable = ({ user }) => {
                       <FiEdit className="w-4 h-4" />
                     </button>
                     
-                    {/* Botão de excluir no mobile */}
                     <button
                       onClick={() => handleDeleteClick(item)}
                       className="p-1 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-md transition-colors"
@@ -924,6 +744,49 @@ const ControleIndicadorTable = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* Informações adicionais sobre filtros aplicados */}
+      {(searchTerm.trim() || filtroProjetoId || filtroCategoriaId) && controles.length > 0 && (
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <FiInfo className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <h4 className="font-medium text-blue-900">Filtros Aplicados</h4>
+              <div className="text-sm text-blue-700 mt-1 space-y-1">
+                {searchTerm.trim() && (
+                  <p>• <strong>Busca:</strong> "{searchTerm}" (nome, descrição ou observações)</p>
+                )}
+                {filtroProjetoId && projetos[filtroProjetoId] && (
+                  <p>• <strong>Projeto:</strong> {projetos[filtroProjetoId]}</p>
+                )}
+                {filtroCategoriaId && categorias[filtroCategoriaId] && (
+                  <p>• <strong>Categoria:</strong> {categorias[filtroCategoriaId]}</p>
+                )}
+                <p>• <strong>Registros encontrados:</strong> {controles.length} indicador(es)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Informações sobre a busca expandida */}
+      {controles.length > 0 && !searchTerm.trim() && !filtroProjetoId && !filtroCategoriaId && (
+        <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <FiInfo className="h-5 w-5 text-gray-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <h4 className="font-medium text-gray-900">Funcionalidades de Busca</h4>
+              <div className="text-sm text-gray-700 mt-1 space-y-1">
+                <p>• <strong>Busca inteligente:</strong> Pesquise por nome do indicador, descrições ou observações</p>
+                <p>• <strong>Filtros:</strong> Use os filtros acima para refinar por projeto ou categoria</p>
+                <p>• <strong>Edição:</strong> Clique no botão de editar para modificar indicadores individuais</p>
+                <p>• <strong>Edição em massa:</strong> Use o botão "Editar em Massa" para atualizar múltiplos registros</p>
+                <p>• <strong>Total de registros:</strong> {controles.length} indicador(es) disponível(is)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

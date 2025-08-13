@@ -26,6 +26,111 @@ export default function ControleIndicador({ user }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('tabela'); // 'tabela' ou 'upload'
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Estados para busca e filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [projetos, setProjetos] = useState({});
+  const [categorias, setCategorias] = useState({});
+  const [projetosVinculados, setProjetosVinculados] = useState([]);
+  const [filtroProjetoId, setFiltroProjetoId] = useState('');
+  const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
+
+  // Carregar dados dos filtros
+  useEffect(() => {
+    if (user?.id) {
+      fetchProjetosVinculados();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (projetosVinculados.length >= 0) {
+      fetchCategorias();
+      fetchProjetos();
+    }
+  }, [projetosVinculados]);
+
+  // Função para buscar projetos vinculados ao usuário
+  const fetchProjetosVinculados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select('projeto_id')
+        .eq('usuario_id', user.id);
+      
+      if (error) throw error;
+      
+      const projetoIds = data.map(item => item.projeto_id);
+      setProjetosVinculados(projetoIds);
+      
+      console.log('Projetos vinculados ao usuário:', projetoIds);
+    } catch (error) {
+      console.error('Erro ao carregar projetos vinculados:', error);
+      setProjetosVinculados([]);
+    }
+  };
+
+  // Buscar APENAS os projetos vinculados ao usuário
+  const fetchProjetos = async () => {
+    try {
+      if (projetosVinculados.length === 0) {
+        setProjetos({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('*')
+        .in('id', projetosVinculados);
+      
+      if (error) throw error;
+      
+      const projetosObj = {};
+      data.forEach(proj => {
+        projetosObj[proj.id] = proj.nome;
+      });
+      
+      setProjetos(projetosObj);
+      console.log('Projetos carregados:', projetosObj);
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+    }
+  };
+
+  // Buscar todas as categorias
+  const fetchCategorias = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*');
+      
+      if (error) throw error;
+      
+      const categoriasObj = {};
+      data.forEach(cat => {
+        categoriasObj[cat.id] = cat.nome;
+      });
+      
+      setCategorias(categoriasObj);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
+
+  // Verificar se há filtros ativos
+  const hasFiltrosAtivos = () => {
+    return searchTerm.trim() !== '' ||
+           filtroProjetoId !== '' ||
+           filtroCategoriaId !== '';
+  };
+
+  // Limpar filtros
+  const limparFiltros = () => {
+    setSearchTerm('');
+    setFiltroProjetoId('');
+    setFiltroCategoriaId('');
+    setShowFilters(false);
+  };
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -78,12 +183,13 @@ export default function ControleIndicador({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo - SEM OS BOTÕES DE TAB */}
+      {/* Header responsivo - COM BUSCA E FILTROS */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile */}
+          {/* MOBILE: Header */}
           <div className="lg:hidden">
-            <div className="flex items-center justify-between">
+            {/* Primeira linha: Logo e Menu */}
+            <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
                 fallbackText="Controle Indicadores"
@@ -183,18 +289,124 @@ export default function ControleIndicador({ user }) {
                 )}
               </div>
             </div>
+
+            {/* Segunda linha: Busca e Filtro - MOBILE */}
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                  placeholder="Buscar por nome, descrição ou observações..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-3 rounded-lg transition-colors ${
+                  showFilters || hasFiltrosAtivos() 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <FiFilter className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filtros Mobile */}
+            {showFilters && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  {hasFiltrosAtivos() && (
+                    <button
+                      onClick={limparFiltros}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Filtro por Projeto */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Projeto</label>
+                      <select
+                        value={filtroProjetoId}
+                        onChange={(e) => setFiltroProjetoId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os projetos</option>
+                        {Object.entries(projetos).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Categoria */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
+                      <select
+                        value={filtroCategoriaId}
+                        onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todas as categorias</option>
+                        {Object.entries(categorias).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Desktop */}
+          {/* DESKTOP: Header */}
           <div className="hidden lg:block">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
                 fallbackText="Controle Indicadores"
                 showFallback={true}
               />
               
+              {/* Barra de busca - Desktop */}
+              <div className="flex-1 max-w-md lg:max-w-lg mx-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                    placeholder="Buscar por nome, descrição ou observações..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              
               <div className="flex items-center space-x-3">
+                {/* Botão de filtro */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`p-3 rounded-lg transition-colors ${
+                    showFilters || hasFiltrosAtivos() 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <FiFilter className="w-5 h-5" />
+                </button>
+
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
@@ -289,13 +501,62 @@ export default function ControleIndicador({ user }) {
                 </div>
               </div>
             </div>
+
+            {/* Filtros Desktop */}
+            {showFilters && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  {hasFiltrosAtivos() && (
+                    <button
+                      onClick={limparFiltros}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Filtro por Projeto */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Projeto (apenas projetos vinculados)</label>
+                    <select
+                      value={filtroProjetoId}
+                      onChange={(e) => setFiltroProjetoId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todos os projetos vinculados</option>
+                      {Object.entries(projetos).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Categoria */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Categoria</label>
+                    <select
+                      value={filtroCategoriaId}
+                      onChange={(e) => setFiltroCategoriaId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Todas as categorias</option>
+                      {Object.entries(categorias).map(([id, nome]) => (
+                        <option key={id} value={id}>{nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Cabeçalho da seção com botões de tab MOVIDOS PARA CÁ */}
+        {/* Cabeçalho da seção com botões de tab */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
@@ -304,6 +565,9 @@ export default function ControleIndicador({ user }) {
               </h2>
               <p className="text-gray-600 text-sm">
                 Gerencie e visualize seus indicadores de controle
+                {hasFiltrosAtivos() && (
+                  <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
+                )}
               </p>
             </div>
             
@@ -318,9 +582,8 @@ export default function ControleIndicador({ user }) {
             </div>
           </div>
 
-          {/* ✅ TABS MOVIDAS PARA BAIXO DO TÍTULO */}
+          {/* Tabs de navegação */}
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Tabs de navegação */}
             <div className="flex">
               {/* Mobile: Tabs responsivas */}
               <div className="lg:hidden flex w-full">
@@ -381,7 +644,12 @@ export default function ControleIndicador({ user }) {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {activeTab === 'tabela' ? (
             <div className="p-6">
-              <ControleIndicadorTable user={user} />
+              <ControleIndicadorTable 
+                user={user} 
+                searchTerm={searchTerm}
+                filtroProjetoId={filtroProjetoId}
+                filtroCategoriaId={filtroCategoriaId}
+              />
             </div>
           ) : (
             <div className="p-6">
