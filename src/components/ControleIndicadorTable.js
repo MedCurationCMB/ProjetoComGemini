@@ -441,9 +441,6 @@ const ControleIndicadorTable = ({
                 Descrição Detalhada
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                Subcategoria
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Tipo Unidade
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -515,9 +512,6 @@ const ControleIndicadorTable = ({
                         <span className="text-gray-400 italic">Não informado</span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {subcategorias[item.subcategoria_id] || 'Subcategoria indisponível'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {tiposUnidadeIndicador[item.tipo_unidade_indicador] || 'Tipo indisponível'}
@@ -598,7 +592,7 @@ const ControleIndicadorTable = ({
               ))
             ) : (
               <tr>
-                <td colSpan="13" className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan="12" className="px-6 py-8 text-center text-sm text-gray-500">
                   {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
@@ -699,11 +693,6 @@ const ControleIndicadorTable = ({
                 <div className="flex items-center text-sm">
                   <span className="font-medium text-gray-600 w-20">Categoria:</span>
                   <span className="text-gray-900">{categorias[item.categoria_id] || 'Indisponível'}</span>
-                </div>
-                
-                <div className="flex items-center text-sm">
-                  <span className="font-medium text-gray-600 w-20">Subcategoria:</span>
-                  <span className="text-gray-900">{subcategorias[item.subcategoria_id] || 'Indisponível'}</span>
                 </div>
 
                 <div className="flex items-center text-sm">

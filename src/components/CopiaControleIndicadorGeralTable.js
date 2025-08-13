@@ -280,8 +280,12 @@ const CopiaControleIndicadorGeralTable = ({
       return query;
     }
 
-    // Buscar no campo 'indicador' (case-insensitive)
-    return query.ilike('indicador', `%${searchTerm.trim()}%`);
+    // Buscar nos campos 'indicador' e 'descricao_resumida' (case-insensitive)
+    const termo = searchTerm.trim();
+    return query.or(
+      `indicador.ilike.%${termo}%,` +
+      `descricao_resumida.ilike.%${termo}%`
+    );
   };
 
   // Buscar os dados com todos os filtros aplicados

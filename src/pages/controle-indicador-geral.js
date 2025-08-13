@@ -525,7 +525,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                 <input
                   type="text"
                   className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                  placeholder="Buscar indicadores..."
+                  placeholder="Buscar Indicador ou Descrição..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -756,7 +756,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   <input
                     type="text"
                     className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                    placeholder="Buscar indicadores..."
+                    placeholder="Buscar Indicador ou Descrição..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
