@@ -27,7 +27,10 @@ import {
   FiList,
   FiTrendingUp,
   FiRepeat,
-  FiCheckCircle
+  FiCheckCircle,
+  FiMoreVertical,
+  FiTrash2,
+  FiEdit
 } from 'react-icons/fi';
 
 export default function VisualizacaoAtividades({ user }) {
@@ -53,6 +56,11 @@ export default function VisualizacaoAtividades({ user }) {
   // Estados de loading
   const [adicionandoAtividade, setAdicionandoAtividade] = useState(false);
   const [loadingAtividades, setLoadingAtividades] = useState(false);
+
+  // Estados para menus de ações e edição
+  const [menuAberto, setMenuAberto] = useState(null);
+  const [editandoAtividade, setEditandoAtividade] = useState(null);
+  const [textoEdicao, setTextoEdicao] = useState('');
 
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
@@ -303,6 +311,65 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
+  const iniciarEdicaoAtividade = (atividade) => {
+    setEditandoAtividade(atividade.id);
+    setTextoEdicao(atividade.content);
+    setMenuAberto(null);
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoAtividade(null);
+    setTextoEdicao('');
+  };
+
+  const salvarEdicaoAtividade = async (taskId) => {
+    if (!textoEdicao.trim()) {
+      toast.error('O texto da atividade não pode estar vazio');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ content: textoEdicao.trim() })
+        .eq('id', taskId);
+      
+      if (error) throw error;
+      
+      toast.success('Atividade atualizada com sucesso!');
+      
+      // Limpar estados de edição e recarregar atividades
+      setEditandoAtividade(null);
+      setTextoEdicao('');
+      await fetchAtividadesDia();
+      
+    } catch (error) {
+      console.error('Erro ao atualizar atividade:', error);
+      toast.error('Erro ao atualizar atividade');
+    }
+  };
+
+  const excluirAtividade = async (taskId) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+      
+      if (error) throw error;
+      
+      toast.success('Atividade excluída com sucesso!');
+      
+      // Fechar menu e recarregar atividades
+      setMenuAberto(null);
+      await fetchAtividadesDia();
+      
+    } catch (error) {
+      console.error('Erro ao excluir atividade:', error);
+      toast.error('Erro ao excluir atividade');
+    }
+  };
+
   const toggleRotinaCompleta = async (rotinaId, completed) => {
     try {
       const dataAtual = formatarDataISO(dataSelecionada);
@@ -413,6 +480,18 @@ export default function VisualizacaoAtividades({ user }) {
     
     carregarAtividades();
   }, [projetoSelecionado, dataSelecionada]);
+
+  // Fechar menu quando clicar fora
+  useEffect(() => {
+    const handleClickFora = (event) => {
+      if (menuAberto && !event.target.closest('.menu-atividade')) {
+        setMenuAberto(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickFora);
+    return () => document.removeEventListener('click', handleClickFora);
+  }, [menuAberto]);
 
   // ===========================================
   // RENDER
@@ -677,6 +756,7 @@ export default function VisualizacaoAtividades({ user }) {
                       {atividadesDia.map((atividade) => {
                         const isAtividadeHoje = atividade.date === formatarDataISO(dataSelecionada);
                         const dataAtividade = new Date(atividade.date + 'T12:00:00');
+                        const isEditando = editandoAtividade === atividade.id;
                         
                         return (
                           <div
@@ -702,31 +782,95 @@ export default function VisualizacaoAtividades({ user }) {
                               </button>
                               
                               <div className="flex-1">
-                                <h4 className={`font-medium ${
-                                  atividade.completed 
-                                    ? 'text-green-800 line-through' 
-                                    : isAtividadeHoje 
-                                      ? 'text-[#012060]'
-                                      : 'text-yellow-800'
-                                }`}>
-                                  {atividade.content}
-                                </h4>
-                                
-                                {!isAtividadeHoje && (
-                                  <div className="flex items-center mt-1 text-xs">
-                                    <FiClock className="w-3 h-3 mr-1 text-yellow-600" />
-                                    <span className="text-yellow-600">
-                                      Pendente desde {dataAtividade.toLocaleDateString('pt-BR')}
-                                    </span>
+                                {isEditando ? (
+                                  <div className="space-y-2">
+                                    <input
+                                      type="text"
+                                      value={textoEdicao}
+                                      onChange={(e) => setTextoEdicao(e.target.value)}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          salvarEdicaoAtividade(atividade.id);
+                                        } else if (e.key === 'Escape') {
+                                          cancelarEdicao();
+                                        }
+                                      }}
+                                      className="w-full px-3 py-2 border border-[#012060] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] text-sm"
+                                      autoFocus
+                                    />
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => salvarEdicaoAtividade(atividade.id)}
+                                        className="px-3 py-1 bg-[#012060] text-white rounded text-xs hover:bg-[#013080] transition-colors"
+                                      >
+                                        Salvar
+                                      </button>
+                                      <button
+                                        onClick={cancelarEdicao}
+                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
                                   </div>
+                                ) : (
+                                  <>
+                                    <h4 className={`font-medium ${
+                                      atividade.completed 
+                                        ? 'text-green-800 line-through' 
+                                        : isAtividadeHoje 
+                                          ? 'text-[#012060]'
+                                          : 'text-yellow-800'
+                                    }`}>
+                                      {atividade.content}
+                                    </h4>
+                                    
+                                    {!isAtividadeHoje && (
+                                      <div className="flex items-center mt-1 text-xs">
+                                        <FiClock className="w-3 h-3 mr-1 text-yellow-600" />
+                                        <span className="text-yellow-600">
+                                          Pendente desde {dataAtividade.toLocaleDateString('pt-BR')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {atividade.completed && atividade.completed_at && (
+                                      <div className="flex items-center mt-1 text-xs text-green-600">
+                                        <FiCheckCircle className="w-3 h-3 mr-1" />
+                                        <span>
+                                          Concluída em {new Date(atividade.completed_at).toLocaleDateString('pt-BR')} às {new Date(atividade.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
+                              </div>
+
+                              {/* Menu de 3 pontos */}
+                              <div className="relative menu-atividade">
+                                <button
+                                  onClick={() => setMenuAberto(menuAberto === atividade.id ? null : atividade.id)}
+                                  className="p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+                                >
+                                  <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                                </button>
                                 
-                                {atividade.completed && atividade.completed_at && (
-                                  <div className="flex items-center mt-1 text-xs text-green-600">
-                                    <FiCheckCircle className="w-3 h-3 mr-1" />
-                                    <span>
-                                      Concluída em {new Date(atividade.completed_at).toLocaleDateString('pt-BR')} às {new Date(atividade.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                                {menuAberto === atividade.id && (
+                                  <div className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border z-20 py-1 min-w-[120px]">
+                                    <button
+                                      onClick={() => iniciarEdicaoAtividade(atividade)}
+                                      className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center text-[#012060] text-sm"
+                                    >
+                                      <FiEdit className="w-3 h-3 mr-2" />
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={() => excluirAtividade(atividade.id)}
+                                      className="w-full px-3 py-2 text-left hover:bg-red-50 flex items-center text-red-600 text-sm"
+                                    >
+                                      <FiTrash2 className="w-3 h-3 mr-2" />
+                                      Excluir
+                                    </button>
                                   </div>
                                 )}
                               </div>
