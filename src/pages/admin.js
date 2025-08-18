@@ -1,4 +1,4 @@
-// src/pages/admin.js (versão atualizada com novo layout)
+// src/pages/admin.js (versão atualizada com vinculações de listas)
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -25,17 +25,31 @@ import {
   FiCpu,
   FiList,
   FiShield,
-  FiUserCheck
+  FiUserCheck,
+  FiPlus,
+  FiTrash2,
+  FiCheckCircle,
+  FiEdit,
+  FiSave
 } from 'react-icons/fi';
 
 export default function Admin({ user }) {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios', 'gemini', 'logo', 'vinculacoes'
+  const [activeTab, setActiveTab] = useState('usuarios'); // 'usuarios', 'gemini', 'logo', 'vinculacoes', 'listas'
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+
+  // Estados para vinculações de listas
+  const [vinculacoesListas, setVinculacoesListas] = useState([]);
+  const [todosUsuarios, setTodosUsuarios] = useState([]);
+  const [todasListas, setTodasListas] = useState([]);
+  const [loadingListas, setLoadingListas] = useState(false);
+  const [showNovaVinculacao, setShowNovaVinculacao] = useState(false);
+  const [novaVinculacao, setNovaVinculacao] = useState({ usuario_id: '', list_id: '' });
+  const [salvandoVinculacao, setSalvandoVinculacao] = useState(false);
 
   // Verificar se o usuário é administrador
   useEffect(() => {
@@ -69,12 +83,20 @@ export default function Admin({ user }) {
     checkAdminStatus();
   }, [user, router]);
 
-  // Carregar lista de usuários se estiver na tab de usuários
+  // Carregar dados baseado na tab ativa
   useEffect(() => {
-    if (isAdmin && activeTab === 'usuarios') {
-      fetchUsers();
+    if (isAdmin) {
+      if (activeTab === 'usuarios') {
+        fetchUsers();
+      } else if (activeTab === 'listas') {
+        fetchVinculacoesListas();
+      }
     }
   }, [isAdmin, activeTab]);
+
+  // ===========================================
+  // FUNÇÕES PARA USUÁRIOS
+  // ===========================================
 
   // Carregar lista de usuários
   const fetchUsers = async () => {
@@ -210,6 +232,141 @@ export default function Admin({ user }) {
     }
   };
 
+  // ===========================================
+  // FUNÇÕES PARA VINCULAÇÕES DE LISTAS
+  // ===========================================
+
+  // Carregar vinculações de listas
+  const fetchVinculacoesListas = async () => {
+    try {
+      setLoadingListas(true);
+
+      // Carregar vinculações com dados dos usuários e listas
+      const { data: vinculacoes, error: vinculacoesError } = await supabase
+        .from('relacao_usuario_list')
+        .select(`
+          id,
+          usuario_id,
+          list_id,
+          created_at,
+          usuarios(id, nome, email),
+          tasks_list(id, nome_lista, projeto_id, projetos(nome))
+        `)
+        .order('created_at', { ascending: false });
+
+      if (vinculacoesError) throw vinculacoesError;
+
+      setVinculacoesListas(vinculacoes || []);
+
+      // Carregar todos os usuários para dropdown
+      const { data: usuarios, error: usuariosError } = await supabase
+        .from('usuarios')
+        .select('id, nome, email, ativo')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (usuariosError) throw usuariosError;
+
+      setTodosUsuarios(usuarios || []);
+
+      // Carregar todas as listas para dropdown
+      const { data: listas, error: listasError } = await supabase
+        .from('tasks_list')
+        .select(`
+          id, 
+          nome_lista, 
+          projeto_id,
+          projetos(nome)
+        `)
+        .order('nome_lista');
+
+      if (listasError) throw listasError;
+
+      setTodasListas(listas || []);
+
+    } catch (error) {
+      console.error('Erro ao carregar vinculações de listas:', error);
+      toast.error('Erro ao carregar vinculações de listas');
+    } finally {
+      setLoadingListas(false);
+    }
+  };
+
+  // Criar nova vinculação
+  const criarVinculacao = async () => {
+    if (!novaVinculacao.usuario_id || !novaVinculacao.list_id) {
+      toast.error('Selecione um usuário e uma lista');
+      return;
+    }
+
+    // Verificar se vinculação já existe
+    const vinculacaoExistente = vinculacoesListas.find(v => 
+      v.usuario_id === novaVinculacao.usuario_id && v.list_id === parseInt(novaVinculacao.list_id)
+    );
+
+    if (vinculacaoExistente) {
+      toast.error('Esta vinculação já existe');
+      return;
+    }
+
+    try {
+      setSalvandoVinculacao(true);
+
+      const { error } = await supabase
+        .from('relacao_usuario_list')
+        .insert([{
+          usuario_id: novaVinculacao.usuario_id,
+          list_id: parseInt(novaVinculacao.list_id)
+        }]);
+
+      if (error) throw error;
+
+      toast.success('Vinculação criada com sucesso!');
+      setShowNovaVinculacao(false);
+      setNovaVinculacao({ usuario_id: '', list_id: '' });
+      
+      // Recarregar dados
+      await fetchVinculacoesListas();
+
+    } catch (error) {
+      console.error('Erro ao criar vinculação:', error);
+      toast.error('Erro ao criar vinculação');
+    } finally {
+      setSalvandoVinculacao(false);
+    }
+  };
+
+  // Remover vinculação
+  const removerVinculacao = async (vinculacaoId, usuarioNome, listaNome) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja remover a vinculação entre ${usuarioNome} e a lista "${listaNome}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('relacao_usuario_list')
+        .delete()
+        .eq('id', vinculacaoId);
+
+      if (error) throw error;
+
+      toast.success('Vinculação removida com sucesso!');
+      
+      // Recarregar dados
+      await fetchVinculacoesListas();
+
+    } catch (error) {
+      console.error('Erro ao remover vinculação:', error);
+      toast.error('Erro ao remover vinculação');
+    }
+  };
+
+  // ===========================================
+  // FUNÇÕES DE NAVEGAÇÃO
+  // ===========================================
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -240,6 +397,12 @@ export default function Admin({ user }) {
           title: 'Vinculações Usuário-Projeto',
           subtitle: 'Gerencie as vinculações entre usuários e projetos',
           icon: FiLink
+        };
+      case 'listas':
+        return {
+          title: 'Vinculações Usuário-Lista',
+          subtitle: 'Gerencie as vinculações entre usuários e listas de tarefas',
+          icon: FiList
         };
       case 'gemini':
         return {
@@ -333,6 +496,13 @@ export default function Admin({ user }) {
                       Gestão Documentos
                     </button>
                     <button
+                      onClick={() => handleNavigate('/visualizacao-atividades')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiCheckCircle className="mr-3 h-4 w-4" />
+                      Visualizar Atividades
+                    </button>
+                    <button
                       onClick={() => setShowMenu(false)}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -407,6 +577,13 @@ export default function Admin({ user }) {
                       Gestão Documentos
                     </button>
                     <button
+                      onClick={() => handleNavigate('/visualizacao-atividades')}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiCheckCircle className="mr-3 h-4 w-4" />
+                      Visualizar Atividades
+                    </button>
+                    <button
                       onClick={() => setShowMenu(false)}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -477,7 +654,19 @@ export default function Admin({ user }) {
               }`}
             >
               <FiLink className="mr-2 h-4 w-4" />
-              Vinculações
+              Proj. Usuários
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('listas')}
+              className={`flex-shrink-0 flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors mr-1 ${
+                activeTab === 'listas'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FiList className="mr-2 h-4 w-4" />
+              Listas Usuários
             </button>
             
             <button
@@ -649,6 +838,157 @@ export default function Admin({ user }) {
             </div>
           )}
 
+          {activeTab === 'listas' && (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-3 sm:space-y-0">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Vinculações Usuário-Lista</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Gerencie quais usuários têm acesso a quais listas de tarefas
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowNovaVinculacao(true)}
+                  className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <FiPlus className="mr-2 h-4 w-4" />
+                  Nova Vinculação
+                </button>
+              </div>
+
+              {/* Estatísticas rápidas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <FiUsers className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-blue-800">Total de Usuários</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-900 mt-1">
+                    {todosUsuarios.length}
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <FiList className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="text-sm font-medium text-green-800">Total de Listas</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-900 mt-1">
+                    {todasListas.length}
+                  </div>
+                </div>
+                
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <FiLink className="w-5 h-5 text-purple-600 mr-2" />
+                    <span className="text-sm font-medium text-purple-800">Vinculações Ativas</span>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-900 mt-1">
+                    {vinculacoesListas.length}
+                  </div>
+                </div>
+              </div>
+
+              {loadingListas ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Usuário
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Lista
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Projeto
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Data de Criação
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {vinculacoesListas.length > 0 ? (
+                        vinculacoesListas.map((vinculacao) => (
+                          <tr key={vinculacao.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                  <FiUser className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {vinculacao.usuarios?.nome || "Nome não disponível"}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {vinculacao.usuarios?.email}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <FiList className="w-4 h-4 text-gray-400 mr-2" />
+                                <div className="text-sm font-medium text-gray-900">
+                                  {vinculacao.tasks_list?.nome_lista || "Lista não encontrada"}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {vinculacao.tasks_list?.projetos?.nome || "Projeto não encontrado"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {new Date(vinculacao.created_at).toLocaleDateString('pt-BR')}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={() => removerVinculacao(
+                                  vinculacao.id,
+                                  vinculacao.usuarios?.nome || 'Usuário',
+                                  vinculacao.tasks_list?.nome_lista || 'Lista'
+                                )}
+                                className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Remover vinculação"
+                              >
+                                <FiTrash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="5"
+                            className="px-6 py-8 text-center text-sm text-gray-500"
+                          >
+                            <div className="flex flex-col items-center">
+                              <FiLink className="w-12 h-12 text-gray-300 mb-2" />
+                              <p className="font-medium mb-1">Nenhuma vinculação encontrada</p>
+                              <p className="text-xs">Crie uma nova vinculação para começar</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'vinculacoes' && (
             <GerenciarVinculacoes />
           )}
@@ -663,11 +1003,122 @@ export default function Admin({ user }) {
         </div>
       </div>
 
+      {/* Modal para nova vinculação de lista */}
+      {showNovaVinculacao && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Nova Vinculação Usuário-Lista
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowNovaVinculacao(false);
+                    setNovaVinculacao({ usuario_id: '', list_id: '' });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Usuário *
+                  </label>
+                  <select
+                    value={novaVinculacao.usuario_id}
+                    onChange={(e) => setNovaVinculacao(prev => ({ ...prev, usuario_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    disabled={salvandoVinculacao}
+                  >
+                    <option value="">Selecione um usuário</option>
+                    {todosUsuarios.map((usuario) => (
+                      <option key={usuario.id} value={usuario.id}>
+                        {usuario.nome} ({usuario.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Lista *
+                  </label>
+                  <select
+                    value={novaVinculacao.list_id}
+                    onChange={(e) => setNovaVinculacao(prev => ({ ...prev, list_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    disabled={salvandoVinculacao}
+                  >
+                    <option value="">Selecione uma lista</option>
+                    {todasListas.map((lista) => (
+                      <option key={lista.id} value={lista.id}>
+                        {lista.nome_lista} ({lista.projetos?.nome || 'Projeto não encontrado'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Dica:</strong> O usuário terá acesso à lista selecionada e poderá visualizar e gerenciar as tarefas dentro dela.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowNovaVinculacao(false);
+                    setNovaVinculacao({ usuario_id: '', list_id: '' });
+                  }}
+                  disabled={salvandoVinculacao}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                
+                <button
+                  onClick={criarVinculacao}
+                  disabled={salvandoVinculacao || !novaVinculacao.usuario_id || !novaVinculacao.list_id}
+                  className={`px-4 py-2 rounded-md text-white transition-colors flex items-center ${
+                    salvandoVinculacao || !novaVinculacao.usuario_id || !novaVinculacao.list_id
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {salvandoVinculacao ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <FiSave className="w-4 h-4 mr-2" />
+                      Criar Vinculação
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Overlay para fechar menu quando clicar fora */}
-      {showMenu && (
+      {(showMenu || showNovaVinculacao) && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
-          onClick={() => setShowMenu(false)}
+          onClick={() => {
+            setShowMenu(false);
+            if (showNovaVinculacao) {
+              setShowNovaVinculacao(false);
+              setNovaVinculacao({ usuario_id: '', list_id: '' });
+            }
+          }}
         />
       )}
     </div>

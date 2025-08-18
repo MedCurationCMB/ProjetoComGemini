@@ -35,18 +35,24 @@ export default function Cadastros({ user }) {
   const [tiposIndicador, setTiposIndicador] = useState([]);
   const [prompts, setPrompts] = useState([]);
   const [promptsIndicadores, setPromptsIndicadores] = useState([]);
+  const [listas, setListas] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Estados para projetos (para dropdown na aba de listas)
+  const [todosProjetos, setTodosProjetos] = useState([]);
   
   // Estados para edição
   const [editandoItem, setEditandoItem] = useState(null);
   const [nomeEditado, setNomeEditado] = useState('');
   const [textoPromptEditado, setTextoPromptEditado] = useState('');
+  const [projetoEditado, setProjetoEditado] = useState('');
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   
   // Estados para o diálogo de cadastro
   const [showCadastroDialog, setShowCadastroDialog] = useState(false);
   const [novoNome, setNovoNome] = useState('');
   const [novoTextoPrompt, setNovoTextoPrompt] = useState('');
+  const [novoProjetoId, setNovoProjetoId] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
 
   // Estados para administrador
@@ -68,7 +74,8 @@ export default function Cadastros({ user }) {
       campo: 'nome',
       singular: 'projeto',
       artigo: 'um',
-      hasApresentacao: true
+      hasApresentacao: true,
+      adminOnly: false
     },
     categorias: {
       label: 'Categorias',
@@ -76,7 +83,8 @@ export default function Cadastros({ user }) {
       campo: 'nome',
       singular: 'categoria',
       artigo: 'uma',
-      hasApresentacao: true
+      hasApresentacao: true,
+      adminOnly: false
     },
     subcategorias: {
       label: 'Subcategorias',
@@ -84,7 +92,8 @@ export default function Cadastros({ user }) {
       campo: 'nome',
       singular: 'subcategoria',
       artigo: 'uma',
-      hasApresentacao: false
+      hasApresentacao: false,
+      adminOnly: false
     },
     tiposUnidadeIndicador: {
       label: 'Tipos Unidade Indicador',
@@ -92,7 +101,8 @@ export default function Cadastros({ user }) {
       campo: 'tipo',
       singular: 'tipo de unidade indicador',
       artigo: 'um',
-      hasApresentacao: false
+      hasApresentacao: false,
+      adminOnly: false
     },
     tiposIndicador: {
       label: 'Tipos Indicador',
@@ -100,7 +110,8 @@ export default function Cadastros({ user }) {
       campo: 'tipo',
       singular: 'tipo de indicador',
       artigo: 'um',
-      hasApresentacao: false
+      hasApresentacao: false,
+      adminOnly: false
     },
     prompts: {
       label: 'Prompts',
@@ -110,7 +121,8 @@ export default function Cadastros({ user }) {
       singular: 'prompt',
       artigo: 'um',
       hasApresentacao: false,
-      hasTexto: true
+      hasTexto: true,
+      adminOnly: false
     },
     promptsIndicadores: {
       label: 'Prompts Indicadores',
@@ -120,7 +132,19 @@ export default function Cadastros({ user }) {
       singular: 'prompt de indicador',
       artigo: 'um',
       hasApresentacao: false,
-      hasTexto: true
+      hasTexto: true,
+      adminOnly: false
+    },
+    listas: {
+      label: 'Listas',
+      tabela: 'tasks_list',
+      campo: 'nome_lista',
+      singular: 'lista',
+      artigo: 'uma',
+      hasApresentacao: false,
+      hasTexto: false,
+      hasProjeto: true,
+      adminOnly: true
     }
   };
 
@@ -170,6 +194,14 @@ export default function Cadastros({ user }) {
           
           // Carregar configurações de visibilidade das abas
           await fetchVisibilidadeAbas();
+          
+          // Se não é admin e a aba ativa é exclusiva de admin, mudar para primeira aba disponível
+          if (!adminStatus && tabsConfig[activeTab].adminOnly) {
+            const primeiraAbaDisponivel = Object.keys(tabsConfig).find(aba => !tabsConfig[aba].adminOnly);
+            if (primeiraAbaDisponivel) {
+              setActiveTab(primeiraAbaDisponivel);
+            }
+          }
         } catch (error) {
           console.error('Erro ao verificar admin status:', error);
         }
@@ -177,7 +209,7 @@ export default function Cadastros({ user }) {
     };
 
     checkAdminAndLoadVisibility();
-  }, [user]);
+  }, [user, activeTab]);
 
   // Carregar dados quando o componente monta ou a aba muda
   useEffect(() => {
@@ -186,8 +218,28 @@ export default function Cadastros({ user }) {
       if (tabsConfig[activeTab].hasApresentacao) {
         fetchApresentacaoVariaveis();
       }
+      // Carregar todos os projetos para dropdown na aba de listas
+      if (activeTab === 'listas') {
+        fetchTodosProjetos();
+      }
     }
   }, [user, activeTab]);
+
+  // Função para buscar todos os projetos (para dropdown)
+  const fetchTodosProjetos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('id, nome')
+        .order('nome', { ascending: true });
+      
+      if (error) throw error;
+      
+      setTodosProjetos(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar projetos:', error);
+    }
+  };
 
   // Função para buscar configurações de visibilidade das abas
   const fetchVisibilidadeAbas = async () => {
@@ -210,7 +262,12 @@ export default function Cadastros({ user }) {
       // Definir valores padrão para abas que não existem na configuração
       const configCompleta = {};
       Object.keys(tabsConfig).forEach(aba => {
-        configCompleta[aba] = configObj[aba] !== undefined ? configObj[aba] : true;
+        if (tabsConfig[aba].adminOnly) {
+          // Abas de admin não precisam de controle de visibilidade
+          configCompleta[aba] = true;
+        } else {
+          configCompleta[aba] = configObj[aba] !== undefined ? configObj[aba] : true;
+        }
       });
       
       setVisibilidadeAbas(configCompleta);
@@ -255,6 +312,8 @@ export default function Cadastros({ user }) {
       let selectFields = '*';
       if (config.hasTexto) {
         selectFields = `id, ${config.campo}, ${config.campoTexto}`;
+      } else if (config.hasProjeto) {
+        selectFields = `id, ${config.campo}, projeto_id, projetos(nome)`;
       }
       
       const { data, error } = await supabase
@@ -286,6 +345,9 @@ export default function Cadastros({ user }) {
           break;
         case 'promptsIndicadores':
           setPromptsIndicadores(data || []);
+          break;
+        case 'listas':
+          setListas(data || []);
           break;
       }
     } catch (error) {
@@ -338,8 +400,10 @@ export default function Cadastros({ user }) {
       // Admins veem todas as abas
       return Object.keys(tabsConfig);
     } else {
-      // Usuários normais veem apenas abas configuradas como visíveis
-      return Object.keys(tabsConfig).filter(aba => visibilidadeAbas[aba] === true);
+      // Usuários normais veem apenas abas configuradas como visíveis e que não são admin-only
+      return Object.keys(tabsConfig).filter(aba => 
+        !tabsConfig[aba].adminOnly && visibilidadeAbas[aba] === true
+      );
     }
   };
 
@@ -392,6 +456,9 @@ export default function Cadastros({ user }) {
     if (config.hasTexto) {
       setTextoPromptEditado(item[config.campoTexto] || '');
     }
+    if (config.hasProjeto) {
+      setProjetoEditado(item.projeto_id);
+    }
   };
 
   // Função para cancelar edição
@@ -399,6 +466,7 @@ export default function Cadastros({ user }) {
     setEditandoItem(null);
     setNomeEditado('');
     setTextoPromptEditado('');
+    setProjetoEditado('');
   };
 
   // Função para salvar edição
@@ -408,19 +476,40 @@ export default function Cadastros({ user }) {
       return;
     }
 
+    const config = tabsConfig[activeTab];
+    
+    // Validação específica para listas
+    if (config.hasProjeto && !projetoEditado) {
+      toast.error('Selecione um projeto');
+      return;
+    }
+
     try {
       setSalvandoEdicao(true);
-      const config = tabsConfig[activeTab];
       const dados = getDadosAbaAtiva();
       
       // Verificar se já existe outro item com o mesmo nome (case insensitive)
-      const nomeExistente = dados.find(item => 
-        item.id !== editandoItem && 
-        item[config.campo].toUpperCase() === nomeEditado.trim().toUpperCase()
-      );
+      // Para listas, verificar apenas dentro do mesmo projeto
+      let nomeExistente;
+      if (config.hasProjeto) {
+        nomeExistente = dados.find(item => 
+          item.id !== editandoItem && 
+          item.projeto_id === projetoEditado &&
+          item[config.campo].toUpperCase() === nomeEditado.trim().toUpperCase()
+        );
+      } else {
+        nomeExistente = dados.find(item => 
+          item.id !== editandoItem && 
+          item[config.campo].toUpperCase() === nomeEditado.trim().toUpperCase()
+        );
+      }
       
       if (nomeExistente) {
-        toast.error(`Já existe ${config.artigo} ${config.singular} com este nome`);
+        if (config.hasProjeto) {
+          toast.error(`Já existe ${config.artigo} ${config.singular} com este nome neste projeto`);
+        } else {
+          toast.error(`Já existe ${config.artigo} ${config.singular} com este nome`);
+        }
         return;
       }
 
@@ -428,6 +517,9 @@ export default function Cadastros({ user }) {
       const updateData = { [config.campo]: nomeEditado.trim() };
       if (config.hasTexto) {
         updateData[config.campoTexto] = textoPromptEditado.trim();
+      }
+      if (config.hasProjeto) {
+        updateData.projeto_id = projetoEditado;
       }
 
       const { error } = await supabase
@@ -441,6 +533,7 @@ export default function Cadastros({ user }) {
       setEditandoItem(null);
       setNomeEditado('');
       setTextoPromptEditado('');
+      setProjetoEditado('');
       
       // Recarregar dados
       await fetchData();
@@ -459,18 +552,38 @@ export default function Cadastros({ user }) {
       return;
     }
 
+    const config = tabsConfig[activeTab];
+    
+    // Validação específica para listas
+    if (config.hasProjeto && !novoProjetoId) {
+      toast.error('Selecione um projeto');
+      return;
+    }
+
     try {
       setCadastrando(true);
-      const config = tabsConfig[activeTab];
       const dados = getDadosAbaAtiva();
       
       // Verificar se já existe item com o mesmo nome (case insensitive)
-      const nomeExistente = dados.find(item => 
-        item[config.campo].toUpperCase() === novoNome.trim().toUpperCase()
-      );
+      // Para listas, verificar apenas dentro do mesmo projeto
+      let nomeExistente;
+      if (config.hasProjeto) {
+        nomeExistente = dados.find(item => 
+          item.projeto_id === novoProjetoId &&
+          item[config.campo].toUpperCase() === novoNome.trim().toUpperCase()
+        );
+      } else {
+        nomeExistente = dados.find(item => 
+          item[config.campo].toUpperCase() === novoNome.trim().toUpperCase()
+        );
+      }
       
       if (nomeExistente) {
-        toast.error(`Já existe ${config.artigo} ${config.singular} com este nome`);
+        if (config.hasProjeto) {
+          toast.error(`Já existe ${config.artigo} ${config.singular} com este nome neste projeto`);
+        } else {
+          toast.error(`Já existe ${config.artigo} ${config.singular} com este nome`);
+        }
         return;
       }
 
@@ -478,6 +591,9 @@ export default function Cadastros({ user }) {
       const insertData = { [config.campo]: novoNome.trim() };
       if (config.hasTexto) {
         insertData[config.campoTexto] = novoTextoPrompt.trim();
+      }
+      if (config.hasProjeto) {
+        insertData.projeto_id = novoProjetoId;
       }
 
       // Inserir o novo item
@@ -511,10 +627,11 @@ export default function Cadastros({ user }) {
         }
       }
 
-      toast.success(`${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)} cadastrado com sucesso!`);
+      toast.success(`${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)} cadastrad${config.singular.endsWith('a') ? 'a' : 'o'} com sucesso!`);
       setShowCadastroDialog(false);
       setNovoNome('');
       setNovoTextoPrompt('');
+      setNovoProjetoId('');
       
       // Recarregar dados
       await fetchData();
@@ -536,6 +653,7 @@ export default function Cadastros({ user }) {
       case 'tiposIndicador': return tiposIndicador;
       case 'prompts': return prompts;
       case 'promptsIndicadores': return promptsIndicadores;
+      case 'listas': return listas;
       default: return [];
     }
   };
@@ -753,6 +871,16 @@ export default function Cadastros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-atividades');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiList className="mr-3 h-4 w-4" />
+                      Visualizar Atividades
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -856,6 +984,16 @@ export default function Cadastros({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-atividades');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiList className="mr-3 h-4 w-4" />
+                      Visualizar Atividades
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
@@ -934,6 +1072,11 @@ export default function Cadastros({ user }) {
                     }`}
                   >
                     {tabsConfig[key].label}
+                    {tabsConfig[key].adminOnly && (
+                      <span className="ml-1 bg-red-100 text-red-600 px-1 py-0.5 rounded-full text-xs">
+                        Admin
+                      </span>
+                    )}
                     {activeTab === key && (
                       <span className="ml-1 bg-blue-100 text-blue-600 px-1 py-0.5 rounded-full text-xs">
                         ✓
@@ -961,6 +1104,11 @@ export default function Cadastros({ user }) {
                     }`}
                   >
                     {tabsConfig[key].label}
+                    {tabsConfig[key].adminOnly && (
+                      <span className="ml-2 bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs">
+                        Admin
+                      </span>
+                    )}
                     {activeTab === key && (
                       <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs">
                         Ativo
@@ -975,8 +1123,8 @@ export default function Cadastros({ user }) {
 
         {/* Conteúdo da tab atual */}
         <div className="bg-white rounded-lg shadow-md p-4 lg:p-6">
-          {/* Controle de Visibilidade para Admins */}
-          {isAdmin && (
+          {/* Controle de Visibilidade para Admins (apenas para abas não admin-only) */}
+          {isAdmin && !config.adminOnly && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex flex-col space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                 <div className="flex-1">
@@ -1019,6 +1167,27 @@ export default function Cadastros({ user }) {
                   Salvando alteração...
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Aviso para aba admin-only */}
+          {config.adminOnly && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Seção Exclusiva para Administradores
+                  </h3>
+                  <p className="text-xs text-red-600 mt-1">
+                    Esta seção só é visível para usuários com privilégios de administrador.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1132,6 +1301,11 @@ export default function Cadastros({ user }) {
                     <strong>Novo:</strong> Ao criar um projeto, você será automaticamente vinculado a ele.
                   </span>
                 )}
+                {activeTab === 'listas' && (
+                  <span className="block mt-1">
+                    <strong>Listas:</strong> As listas são vinculadas a projetos específicos e permitem organizar tarefas de forma mais detalhada.
+                  </span>
+                )}
               </p>
             </div>
             
@@ -1146,8 +1320,13 @@ export default function Cadastros({ user }) {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {config.campo === 'nome_prompt' ? 'Nome do Prompt' : 'Nome'}
+                          {config.campo === 'nome_prompt' ? 'Nome do Prompt' : config.campo === 'nome_lista' ? 'Nome da Lista' : 'Nome'}
                         </th>
+                        {config.hasProjeto && (
+                          <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Projeto
+                          </th>
+                        )}
                         {config.hasTexto && (
                           <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Texto do Prompt
@@ -1177,6 +1356,29 @@ export default function Cadastros({ user }) {
                                 </div>
                               )}
                             </td>
+                            {config.hasProjeto && (
+                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                {editandoItem === item.id ? (
+                                  <select
+                                    value={projetoEditado}
+                                    onChange={(e) => setProjetoEditado(e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    disabled={salvandoEdicao}
+                                  >
+                                    <option value="">Selecione um projeto</option>
+                                    {todosProjetos.map((projeto) => (
+                                      <option key={projeto.id} value={projeto.id}>
+                                        {projeto.nome}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div className="text-sm text-gray-900">
+                                    {item.projetos?.nome || 'Projeto não encontrado'}
+                                  </div>
+                                )}
+                              </td>
+                            )}
                             {config.hasTexto && (
                               <td className="px-4 lg:px-6 py-4">
                                 {editandoItem === item.id ? (
@@ -1242,7 +1444,7 @@ export default function Cadastros({ user }) {
                       ) : (
                         <tr>
                           <td
-                            colSpan={config.hasTexto ? "3" : "2"}
+                            colSpan={config.hasTexto ? "3" : config.hasProjeto ? "3" : "2"}
                             className="px-4 lg:px-6 py-4 text-center text-sm text-gray-500"
                           >
                             Nenhum {config.singular} encontrado
@@ -1272,6 +1474,7 @@ export default function Cadastros({ user }) {
                     setShowCadastroDialog(false);
                     setNovoNome('');
                     setNovoTextoPrompt('');
+                    setNovoProjetoId('');
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1282,17 +1485,43 @@ export default function Cadastros({ user }) {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {config.campo === 'nome_prompt' ? 'Nome do Prompt' : `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
+                    {config.campo === 'nome_prompt' ? 'Nome do Prompt' : 
+                     config.campo === 'nome_lista' ? 'Nome da Lista' : 
+                     `Nome do ${config.singular.charAt(0).toUpperCase() + config.singular.slice(1)}`}
                   </label>
                   <input
                     type="text"
                     value={novoNome}
                     onChange={(e) => setNovoNome(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={`Digite o nome do ${config.singular}`}
+                    placeholder={`Digite o nome ${config.campo === 'nome_lista' ? 'da lista' : `do ${config.singular}`}`}
                     disabled={cadastrando}
                   />
                 </div>
+
+                {config.hasProjeto && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Projeto *
+                    </label>
+                    <select
+                      value={novoProjetoId}
+                      onChange={(e) => setNovoProjetoId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      disabled={cadastrando}
+                    >
+                      <option value="">Selecione um projeto</option>
+                      {todosProjetos.map((projeto) => (
+                        <option key={projeto.id} value={projeto.id}>
+                          {projeto.nome}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      A lista será vinculada ao projeto selecionado
+                    </p>
+                  </div>
+                )}
 
                 {config.hasTexto && (
                   <div>
@@ -1315,6 +1544,15 @@ export default function Cadastros({ user }) {
                     Você será automaticamente vinculado a este projeto.
                   </p>
                 )}
+
+                {activeTab === 'listas' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Dica:</strong> As listas ajudam a organizar tarefas dentro de projetos. 
+                      Exemplos: "Backlog", "Em Progresso", "Concluídas", "Tarefas Urgentes", etc.
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
@@ -1323,6 +1561,7 @@ export default function Cadastros({ user }) {
                     setShowCadastroDialog(false);
                     setNovoNome('');
                     setNovoTextoPrompt('');
+                    setNovoProjetoId('');
                   }}
                   disabled={cadastrando}
                   className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
@@ -1332,9 +1571,9 @@ export default function Cadastros({ user }) {
                 
                 <button
                   onClick={cadastrarItem}
-                  disabled={cadastrando || !novoNome.trim()}
+                  disabled={cadastrando || !novoNome.trim() || (config.hasProjeto && !novoProjetoId)}
                   className={`w-full sm:w-auto px-4 py-2 rounded-md text-white transition-colors ${
-                    cadastrando || !novoNome.trim()
+                    cadastrando || !novoNome.trim() || (config.hasProjeto && !novoProjetoId)
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
