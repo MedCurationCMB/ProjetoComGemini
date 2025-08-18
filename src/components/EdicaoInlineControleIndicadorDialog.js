@@ -10,8 +10,8 @@ const EdicaoInlineControleIndicadorDialog = ({
   dadosTabela, 
   categorias,
   projetos,
-  subcategorias,
-  tiposUnidadeIndicador
+  tiposUnidadeIndicador,
+  tiposApresentacao
 }) => {
   const [dadosEditaveis, setDadosEditaveis] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,8 +42,8 @@ const EdicaoInlineControleIndicadorDialog = ({
       descricao_detalhada: item.descricao_detalhada || '',
       descricao_resumida: item.descricao_resumida || '',
       categoria_id: item.categoria_id || '',
-      subcategoria_id: item.subcategoria_id || '',
       tipo_unidade_indicador: item.tipo_unidade_indicador || '',
+      tipo_apresentacao: item.tipo_apresentacao || '',
       prazo_entrega_inicial: item.prazo_entrega_inicial || '',
       recorrencia: item.recorrencia || 'sem recorrencia',
       tempo_recorrencia: item.tempo_recorrencia || '',
@@ -136,8 +136,8 @@ const EdicaoInlineControleIndicadorDialog = ({
         erros.push(`Linha ${linha}: Categoria é obrigatória`);
       }
       
-      if (!item.subcategoria_id || item.subcategoria_id === '' || item.subcategoria_id === 'undefined') {
-        erros.push(`Linha ${linha}: Subcategoria é obrigatória`);
+      if (!item.tipo_apresentacao || item.tipo_apresentacao === '' || item.tipo_apresentacao === 'undefined') {
+        erros.push(`Linha ${linha}: Tipo de Apresentação é obrigatório`);
       }
       
       if (!item.tipo_unidade_indicador || item.tipo_unidade_indicador === '' || item.tipo_unidade_indicador === 'undefined') {
@@ -185,8 +185,9 @@ const EdicaoInlineControleIndicadorDialog = ({
             descricao_detalhada: item.descricao_detalhada?.trim() || null,
             descricao_resumida: item.descricao_resumida?.trim() || null,
             categoria_id: item.categoria_id,
-            subcategoria_id: parseInt(item.subcategoria_id),
+            subcategoria_id: null,
             tipo_unidade_indicador: parseInt(item.tipo_unidade_indicador),
+            tipo_apresentacao: parseInt(item.tipo_apresentacao),
             prazo_entrega_inicial: item.prazo_entrega_inicial || null,
             recorrencia: item.recorrencia,
             tempo_recorrencia: item.recorrencia !== 'sem recorrencia' ? parseInt(item.tempo_recorrencia) : null,
@@ -239,8 +240,8 @@ const EdicaoInlineControleIndicadorDialog = ({
       descricao_detalhada: item.descricao_detalhada || '',
       descricao_resumida: item.descricao_resumida || '',
       categoria_id: item.categoria_id || '',
-      subcategoria_id: item.subcategoria_id || '',
       tipo_unidade_indicador: item.tipo_unidade_indicador || '',
+      tipo_apresentacao: item.tipo_apresentacao || '',
       prazo_entrega_inicial: item.prazo_entrega_inicial || '',
       recorrencia: item.recorrencia || 'sem recorrencia',
       tempo_recorrencia: item.tempo_recorrencia || '',
@@ -358,7 +359,7 @@ const EdicaoInlineControleIndicadorDialog = ({
                     </>
                   )}
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Categoria *</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Subcategoria *</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Tipo Apresentação *</th>
                   {!isMobile && (
                     <>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Tipo Unidade *</th>
@@ -477,21 +478,21 @@ const EdicaoInlineControleIndicadorDialog = ({
                         )}
                       </td>
                       
-                      {/* Subcategoria */}
+                      {/* Tipo de Apresentação */}
                       <td className="px-2 py-2">
                         <select
-                          value={item.subcategoria_id}
-                          onChange={(e) => handleInputChange(originalIndex, 'subcategoria_id', e.target.value)}
-                          className={getInputClassName(originalIndex, 'subcategoria_id', 'w-full px-1 py-1 text-xs md:text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500')}
+                          value={item.tipo_apresentacao}
+                          onChange={(e) => handleInputChange(originalIndex, 'tipo_apresentacao', e.target.value)}
+                          className={getInputClassName(originalIndex, 'tipo_apresentacao', 'w-full px-1 py-1 text-xs md:text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500')}
                           required
                         >
                           <option value="">Selecione...</option>
-                          {Object.entries(subcategorias).map(([id, nome]) => (
+                          {Object.entries(tiposApresentacao).map(([id, nome]) => (
                             <option key={id} value={id}>{nome}</option>
                           ))}
                         </select>
-                        {errosValidacao[`${originalIndex}_subcategoria_id`] && (
-                          <p className="text-xs text-red-600 mt-1">{errosValidacao[`${originalIndex}_subcategoria_id`]}</p>
+                        {errosValidacao[`${originalIndex}_tipo_apresentacao`] && (
+                          <p className="text-xs text-red-600 mt-1">{errosValidacao[`${originalIndex}_tipo_apresentacao`]}</p>
                         )}
                       </td>
                       
