@@ -1,4 +1,4 @@
-// src/components/DeleteIndicadorDialog.js
+// src/components/DeleteIndicadorDialog.js - Versão Atualizada SEM subcategoria
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -9,18 +9,14 @@ const DeleteIndicadorDialog = ({
   onClose, 
   onSuccess,
   projetos,
-  categorias,
-  subcategorias
+  categorias
 }) => {
   const [deleting, setDeleting] = useState(false);
 
-  // Função para executar a exclusão
   const handleDelete = async () => {
     try {
       setDeleting(true);
       
-      // Excluir apenas a linha base da tabela controle_indicador
-      // O Supabase automaticamente excluirá as linhas relacionadas em controle_indicador_geral
       const { error: deleteControleError } = await supabase
         .from('controle_indicador')
         .delete()
@@ -28,14 +24,12 @@ const DeleteIndicadorDialog = ({
       
       if (deleteControleError) throw deleteControleError;
       
-      // Calcular quantas linhas foram teoricamente afetadas para informar o usuário
       const linhasAfetadas = calcularLinhasAfetadas();
       
       toast.success(
         `Indicador excluído com sucesso! Aproximadamente ${linhasAfetadas} linhas relacionadas também foram removidas automaticamente.`
       );
       
-      // Chamar a função de sucesso para atualizar a lista
       if (onSuccess) {
         onSuccess();
       }
@@ -48,15 +42,14 @@ const DeleteIndicadorDialog = ({
     }
   };
 
-  // Calcular quantas linhas serão afetadas
   const calcularLinhasAfetadas = () => {
     let linhasBase;
     if (!indicador.repeticoes || indicador.repeticoes <= 0) {
-      linhasBase = 1; // Apenas linha base
+      linhasBase = 1;
     } else {
-      linhasBase = 1 + indicador.repeticoes; // Linha base + repetições
+      linhasBase = 1 + indicador.repeticoes;
     }
-    return linhasBase * 2; // Multiplicado por 2 (Meta + Realizado)
+    return linhasBase * 2;
   };
 
   const linhasAfetadas = calcularLinhasAfetadas();
@@ -86,7 +79,7 @@ const DeleteIndicadorDialog = ({
           </button>
         </div>
         
-        {/* Informações do indicador */}
+        {/* Informações do indicador - REMOVIDO subcategoria */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <h4 className="font-medium text-gray-900 mb-2">
             {indicador.indicador}
@@ -99,10 +92,6 @@ const DeleteIndicadorDialog = ({
             <p>
               <span className="font-medium">Categoria:</span>{' '}
               {categorias[indicador.categoria_id] || 'Não informado'}
-            </p>
-            <p>
-              <span className="font-medium">Subcategoria:</span>{' '}
-              {subcategorias[indicador.subcategoria_id] || 'Não informado'}
             </p>
             {indicador.observacao && (
               <p>
@@ -134,14 +123,12 @@ const DeleteIndicadorDialog = ({
           </div>
         </div>
         
-        {/* Confirmação */}
         <div className="mb-6">
           <p className="text-sm text-gray-700">
             Você tem certeza que deseja excluir este indicador e todas as suas linhas relacionadas?
           </p>
         </div>
         
-        {/* Botões de ação */}
         <div className="flex justify-end space-x-3">
           <button
             type="button"

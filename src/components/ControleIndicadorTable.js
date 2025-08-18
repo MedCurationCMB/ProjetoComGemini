@@ -17,8 +17,8 @@ const ControleIndicadorTable = ({
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
-  const [subcategorias, setSubcategorias] = useState({});
   const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
+  const [tiposApresentacao, setTiposApresentacao] = useState({}); // ✅ NOVO STATE
   const [loading, setLoading] = useState(true);
   const [showAdicionarLinhaDialog, setShowAdicionarLinhaDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -37,13 +37,12 @@ const ControleIndicadorTable = ({
     if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
-      fetchSubcategorias();
       fetchTiposUnidadeIndicador();
+      fetchTiposApresentacao(); // ✅ NOVA FUNÇÃO
       fetchControles();
     }
   }, [projetosVinculados, filtroProjetoId, filtroCategoriaId, searchTerm]);
 
-  // Função para buscar projetos vinculados ao usuário
   const fetchProjetosVinculados = async () => {
     try {
       const { data, error } = await supabase
@@ -63,7 +62,6 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Buscar todas as categorias
   const fetchCategorias = async () => {
     try {
       const { data, error } = await supabase
@@ -83,7 +81,6 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Buscar APENAS os projetos vinculados ao usuário
   const fetchProjetos = async () => {
     try {
       if (projetosVinculados.length === 0) {
@@ -110,27 +107,6 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Buscar subcategorias
-  const fetchSubcategorias = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('subcategorias')
-        .select('*');
-      
-      if (error) throw error;
-      
-      const subcategoriasObj = {};
-      data.forEach(sub => {
-        subcategoriasObj[sub.id] = sub.nome;
-      });
-      
-      setSubcategorias(subcategoriasObj);
-    } catch (error) {
-      console.error('Erro ao carregar subcategorias:', error);
-    }
-  };
-
-  // Buscar tipos de unidade do indicador
   const fetchTiposUnidadeIndicador = async () => {
     try {
       const { data, error } = await supabase
@@ -152,7 +128,28 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Buscar os dados de controle_indicador APENAS dos projetos vinculados
+  // ✅ NOVA FUNÇÃO: Buscar tipos de apresentação
+  const fetchTiposApresentacao = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_apresentacao')
+        .select('*')
+        .order('nome', { ascending: true });
+      
+      if (error) throw error;
+      
+      const tiposObj = {};
+      data.forEach(tipo => {
+        tiposObj[tipo.id] = tipo.nome;
+      });
+      
+      setTiposApresentacao(tiposObj);
+      console.log('Tipos de apresentação carregados:', tiposObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de apresentação:', error);
+    }
+  };
+
   const fetchControles = async () => {
     try {
       setLoading(true);
@@ -169,7 +166,6 @@ const ControleIndicadorTable = ({
         .in('projeto_id', projetosVinculados)
         .order('id', { ascending: true });
       
-      // Aplicar filtros se estiverem definidos
       if (filtroProjetoId) {
         query = query.eq('projeto_id', filtroProjetoId);
       }
@@ -178,7 +174,6 @@ const ControleIndicadorTable = ({
         query = query.eq('categoria_id', filtroCategoriaId);
       }
 
-      // Aplicar filtro de busca expandido para múltiplos campos
       if (searchTerm.trim()) {
         const termo = searchTerm.trim();
         query = query.or(
@@ -203,21 +198,17 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Formata a data para exibição - VERSÃO CORRIGIDA
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     
     try {
-      // Método 1: Tratar como date-only (sem time) para evitar timezone issues
       if (dateString.includes('T') || dateString.includes(' ')) {
-        // Se a string contém informação de tempo, usar o método tradicional com ajuste
         const date = new Date(dateString);
         
         if (isNaN(date.getTime())) {
           return 'Data inválida';
         }
         
-        // Ajustar para timezone local para evitar o problema do "um dia a menos"
         const adjustedDate = new Date(
           date.getUTCFullYear(),
           date.getUTCMonth(),
@@ -230,15 +221,12 @@ const ControleIndicadorTable = ({
           year: 'numeric'
         });
       } else {
-        // Método 2: Para datas no formato YYYY-MM-DD (date-only), 
-        // usar parsing manual para evitar timezone conversion
         const dateParts = dateString.split('-');
         if (dateParts.length === 3) {
           const year = parseInt(dateParts[0], 10);
-          const month = parseInt(dateParts[1], 10) - 1; // Month é 0-indexed
+          const month = parseInt(dateParts[1], 10) - 1;
           const day = parseInt(dateParts[2], 10);
           
-          // Criar data no timezone local (sem UTC conversion)
           const localDate = new Date(year, month, day);
           
           if (isNaN(localDate.getTime())) {
@@ -253,7 +241,6 @@ const ControleIndicadorTable = ({
         }
       }
       
-      // Fallback para outros formatos
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
         return 'Data inválida';
@@ -269,52 +256,44 @@ const ControleIndicadorTable = ({
     }
   };
 
-  // Função para truncar texto longo
   const truncateText = (text, maxLength = 100) => {
     if (!text) return '-';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
 
-  // Função para lidar com o sucesso da adição de linha
   const handleAdicionarLinhaSuccess = () => {
     setShowAdicionarLinhaDialog(false);
     fetchControles();
     toast.success('Operação concluída com sucesso!');
   };
 
-  // Função para abrir modal de exclusão
   const handleDeleteClick = (indicador) => {
     setIndicadorToDelete(indicador);
     setShowDeleteDialog(true);
   };
 
-  // Função para lidar com o sucesso da exclusão
   const handleDeleteSuccess = () => {
     setShowDeleteDialog(false);
     setIndicadorToDelete(null);
     fetchControles();
   };
 
-  // Função para abrir modal de edição individual
   const handleEditClick = (indicador) => {
     setIndicadorToEdit(indicador);
     setShowEditarDialog(true);
   };
 
-  // Função para lidar com o sucesso da edição individual
   const handleEditSuccess = () => {
     setShowEditarDialog(false);
     setIndicadorToEdit(null);
     fetchControles();
   };
 
-  // Função para abrir modal de edição em massa
   const handleEdicaoMassaClick = () => {
     setShowEdicaoDialog(true);
   };
 
-  // Função para lidar com o sucesso da edição em massa
   const handleEdicaoSuccess = () => {
     setShowEdicaoDialog(false);
     fetchControles();
@@ -328,7 +307,6 @@ const ControleIndicadorTable = ({
     );
   }
 
-  // Se não há projetos vinculados, mostrar mensagem informativa
   if (projetosVinculados.length === 0) {
     return (
       <div className="py-8 text-center">
@@ -375,7 +353,6 @@ const ControleIndicadorTable = ({
           onSuccess={handleAdicionarLinhaSuccess}
           categorias={categorias}
           projetos={projetos}
-          subcategorias={subcategorias}
         />
       )}
 
@@ -387,7 +364,6 @@ const ControleIndicadorTable = ({
           onSuccess={handleDeleteSuccess}
           projetos={projetos}
           categorias={categorias}
-          subcategorias={subcategorias}
         />
       )}
 
@@ -399,8 +375,8 @@ const ControleIndicadorTable = ({
           dadosTabela={controles}
           categorias={categorias}
           projetos={projetos}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
+          tiposApresentacao={tiposApresentacao} // ✅ NOVO PROP
         />
       )}
 
@@ -412,8 +388,8 @@ const ControleIndicadorTable = ({
           onSuccess={handleEditSuccess}
           categorias={categorias}
           projetos={projetos}
-          subcategorias={subcategorias}
           tiposUnidadeIndicador={tiposUnidadeIndicador}
+          tiposApresentacao={tiposApresentacao} // ✅ NOVO PROP
         />
       )}
 
@@ -442,6 +418,10 @@ const ControleIndicadorTable = ({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Tipo Unidade
+              </th>
+              {/* ✅ NOVO CABEÇALHO: Tipo de Apresentação */}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                Tipo Apresentação
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                 Prazo Inicial
@@ -516,6 +496,10 @@ const ControleIndicadorTable = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {tiposUnidadeIndicador[item.tipo_unidade_indicador] || 'Tipo indisponível'}
                   </td>
+                  {/* ✅ NOVA COLUNA: Tipo de Apresentação */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {tiposApresentacao[item.tipo_apresentacao] || 'Tipo indisponível'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <FiCalendar className="mr-1 text-gray-400" />
@@ -547,14 +531,13 @@ const ControleIndicadorTable = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
-                      // Calcular quantas linhas foram criadas baseado na configuração
                       let linhasBase;
                       if (!item.repeticoes || item.repeticoes <= 0) {
-                        linhasBase = 1; // Apenas linha base
+                        linhasBase = 1;
                       } else {
-                        linhasBase = 1 + item.repeticoes; // Linha base + repetições
+                        linhasBase = 1 + item.repeticoes;
                       }
-                      const totalLinhas = linhasBase * 2; // Multiplicado por 2 (Meta + Realizado)
+                      const totalLinhas = linhasBase * 2;
                       
                       return (
                         <div className="text-center">
@@ -570,7 +553,6 @@ const ControleIndicadorTable = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center space-x-2">
-                      {/* Botão para editar individual */}
                       <button
                         onClick={() => handleEditClick(item)}
                         className="inline-flex items-center px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 text-xs font-medium rounded-md transition-colors"
@@ -592,7 +574,7 @@ const ControleIndicadorTable = ({
               ))
             ) : (
               <tr>
-                <td colSpan="12" className="px-6 py-8 text-center text-sm text-gray-500">
+                <td colSpan="13" className="px-6 py-8 text-center text-sm text-gray-500">
                   {searchTerm.trim() ? 'Nenhum indicador encontrado para a busca' : 'Nenhum item de controle encontrado para os projetos vinculados'}
                 </td>
               </tr>
@@ -641,7 +623,6 @@ const ControleIndicadorTable = ({
                     );
                   })()}
 
-                  {/* Botões de ação no mobile */}
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleEditClick(item)}
@@ -666,7 +647,6 @@ const ControleIndicadorTable = ({
                 <p className="text-sm text-gray-600 mb-3">{item.observacao}</p>
               )}
 
-              {/* Descrições */}
               {(item.descricao_resumida || item.descricao_detalhada) && (
                 <div className="mb-3 p-3 bg-gray-50 rounded-lg">
                   {item.descricao_resumida && (
@@ -698,6 +678,12 @@ const ControleIndicadorTable = ({
                 <div className="flex items-center text-sm">
                   <span className="font-medium text-gray-600 w-20">Tipo Unidade:</span>
                   <span className="text-gray-900">{tiposUnidadeIndicador[item.tipo_unidade_indicador] || 'Indisponível'}</span>
+                </div>
+
+                {/* ✅ NOVO CAMPO NO MOBILE: Tipo de Apresentação */}
+                <div className="flex items-center text-sm">
+                  <span className="font-medium text-gray-600 w-20">Tipo Apresentação:</span>
+                  <span className="text-gray-900">{tiposApresentacao[item.tipo_apresentacao] || 'Indisponível'}</span>
                 </div>
               </div>
               

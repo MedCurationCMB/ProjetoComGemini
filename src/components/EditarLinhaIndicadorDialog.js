@@ -1,8 +1,8 @@
-// src/components/EditarLinhaIndicadorDialog.js
+// src/components/EditarLinhaIndicadorDialog.js - Versão Atualizada SEM subcategoria + Tipo de Apresentação + Campos Bloqueados
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiX, FiSave, FiCalendar } from 'react-icons/fi';
+import { FiX, FiSave, FiLock, FiInfo } from 'react-icons/fi';
 
 const EditarLinhaIndicadorDialog = ({ 
   controleItem, 
@@ -10,8 +10,8 @@ const EditarLinhaIndicadorDialog = ({
   onSuccess, 
   categorias,
   projetos,
-  subcategorias,
-  tiposUnidadeIndicador
+  tiposUnidadeIndicador,
+  tiposApresentacao
 }) => {
   const [formData, setFormData] = useState({
     projeto_id: '',
@@ -20,28 +20,30 @@ const EditarLinhaIndicadorDialog = ({
     observacao: '',
     descricao_detalhada: '',
     descricao_resumida: '',
-    subcategoria_id: '',
     tipo_unidade_indicador: '',
-    prazo_entrega_inicial: '',
-    recorrencia: 'sem recorrencia',
-    tempo_recorrencia: '',
-    repeticoes: '',
+    tipo_apresentacao: '', // ✅ NOVO CAMPO
     obrigatorio: false
+    // ✅ REMOVIDOS: subcategoria_id, prazo_entrega_inicial, recorrencia, tempo_recorrencia, repeticoes
+  });
+  
+  // ✅ CAMPOS SOMENTE LEITURA (não editáveis)
+  const [camposReadOnly, setCamposReadOnly] = useState({
+    prazo_entrega_inicial: '',
+    recorrencia: '',
+    tempo_recorrencia: '',
+    repeticoes: ''
   });
   
   const [loading, setLoading] = useState(false);
 
-  // ✅ Função para formatar data para input
   const formatDateForInput = (dateString) => {
     if (!dateString) return '';
     
     try {
-      // Se a data já está no formato correto YYYY-MM-DD, retornar como está
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
         return dateString;
       }
       
-      // Se for uma data completa com horário, extrair apenas a parte da data
       const date = new Date(dateString);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -54,12 +56,10 @@ const EditarLinhaIndicadorDialog = ({
     }
   };
 
-  // ✅ Função para formatar data para exibição
   const formatDate = (dateString) => {
-    if (!dateString) return 'Data indisponível';
+    if (!dateString) return 'Não definido';
     
     try {
-      // Se for uma string no formato YYYY-MM-DD, criar a data sem conversão de fuso
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
         const [year, month, day] = dateString.split('-');
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -70,7 +70,6 @@ const EditarLinhaIndicadorDialog = ({
         });
       }
       
-      // Para outros formatos, usar parsing normal
       const date = new Date(dateString);
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -82,9 +81,10 @@ const EditarLinhaIndicadorDialog = ({
     }
   };
 
-  // Carrega os dados iniciais do item de controle
+  // ✅ CARREGAR DADOS INICIAIS - Separar campos editáveis dos não editáveis
   useEffect(() => {
     if (controleItem) {
+      // Campos editáveis
       setFormData({
         projeto_id: controleItem.projeto_id || '',
         categoria_id: controleItem.categoria_id || '',
@@ -92,67 +92,43 @@ const EditarLinhaIndicadorDialog = ({
         observacao: controleItem.observacao || '',
         descricao_detalhada: controleItem.descricao_detalhada || '',
         descricao_resumida: controleItem.descricao_resumida || '',
-        subcategoria_id: controleItem.subcategoria_id || '',
         tipo_unidade_indicador: controleItem.tipo_unidade_indicador || '',
-        prazo_entrega_inicial: formatDateForInput(controleItem.prazo_entrega_inicial),
+        tipo_apresentacao: controleItem.tipo_apresentacao || '', // ✅ NOVO CAMPO
+        obrigatorio: controleItem.obrigatorio || false
+      });
+
+      // ✅ Campos não editáveis (somente leitura)
+      setCamposReadOnly({
+        prazo_entrega_inicial: controleItem.prazo_entrega_inicial || '',
         recorrencia: controleItem.recorrencia || 'sem recorrencia',
         tempo_recorrencia: controleItem.tempo_recorrencia || '',
-        repeticoes: controleItem.repeticoes || '',
-        obrigatorio: controleItem.obrigatorio || false
+        repeticoes: controleItem.repeticoes || ''
       });
     }
   }, [controleItem]);
 
-  // Função para lidar com mudanças nos campos do formulário
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Se o campo for "recorrencia" e mudar para "sem recorrencia", 
-    // limpar os campos relacionados
-    if (name === 'recorrencia' && value === 'sem recorrencia') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        tempo_recorrencia: '',
-        repeticoes: ''
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
-  // Salvar as alterações
   const handleSave = async () => {
     try {
       setLoading(true);
       
-      // Validar campos obrigatórios
+      // ✅ VALIDAÇÃO ATUALIZADA: Remover subcategoria_id, adicionar tipo_apresentacao
       if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || 
-          !formData.subcategoria_id || !formData.tipo_unidade_indicador) {
+          !formData.tipo_unidade_indicador || !formData.tipo_apresentacao) {
         toast.error('Por favor, preencha todos os campos obrigatórios');
         setLoading(false);
         return;
       }
       
-      // Validar campos adicionais se a recorrência não for "sem recorrencia"
-      if (formData.recorrencia !== 'sem recorrencia') {
-        if (!formData.tempo_recorrencia || parseInt(formData.tempo_recorrencia) < 1) {
-          toast.error('Por favor, informe um tempo de recorrência válido');
-          setLoading(false);
-          return;
-        }
-        
-        if (!formData.repeticoes || parseInt(formData.repeticoes) < 1) {
-          toast.error('Por favor, informe um número válido de repetições');
-          setLoading(false);
-          return;
-        }
-      }
-      
-      // Preparar dados para atualização
+      // ✅ PREPARAR DADOS PARA ATUALIZAÇÃO: Incluir apenas campos editáveis + subcategoria_id como null
       const dadosAtualizacao = {
         projeto_id: formData.projeto_id,
         categoria_id: formData.categoria_id,
@@ -160,16 +136,13 @@ const EditarLinhaIndicadorDialog = ({
         observacao: formData.observacao.trim() || null,
         descricao_detalhada: formData.descricao_detalhada.trim() || null,
         descricao_resumida: formData.descricao_resumida.trim() || null,
-        subcategoria_id: parseInt(formData.subcategoria_id),
+        subcategoria_id: null, // ✅ SEMPRE NULL
         tipo_unidade_indicador: parseInt(formData.tipo_unidade_indicador),
-        prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
-        recorrencia: formData.recorrencia,
-        tempo_recorrencia: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.tempo_recorrencia) : null,
-        repeticoes: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.repeticoes) : 0,
+        tipo_apresentacao: parseInt(formData.tipo_apresentacao), // ✅ NOVO CAMPO
         obrigatorio: formData.obrigatorio
+        // ✅ NÃO INCLUIR: prazo_entrega_inicial, recorrencia, tempo_recorrencia, repeticoes
       };
       
-      // Atualizar o item de controle de indicador
       const { data, error } = await supabase
         .from('controle_indicador')
         .update(dadosAtualizacao)
@@ -211,296 +184,280 @@ const EditarLinhaIndicadorDialog = ({
             <p><strong>ID:</strong> {controleItem?.id}</p>
             <p><strong>Projeto Atual:</strong> {projetos[controleItem?.projeto_id] || 'N/A'}</p>
             <p><strong>Categoria Atual:</strong> {categorias[controleItem?.categoria_id] || 'N/A'}</p>
-            <p><strong>Subcategoria Atual:</strong> {subcategorias[controleItem?.subcategoria_id] || 'N/A'}</p>
             {controleItem?.created_at && (
               <p><strong>Criado em:</strong> {formatDate(controleItem.created_at)}</p>
             )}
           </div>
           
-          {/* Informações sobre linhas criadas */}
           <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-100">
             <h4 className="font-medium text-blue-800 mb-1">Linhas Relacionadas</h4>
             <p className="text-sm text-blue-700">
               Este indicador possui linhas automaticamente geradas na tabela de controle geral.
-              Alterar a configuração de recorrência pode afetar a quantidade de linhas futuras.
+              Campos de recorrência não podem ser editados após a criação.
             </p>
+          </div>
+        </div>
+
+        {/* ✅ AVISO SOBRE CAMPOS NÃO EDITÁVEIS */}
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start">
+            <FiLock className="h-5 w-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="text-sm font-medium text-yellow-800 mb-2">
+                Campos Não Editáveis
+              </h4>
+              <p className="text-sm text-yellow-700 mb-2">
+                Os seguintes campos não podem ser modificados após a criação do indicador:
+              </p>
+              <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                <li>Prazo de Entrega Inicial</li>
+                <li>Recorrência</li>
+                <li>Tempo de Recorrência</li>
+                <li>Número de Repetições</li>
+              </ul>
+              <p className="text-sm text-yellow-600 mt-2">
+                Estes campos estão exibidos abaixo apenas para visualização.
+              </p>
+            </div>
           </div>
         </div>
         
         <form className="space-y-4">
-          {/* Primeira linha: Projeto e Categoria */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Projeto */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Projeto <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="projeto_id"
-                value={formData.projeto_id}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Selecione um projeto</option>
-                {Object.entries(projetos).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Categoria */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoria <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="categoria_id"
-                value={formData.categoria_id}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Selecione uma categoria</option>
-                {Object.entries(categorias).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          {/* Indicador */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Indicador <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="indicador"
-              value={formData.indicador}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Digite o nome do indicador"
-              required
-            />
-          </div>
-          
-          {/* Segunda linha: Subcategoria e Tipo de Unidade do Indicador */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Subcategoria */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Subcategoria <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="subcategoria_id"
-                value={formData.subcategoria_id}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Selecione uma subcategoria</option>
-                {Object.entries(subcategorias).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Tipo de Unidade do Indicador */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Unidade <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="tipo_unidade_indicador"
-                value={formData.tipo_unidade_indicador}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Selecione o tipo de unidade</option>
-                {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
-                  <option key={id} value={id}>
-                    {tipo}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          {/* Observação */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Observação <span className="text-gray-400 text-xs">(opcional)</span>
-            </label>
-            <textarea
-              name="observacao"
-              value={formData.observacao}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows="3"
-              placeholder="Digite observações sobre o indicador"
-            />
-          </div>
-          
-          {/* Descrição Detalhada */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descrição Detalhada <span className="text-gray-400 text-xs">(opcional)</span>
-            </label>
-            <textarea
-              name="descricao_detalhada"
-              value={formData.descricao_detalhada}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows="4"
-              placeholder="Digite uma descrição detalhada do indicador, sua finalidade e metodologia"
-            />
-          </div>
-          
-          {/* Descrição Resumida */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descrição Resumida <span className="text-gray-400 text-xs">(opcional)</span>
-            </label>
-            <textarea
-              name="descricao_resumida"
-              value={formData.descricao_resumida}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows="2"
-              placeholder="Digite uma descrição resumida do indicador"
-            />
-          </div>
-          
-          {/* Prazo inicial */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prazo Inicial <span className="text-gray-400 text-xs">(opcional)</span>
-            </label>
-            <input
-              type="date"
-              name="prazo_entrega_inicial"
-              value={formData.prazo_entrega_inicial}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          {/* Recorrência */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recorrência <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="recorrencia"
-              value={formData.recorrencia}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="sem recorrencia">Sem recorrência</option>
-              <option value="dia">Dia</option>
-              <option value="mês">Mês</option>
-              <option value="ano">Ano</option>
-            </select>
-          </div>
-          
-          {/* Tempo de Recorrência - apenas se a recorrência não for "sem recorrencia" */}
-          {formData.recorrencia !== 'sem recorrencia' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tempo de Recorrência <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                name="tempo_recorrencia"
-                value={formData.tempo_recorrencia}
-                onChange={(e) => {
-                  // Permitir apenas números ou campo vazio
-                  const value = e.target.value;
-                  if (value === '' || /^\d+$/.test(value)) {
-                    handleInputChange(e);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ex: 1"
-                required={formData.recorrencia !== 'sem recorrencia'}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                {formData.recorrencia === 'dia' && 'A cada quantos dias o item se repete'}
-                {formData.recorrencia === 'mês' && 'A cada quantos meses o item se repete'}
-                {formData.recorrencia === 'ano' && 'A cada quantos anos o item se repete'}
-              </p>
-            </div>
-          )}
-          
-          {/* Número de Repetições - apenas se a recorrência não for "sem recorrencia" */}
-          {formData.recorrencia !== 'sem recorrencia' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Repetições <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                name="repeticoes"
-                value={formData.repeticoes}
-                onChange={(e) => {
-                  // Permitir apenas números ou campo vazio
-                  const value = e.target.value;
-                  if (value === '' || /^\d+$/.test(value)) {
-                    handleInputChange(e);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ex: 3"
-                required={formData.recorrencia !== 'sem recorrencia'}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Quantas vezes este item deve se repetir (além da linha base)
-              </p>
-            </div>
-          )}
-          
-          {/* Obrigatório */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="obrigatorio"
-              name="obrigatorio"
-              checked={formData.obrigatorio}
-              onChange={handleInputChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="obrigatorio" className="ml-2 block text-sm text-gray-700">
-              Obrigatório
-            </label>
-          </div>
-          
-          {/* Aviso sobre alterações */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-            <div className="flex items-center">
-              <FiCalendar className="h-5 w-5 text-yellow-600 mr-2" />
+          {/* ===== CAMPOS EDITÁVEIS ===== */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+              Campos Editáveis
+            </h3>
+
+            {/* Primeira linha: Projeto e Categoria */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium text-yellow-900">Atenção</h4>
-                <p className="text-sm text-yellow-700">
-                  Alterar a configuração de recorrência pode impactar as linhas já geradas na tabela de controle geral.
-                  Linhas já criadas não serão automaticamente removidas ou adicionadas.
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Projeto <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="projeto_id"
+                  value={formData.projeto_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecione um projeto</option>
+                  {Object.entries(projetos).map(([id, nome]) => (
+                    <option key={id} value={id}>
+                      {nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoria <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="categoria_id"
+                  value={formData.categoria_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecione uma categoria</option>
+                  {Object.entries(categorias).map(([id, nome]) => (
+                    <option key={id} value={id}>
+                      {nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Indicador */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Indicador <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="indicador"
+                value={formData.indicador}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Digite o nome do indicador"
+                required
+              />
+            </div>
+            
+            {/* Segunda linha: Tipo de Unidade e Tipo de Apresentação */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Unidade <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="tipo_unidade_indicador"
+                  value={formData.tipo_unidade_indicador}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecione o tipo de unidade</option>
+                  {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
+                    <option key={id} value={id}>
+                      {tipo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* ✅ NOVO CAMPO: Tipo de Apresentação */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Apresentação <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="tipo_apresentacao"
+                  value={formData.tipo_apresentacao}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecione o tipo de apresentação</option>
+                  {Object.entries(tiposApresentacao).map(([id, nome]) => (
+                    <option key={id} value={id}>
+                      {nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            {/* Observação */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observação <span className="text-gray-400 text-xs">(opcional)</span>
+              </label>
+              <textarea
+                name="observacao"
+                value={formData.observacao}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="3"
+                placeholder="Digite observações sobre o indicador"
+              />
+            </div>
+            
+            {/* Descrição Detalhada */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição Detalhada <span className="text-gray-400 text-xs">(opcional)</span>
+              </label>
+              <textarea
+                name="descricao_detalhada"
+                value={formData.descricao_detalhada}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="4"
+                placeholder="Digite uma descrição detalhada do indicador, sua finalidade e metodologia"
+              />
+            </div>
+            
+            {/* Descrição Resumida */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição Resumida <span className="text-gray-400 text-xs">(opcional)</span>
+              </label>
+              <textarea
+                name="descricao_resumida"
+                value={formData.descricao_resumida}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="2"
+                placeholder="Digite uma descrição resumida do indicador"
+              />
+            </div>
+            
+            {/* Obrigatório */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="obrigatorio"
+                name="obrigatorio"
+                checked={formData.obrigatorio}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="obrigatorio" className="ml-2 block text-sm text-gray-700">
+                Obrigatório
+              </label>
+            </div>
+          </div>
+
+          {/* ===== CAMPOS NÃO EDITÁVEIS (SOMENTE LEITURA) ===== */}
+          <div className="space-y-4 pt-6 border-t border-gray-200">
+            <div className="flex items-center mb-4">
+              <FiLock className="h-5 w-5 text-gray-500 mr-2" />
+              <h3 className="text-lg font-medium text-gray-700">
+                Campos Não Editáveis
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Prazo inicial - Apenas visualização */}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Prazo Inicial (não editável)
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600">
+                  {formatDate(camposReadOnly.prazo_entrega_inicial)}
+                </div>
+              </div>
+
+              {/* Recorrência - Apenas visualização */}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Recorrência (não editável)
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600">
+                  {camposReadOnly.recorrencia || 'sem recorrencia'}
+                </div>
+              </div>
+
+              {/* Tempo de Recorrência - Apenas visualização */}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Tempo de Recorrência (não editável)
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600">
+                  {camposReadOnly.tempo_recorrencia || 'Não definido'}
+                </div>
+              </div>
+
+              {/* Número de Repetições - Apenas visualização */}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Número de Repetições (não editável)
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600">
+                  {camposReadOnly.repeticoes || '0'}
+                </div>
+              </div>
+            </div>
+
+            {/* Informação adicional */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div className="flex items-start">
+                <FiInfo className="h-4 w-4 text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-gray-600">
+                  Estes campos são definidos apenas na criação do indicador e não podem ser alterados posteriormente 
+                  para manter a integridade das linhas já geradas no sistema.
                 </p>
               </div>
             </div>
           </div>
           
           {/* Botões de Ação */}
-          <div className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}

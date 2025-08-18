@@ -1,4 +1,4 @@
-// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Atualizada com Tipo de Unidade do Indicador
+// src/components/AdicionarLinhaIndicadorBaseDialog.js - Versão Atualizada SEM subcategoria + Tipo de Apresentação
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -8,10 +8,9 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   onClose, 
   onSuccess, 
   categorias, 
-  projetos, 
-  subcategorias 
+  projetos
 }) => {
-  // Estado inicial do formulário - ADICIONADO tipo_unidade_indicador
+  // Estado inicial do formulário - REMOVIDO subcategoria_id, ADICIONADO tipo_apresentacao
   const [formData, setFormData] = useState({
     projeto_id: '',
     categoria_id: '',
@@ -19,8 +18,8 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     observacao: '',
     descricao_detalhada: '',
     descricao_resumida: '',
-    subcategoria_id: '',
-    tipo_unidade_indicador: '', // ✅ NOVO CAMPO OBRIGATÓRIO
+    tipo_unidade_indicador: '',
+    tipo_apresentacao: '', // ✅ NOVO CAMPO
     prazo_entrega_inicial: '',
     recorrencia: 'sem recorrencia',
     tempo_recorrencia: '',
@@ -29,14 +28,14 @@ const AdicionarLinhaIndicadorBaseDialog = ({
   });
   
   const [loading, setLoading] = useState(false);
-  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({}); // ✅ NOVO STATE
+  const [tiposUnidadeIndicador, setTiposUnidadeIndicador] = useState({});
+  const [tiposApresentacao, setTiposApresentacao] = useState({}); // ✅ NOVO STATE
 
-  // ✅ NOVO useEffect: Buscar tipos de unidade do indicador
   useEffect(() => {
     fetchTiposUnidadeIndicador();
+    fetchTiposApresentacao(); // ✅ NOVA FUNÇÃO
   }, []);
 
-  // ✅ NOVA FUNÇÃO: Buscar tipos de unidade do indicador
   const fetchTiposUnidadeIndicador = async () => {
     try {
       const { data, error } = await supabase
@@ -59,12 +58,32 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     }
   };
 
-  // Função para lidar com mudanças nos campos do formulário
+  // ✅ NOVA FUNÇÃO: Buscar tipos de apresentação
+  const fetchTiposApresentacao = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_apresentacao')
+        .select('*')
+        .order('nome', { ascending: true });
+      
+      if (error) throw error;
+      
+      const tiposObj = {};
+      data.forEach(tipo => {
+        tiposObj[tipo.id] = tipo.nome;
+      });
+      
+      setTiposApresentacao(tiposObj);
+      console.log('Tipos de apresentação carregados:', tiposObj);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de apresentação:', error);
+      toast.error('Erro ao carregar tipos de apresentação');
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Se o campo for "recorrencia" e mudar para "sem recorrencia", 
-    // limpar os campos relacionados
     if (name === 'recorrencia' && value === 'sem recorrencia') {
       setFormData(prev => ({
         ...prev,
@@ -80,15 +99,15 @@ const AdicionarLinhaIndicadorBaseDialog = ({
     }
   };
 
-  // Validação e submissão do formulário
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       setLoading(true);
       
-      // ✅ VALIDAÇÃO ATUALIZADA: Incluir tipo_unidade_indicador como obrigatório
-      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || !formData.subcategoria_id || !formData.tipo_unidade_indicador) {
+      // ✅ VALIDAÇÃO ATUALIZADA: Remover subcategoria_id, adicionar tipo_apresentacao
+      if (!formData.projeto_id || !formData.categoria_id || !formData.indicador || 
+          !formData.tipo_unidade_indicador || !formData.tipo_apresentacao) {
         toast.error('Por favor, preencha todos os campos obrigatórios');
         setLoading(false);
         return;
@@ -109,7 +128,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         }
       }
       
-      // ✅ PREPARAR DADOS: Incluir tipo_unidade_indicador
+      // ✅ PREPARAR DADOS: Remover subcategoria_id, adicionar tipo_apresentacao, definir subcategoria_id como null
       const dadosInsercao = {
         projeto_id: formData.projeto_id,
         categoria_id: formData.categoria_id,
@@ -117,17 +136,17 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         observacao: formData.observacao.trim() || null,
         descricao_detalhada: formData.descricao_detalhada.trim() || null,
         descricao_resumida: formData.descricao_resumida.trim() || null,
-        subcategoria_id: parseInt(formData.subcategoria_id),
-        tipo_unidade_indicador: parseInt(formData.tipo_unidade_indicador), // ✅ NOVO CAMPO
+        subcategoria_id: null, // ✅ SEMPRE NULL
+        tipo_unidade_indicador: parseInt(formData.tipo_unidade_indicador),
+        tipo_apresentacao: parseInt(formData.tipo_apresentacao), // ✅ NOVO CAMPO
         prazo_entrega_inicial: formData.prazo_entrega_inicial || null,
         recorrencia: formData.recorrencia,
         tempo_recorrencia: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.tempo_recorrencia) : null,
         repeticoes: formData.recorrencia !== 'sem recorrencia' ? parseInt(formData.repeticoes) : 0,
         obrigatorio: formData.obrigatorio,
-        tem_documento: false // sempre começa como false
+        tem_documento: false
       };
       
-      // Inserir na tabela controle_indicador
       const { data, error } = await supabase
         .from('controle_indicador')
         .insert([dadosInsercao])
@@ -135,18 +154,17 @@ const AdicionarLinhaIndicadorBaseDialog = ({
       
       if (error) throw error;
       
-      // Calcular quantas linhas serão criadas para informar o usuário
+      // Calcular quantas linhas serão criadas
       let totalLinhasEsperadas;
       if (formData.recorrencia === 'sem recorrencia' || !formData.repeticoes || parseInt(formData.repeticoes) <= 0) {
-        totalLinhasEsperadas = 2; // 1 linha base × 2 (Meta + Realizado)
+        totalLinhasEsperadas = 2;
       } else {
         const repeticoes = parseInt(formData.repeticoes);
-        totalLinhasEsperadas = (1 + repeticoes) * 2; // (linha base + repetições) × 2
+        totalLinhasEsperadas = (1 + repeticoes) * 2;
       }
       
       toast.success(`Linha de indicador adicionada com sucesso! Foram criadas ${totalLinhasEsperadas} linhas automaticamente (Meta + Realizado).`);
       
-      // Chamar a função de sucesso e fechar o diálogo
       if (onSuccess) {
         onSuccess();
       }
@@ -161,7 +179,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      {/* Container com max-height e overflow para rolagem */}
       <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Criar Linha Base de Indicador</h2>
@@ -173,7 +190,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
           </button>
         </div>
         
-        {/* Informação sobre a criação automática */}
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start">
             <FiCheck className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
@@ -196,7 +212,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Primeira linha: Projeto e Categoria */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Projeto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Projeto <span className="text-red-500">*</span>
@@ -217,7 +232,6 @@ const AdicionarLinhaIndicadorBaseDialog = ({
               </select>
             </div>
             
-            {/* Categoria */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Categoria <span className="text-red-500">*</span>
@@ -255,30 +269,8 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             />
           </div>
           
-          {/* Segunda linha: Subcategoria e Tipo de Unidade do Indicador */}
+          {/* Segunda linha: Tipo de Unidade e Tipo de Apresentação */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Subcategoria */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Subcategoria <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="subcategoria_id"
-                value={formData.subcategoria_id}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Selecione uma subcategoria</option>
-                {Object.entries(subcategorias).map(([id, nome]) => (
-                  <option key={id} value={id}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* ✅ NOVO CAMPO: Tipo de Unidade do Indicador */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Unidade <span className="text-red-500">*</span>
@@ -294,6 +286,27 @@ const AdicionarLinhaIndicadorBaseDialog = ({
                 {Object.entries(tiposUnidadeIndicador).map(([id, tipo]) => (
                   <option key={id} value={id}>
                     {tipo}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* ✅ NOVO CAMPO: Tipo de Apresentação */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Apresentação <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tipo_apresentacao"
+                value={formData.tipo_apresentacao}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Selecione o tipo de apresentação</option>
+                {Object.entries(tiposApresentacao).map(([id, nome]) => (
+                  <option key={id} value={id}>
+                    {nome}
                   </option>
                 ))}
               </select>
@@ -378,62 +391,59 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             </select>
           </div>
           
-          {/* Tempo de Recorrência - apenas se a recorrência não for "sem recorrencia" */}
+          {/* Campos de recorrência condicionais */}
           {formData.recorrencia !== 'sem recorrencia' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tempo de Recorrência <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                name="tempo_recorrencia"
-                value={formData.tempo_recorrencia}
-                onChange={(e) => {
-                  // Permitir apenas números ou campo vazio
-                  const value = e.target.value;
-                  if (value === '' || /^\d+$/.test(value)) {
-                    handleInputChange(e);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ex: 1"
-                required={formData.recorrencia !== 'sem recorrencia'}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                {formData.recorrencia === 'dia' && 'A cada quantos dias o item se repete'}
-                {formData.recorrencia === 'mês' && 'A cada quantos meses o item se repete'}
-                {formData.recorrencia === 'ano' && 'A cada quantos anos o item se repete'}
-              </p>
-            </div>
-          )}
-          
-          {/* Número de Repetições - apenas se a recorrência não for "sem recorrencia" */}
-          {formData.recorrencia !== 'sem recorrencia' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Repetições <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                name="repeticoes"
-                value={formData.repeticoes}
-                onChange={(e) => {
-                  // Permitir apenas números ou campo vazio
-                  const value = e.target.value;
-                  if (value === '' || /^\d+$/.test(value)) {
-                    handleInputChange(e);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ex: 3"
-                required={formData.recorrencia !== 'sem recorrencia'}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Quantas vezes este item deve se repetir (além da linha base)
-              </p>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tempo de Recorrência <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="tempo_recorrencia"
+                  value={formData.tempo_recorrencia}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      handleInputChange(e);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: 1"
+                  required={formData.recorrencia !== 'sem recorrencia'}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {formData.recorrencia === 'dia' && 'A cada quantos dias o item se repete'}
+                  {formData.recorrencia === 'mês' && 'A cada quantos meses o item se repete'}
+                  {formData.recorrencia === 'ano' && 'A cada quantos anos o item se repete'}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de Repetições <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="repeticoes"
+                  value={formData.repeticoes}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      handleInputChange(e);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: 3"
+                  required={formData.recorrencia !== 'sem recorrencia'}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Quantas vezes este item deve se repetir (além da linha base)
+                </p>
+              </div>
+            </>
           )}
           
           {/* Obrigatório */}
@@ -451,7 +461,7 @@ const AdicionarLinhaIndicadorBaseDialog = ({
             </label>
           </div>
           
-          {/* Botões: Rodapé normal (sem sticky) */}
+          {/* Botões */}
           <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
