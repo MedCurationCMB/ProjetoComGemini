@@ -33,17 +33,19 @@ export default function CopiaControleIndicadorGeral({ user }) {
   const [abaAtiva, setAbaAtiva] = useState('todos'); // 'todos', 'realizado', 'meta', 'pendentes'
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [filtroValorPendente, setFiltroValorPendente] = useState(false);
+  
+  // ✅ MODIFICADO: Substituir filtroValorPendente por filtroValorApresentado
+  const [filtroValorApresentado, setFiltroValorApresentado] = useState('todos'); // 'todos', 'sem_valor', 'com_valor'
   const [searchTerm, setSearchTerm] = useState('');
   
   // Estados para filtros
   const [projetos, setProjetos] = useState({});
   const [categorias, setCategorias] = useState({});
-  const [tiposIndicador, setTiposIndicador] = useState({}); // ✅ NOVO
+  const [tiposIndicador, setTiposIndicador] = useState({});
   const [projetosVinculados, setProjetosVinculados] = useState([]);
   const [filtroProjetoId, setFiltroProjetoId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
-  const [filtroTipoIndicadorId, setFiltroTipoIndicadorId] = useState(''); // ✅ NOVO
+  const [filtroTipoIndicadorId, setFiltroTipoIndicadorId] = useState('');
   
   const [filtrosPrazo, setFiltrosPrazo] = useState(() => {
     const hoje = new Date();
@@ -78,7 +80,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     if (projetosVinculados.length >= 0) {
       fetchCategorias();
       fetchProjetos();
-      fetchTiposIndicador(); // ✅ NOVO
+      fetchTiposIndicador();
     }
   }, [projetosVinculados]);
 
@@ -149,7 +151,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Buscar tipos de indicador
+  // Buscar tipos de indicador
   const fetchTiposIndicador = async () => {
     try {
       const { data, error } = await supabase
@@ -292,7 +294,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
       filtrosAplicados.push(`Categoria: ${categorias[filtroCategoriaId]}`);
     }
 
-    // ✅ FILTRO: Tipo Indicador (apenas na aba Pendentes)
+    // Filtro: Tipo Indicador (apenas na aba Pendentes)
     if (abaAtiva === 'pendentes' && filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId]) {
       filtrosAplicados.push(`Tipo: ${tiposIndicador[filtroTipoIndicadorId]}`);
     }
@@ -323,9 +325,13 @@ export default function CopiaControleIndicadorGeral({ user }) {
       }
     }
 
-    // Filtro de valor pendente (apenas para abas que não sejam Pendentes)
-    if (abaAtiva !== 'pendentes' && filtroValorPendente) {
-      filtrosAplicados.push('Apenas sem valor apresentado');
+    // ✅ NOVO: Filtro de valor apresentado (apenas para abas que não sejam Pendentes)
+    if (abaAtiva !== 'pendentes' && filtroValorApresentado !== 'todos') {
+      if (filtroValorApresentado === 'sem_valor') {
+        filtrosAplicados.push('Apenas sem valor apresentado');
+      } else if (filtroValorApresentado === 'com_valor') {
+        filtrosAplicados.push('Apenas com valor apresentado');
+      }
     }
     
     if (searchTerm) {
@@ -349,14 +355,15 @@ export default function CopiaControleIndicadorGeral({ user }) {
                          filtrosPrazo.data_inicio !== calcularPeriodo('30dias').dataInicio ||
                          filtrosPrazo.data_fim !== calcularPeriodo('30dias').dataFim;
 
-    // ✅ FILTRO TIPO INDICADOR: apenas para aba Pendentes
+    // Filtro Tipo Indicador: apenas para aba Pendentes
     const filtroTipo = abaAtiva === 'pendentes' && filtroTipoIndicadorId !== '';
 
     if (abaAtiva === 'pendentes') {
       return filtrosComuns || filtroTipo;
     }
 
-    return filtroValorPendente || filtrosComuns || filtroTipo;
+    // ✅ NOVO: Filtro valor apresentado para outras abas
+    return filtroValorApresentado !== 'todos' || filtrosComuns || filtroTipo;
   };
 
   // ✅ FUNÇÃO ATUALIZADA: Limpar filtros
@@ -367,11 +374,11 @@ export default function CopiaControleIndicadorGeral({ user }) {
       data_inicio: periodoPadrao.dataInicio,
       data_fim: periodoPadrao.dataFim
     });
-    setFiltroValorPendente(false);
+    setFiltroValorApresentado('todos'); // ✅ NOVO
     setSearchTerm('');
     setFiltroProjetoId('');
     setFiltroCategoriaId('');
-    setFiltroTipoIndicadorId(''); // ✅ NOVO
+    setFiltroTipoIndicadorId('');
     setShowFilters(false);
   };
 
@@ -379,9 +386,9 @@ export default function CopiaControleIndicadorGeral({ user }) {
   const handleAbaChange = (novaAba) => {
     setAbaAtiva(novaAba);
     
-    // Para aba Pendentes, limpar apenas o filtro de valor pendente (redundante)
+    // ✅ MODIFICADO: Para aba Pendentes, limpar filtro de valor apresentado (redundante)
     if (novaAba === 'pendentes') {
-      setFiltroValorPendente(false);
+      setFiltroValorApresentado('todos');
     }
   };
 
@@ -544,7 +551,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </button>
             </div>
 
-            {/* ✅ MOBILE: Filtros com novo filtro Tipo Indicador */}
+            {/* ✅ MOBILE: Filtros com novo filtro Valor Apresentado */}
             {showFilters && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-3">
@@ -596,7 +603,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                       </select>
                     </div>
 
-                    {/* ✅ NOVO FILTRO: Tipo Indicador - Apena na aba Pendentes */}
+                    {/* Filtro: Tipo Indicador - Apenas na aba Pendentes */}
                     {abaAtiva === 'pendentes' && (
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Tipo Indicador</label>
@@ -616,21 +623,19 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     )}
                   </div>
 
-                  {/* Filtro por Valor Pendente - Ocultar apenas na aba Pendentes */}
+                  {/* ✅ NOVO: Filtro por Valor Apresentado - Apenas nas abas que não sejam Pendentes */}
                   {abaAtiva !== 'pendentes' && (
                     <div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="filtroValorPendenteMobile"
-                          checked={filtroValorPendente}
-                          onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="filtroValorPendenteMobile" className="ml-2 block text-sm text-gray-700">
-                          Apenas sem valor apresentado
-                        </label>
-                      </div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Filtrar por Valor Apresentado</label>
+                      <select
+                        value={filtroValorApresentado}
+                        onChange={(e) => setFiltroValorApresentado(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="todos">Todos os valores</option>
+                        <option value="sem_valor">Apenas sem valor apresentado</option>
+                        <option value="com_valor">Apenas com valor apresentado</option>
+                      </select>
                     </div>
                   )}
 
@@ -884,7 +889,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
               </div>
             </div>
 
-            {/* ✅ FILTROS DESKTOP - Com novo filtro Tipo Indicador */}
+            {/* ✅ FILTROS DESKTOP - Com novo filtro Valor Apresentado */}
             {showFilters && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
@@ -939,7 +944,7 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     </select>
                   </div>
 
-                  {/* ✅ NOVO FILTRO: Tipo Indicador - Apenas na aba Pendentes */}
+                  {/* Filtro: Tipo Indicador - Apenas na aba Pendentes */}
                   {abaAtiva === 'pendentes' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">Tipo Indicador</label>
@@ -958,22 +963,19 @@ export default function CopiaControleIndicadorGeral({ user }) {
                     </div>
                   )}
 
-                  {/* Filtro por Valor Pendente - Ocultar apenas na aba Pendentes */}
+                  {/* ✅ NOVO: Filtro por Valor Apresentado - Apenas nas abas que não sejam Pendentes */}
                   {abaAtiva !== 'pendentes' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Filtrar por Pendência</label>
-                      <div className="flex items-center mt-2">
-                        <input
-                          type="checkbox"
-                          id="filtroValorPendenteDesktop"
-                          checked={filtroValorPendente}
-                          onChange={(e) => setFiltroValorPendente(e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="filtroValorPendenteDesktop" className="ml-2 block text-sm text-gray-700">
-                          Apenas sem valor apresentado
-                        </label>
-                      </div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Filtrar por Valor Apresentado</label>
+                      <select
+                        value={filtroValorApresentado}
+                        onChange={(e) => setFiltroValorApresentado(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="todos">Todos os valores</option>
+                        <option value="sem_valor">Apenas sem valor apresentado</option>
+                        <option value="com_valor">Apenas com valor apresentado</option>
+                      </select>
                     </div>
                   )}
 
@@ -1373,18 +1375,18 @@ export default function CopiaControleIndicadorGeral({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ COMPONENTE DA TABELA: Com novo filtro Tipo Indicador */}
+                {/* ✅ COMPONENTE DA TABELA: Com novo filtro Valor Apresentado */}
                 <CopiaControleIndicadorGeralTable 
                   user={user} 
                   filtroTipoIndicador={abaAtiva}
-                  filtroValorPendente={abaAtiva === 'pendentes' ? true : filtroValorPendente}
-                  setFiltroValorPendente={setFiltroValorPendente}
+                  filtroValorApresentado={filtroValorApresentado} // ✅ NOVO
+                  setFiltroValorApresentado={setFiltroValorApresentado} // ✅ NOVO
                   filtrosPrazo={filtrosPrazo}
                   setFiltrosPrazo={setFiltrosPrazo}
                   searchTerm={searchTerm}
                   filtroProjetoId={filtroProjetoId}
                   filtroCategoriaId={filtroCategoriaId}
-                  filtroTipoIndicadorId={filtroTipoIndicadorId} // ✅ NOVO
+                  filtroTipoIndicadorId={filtroTipoIndicadorId}
                 />
               </div>
             </div>

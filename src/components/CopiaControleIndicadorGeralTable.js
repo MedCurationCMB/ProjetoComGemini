@@ -1,4 +1,4 @@
-// Componente CopiaControleIndicadorGeralTable.js - COM FILTRO TIPO INDICADOR
+// Componente CopiaControleIndicadorGeralTable.js - COM FILTRO VALOR APRESENTADO
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -13,14 +13,14 @@ import PreenchimentoAutomaticoDialog from './PreenchimentoAutomaticoDialog';
 const CopiaControleIndicadorGeralTable = ({ 
   user, 
   filtroTipoIndicador = 'todos',
-  filtroValorPendente = false,
-  setFiltroValorPendente,
+  filtroValorApresentado = 'todos', // ✅ NOVO: Filtro de valor apresentado
+  setFiltroValorApresentado, // ✅ NOVO
   filtrosPrazo,
   setFiltrosPrazo,
   searchTerm = '',
   filtroProjetoId = '',
   filtroCategoriaId = '',
-  filtroTipoIndicadorId = '' // ✅ NOVO
+  filtroTipoIndicadorId = ''
 }) => {
   // Função: Formatar valores numéricos para padrão brasileiro
   const formatarValorIndicador = (valor) => {
@@ -65,12 +65,12 @@ const CopiaControleIndicadorGeralTable = ({
     }
   }, [projetosVinculados]);
 
-  // Recarregar dados quando os filtros mudarem
+  // ✅ ATUALIZADO: Recarregar dados quando os filtros mudarem (incluindo novo filtro)
   useEffect(() => {
     if (!loading && projetosVinculados.length >= 0) {
       fetchControles();
     }
-  }, [filtroTipoIndicador, filtroValorPendente, filtrosPrazo, searchTerm, filtroProjetoId, filtroCategoriaId, filtroTipoIndicadorId]); // ✅ ADICIONADO filtroTipoIndicadorId
+  }, [filtroTipoIndicador, filtroValorApresentado, filtrosPrazo, searchTerm, filtroProjetoId, filtroCategoriaId, filtroTipoIndicadorId]);
 
   // Função para calcular período
   const calcularPeriodo = (tipo) => {
@@ -226,7 +226,7 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // ✅ FUNÇÃO: Aplicar filtro por tipo indicador customizado (apenas para aba Pendentes)
+  // Função: Aplicar filtro por tipo indicador customizado (apenas para aba Pendentes)
   const aplicarFiltroTipoIndicadorCustom = (query) => {
     // Só aplicar este filtro na aba "pendentes"
     if (filtroTipoIndicador === 'pendentes' && filtroTipoIndicadorId) {
@@ -235,16 +235,20 @@ const CopiaControleIndicadorGeralTable = ({
     return query;
   };
 
-  // Aplicar filtro por valor pendente
-  const aplicarFiltroValorPendente = (query) => {
+  // ✅ NOVO: Aplicar filtro por valor apresentado
+  const aplicarFiltroValorApresentado = (query) => {
     // Para aba Pendentes, o filtro já é aplicado em aplicarFiltroTipoIndicador
     if (filtroTipoIndicador === 'pendentes') {
       return query; // Já filtrado na função anterior
     }
     
-    if (filtroValorPendente) {
+    if (filtroValorApresentado === 'sem_valor') {
       return query.is('valor_indicador_apresentado', null);
+    } else if (filtroValorApresentado === 'com_valor') {
+      return query.not('valor_indicador_apresentado', 'is', null);
     }
+    
+    // Para 'todos', não aplicar filtro
     return query;
   };
 
@@ -288,7 +292,7 @@ const CopiaControleIndicadorGeralTable = ({
     );
   };
 
-  // Buscar os dados com todos os filtros aplicados
+  // ✅ ATUALIZADO: Buscar os dados com todos os filtros aplicados (incluindo novo filtro)
   const fetchControles = async () => {
     try {
       setLoading(true);
@@ -306,10 +310,10 @@ const CopiaControleIndicadorGeralTable = ({
       
       // Aplicar todos os filtros
       query = aplicarFiltroTipoIndicador(query);
-      query = aplicarFiltroValorPendente(query);
+      query = aplicarFiltroValorApresentado(query); // ✅ NOVO
       query = aplicarFiltrosPrazo(query);
       query = aplicarFiltroBusca(query);
-      query = aplicarFiltroTipoIndicadorCustom(query); // ✅ NOVO
+      query = aplicarFiltroTipoIndicadorCustom(query);
       
       // Aplicar outros filtros se estiverem definidos
       if (filtroProjetoId) {
@@ -342,7 +346,7 @@ const CopiaControleIndicadorGeralTable = ({
       if (error) throw error;
       
       setControles(Array.isArray(data) ? data : []);
-      console.log(`Controles carregados (filtro: ${filtroTipoIndicador}):`, data?.length || 0);
+      console.log(`Controles carregados (filtro: ${filtroTipoIndicador}, valor: ${filtroValorApresentado}):`, data?.length || 0);
     } catch (error) {
       toast.error('Erro ao carregar dados de controle');
       console.error(error);
@@ -671,7 +675,7 @@ const CopiaControleIndicadorGeralTable = ({
         />
       )}
 
-      {/* TABELA ATUALIZADA: SEM COLUNA SUBCATEGORIA */}
+      {/* TABELA */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -715,7 +719,7 @@ const CopiaControleIndicadorGeralTable = ({
                   Indicador
                 </th>
                 
-                {/* ✅ PRAZO ATUAL - COM ORDENAÇÃO ADICIONADA */}
+                {/* PRAZO ATUAL - COM ORDENAÇÃO */}
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleToggleOrdenacao('prazo_entrega')}
@@ -890,9 +894,15 @@ const CopiaControleIndicadorGeralTable = ({
                     <div className="flex flex-col items-center">
                       <FiFolder className="h-12 w-12 text-gray-300 mb-4" />
                       <div>
-                        {filtroTipoIndicador === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
-                        {filtroTipoIndicador === 'realizado' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
-                        {filtroTipoIndicador === 'meta' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'todos' && filtroValorApresentado === 'todos' && 'Nenhum item de controle encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'todos' && filtroValorApresentado === 'sem_valor' && 'Nenhum indicador sem valor apresentado encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'todos' && filtroValorApresentado === 'com_valor' && 'Nenhum indicador com valor apresentado encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'realizado' && filtroValorApresentado === 'todos' && 'Nenhum indicador do tipo "Realizado" encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'realizado' && filtroValorApresentado === 'sem_valor' && 'Nenhum indicador "Realizado" sem valor apresentado encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'realizado' && filtroValorApresentado === 'com_valor' && 'Nenhum indicador "Realizado" com valor apresentado encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'meta' && filtroValorApresentado === 'todos' && 'Nenhum indicador do tipo "Meta" encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'meta' && filtroValorApresentado === 'sem_valor' && 'Nenhum indicador "Meta" sem valor apresentado encontrado para os projetos vinculados'}
+                        {filtroTipoIndicador === 'meta' && filtroValorApresentado === 'com_valor' && 'Nenhum indicador "Meta" com valor apresentado encontrado para os projetos vinculados'}
                         {filtroTipoIndicador === 'pendentes' && 'Nenhum indicador pendente (sem valor apresentado) encontrado para os projetos vinculados'}
                       </div>
                     </div>
@@ -904,7 +914,7 @@ const CopiaControleIndicadorGeralTable = ({
         </div>
       </div>
 
-      {/* Informações adicionais */}
+      {/* ✅ INFORMAÇÕES ADICIONAIS ATUALIZADAS */}
       {controles.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start">
@@ -928,7 +938,14 @@ const CopiaControleIndicadorGeralTable = ({
                 {filtroTipoIndicador === 'pendentes' && (
                   <li>• <strong>🔍 Aba Pendentes:</strong> Mostra apenas indicadores sem valor apresentado</li>
                 )}
-                {/* ✅ INFORMAÇÃO: Filtro Tipo Indicador */}
+                {/* ✅ NOVO: Informação sobre filtro Valor Apresentado */}
+                {filtroTipoIndicador !== 'pendentes' && filtroValorApresentado !== 'todos' && (
+                  <li>• <strong>💎 Filtro Valor Apresentado:</strong> {
+                    filtroValorApresentado === 'sem_valor' 
+                      ? 'Mostrando apenas indicadores sem valor apresentado'
+                      : 'Mostrando apenas indicadores com valor apresentado'
+                  }</li>
+                )}
                 {filtroTipoIndicador === 'pendentes' && filtroTipoIndicadorId && (
                   <li>• <strong>🏷️ Filtro Tipo Indicador:</strong> Aplicado filtro por tipo "{tiposIndicador[filtroTipoIndicadorId]}"</li>
                 )}
@@ -941,12 +958,14 @@ const CopiaControleIndicadorGeralTable = ({
                   Baseado nos filtros aplicados: {filtroTipoIndicador} • 
                   {filtroTipoIndicador === 'pendentes' 
                     ? `Apenas sem valor apresentado • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}` 
-                    : `${filtroValorPendente ? 'Apenas sem valor' : 'Todos os valores'} • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}`
+                    : `${
+                        filtroValorApresentado === 'sem_valor' ? 'Apenas sem valor' :
+                        filtroValorApresentado === 'com_valor' ? 'Apenas com valor' : 'Todos os valores'
+                      } • ${filtrosPrazo?.periodo || 'Sem filtro de prazo'}`
                   }
                   {searchTerm && ` • Busca: "${searchTerm}"`}
                   {filtroProjetoId && projetos[filtroProjetoId] && ` • Projeto: ${projetos[filtroProjetoId]}`}
                   {filtroCategoriaId && categorias[filtroCategoriaId] && ` • Categoria: ${categorias[filtroCategoriaId]}`}
-                  {/* ✅ NOVO: Mostrar filtro tipo indicador aplicado */}
                   {filtroTipoIndicadorId && tiposIndicador[filtroTipoIndicadorId] && ` • Tipo: ${tiposIndicador[filtroTipoIndicadorId]}`}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
