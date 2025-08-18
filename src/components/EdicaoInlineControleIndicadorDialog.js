@@ -144,19 +144,6 @@ const EdicaoInlineControleIndicadorDialog = ({
         erros.push(`Linha ${linha}: Tipo de Unidade do Indicador é obrigatório`);
       }
       
-      if (item.prazo_entrega_inicial && !/^\d{4}-\d{2}-\d{2}$/.test(item.prazo_entrega_inicial)) {
-        erros.push(`Linha ${linha}: Prazo inicial deve estar no formato YYYY-MM-DD`);
-      }
-      
-      if (item.recorrencia !== 'sem recorrencia') {
-        if (!item.tempo_recorrencia || parseInt(item.tempo_recorrencia) < 1) {
-          erros.push(`Linha ${linha}: Tempo de recorrência deve ser um número maior que 0`);
-        }
-        
-        if (!item.repeticoes || parseInt(item.repeticoes) < 1) {
-          erros.push(`Linha ${linha}: Número de repetições deve ser um número maior que 0`);
-        }
-      }
     });
     
     return erros;
@@ -364,7 +351,7 @@ const EdicaoInlineControleIndicadorDialog = ({
                     <>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Tipo Unidade *</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-36">Prazo Inicial</th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Recorrência *</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-32">Recorrência</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Tempo</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Rep.</th>
                     </>
@@ -522,12 +509,10 @@ const EdicaoInlineControleIndicadorDialog = ({
                           <input
                             type="date"
                             value={formatDateForInput(item.prazo_entrega_inicial)}
-                            onChange={(e) => handleInputChange(originalIndex, 'prazo_entrega_inicial', e.target.value)}
-                            className={getInputClassName(originalIndex, 'prazo_entrega_inicial', 'w-full px-1 py-1 text-xs md:text-sm rounded focus:outline-none focus:ring-1 focus:ring-blue-500')}
+                            readOnly
+                            disabled
+                            className="w-full px-1 py-1 text-xs md:text-sm rounded bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200"
                           />
-                          {errosValidacao[`${originalIndex}_prazo_entrega_inicial`] && (
-                            <p className="text-xs text-red-600 mt-1">{errosValidacao[`${originalIndex}_prazo_entrega_inicial`]}</p>
-                          )}
                         </td>
                       )}
                       
@@ -536,8 +521,8 @@ const EdicaoInlineControleIndicadorDialog = ({
                         <td className="px-2 py-2">
                           <select
                             value={item.recorrencia}
-                            onChange={(e) => handleInputChange(originalIndex, 'recorrencia', e.target.value)}
-                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled
+                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-200 rounded bg-gray-100 text-gray-500 cursor-not-allowed"
                           >
                             <option value="sem recorrencia">Sem</option>
                             <option value="dia">Dia</option>
@@ -554,10 +539,10 @@ const EdicaoInlineControleIndicadorDialog = ({
                             type="number"
                             min="1"
                             value={item.tempo_recorrencia}
-                            onChange={(e) => handleInputChange(originalIndex, 'tempo_recorrencia', e.target.value)}
-                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            readOnly
+                            disabled
+                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-200 rounded bg-gray-100 text-gray-500 cursor-not-allowed"
                             placeholder="Ex: 1"
-                            disabled={item.recorrencia === 'sem recorrencia'}
                           />
                         </td>
                       )}
@@ -569,10 +554,10 @@ const EdicaoInlineControleIndicadorDialog = ({
                             type="number"
                             min="0"
                             value={item.repeticoes}
-                            onChange={(e) => handleInputChange(originalIndex, 'repeticoes', e.target.value)}
-                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            readOnly
+                            disabled
+                            className="w-full px-1 py-1 text-xs md:text-sm border border-gray-200 rounded bg-gray-100 text-gray-500 cursor-not-allowed"
                             placeholder="Ex: 3"
-                            disabled={item.recorrencia === 'sem recorrencia'}
                           />
                         </td>
                       )}
