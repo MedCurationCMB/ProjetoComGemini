@@ -539,6 +539,19 @@ export default function VisualizacaoAtividades({ user }) {
                     <FiHome className="mr-3 h-4 w-4" />
                     Início
                   </button>
+                  
+                  {/* ✅ Gestão de Rotinas */}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      router.push('/gestao-rotinas');
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                  >
+                    <FiRepeat className="mr-3 h-4 w-4" />
+                    Gestão de Rotinas
+                  </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -567,36 +580,6 @@ export default function VisualizacaoAtividades({ user }) {
                   >
                     <FiUser className="mr-3 h-4 w-4" />
                     Perfil
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      router.push('/controle-indicador');
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                  >
-                    <FiEdit3 className="mr-3 h-4 w-4" />
-                    Criar Indicador Base
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      handleAnalisesIndicadoresClick();
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                  >
-                    <FiCpu className="mr-3 h-4 w-4" />
-                    Análises Indicadores
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      handleHistoricoAcessos();
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                  >
-                    <FiList className="mr-3 h-4 w-4" />
-                    Histórico Acessos (admin)
                   </button>
                   <button
                     onClick={() => {
@@ -891,7 +874,7 @@ export default function VisualizacaoAtividades({ user }) {
                   
                   {atividadesRotina.length === 0 ? (
                     <div className="text-center py-8">
-                      <div className="mx-auto w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3">
+                      <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
                         <FiRepeat className="w-6 h-6 text-[#012060]" />
                       </div>
                       <p className="text-gray-500 text-sm">Não há atividades de rotina para hoje</p>
@@ -908,7 +891,7 @@ export default function VisualizacaoAtividades({ user }) {
                             className={`p-4 border rounded-lg transition-colors ${
                               isCompleted 
                                 ? 'bg-green-50 border-green-200' 
-                                : 'bg-purple-50 border-purple-200 hover:bg-purple-100'
+                                : 'bg-blue-50 border-blue-200 hover:bg-blue-100' // ✅ MUDOU: de purple para blue
                             }`}
                           >
                             <div className="flex items-start space-x-3">
@@ -917,7 +900,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                   isCompleted
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-purple-100 text-[#012060] hover:bg-purple-200'
+                                    : 'bg-blue-100 text-[#012060] hover:bg-blue-200' // ✅ MUDOU: de purple para blue
                                 }`}
                               >
                                 <FiCheck className="w-4 h-4" />

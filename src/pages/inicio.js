@@ -17,7 +17,8 @@ import {
   FiArrowRight,
   FiTrendingUp,
   FiFolder,
-  FiShield
+  FiShield,
+  FiCheckCircle // ✅ NOVO ÍCONE
 } from 'react-icons/fi';
 
 export default function Inicio({ user }) {
@@ -79,6 +80,11 @@ export default function Inicio({ user }) {
 
   const handleAdminClick = () => {
     router.push('/admin');
+  };
+
+  // ✅ NOVA FUNÇÃO: Navegação para atividades
+  const handleAtividadesClick = () => {
+    router.push('/visualizacao-atividades');
   };
 
   // Obter nome do usuário
@@ -154,6 +160,16 @@ export default function Inicio({ user }) {
                       >
                         <FiHome className="mr-3 h-4 w-4" />
                         Início
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/visualizacao-atividades');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiCheckCircle className="mr-3 h-4 w-4" />
+                        Visualizar Atividades
                       </button>
                       <button
                         onClick={() => {
@@ -262,6 +278,16 @@ export default function Inicio({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          router.push('/visualizacao-atividades');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiCheckCircle className="mr-3 h-4 w-4" />
+                        Visualizar Atividades
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                           router.push('/visualizacao-indicadores');
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
@@ -330,8 +356,8 @@ export default function Inicio({ user }) {
           </p>
         </div>
 
-        {/* Opções principais */}
-        <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
+        {/* ✅ SEÇÃO ATUALIZADA: Opções principais com 3 colunas */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
           {/* Opção Indicadores */}
           <button
             onClick={handleIndicadoresClick}
@@ -352,10 +378,30 @@ export default function Inicio({ user }) {
             </p>
           </button>
 
+          {/* ✅ NOVA OPÇÃO: Atividades */}
+          <button
+            onClick={handleAtividadesClick}
+            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300 text-left"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                <FiCheckCircle className="w-8 h-8 text-purple-600" />
+              </div>
+              <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+              Atividades
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Gerencie suas tarefas diárias, rotinas e atividades de forma organizada e eficiente.
+            </p>
+          </button>
+
           {/* Opção Documentos */}
           <button
             onClick={handleDocumentosClick}
-            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-green-300 text-left"
+            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-green-300 text-left md:col-span-2 lg:col-span-1"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">

@@ -441,6 +441,8 @@ export default function GestaoRotinas({ user }) {
                     <FiHome className="mr-3 h-4 w-4" />
                     Início
                   </button>
+                  
+                  {/* ✅ SUBSTITUÍDO: Visualizar Atividades (ao invés de Gestão de Rotinas) */}
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -451,6 +453,7 @@ export default function GestaoRotinas({ user }) {
                     <FiCheckCircle className="mr-3 h-4 w-4" />
                     Visualizar Atividades
                   </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -471,6 +474,16 @@ export default function GestaoRotinas({ user }) {
                     <FiFolder className="mr-3 h-4 w-4" />
                     Gestão Documentos
                   </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
+                  >
+                    <FiUser className="mr-3 h-4 w-4" />
+                    Perfil
+                  </button>
+
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -793,7 +806,7 @@ export default function GestaoRotinas({ user }) {
                   </div>
                 </div>
 
-                {/* Preview da Recorrência */}
+                {/* Preview da Recorrência - VERSÃO ALTERNATIVA */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
                   <p className="text-sm text-blue-800">
@@ -814,13 +827,14 @@ export default function GestaoRotinas({ user }) {
                     )}
                     {formData.recurrence_type === 'monthly' && (
                       <>
-                        <strong>Dia do mês:</strong> {new Date(formData.start_date).getDate()}
+                        <strong>Dia do mês:</strong> {formData.start_date ? formData.start_date.split('-')[2] : ''}
                       </>
                     )}
                     <br />
-                    <strong>Período:</strong> {new Date(formData.start_date).toLocaleDateString('pt-BR')}
+                    <strong>Período:</strong> {formData.start_date ? 
+                      formData.start_date.split('-').reverse().join('/') : ''}
                     {formData.end_date && (
-                      <> até {new Date(formData.end_date).toLocaleDateString('pt-BR')}</>
+                      <> até {formData.end_date.split('-').reverse().join('/')}</>
                     )}
                     {!formData.end_date && <> (sem data de término)</>}
                   </p>
