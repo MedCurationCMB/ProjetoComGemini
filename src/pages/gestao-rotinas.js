@@ -38,10 +38,10 @@ export default function GestaoRotinas({ user }) {
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   
-  // Estados para projetos
-  const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]);
-  const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  // ✅ Estados para listas (substituindo projetos)
+  const [listas, setListas] = useState({});
+  const [listasVinculadas, setListasVinculadas] = useState([]);
+  const [listaSelecionada, setListaSelecionada] = useState('');
   
   // Estados para rotinas
   const [rotinas, setRotinas] = useState([]);
@@ -110,61 +110,64 @@ export default function GestaoRotinas({ user }) {
   };
 
   // ===========================================
-  // FUNÇÕES DE CARREGAMENTO DE DADOS
+  // ✅ FUNÇÕES DE CARREGAMENTO DE DADOS (ATUALIZADAS PARA LISTAS)
   // ===========================================
 
-  const fetchProjetosVinculados = async (userId) => {
+  const fetchListasVinculadas = async (userId) => {
     try {
+      // ✅ Buscar listas vinculadas ao usuário
       const { data, error } = await supabase
-        .from('relacao_usuarios_projetos')
-        .select('projeto_id')
+        .from('relacao_usuario_list')
+        .select('list_id')
         .eq('usuario_id', userId);
       
       if (error) throw error;
       
-      const projetoIds = data.map(item => item.projeto_id);
-      setProjetosVinculados(projetoIds);
+      const listIds = data.map(item => item.list_id);
+      setListasVinculadas(listIds);
       
-      if (projetoIds.length > 0) {
-        const { data: projetosData, error: projetosError } = await supabase
-          .from('projetos')
-          .select('id, nome')
-          .in('id', projetoIds)
-          .order('nome');
+      if (listIds.length > 0) {
+        // ✅ Buscar dados das listas
+        const { data: listasData, error: listasError } = await supabase
+          .from('tasks_list')
+          .select('id, nome_lista')
+          .in('id', listIds)
+          .order('nome_lista');
         
-        if (projetosError) throw projetosError;
+        if (listasError) throw listasError;
         
-        const projetosObj = {};
-        projetosData.forEach(proj => {
-          projetosObj[proj.id] = proj.nome;
+        const listasObj = {};
+        listasData.forEach(lista => {
+          listasObj[lista.id] = lista.nome_lista;
         });
         
-        setProjetos(projetosObj);
+        setListas(listasObj);
         
-        // Selecionar primeiro projeto por padrão
-        if (!projetoSelecionado && projetosData.length > 0) {
-          setProjetoSelecionado(projetosData[0].id);
+        // Selecionar primeira lista por padrão
+        if (!listaSelecionada && listasData.length > 0) {
+          setListaSelecionada(listasData[0].id);
         }
       }
       
-      return projetoIds;
+      return listIds;
     } catch (error) {
-      console.error('Erro ao carregar projetos vinculados:', error);
+      console.error('Erro ao carregar listas vinculadas:', error);
       return [];
     }
   };
 
   const fetchRotinas = async () => {
-    if (!projetoSelecionado) return;
+    if (!listaSelecionada) return;
     
     try {
       setLoadingRotinas(true);
       
+      // ✅ Buscar rotinas da lista selecionada
       const { data, error } = await supabase
         .from('routine_tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('projeto_id', projetoSelecionado)
+        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -180,7 +183,7 @@ export default function GestaoRotinas({ user }) {
   };
 
   // ===========================================
-  // FUNÇÕES DE AÇÕES
+  // ✅ FUNÇÕES DE AÇÕES (ATUALIZADAS PARA LISTAS)
   // ===========================================
 
   const validarFormulario = () => {
@@ -189,8 +192,8 @@ export default function GestaoRotinas({ user }) {
       return false;
     }
     
-    if (!projetoSelecionado) {
-      toast.error('Selecione um projeto');
+    if (!listaSelecionada) {
+      toast.error('Selecione uma lista');
       return false;
     }
     
@@ -218,9 +221,10 @@ export default function GestaoRotinas({ user }) {
     try {
       setSalvandoRotina(true);
       
+      // ✅ Usar task_list_id em vez de projeto_id
       const dadosRotina = {
         usuario_id: user.id,
-        projeto_id: projetoSelecionado,
+        task_list_id: listaSelecionada, // ✅ Mudança aqui
         content: formData.content.trim(),
         recurrence_type: formData.recurrence_type,
         recurrence_interval: formData.recurrence_interval,
@@ -340,16 +344,8 @@ export default function GestaoRotinas({ user }) {
     router.push('/configuracoes');
   };
 
-  const handleHistoricoAcessos = () => {
-    router.push('/historico-acessos');
-  };
-
-  const handleAnalisesIndicadoresClick = () => {
-    router.push('/analise-multiplos-indicadores');
-  };
-
   // ===========================================
-  // EFFECTS
+  // ✅ EFFECTS (ATUALIZADOS PARA LISTAS)
   // ===========================================
 
   useEffect(() => {
@@ -362,7 +358,7 @@ export default function GestaoRotinas({ user }) {
     const carregarDados = async () => {
       if (user) {
         setLoading(true);
-        await fetchProjetosVinculados(user.id);
+        await fetchListasVinculadas(user.id); // ✅ Mudança aqui
         setLoading(false);
       }
     };
@@ -371,10 +367,10 @@ export default function GestaoRotinas({ user }) {
   }, [user]);
 
   useEffect(() => {
-    if (projetoSelecionado) {
+    if (listaSelecionada) { // ✅ Mudança aqui
       fetchRotinas();
     }
-  }, [projetoSelecionado]);
+  }, [listaSelecionada]); // ✅ Mudança aqui
 
   // Fechar menu quando clicar fora
   useEffect(() => {
@@ -442,7 +438,6 @@ export default function GestaoRotinas({ user }) {
                     Início
                   </button>
                   
-                  {/* ✅ SUBSTITUÍDO: Visualizar Atividades (ao invés de Gestão de Rotinas) */}
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -464,6 +459,7 @@ export default function GestaoRotinas({ user }) {
                     <FiTrendingUp className="mr-3 h-4 w-4" />
                     Gestão Indicadores
                   </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -474,6 +470,19 @@ export default function GestaoRotinas({ user }) {
                     <FiFolder className="mr-3 h-4 w-4" />
                     Gestão Documentos
                   </button>
+                  
+                  {/* ✅ NOVO: Link para Gestão de Listas */}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      router.push('/gestao-listas');
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                  >
+                    <FiList className="mr-3 h-4 w-4" />
+                    Gestão de Listas
+                  </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -511,37 +520,37 @@ export default function GestaoRotinas({ user }) {
         </div>
       </div>
 
-      {/* Seleção de Projeto */}
+      {/* ✅ Seleção de Lista */}
       <div className="sticky top-[72px] bg-white border-b border-gray-200 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {loading ? (
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#012060]"></div>
             </div>
-          ) : projetosVinculados.length === 0 ? (
+          ) : listasVinculadas.length === 0 ? (
             <div className="text-center py-4">
               <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <FiFolder className="w-6 h-6 text-gray-400" />
+                <FiList className="w-6 h-6 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma lista vinculada</h3>
               <p className="text-gray-500 text-sm">
-                Entre em contato com o administrador para vincular você a projetos relevantes.
+                Entre em contato com o administrador para vincular você a listas relevantes.
               </p>
             </div>
           ) : (
             <div className="flex items-center justify-between">
               <select
                 className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm mr-4"
-                value={projetoSelecionado}
-                onChange={(e) => setProjetoSelecionado(e.target.value)}
+                value={listaSelecionada}
+                onChange={(e) => setListaSelecionada(e.target.value)}
               >
-                <option value="">Selecione um projeto</option>
-                {Object.entries(projetos).map(([id, nome]) => (
+                <option value="">Selecione uma lista</option>
+                {Object.entries(listas).map(([id, nome]) => (
                   <option key={id} value={id}>{nome}</option>
                 ))}
               </select>
               
-              {projetoSelecionado && (
+              {listaSelecionada && (
                 <button
                   onClick={() => setShowForm(true)}
                   className="px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center space-x-2 transition-colors"
@@ -558,7 +567,7 @@ export default function GestaoRotinas({ user }) {
       {/* Conteúdo Principal */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {projetoSelecionado && (
+          {listaSelecionada && (
             <>
               {/* Lista de Rotinas */}
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -686,6 +695,16 @@ export default function GestaoRotinas({ user }) {
               </div>
 
               <div className="space-y-6">
+                {/* ✅ Mostrar lista selecionada */}
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="flex items-center text-sm">
+                    <FiList className="w-4 h-4 text-[#012060] mr-2" />
+                    <span className="text-gray-700">
+                      Lista selecionada: <strong>{listas[listaSelecionada]}</strong>
+                    </span>
+                  </div>
+                </div>
+
                 {/* Conteúdo da Rotina */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -806,10 +825,12 @@ export default function GestaoRotinas({ user }) {
                   </div>
                 </div>
 
-                {/* Preview da Recorrência - VERSÃO ALTERNATIVA */}
+                {/* Preview da Recorrência */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
                   <p className="text-sm text-blue-800">
+                    <strong>Lista:</strong> {listas[listaSelecionada]}
+                    <br />
                     <strong>Tipo:</strong> {tiposRecorrencia.find(t => t.valor === formData.recurrence_type)?.nome}
                     <br />
                     {formData.recurrence_type === 'daily' && (

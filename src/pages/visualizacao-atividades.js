@@ -38,10 +38,10 @@ export default function VisualizacaoAtividades({ user }) {
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   
-  // Estados para projetos
-  const [projetos, setProjetos] = useState({});
-  const [projetosVinculados, setProjetosVinculados] = useState([]);
-  const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  // ✅ Estados para listas (substituindo projetos)
+  const [listas, setListas] = useState({});
+  const [listasVinculadas, setListasVinculadas] = useState([]);
+  const [listaSelecionada, setListaSelecionada] = useState('');
   
   // Estados para data
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
@@ -61,6 +61,12 @@ export default function VisualizacaoAtividades({ user }) {
   const [menuAberto, setMenuAberto] = useState(null);
   const [editandoAtividade, setEditandoAtividade] = useState(null);
   const [textoEdicao, setTextoEdicao] = useState('');
+
+  // Estados para o popup de calendário
+  const [showPopupCalendario, setShowPopupCalendario] = useState(false);
+  const [atividadePopup, setAtividadePopup] = useState('');
+  const [dataPopup, setDataPopup] = useState(new Date());
+  const [adicionandoAtividadePopup, setAdicionandoAtividadePopup] = useState(false);
 
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
@@ -98,63 +104,65 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   // ===========================================
-  // FUNÇÕES DE CARREGAMENTO DE DADOS
+  // ✅ FUNÇÕES DE CARREGAMENTO DE DADOS (ATUALIZADAS PARA LISTAS)
   // ===========================================
 
-  const fetchProjetosVinculados = async (userId) => {
+  const fetchListasVinculadas = async (userId) => {
     try {
+      // ✅ Buscar listas vinculadas ao usuário
       const { data, error } = await supabase
-        .from('relacao_usuarios_projetos')
-        .select('projeto_id')
+        .from('relacao_usuario_list')
+        .select('list_id')
         .eq('usuario_id', userId);
       
       if (error) throw error;
       
-      const projetoIds = data.map(item => item.projeto_id);
-      setProjetosVinculados(projetoIds);
+      const listIds = data.map(item => item.list_id);
+      setListasVinculadas(listIds);
       
-      if (projetoIds.length > 0) {
-        const { data: projetosData, error: projetosError } = await supabase
-          .from('projetos')
-          .select('id, nome')
-          .in('id', projetoIds)
-          .order('nome');
+      if (listIds.length > 0) {
+        // ✅ Buscar dados das listas
+        const { data: listasData, error: listasError } = await supabase
+          .from('tasks_list')
+          .select('id, nome_lista')
+          .in('id', listIds)
+          .order('nome_lista');
         
-        if (projetosError) throw projetosError;
+        if (listasError) throw listasError;
         
-        const projetosObj = {};
-        projetosData.forEach(proj => {
-          projetosObj[proj.id] = proj.nome;
+        const listasObj = {};
+        listasData.forEach(lista => {
+          listasObj[lista.id] = lista.nome_lista;
         });
         
-        setProjetos(projetosObj);
+        setListas(listasObj);
         
-        // Selecionar primeiro projeto por padrão
-        if (!projetoSelecionado && projetosData.length > 0) {
-          setProjetoSelecionado(projetosData[0].id);
+        // Selecionar primeira lista por padrão
+        if (!listaSelecionada && listasData.length > 0) {
+          setListaSelecionada(listasData[0].id);
         }
       }
       
-      return projetoIds;
+      return listIds;
     } catch (error) {
-      console.error('Erro ao carregar projetos vinculados:', error);
+      console.error('Erro ao carregar listas vinculadas:', error);
       return [];
     }
   };
 
   const fetchAtividadesRotina = async () => {
-    if (!projetoSelecionado) return;
+    if (!listaSelecionada) return;
     
     try {
       const dataAtual = formatarDataISO(dataSelecionada);
       const diaSemana = getDiaSemanaNumero(dataSelecionada);
       
-      // Buscar rotinas que devem aparecer na data selecionada
+      // ✅ Buscar rotinas da lista selecionada
       const { data, error } = await supabase
         .from('routine_tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('projeto_id', projetoSelecionado)
+        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
         .lte('start_date', dataAtual)
         .or(`end_date.is.null,end_date.gte.${dataAtual}`);
       
@@ -205,28 +213,28 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   const fetchAtividadesDia = async () => {
-    if (!projetoSelecionado) return;
+    if (!listaSelecionada) return;
     
     try {
       const dataAtual = formatarDataISO(dataSelecionada);
       
-      // Buscar atividades do dia atual
+      // ✅ Buscar atividades do dia atual da lista selecionada
       const { data: atividadesHoje, error: erroHoje } = await supabase
         .from('tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('projeto_id', projetoSelecionado)
+        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
         .eq('date', dataAtual)
         .order('created_at', { ascending: false });
       
       if (erroHoje) throw erroHoje;
       
-      // Buscar atividades pendentes de dias anteriores
+      // ✅ Buscar atividades pendentes de dias anteriores da lista selecionada
       const { data: atividadesPendentes, error: erroPendentes } = await supabase
         .from('tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('projeto_id', projetoSelecionado)
+        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
         .eq('completed', false)
         .lt('date', dataAtual)
         .order('date', { ascending: false });
@@ -248,23 +256,24 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   // ===========================================
-  // FUNÇÕES DE AÇÕES
+  // ✅ FUNÇÕES DE AÇÕES (ATUALIZADAS PARA LISTAS)
   // ===========================================
 
   const adicionarAtividade = async () => {
-    if (!novaAtividade.trim() || !projetoSelecionado) {
-      toast.error('Digite uma atividade e selecione um projeto');
+    if (!novaAtividade.trim() || !listaSelecionada) {
+      toast.error('Digite uma atividade e selecione uma lista');
       return;
     }
     
     try {
       setAdicionandoAtividade(true);
       
+      // ✅ Inserir com task_list_id
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           usuario_id: user.id,
-          projeto_id: projetoSelecionado,
+          task_list_id: listaSelecionada, // ✅ Mudança aqui
           content: novaAtividade.trim(),
           date: formatarDataISO(dataSelecionada),
           completed: false
@@ -285,6 +294,50 @@ export default function VisualizacaoAtividades({ user }) {
       toast.error('Erro ao adicionar atividade');
     } finally {
       setAdicionandoAtividade(false);
+    }
+  };
+
+  const adicionarAtividadeComData = async () => {
+    if (!atividadePopup.trim() || !listaSelecionada) {
+      toast.error('Digite uma atividade e selecione uma lista');
+      return;
+    }
+    
+    try {
+      setAdicionandoAtividadePopup(true);
+      
+      // ✅ Inserir com task_list_id
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{
+          usuario_id: user.id,
+          task_list_id: listaSelecionada, // ✅ Mudança aqui
+          content: atividadePopup.trim(),
+          date: formatarDataISO(dataPopup),
+          completed: false
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Limpar estados do popup
+      setAtividadePopup('');
+      setDataPopup(new Date());
+      setShowPopupCalendario(false);
+      
+      toast.success('Atividade adicionada com sucesso!');
+      
+      // Recarregar atividades se a data selecionada for a mesma da data atual
+      if (formatarDataISO(dataPopup) === formatarDataISO(dataSelecionada)) {
+        await fetchAtividadesDia();
+      }
+      
+    } catch (error) {
+      console.error('Erro ao adicionar atividade:', error);
+      toast.error('Erro ao adicionar atividade');
+    } finally {
+      setAdicionandoAtividadePopup(false);
     }
   };
 
@@ -407,6 +460,19 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
+  // Funções do popup
+  const abrirPopupCalendario = () => {
+    setDataPopup(new Date());
+    setAtividadePopup('');
+    setShowPopupCalendario(true);
+  };
+
+  const fecharPopupCalendario = () => {
+    setShowPopupCalendario(false);
+    setAtividadePopup('');
+    setDataPopup(new Date());
+  };
+
   // ===========================================
   // FUNÇÕES DE NAVEGAÇÃO
   // ===========================================
@@ -436,16 +502,8 @@ export default function VisualizacaoAtividades({ user }) {
     router.push('/configuracoes');
   };
 
-  const handleHistoricoAcessos = () => {
-    router.push('/historico-acessos');
-  };
-
-  const handleAnalisesIndicadoresClick = () => {
-    router.push('/analise-multiplos-indicadores');
-  };
-
   // ===========================================
-  // EFFECTS
+  // ✅ EFFECTS (ATUALIZADOS PARA LISTAS)
   // ===========================================
 
   useEffect(() => {
@@ -458,7 +516,7 @@ export default function VisualizacaoAtividades({ user }) {
     const carregarDados = async () => {
       if (user) {
         setLoading(true);
-        await fetchProjetosVinculados(user.id);
+        await fetchListasVinculadas(user.id); // ✅ Mudança aqui
         setLoading(false);
       }
     };
@@ -468,7 +526,7 @@ export default function VisualizacaoAtividades({ user }) {
 
   useEffect(() => {
     const carregarAtividades = async () => {
-      if (projetoSelecionado) {
+      if (listaSelecionada) { // ✅ Mudança aqui
         setLoadingAtividades(true);
         await Promise.all([
           fetchAtividadesRotina(),
@@ -479,7 +537,7 @@ export default function VisualizacaoAtividades({ user }) {
     };
     
     carregarAtividades();
-  }, [projetoSelecionado, dataSelecionada]);
+  }, [listaSelecionada, dataSelecionada]); // ✅ Mudança aqui
 
   // Fechar menu quando clicar fora
   useEffect(() => {
@@ -511,7 +569,6 @@ export default function VisualizacaoAtividades({ user }) {
       {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Mobile e Desktop */}
           <div className="flex items-center justify-between">
             <LogoDisplay 
               className=""
@@ -540,7 +597,6 @@ export default function VisualizacaoAtividades({ user }) {
                     Início
                   </button>
                   
-                  {/* ✅ Gestão de Rotinas */}
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -562,6 +618,7 @@ export default function VisualizacaoAtividades({ user }) {
                     <FiTrendingUp className="mr-3 h-4 w-4" />
                     Gestão Indicadores
                   </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -572,6 +629,19 @@ export default function VisualizacaoAtividades({ user }) {
                     <FiFolder className="mr-3 h-4 w-4" />
                     Gestão Documentos
                   </button>
+                  
+                  {/* ✅ NOVO: Link para Gestão de Listas */}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      router.push('/gestao-listas');
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                  >
+                    <FiList className="mr-3 h-4 w-4" />
+                    Gestão de Listas
+                  </button>
+                  
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -608,41 +678,41 @@ export default function VisualizacaoAtividades({ user }) {
         </div>
       </div>
 
-      {/* SEÇÃO FIXA MESCLADA: Seleção de projeto + Data */}
+      {/* ✅ SEÇÃO FIXA: Seleção de lista + Data */}
       <div className="sticky top-[72px] bg-white border-b border-gray-200 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {loading ? (
             <div className="flex justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#012060]"></div>
             </div>
-          ) : projetosVinculados.length === 0 ? (
+          ) : listasVinculadas.length === 0 ? (
             <div className="text-center py-4">
               <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <FiFolder className="w-6 h-6 text-gray-400" />
+                <FiList className="w-6 h-6 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum projeto vinculado</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma lista vinculada</h3>
               <p className="text-gray-500 text-sm">
-                Entre em contato com o administrador para vincular você a projetos relevantes.
+                Entre em contato com o administrador para vincular você a listas relevantes.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Seleção de Projeto */}
+              {/* ✅ Seleção de Lista */}
               <div>
                 <select
                   className="w-full px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm"
-                  value={projetoSelecionado}
-                  onChange={(e) => setProjetoSelecionado(e.target.value)}
+                  value={listaSelecionada}
+                  onChange={(e) => setListaSelecionada(e.target.value)}
                 >
-                  <option value="">Selecione um projeto</option>
-                  {Object.entries(projetos).map(([id, nome]) => (
+                  <option value="">Selecione uma lista</option>
+                  {Object.entries(listas).map(([id, nome]) => (
                     <option key={id} value={id}>{nome}</option>
                   ))}
                 </select>
               </div>
 
               {/* Navegação de Data */}
-              {projetoSelecionado && (
+              {listaSelecionada && (
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => mudarData(-1)}
@@ -699,7 +769,7 @@ export default function VisualizacaoAtividades({ user }) {
       </div>
 
       {/* CONTEÚDO PRINCIPAL ROLÁVEL */}
-      {projetoSelecionado && (
+      {listaSelecionada && (
         <div className="flex-1 overflow-y-auto pt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
             {loadingAtividades ? (
@@ -891,7 +961,7 @@ export default function VisualizacaoAtividades({ user }) {
                             className={`p-4 border rounded-lg transition-colors ${
                               isCompleted 
                                 ? 'bg-green-50 border-green-200' 
-                                : 'bg-blue-50 border-blue-200 hover:bg-blue-100' // ✅ MUDOU: de purple para blue
+                                : 'bg-blue-50 border-blue-200 hover:bg-blue-100'
                             }`}
                           >
                             <div className="flex items-start space-x-3">
@@ -900,7 +970,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                   isCompleted
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-blue-100 text-[#012060] hover:bg-blue-200' // ✅ MUDOU: de purple para blue
+                                    : 'bg-blue-100 text-[#012060] hover:bg-blue-200'
                                 }`}
                               >
                                 <FiCheck className="w-4 h-4" />
@@ -934,12 +1004,114 @@ export default function VisualizacaoAtividades({ user }) {
         </div>
       )}
 
-      {/* SEÇÃO FIXA 3: Adicionar nova atividade (parte inferior) */}
-      {projetoSelecionado && (
+      {/* POPUP PARA ADICIONAR ATIVIDADE COM DATA ESPECÍFICA */}
+      {showPopupCalendario && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {/* Header do Popup */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Nova Atividade</h3>
+              <button
+                onClick={fecharPopupCalendario}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Conteúdo do Popup */}
+            <div className="p-6 space-y-4">
+              {/* Campo de texto para a atividade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descrição da Atividade
+                </label>
+                <textarea
+                  value={atividadePopup}
+                  onChange={(e) => setAtividadePopup(e.target.value)}
+                  placeholder="Digite a descrição da atividade..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-[#012060] resize-none"
+                />
+              </div>
+              
+              {/* Seletor de data */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data da Atividade
+                </label>
+                <input
+                  type="date"
+                  value={formatarDataISO(dataPopup)}
+                  onChange={(e) => setDataPopup(new Date(e.target.value + 'T12:00:00'))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-[#012060]"
+                />
+              </div>
+              
+              {/* Mostrar lista e data selecionada */}
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center">
+                    <FiList className="w-4 h-4 text-[#012060] mr-2" />
+                    <span className="text-gray-700">
+                      Lista: <strong>{listas[listaSelecionada]}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <FiCalendar className="w-4 h-4 text-[#012060] mr-2" />
+                    <span className="text-gray-700">
+                      Data: <strong>{formatarData(dataPopup)}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer do Popup */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={fecharPopupCalendario}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={adicionarAtividadeComData}
+                disabled={adicionandoAtividadePopup || !atividadePopup.trim()}
+                className="px-4 py-2 bg-[#012060] text-white rounded-lg hover:bg-[#013080] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-colors"
+              >
+                {adicionandoAtividadePopup ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiPlus className="w-4 h-4" />
+                    <span>Adicionar Atividade</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SEÇÃO FIXA: Adicionar nova atividade (parte inferior) */}
+      {listaSelecionada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Adicionar Nova Atividade</h3>
             <div className="flex space-x-3">
+              {/* Botão de calendário */}
+              <button
+                onClick={abrirPopupCalendario}
+                className="px-4 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center justify-center transition-colors"
+                title="Adicionar atividade para data específica"
+              >
+                <FiCalendar className="w-5 h-5" />
+              </button>
+              
               <input
                 type="text"
                 placeholder="Digite a atividade..."
@@ -960,6 +1132,11 @@ export default function VisualizacaoAtividades({ user }) {
                 )}
               </button>
             </div>
+            
+            {/* Texto explicativo */}
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Use o campo acima para adicionar para <strong>{formatarData(dataSelecionada)}</strong> ou clique no calendário para escolher outra data
+            </p>
           </div>
         </div>
       )}
