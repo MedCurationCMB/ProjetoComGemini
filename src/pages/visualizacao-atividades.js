@@ -1,5 +1,5 @@
 // Arquivo: src/pages/visualizacao-atividades.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -11,6 +11,7 @@ import {
   FiCalendar,
   FiChevronLeft,
   FiChevronRight,
+  FiChevronDown,
   FiMenu, 
   FiHome, 
   FiStar, 
@@ -30,7 +31,8 @@ import {
   FiCheckCircle,
   FiMoreVertical,
   FiTrash2,
-  FiEdit
+  FiEdit,
+  FiCircle
 } from 'react-icons/fi';
 import { LuCalendarPlus } from "react-icons/lu";
 
@@ -38,6 +40,13 @@ export default function VisualizacaoAtividades({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // ✅ SOLUÇÃO 2: useRef para controlar carregamentos desnecessários
+  const dadosCarregadosRef = useRef(false);
+  const userIdRef = useRef(null);
+  const atividadesCarregadasRef = useRef(false);
+  const ultimaListaRef = useRef(null);
+  const ultimaDataRef = useRef(null);
   
   // ✅ Estados para listas (substituindo projetos)
   const [listas, setListas] = useState({});
@@ -110,6 +119,8 @@ export default function VisualizacaoAtividades({ user }) {
 
   const fetchListasVinculadas = async (userId) => {
     try {
+      console.log('🔄 Carregando listas vinculadas...');
+      
       // ✅ Buscar listas vinculadas ao usuário
       const { data, error } = await supabase
         .from('relacao_usuario_list')
@@ -144,6 +155,7 @@ export default function VisualizacaoAtividades({ user }) {
         }
       }
       
+      console.log('✅ Listas carregadas com sucesso');
       return listIds;
     } catch (error) {
       console.error('Erro ao carregar listas vinculadas:', error);
@@ -504,7 +516,7 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   // ===========================================
-  // ✅ EFFECTS (ATUALIZADOS PARA LISTAS)
+  // ✅ EFFECTS OTIMIZADOS (COM SOLUÇÃO useRef)
   // ===========================================
 
   useEffect(() => {
@@ -513,32 +525,77 @@ export default function VisualizacaoAtividades({ user }) {
     }
   }, [user, router]);
 
+  // ✅ EFFECT PRINCIPAL: Carregamento de dados do usuário (OTIMIZADO)
   useEffect(() => {
     const carregarDados = async () => {
-      if (user) {
+      // ✅ Só carrega se:
+      // 1. Tem usuário
+      // 2. Nunca carregou antes OU o usuário mudou (login/logout real)
+      if (user && (!dadosCarregadosRef.current || user.id !== userIdRef.current)) {
+        console.log('🔄 Carregando dados do usuário...', user.id);
         setLoading(true);
-        await fetchListasVinculadas(user.id); // ✅ Mudança aqui
+        await fetchListasVinculadas(user.id);
         setLoading(false);
+        
+        // ✅ Marcar como carregado
+        dadosCarregadosRef.current = true;
+        userIdRef.current = user.id;
+      } else if (user) {
+        console.log('✅ Dados já carregados, pulando recarregamento desnecessário');
       }
     };
     
     carregarDados();
   }, [user]);
 
+  // ✅ EFFECT: Reset quando usuário faz logout
+  useEffect(() => {
+    if (!user) {
+      console.log('🚪 Usuário fez logout, resetando refs');
+      dadosCarregadosRef.current = false;
+      userIdRef.current = null;
+      atividadesCarregadasRef.current = false;
+      ultimaListaRef.current = null;
+      ultimaDataRef.current = null;
+    }
+  }, [user]);
+
+  // ✅ EFFECT: Carregamento de atividades (OTIMIZADO)
   useEffect(() => {
     const carregarAtividades = async () => {
-      if (listaSelecionada) { // ✅ Mudança aqui
+      // ✅ Só carrega se:
+      // 1. Tem lista selecionada
+      // 2. Nunca carregou OU a lista/data mudou realmente
+      const dataISO = formatarDataISO(dataSelecionada);
+      const mudouLista = listaSelecionada !== ultimaListaRef.current;
+      const mudouData = dataISO !== ultimaDataRef.current;
+      
+      if (listaSelecionada && (!atividadesCarregadasRef.current || mudouLista || mudouData)) {
+        console.log('🔄 Carregando atividades...', {
+          lista: listaSelecionada,
+          data: dataISO,
+          mudouLista,
+          mudouData
+        });
+        
         setLoadingAtividades(true);
         await Promise.all([
           fetchAtividadesRotina(),
           fetchAtividadesDia()
         ]);
         setLoadingAtividades(false);
+        
+        // ✅ Marcar como carregado
+        atividadesCarregadasRef.current = true;
+        ultimaListaRef.current = listaSelecionada;
+        ultimaDataRef.current = dataISO;
+      } else if (listaSelecionada) {
+        console.log('✅ Atividades já carregadas para esta lista/data, pulando...');
       }
     };
     
     carregarAtividades();
-  }, [listaSelecionada, dataSelecionada]); // ✅ Mudança aqui
+  }, [listaSelecionada, dataSelecionada]);
 
   // Fechar menu quando clicar fora
   useEffect(() => {
@@ -567,7 +624,7 @@ export default function VisualizacaoAtividades({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo */}
+      {/* Header responsivo - MANTIDO COMO ESTÁ */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -631,7 +688,6 @@ export default function VisualizacaoAtividades({ user }) {
                     Gestão Documentos
                   </button>
                   
-                  {/* ✅ NOVO: Link para Gestão de Listas */}
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -679,15 +735,15 @@ export default function VisualizacaoAtividades({ user }) {
         </div>
       </div>
 
-      {/* ✅ SEÇÃO FIXA: Seleção de lista + Data */}
+      {/* ✅ NOVA SEÇÃO REDESENHADA: Com ajustes de tamanho */}
       <div className="sticky top-[72px] bg-white border-b border-gray-200 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {loading ? (
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#012060]"></div>
             </div>
           ) : listasVinculadas.length === 0 ? (
-            <div className="text-center py-4">
+            <div className="text-center py-8">
               <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                 <FiList className="w-6 h-6 text-gray-400" />
               </div>
@@ -697,73 +753,95 @@ export default function VisualizacaoAtividades({ user }) {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* ✅ Seleção de Lista */}
-              <div>
-                <select
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm"
-                  value={listaSelecionada}
-                  onChange={(e) => setListaSelecionada(e.target.value)}
-                >
-                  <option value="">Selecione uma lista</option>
-                  {Object.entries(listas).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-6">
+              {/* ✅ SEÇÃO DA DATA - Estilo grande e destaque inspirado no design */}
+              <div className="flex items-center justify-between">
+                {/* Data principal - Estilo grande como no design do chefe */}
+                <div className="flex-1">
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+                    {dataSelecionada.getDate()} de {dataSelecionada.toLocaleDateString('pt-BR', { month: 'long' })}
+                  </h1>
+                  <p className="text-lg text-gray-500 capitalize mt-1">
+                    {formatarDiaSemana(dataSelecionada)}, {dataSelecionada.getFullYear()}
+                  </p>
+                </div>
 
-              {/* Navegação de Data */}
-              {listaSelecionada && (
-                <div className="flex items-center justify-between">
+                {/* Controles de navegação */}
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={() => mudarData(-1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Dia anterior"
                   >
                     <FiChevronLeft className="w-6 h-6 text-gray-600" />
                   </button>
                   
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowDatePicker(!showDatePicker)}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                      >
-                        <FiCalendar className="w-6 h-6 text-[#012060]" />
-                      </button>
-                      
-                      {showDatePicker && (
-                        <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border z-30 p-4">
-                          <input
-                            type="date"
-                            value={formatarDataISO(dataSelecionada)}
-                            onChange={(e) => {
-                              setDataSelecionada(new Date(e.target.value + 'T12:00:00'));
-                              setShowDatePicker(false);
-                            }}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060]"
-                          />
-                        </div>
-                      )}
-                    </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className="p-3 hover:bg-blue-50 rounded-full transition-colors bg-blue-100"
+                      title="Selecionar data"
+                    >
+                      <FiCalendar className="w-6 h-6 text-[#012060]" />
+                    </button>
                     
-                    <div className="text-center">
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {formatarData(dataSelecionada)}
-                      </h2>
-                      <span className="text-sm text-[#012060] font-medium capitalize">
-                        {formatarDiaSemana(dataSelecionada)}
-                      </span>
-                    </div>
+                    {showDatePicker && (
+                      <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border z-30 p-4">
+                        <input
+                          type="date"
+                          value={formatarDataISO(dataSelecionada)}
+                          onChange={(e) => {
+                            setDataSelecionada(new Date(e.target.value + 'T12:00:00'));
+                            setShowDatePicker(false);
+                          }}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060]"
+                        />
+                      </div>
+                    )}
                   </div>
                   
                   <button
                     onClick={() => mudarData(1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Próximo dia"
                   >
                     <FiChevronRight className="w-6 h-6 text-gray-600" />
                   </button>
                 </div>
-              )}
+              </div>
+
+              {/* ✅ SELEÇÃO DE LISTA - REDUZIDA PARA 1/3 DO TAMANHO */}
+              <div className="flex items-center justify-between">
+                <div className="relative w-1/3">
+                  <select
+                    className="w-full pl-12 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm font-medium text-gray-700 appearance-none cursor-pointer transition-all duration-200 hover:bg-white hover:shadow-sm"
+                    value={listaSelecionada}
+                    onChange={(e) => setListaSelecionada(e.target.value)}
+                  >
+                    <option value="">Selecione uma lista</option>
+                    {Object.entries(listas).map(([id, nome]) => (
+                      <option key={id} value={id}>{nome}</option>
+                    ))}
+                  </select>
+                  
+                  {/* Ícone de lista à esquerda */}
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <FiList className="w-4 h-4 text-[#012060]" />
+                  </div>
+                  
+                  {/* Ícone de dropdown à direita */}
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <FiChevronDown className="w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Badge opcional com contador de atividades */}
+                {listaSelecionada && (atividadesDia.length > 0 || atividadesRotina.length > 0) && (
+                  <div className="bg-gray-500 text-white px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap">
+                    {atividadesDia.length + atividadesRotina.length} atividade{(atividadesDia.length + atividadesRotina.length) !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -823,16 +901,18 @@ export default function VisualizacaoAtividades({ user }) {
                                   : 'bg-yellow-50 border-yellow-200'
                             }`}
                           >
-                            <div className="flex items-start space-x-3">
+                            <div className="flex items-start space-x-3">                      
+                              {/* ✅ BOTÃO PARA MARCAR/DESMARCAR - sempre visível */}
                               <button
                                 onClick={() => toggleAtividadeCompleta(atividade.id, atividade.completed)}
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                   atividade.completed
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-blue-100 text-[#012060] hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-[#012060]'
                                 }`}
+                                title={atividade.completed ? 'Marcar como pendente' : 'Marcar como concluída'}
                               >
-                                <FiCheck className="w-4 h-4" />
+                                {atividade.completed ? <FiCheck className="w-4 h-4" /> : <FiCircle className="w-4 h-4" />}
                               </button>
                               
                               <div className="flex-1">
@@ -966,15 +1046,17 @@ export default function VisualizacaoAtividades({ user }) {
                             }`}
                           >
                             <div className="flex items-start space-x-3">
+                              {/* ✅ BOTÃO PARA MARCAR/DESMARCAR ROTINA - sempre visível */}
                               <button
                                 onClick={() => toggleRotinaCompleta(rotina.id, isCompleted)}
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                   isCompleted
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-blue-100 text-[#012060] hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-[#012060]'
                                 }`}
+                                title={isCompleted ? 'Marcar como pendente' : 'Marcar como concluída'}
                               >
-                                <FiCheck className="w-4 h-4" />
+                                {isCompleted ? <FiCheck className="w-4 h-4" /> : <FiCircle className="w-4 h-4" />}
                               </button>
                               
                               <div className="flex-1">
