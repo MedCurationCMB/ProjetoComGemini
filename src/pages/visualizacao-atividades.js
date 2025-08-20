@@ -32,6 +32,7 @@ import {
   FiTrash2,
   FiEdit
 } from 'react-icons/fi';
+import { LuCalendarPlus } from "react-icons/lu";
 
 export default function VisualizacaoAtividades({ user }) {
   const router = useRouter();
@@ -1101,7 +1102,6 @@ export default function VisualizacaoAtividades({ user }) {
       {listaSelecionada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Adicionar Nova Atividade</h3>
             <div className="flex space-x-3">
               {/* Botão de calendário */}
               <button
@@ -1109,12 +1109,12 @@ export default function VisualizacaoAtividades({ user }) {
                 className="px-4 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center justify-center transition-colors"
                 title="Adicionar atividade para data específica"
               >
-                <FiCalendar className="w-5 h-5" />
+                <LuCalendarPlus className="w-5 h-5" />
               </button>
               
               <input
                 type="text"
-                placeholder="Digite a atividade..."
+                placeholder="Digite a atividade que deseja adicionar..."
                 value={novaAtividade}
                 onChange={(e) => setNovaAtividade(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
@@ -1132,11 +1132,6 @@ export default function VisualizacaoAtividades({ user }) {
                 )}
               </button>
             </div>
-            
-            {/* Texto explicativo */}
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              Use o campo acima para adicionar para <strong>{formatarData(dataSelecionada)}</strong> ou clique no calendário para escolher outra data
-            </p>
           </div>
         </div>
       )}
