@@ -32,7 +32,8 @@ import {
   FiTarget,
   FiCalendar,
   FiActivity,
-  FiAward
+  FiAward,
+  FiGlobe
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -43,7 +44,7 @@ export default function ControleEficienciaTimes({ user }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
-  // KPIs principais de eficiência
+  // KPIs principais de eficiência - GLOBAIS
   const [kpisEficiencia, setKpisEficiencia] = useState({
     totalTarefas: 0,
     tarefasCompletas: 0,
@@ -51,7 +52,7 @@ export default function ControleEficienciaTimes({ user }) {
     taxaConclusao: 0
   });
 
-  // KPIs de disciplina (rotinas)
+  // KPIs de disciplina (rotinas) - GLOBAIS
   const [kpisDisciplina, setKpisDisciplina] = useState({
     totalRotinas: 0,
     rotinasCompletas: 0,
@@ -59,7 +60,7 @@ export default function ControleEficienciaTimes({ user }) {
     taxaDisciplina: 0
   });
 
-  // Dados das tabelas
+  // Dados das tabelas - GLOBAIS
   const [tabelaTimes, setTabelaTimes] = useState([]);
   const [tabelaUsuarios, setTabelaUsuarios] = useState([]);
   const [tabelaRankingTimes, setTabelaRankingTimes] = useState([]);
@@ -176,15 +177,17 @@ export default function ControleEficienciaTimes({ user }) {
 
   // Função para gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
+    let descricao = "Dados globais de todos os usuários e times";
+    
     if (!filtros.periodo) {
-      return "Todos os dados disponíveis";
+      return descricao + " - Todos os períodos";
     }
 
     let dataInicio, dataFim;
 
     if (filtros.periodo === 'personalizado') {
       if (!filtros.data_inicio || !filtros.data_fim) {
-        return "Todos os dados disponíveis";
+        return descricao + " - Todos os períodos";
       }
       dataInicio = filtros.data_inicio;
       dataFim = filtros.data_fim;
@@ -199,10 +202,10 @@ export default function ControleEficienciaTimes({ user }) {
       return `${partes[2]}/${partes[1]}/${partes[0]}`;
     };
 
-    return `Dados de eficiência e disciplina entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
+    return `${descricao} entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
   };
 
-  // Função auxiliar para construir query com filtros
+  // Função auxiliar para construir query com filtros - SEM RESTRIÇÕES DE USUÁRIO
   const construirQueryComFiltros = (queryBase, tabela = 'tasks') => {
     let query = queryBase;
 
@@ -239,22 +242,24 @@ export default function ControleEficienciaTimes({ user }) {
     }
   }, [user, router]);
 
-  // Carregar filtros disponíveis
+  // Carregar filtros disponíveis - GLOBAIS (todos os times e usuários)
   useEffect(() => {
     const fetchFiltrosDisponiveis = async () => {
       try {
-        // Buscar times (listas) disponíveis
+        // Buscar TODOS os times (listas) disponíveis - SEM RESTRIÇÕES
         const { data: timesData, error: timesError } = await supabase
           .from('tasks_list')
-          .select('id, nome_lista');
+          .select('id, nome_lista')
+          .order('nome_lista');
 
         if (timesError) throw timesError;
 
-        // Buscar usuários disponíveis
+        // Buscar TODOS os usuários disponíveis - SEM RESTRIÇÕES
         const { data: usuariosData, error: usuariosError } = await supabase
           .from('usuarios')
           .select('id, nome')
-          .eq('ativo', true);
+          .eq('ativo', true)
+          .order('nome');
 
         if (usuariosError) throw usuariosError;
 
@@ -273,6 +278,8 @@ export default function ControleEficienciaTimes({ user }) {
           usuarios: usuariosMap
         });
 
+        console.log(`Carregados ${timesData.length} times e ${usuariosData.length} usuários`);
+
       } catch (error) {
         console.error('Erro ao carregar filtros disponíveis:', error);
         toast.error('Erro ao carregar opções de filtros');
@@ -284,18 +291,19 @@ export default function ControleEficienciaTimes({ user }) {
     }
   }, [user]);
 
-  // Buscar dados dos KPIs de eficiência (tarefas normais)
+  // Buscar dados dos KPIs de eficiência (tarefas normais) - GLOBAIS
   useEffect(() => {
     const fetchKPIsEficiencia = async () => {
       try {
         setLoading(true);
 
-        // Total de tarefas no período
+        // Total de tarefas no período - TODAS AS TAREFAS DE TODOS OS USUÁRIOS
         let queryTotal = supabase.from('tasks')
           .select('*', { count: 'exact', head: true });
         
         queryTotal = construirQueryComFiltros(queryTotal, 'tasks');
         
+        // Aplicar filtros opcionais (não obrigatórios)
         if (filtros.time_id) {
           queryTotal = queryTotal.eq('task_list_id', filtros.time_id);
         }
@@ -307,13 +315,14 @@ export default function ControleEficienciaTimes({ user }) {
         const { count: totalTarefas, error: totalError } = await queryTotal;
         if (totalError) throw totalError;
 
-        // Tarefas completas
+        // Tarefas completas - TODAS AS TAREFAS COMPLETAS DE TODOS OS USUÁRIOS
         let queryCompletas = supabase.from('tasks')
           .select('*', { count: 'exact', head: true })
           .eq('completed', true);
         
         queryCompletas = construirQueryComFiltros(queryCompletas, 'tasks');
         
+        // Aplicar filtros opcionais (não obrigatórios)
         if (filtros.time_id) {
           queryCompletas = queryCompletas.eq('task_list_id', filtros.time_id);
         }
@@ -335,6 +344,8 @@ export default function ControleEficienciaTimes({ user }) {
           taxaConclusao: taxaConclusao
         });
 
+        console.log(`KPIs Eficiência: ${totalTarefas} total, ${tarefasCompletas} completas`);
+
       } catch (error) {
         console.error('Erro ao buscar KPIs de eficiência:', error);
         toast.error('Erro ao carregar dados de eficiência');
@@ -348,13 +359,13 @@ export default function ControleEficienciaTimes({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados dos KPIs de disciplina (rotinas)
+  // Buscar dados dos KPIs de disciplina (rotinas) - GLOBAIS
   useEffect(() => {
     const fetchKPIsDisciplina = async () => {
       try {
         setLoadingDisciplina(true);
 
-        // Total de rotinas no período
+        // Total de rotinas no período - TODAS AS ROTINAS DE TODOS OS USUÁRIOS
         let queryTotalRotinas = supabase.from('routine_tasks_status')
           .select('*', { count: 'exact', head: true });
         
@@ -385,7 +396,7 @@ export default function ControleEficienciaTimes({ user }) {
         const { count: totalRotinas, error: totalRotinasError } = await queryTotalRotinas;
         if (totalRotinasError) throw totalRotinasError;
 
-        // Rotinas completas
+        // Rotinas completas - TODAS AS ROTINAS COMPLETAS DE TODOS OS USUÁRIOS
         let queryRotinasCompletas = supabase.from('routine_tasks_status')
           .select('*', { count: 'exact', head: true })
           .eq('completed', true);
@@ -427,6 +438,8 @@ export default function ControleEficienciaTimes({ user }) {
           taxaDisciplina: taxaDisciplina
         });
 
+        console.log(`KPIs Disciplina: ${totalRotinas} total, ${rotinasCompletas} completas`);
+
       } catch (error) {
         console.error('Erro ao buscar KPIs de disciplina:', error);
         toast.error('Erro ao carregar dados de disciplina');
@@ -440,28 +453,30 @@ export default function ControleEficienciaTimes({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados das tabelas
+  // Buscar dados das tabelas - GLOBAIS (todos os times e usuários)
   useEffect(() => {
     const fetchTabelas = async () => {
       try {
         setLoadingTabelas(true);
 
-        // Buscar dados por time
+        // Buscar TODOS os dados por time - SEM RESTRIÇÕES DE USUÁRIO
         const { data: timesComTarefas, error: timesError } = await supabase
           .from('tasks')
           .select(`
             task_list_id,
             completed,
+            created_at,
             tasks_list!inner(nome_lista)
           `);
 
         if (timesError) throw timesError;
 
-        // Buscar dados de rotinas por time
+        // Buscar TODOS os dados de rotinas por time - SEM RESTRIÇÕES DE USUÁRIO
         const { data: timesComRotinas, error: timesRotinasError } = await supabase
           .from('routine_tasks_status')
           .select(`
             completed,
+            date,
             routine_tasks!inner(
               task_list_id,
               tasks_list!inner(nome_lista)
@@ -473,8 +488,40 @@ export default function ControleEficienciaTimes({ user }) {
         // Processar dados dos times
         const timesMap = {};
         
+        // Filtrar tarefas por data se necessário
+        let tarefasFiltradas = timesComTarefas;
+        if (filtros.periodo && filtros.periodo !== 'personalizado') {
+          const periodo = calcularPeriodo(filtros.periodo);
+          if (periodo.dataInicio && periodo.dataFim) {
+            tarefasFiltradas = timesComTarefas.filter(tarefa => {
+              const dataTarefa = tarefa.created_at.split('T')[0];
+              return dataTarefa >= periodo.dataInicio && dataTarefa <= periodo.dataFim;
+            });
+          }
+        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+          tarefasFiltradas = timesComTarefas.filter(tarefa => {
+            const dataTarefa = tarefa.created_at.split('T')[0];
+            return dataTarefa >= filtros.data_inicio && dataTarefa <= filtros.data_fim;
+          });
+        }
+
+        // Filtrar rotinas por data se necessário
+        let rotinasFiltradas = timesComRotinas;
+        if (filtros.periodo && filtros.periodo !== 'personalizado') {
+          const periodo = calcularPeriodo(filtros.periodo);
+          if (periodo.dataInicio && periodo.dataFim) {
+            rotinasFiltradas = timesComRotinas.filter(rotina => {
+              return rotina.date >= periodo.dataInicio && rotina.date <= periodo.dataFim;
+            });
+          }
+        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+          rotinasFiltradas = timesComRotinas.filter(rotina => {
+            return rotina.date >= filtros.data_inicio && rotina.date <= filtros.data_fim;
+          });
+        }
+
         // Processar tarefas normais
-        timesComTarefas.forEach(tarefa => {
+        tarefasFiltradas.forEach(tarefa => {
           const timeId = tarefa.task_list_id;
           const nomeTime = tarefa.tasks_list.nome_lista;
           
@@ -496,7 +543,7 @@ export default function ControleEficienciaTimes({ user }) {
         });
 
         // Processar rotinas
-        timesComRotinas.forEach(rotina => {
+        rotinasFiltradas.forEach(rotina => {
           const timeId = rotina.routine_tasks.task_list_id;
           const nomeTime = rotina.routine_tasks.tasks_list.nome_lista;
           
@@ -528,12 +575,13 @@ export default function ControleEficienciaTimes({ user }) {
           scoreGeral: (time.taxaEficiencia + time.taxaDisciplina) / 2
         })).sort((a, b) => b.scoreGeral - a.scoreGeral);
 
-        // Buscar dados por usuário
+        // Buscar TODOS os dados por usuário - SEM RESTRIÇÕES
         const { data: usuariosComTarefas, error: usuariosError } = await supabase
           .from('tasks')
           .select(`
             usuario_id,
             completed,
+            created_at,
             usuarios!inner(nome)
           `);
 
@@ -543,6 +591,7 @@ export default function ControleEficienciaTimes({ user }) {
           .from('routine_tasks_status')
           .select(`
             completed,
+            date,
             routine_tasks!inner(
               usuario_id,
               usuarios!inner(nome)
@@ -551,11 +600,36 @@ export default function ControleEficienciaTimes({ user }) {
 
         if (usuariosRotinasError) throw usuariosRotinasError;
 
+        // Filtrar dados dos usuários por período
+        let tarefasUsuariosFiltradas = usuariosComTarefas;
+        let rotinasUsuariosFiltradas = usuariosComRotinas;
+
+        if (filtros.periodo && filtros.periodo !== 'personalizado') {
+          const periodo = calcularPeriodo(filtros.periodo);
+          if (periodo.dataInicio && periodo.dataFim) {
+            tarefasUsuariosFiltradas = usuariosComTarefas.filter(tarefa => {
+              const dataTarefa = tarefa.created_at.split('T')[0];
+              return dataTarefa >= periodo.dataInicio && dataTarefa <= periodo.dataFim;
+            });
+            rotinasUsuariosFiltradas = usuariosComRotinas.filter(rotina => {
+              return rotina.date >= periodo.dataInicio && rotina.date <= periodo.dataFim;
+            });
+          }
+        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+          tarefasUsuariosFiltradas = usuariosComTarefas.filter(tarefa => {
+            const dataTarefa = tarefa.created_at.split('T')[0];
+            return dataTarefa >= filtros.data_inicio && dataTarefa <= filtros.data_fim;
+          });
+          rotinasUsuariosFiltradas = usuariosComRotinas.filter(rotina => {
+            return rotina.date >= filtros.data_inicio && rotina.date <= filtros.data_fim;
+          });
+        }
+
         // Processar dados dos usuários
         const usuariosMap = {};
         
         // Processar tarefas normais dos usuários
-        usuariosComTarefas.forEach(tarefa => {
+        tarefasUsuariosFiltradas.forEach(tarefa => {
           const usuarioId = tarefa.usuario_id;
           const nomeUsuario = tarefa.usuarios.nome;
           
@@ -577,7 +651,7 @@ export default function ControleEficienciaTimes({ user }) {
         });
 
         // Processar rotinas dos usuários
-        usuariosComRotinas.forEach(rotina => {
+        rotinasUsuariosFiltradas.forEach(rotina => {
           const usuarioId = rotina.routine_tasks.usuario_id;
           const nomeUsuario = rotina.routine_tasks.usuarios.nome;
           
@@ -612,6 +686,8 @@ export default function ControleEficienciaTimes({ user }) {
         setTabelaTimes(dadosTimes);
         setTabelaUsuarios(dadosUsuarios);
         setTabelaRankingTimes(dadosTimes.slice(0, 10)); // Top 10
+
+        console.log(`Processados ${dadosTimes.length} times e ${dadosUsuarios.length} usuários`);
 
       } catch (error) {
         console.error('Erro ao buscar dados das tabelas:', error);
@@ -669,7 +745,7 @@ export default function ControleEficienciaTimes({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Controle de Atividades</title>
+        <title>Controle de Atividades - Dashboard Global</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -681,12 +757,18 @@ export default function ControleEficienciaTimes({ user }) {
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
-                fallbackText="Controle"
+                fallbackText="Dashboard Global"
                 showFallback={true}
               />
               
               {/* Controles à direita - Mobile */}
               <div className="flex items-center space-x-3">
+                {/* Indicador Global */}
+                <div className="flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
+                  <FiGlobe className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-700">Global</span>
+                </div>
+
                 {/* Botão de filtro */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -808,9 +890,12 @@ export default function ControleEficienciaTimes({ user }) {
 
             {/* Filtros Mobile */}
             {showFilters && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  <div className="flex items-center space-x-2">
+                    <FiGlobe className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-sm font-medium text-gray-700">Filtros Globais</h3>
+                  </div>
                   {hasFiltrosAtivos() && (
                     <button
                       onClick={limparFiltros}
@@ -824,13 +909,13 @@ export default function ControleEficienciaTimes({ user }) {
                 <div className="space-y-3">
                   {/* Filtro de Time */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Time</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Time (Opcional)</label>
                     <select
                       value={filtros.time_id}
                       onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Todos os times</option>
+                      <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
                       {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
                         <option key={id} value={id}>{nome}</option>
                       ))}
@@ -839,13 +924,13 @@ export default function ControleEficienciaTimes({ user }) {
 
                   {/* Filtro de Usuário */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Usuário</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
                     <select
                       value={filtros.usuario_id}
                       onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Todos os usuários</option>
+                      <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
                       {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
                         <option key={id} value={id}>{nome}</option>
                       ))}
@@ -960,11 +1045,13 @@ export default function ControleEficienciaTimes({ user }) {
           {/* Desktop: Header */}
           <div className="hidden lg:block">
             <div className="flex items-center justify-between mb-4">
-              <LogoDisplay 
-                className=""
-                fallbackText="Controle"
-                showFallback={true}
-              />
+              <div className="flex items-center space-x-4">
+                <LogoDisplay 
+                  className=""
+                  fallbackText="Dashboard Global"
+                  showFallback={true}
+                />
+              </div>
               
               {/* Controles à direita - Desktop */}
               <div className="flex items-center space-x-3">
@@ -1089,9 +1176,15 @@ export default function ControleEficienciaTimes({ user }) {
 
             {/* Filtros Desktop */}
             {showFilters && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-medium text-gray-700">Filtros</h3>
+                  <div className="flex items-center space-x-2">
+                    <FiGlobe className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-sm font-medium text-gray-700">Filtros Globais (Opcionais)</h3>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      Dados de todos os usuários e times
+                    </span>
+                  </div>
                   {hasFiltrosAtivos() && (
                     <button
                       onClick={limparFiltros}
@@ -1105,13 +1198,13 @@ export default function ControleEficienciaTimes({ user }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Filtro de Time */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Time</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Time (Opcional)</label>
                     <select
                       value={filtros.time_id}
                       onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Todos os times</option>
+                      <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
                       {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
                         <option key={id} value={id}>{nome}</option>
                       ))}
@@ -1120,13 +1213,13 @@ export default function ControleEficienciaTimes({ user }) {
 
                   {/* Filtro de Usuário */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Usuário</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
                     <select
                       value={filtros.usuario_id}
                       onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Todos os usuários</option>
+                      <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
                       {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
                         <option key={id} value={id}>{nome}</option>
                       ))}
@@ -1248,22 +1341,15 @@ export default function ControleEficienciaTimes({ user }) {
             {/* Mobile: Cabeçalho da seção */}
             <div className="lg:hidden">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-2xl font-bold text-black">Controle de Atividades</h2>
+                <h2 className="text-2xl font-bold text-black">Dashboard Global de Atividades</h2>
               </div>
               
-              <p className="text-gray-600 text-sm mb-6">
-                {gerarTextoDescritivo()}
-                {hasFiltrosAtivos() && (
-                  <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
-                )}
-              </p>
-            </div>
-
-            {/* Desktop: Cabeçalho da seção */}
-            <div className="hidden lg:flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-black">Controle de Atividades</h1>
-                <p className="text-gray-600 text-sm mt-1">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <FiGlobe className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Visão Global Ativa</span>
+                </div>
+                <p className="text-blue-700 text-xs">
                   {gerarTextoDescritivo()}
                   {hasFiltrosAtivos() && (
                     <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
@@ -1272,101 +1358,135 @@ export default function ControleEficienciaTimes({ user }) {
               </div>
             </div>
 
-            {/* KPIs de Eficiência (Tarefas Normais) */}
+            {/* Desktop: Cabeçalho da seção */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-black">Dashboard Global de Atividades</h1>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <FiGlobe className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Visão Global Ativa</span>
+                  </div>
+                  <p className="text-blue-700 text-sm">
+                    {gerarTextoDescritivo()}
+                    {hasFiltrosAtivos() && (
+                      <span className="ml-2 text-blue-600 font-medium">• Filtros aplicados</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* KPIs de Eficiência (Tarefas Normais) - GLOBAIS */}
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
-                {/* KPI 1: Total de Tarefas */}
+                {/* KPI 1: Total de Tarefas - GLOBAL */}
                 <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-blue-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600">Total de Tarefas</p>
+                      <p className="text-sm font-medium text-gray-600">Total de Tarefas (Global)</p>
                       <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpisEficiencia.totalTarefas)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiClipboard className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
+                      <div className="relative">
+                        <FiClipboard className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
+                        <FiGlobe className="h-3 w-3 text-blue-400 absolute -top-1 -right-1" />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-400 mt-1">
-                      Tarefas criadas no período filtrado
+                      De todos os usuários e times no período
                     </p>
                   </div>
                 </div>
 
-                {/* KPI 2: Tarefas Completas */}
+                {/* KPI 2: Tarefas Completas - GLOBAL */}
                 <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-green-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600">Tarefas Completas</p>
+                      <p className="text-sm font-medium text-gray-600">Tarefas Completas (Global)</p>
                       <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpisEficiencia.tarefasCompletas)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiCheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+                      <div className="relative">
+                        <FiCheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+                        <FiGlobe className="h-3 w-3 text-green-400 absolute -top-1 -right-1" />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-400 mt-1">
-                      {calculatePercentage(kpisEficiencia.tarefasCompletas, kpisEficiencia.totalTarefas)}% do total
+                      {calculatePercentage(kpisEficiencia.tarefasCompletas, kpisEficiencia.totalTarefas)}% do total global
                     </p>
                   </div>
                 </div>
 
-                {/* KPI 3: Tarefas Pendentes */}
+                {/* KPI 3: Tarefas Pendentes - GLOBAL */}
                 <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-yellow-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600">Tarefas Pendentes</p>
+                      <p className="text-sm font-medium text-gray-600">Tarefas Pendentes (Global)</p>
                       <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatNumber(kpisEficiencia.tarefasPendentes)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiClock className="h-6 w-6 lg:h-8 lg:w-8 text-yellow-500" />
+                      <div className="relative">
+                        <FiClock className="h-6 w-6 lg:h-8 lg:w-8 text-yellow-500" />
+                        <FiGlobe className="h-3 w-3 text-yellow-400 absolute -top-1 -right-1" />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-400 mt-1">
-                      {calculatePercentage(kpisEficiencia.tarefasPendentes, kpisEficiencia.totalTarefas)}% do total
+                      {calculatePercentage(kpisEficiencia.tarefasPendentes, kpisEficiencia.totalTarefas)}% do total global
                     </p>
                   </div>
                 </div>
 
-                {/* KPI 4: Taxa de Conclusão */}
+                {/* KPI 4: Taxa de Conclusão - GLOBAL */}
                 <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-purple-500">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600">Taxa de Eficiência</p>
+                      <p className="text-sm font-medium text-gray-600">Taxa de Eficiência (Global)</p>
                       <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                         {formatPercentage(kpisEficiencia.taxaConclusao)}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
-                      <FiTarget className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+                      <div className="relative">
+                        <FiTarget className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+                        <FiGlobe className="h-3 w-3 text-purple-400 absolute -top-1 -right-1" />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-3 lg:mt-4">
                     <p className="text-xs text-gray-400 mt-1">
-                      Percentual de conclusão de tarefas
+                      Performance global de conclusão
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* KPIs de Disciplina (Rotinas) */}
+            {/* KPIs de Disciplina (Rotinas) - GLOBAIS */}
             <div className="mb-6 lg:mb-8">
               <div className="mb-4 lg:mb-6">
-                <h2 className="text-xl lg:text-2xl font-bold text-black">Disciplina das Rotinas</h2>
+                <h2 className="text-xl lg:text-2xl font-bold text-black flex items-center">
+                  <FiGlobe className="w-5 h-5 mr-2 text-indigo-600" />
+                  Disciplina Global das Rotinas
+                </h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Consistência na execução de tarefas rotineiras
+                  Consistência na execução de tarefas rotineiras - Dados de todos os usuários
                 </p>
               </div>
 
@@ -1376,82 +1496,94 @@ export default function ControleEficienciaTimes({ user }) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                  {/* KPI 1: Total de Rotinas */}
+                  {/* KPI 1: Total de Rotinas - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-indigo-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Total de Rotinas</p>
+                        <p className="text-sm font-medium text-gray-600">Total de Rotinas (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisDisciplina.totalRotinas)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiCalendar className="h-6 w-6 lg:h-8 lg:w-8 text-indigo-500" />
+                        <div className="relative">
+                          <FiCalendar className="h-6 w-6 lg:h-8 lg:w-8 text-indigo-500" />
+                          <FiGlobe className="h-3 w-3 text-indigo-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-400 mt-1">
-                        Rotinas programadas no período
+                        Rotinas de todos os usuários no período
                       </p>
                     </div>
                   </div>
 
-                  {/* KPI 2: Rotinas Completas */}
+                  {/* KPI 2: Rotinas Completas - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-emerald-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Rotinas Completas</p>
+                        <p className="text-sm font-medium text-gray-600">Rotinas Completas (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisDisciplina.rotinasCompletas)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiActivity className="h-6 w-6 lg:h-8 lg:w-8 text-emerald-500" />
+                        <div className="relative">
+                          <FiActivity className="h-6 w-6 lg:h-8 lg:w-8 text-emerald-500" />
+                          <FiGlobe className="h-3 w-3 text-emerald-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-400 mt-1">
-                        {calculatePercentage(kpisDisciplina.rotinasCompletas, kpisDisciplina.totalRotinas)}% do total
+                        {calculatePercentage(kpisDisciplina.rotinasCompletas, kpisDisciplina.totalRotinas)}% do total global
                       </p>
                     </div>
                   </div>
 
-                  {/* KPI 3: Rotinas Pendentes */}
+                  {/* KPI 3: Rotinas Pendentes - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-orange-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Rotinas Pendentes</p>
+                        <p className="text-sm font-medium text-gray-600">Rotinas Pendentes (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisDisciplina.rotinasPendentes)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiAlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+                        <div className="relative">
+                          <FiAlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+                          <FiGlobe className="h-3 w-3 text-orange-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-400 mt-1">
-                        {calculatePercentage(kpisDisciplina.rotinasPendentes, kpisDisciplina.totalRotinas)}% do total
+                        {calculatePercentage(kpisDisciplina.rotinasPendentes, kpisDisciplina.totalRotinas)}% do total global
                       </p>
                     </div>
                   </div>
 
-                  {/* KPI 4: Taxa de Disciplina */}
+                  {/* KPI 4: Taxa de Disciplina - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-teal-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Taxa de Disciplina</p>
+                        <p className="text-sm font-medium text-gray-600">Taxa de Disciplina (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatPercentage(kpisDisciplina.taxaDisciplina)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiAward className="h-6 w-6 lg:h-8 lg:w-8 text-teal-500" />
+                        <div className="relative">
+                          <FiAward className="h-6 w-6 lg:h-8 lg:w-8 text-teal-500" />
+                          <FiGlobe className="h-3 w-3 text-teal-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-400 mt-1">
-                        Consistência nas rotinas
+                        Disciplina global em rotinas
                       </p>
                     </div>
                   </div>
@@ -1459,12 +1591,15 @@ export default function ControleEficienciaTimes({ user }) {
               )}
             </div>
 
-            {/* Score Geral Combinado */}
+            {/* Score Geral Combinado - GLOBAL */}
             <div className="mb-6 lg:mb-8">
               <div className="mb-4 lg:mb-6">
-                <h2 className="text-xl lg:text-2xl font-bold text-black">Score Geral de Performance</h2>
+                <h2 className="text-xl lg:text-2xl font-bold text-black flex items-center">
+                  <FiGlobe className="w-5 h-5 mr-2 text-rose-600" />
+                  Score Global de Performance
+                </h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Combinação de eficiência (tarefas) e disciplina (rotinas)
+                  Combinação global de eficiência (tarefas) e disciplina (rotinas) - Todos os usuários
                 </p>
               </div>
 
@@ -1474,44 +1609,50 @@ export default function ControleEficienciaTimes({ user }) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                  {/* Score Geral */}
+                  {/* Score Geral - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-rose-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Score Geral</p>
+                        <p className="text-sm font-medium text-gray-600">Score Geral (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatPercentage((kpisEficiencia.taxaConclusao + kpisDisciplina.taxaDisciplina) / 2)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiAward className="h-6 w-6 lg:h-8 lg:w-8 text-rose-500" />
+                        <div className="relative">
+                          <FiAward className="h-6 w-6 lg:h-8 lg:w-8 text-rose-500" />
+                          <FiGlobe className="h-3 w-3 text-rose-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
                       <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
                         <span className="flex items-center">
                           <div className="w-2 h-2 bg-purple-500 rounded-full mr-1"></div>
-                          Eficiência: {formatPercentage(kpisEficiencia.taxaConclusao)}
+                          Eficiência Global: {formatPercentage(kpisEficiencia.taxaConclusao)}
                         </span>
                         <span className="flex items-center">
                           <div className="w-2 h-2 bg-teal-500 rounded-full mr-1"></div>
-                          Disciplina: {formatPercentage(kpisDisciplina.taxaDisciplina)}
+                          Disciplina Global: {formatPercentage(kpisDisciplina.taxaDisciplina)}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Total de Atividades */}
+                  {/* Total de Atividades - GLOBAL */}
                   <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-gray-500">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">Total de Atividades</p>
+                        <p className="text-sm font-medium text-gray-600">Total de Atividades (Global)</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
                           {formatNumber(kpisEficiencia.totalTarefas + kpisDisciplina.totalRotinas)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">
-                        <FiBarChart2 className="h-6 w-6 lg:h-8 lg:w-8 text-gray-500" />
+                        <div className="relative">
+                          <FiBarChart2 className="h-6 w-6 lg:h-8 lg:w-8 text-gray-500" />
+                          <FiGlobe className="h-3 w-3 text-gray-400 absolute -top-1 -right-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 lg:mt-4">
@@ -1531,16 +1672,17 @@ export default function ControleEficienciaTimes({ user }) {
               )}
             </div>
             
-            {/* Seção das tabelas */}
+            {/* Seção das tabelas - GLOBAIS */}
             {!loading && !loadingDisciplina && (
               <>
                 {/* Mobile: Tabelas empilhadas */}
                 <div className="lg:hidden space-y-6">
-                  {/* Tabela de Times - Mobile */}
-                  <div className="bg-white rounded-lg shadow-md p-4">
+                  {/* Tabela de Times - Mobile - GLOBAL */}
+                  <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <FiUsers className="h-5 w-5 mr-2 text-blue-500" />
-                      Performance dos Times
+                      Performance Global dos Times
+                      <FiGlobe className="h-4 w-4 ml-2 text-blue-400" />
                       {hasFiltrosAtivos() && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                           Filtrado
@@ -1556,6 +1698,7 @@ export default function ControleEficienciaTimes({ user }) {
                       <div className="text-center py-8 text-gray-500">
                         <FiUsers className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Nenhum dado de performance encontrado</p>
+                        <p className="text-xs mt-2">Dados globais não disponíveis no período</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1622,11 +1765,12 @@ export default function ControleEficienciaTimes({ user }) {
                     )}
                   </div>
 
-                  {/* Tabela de Usuários - Mobile */}
-                  <div className="bg-white rounded-lg shadow-md p-4">
+                  {/* Tabela de Usuários - Mobile - GLOBAL */}
+                  <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <FiUser className="h-5 w-5 mr-2 text-purple-500" />
-                      Performance dos Usuários
+                      Performance Global dos Usuários
+                      <FiGlobe className="h-4 w-4 ml-2 text-purple-400" />
                       {hasFiltrosAtivos() && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                           Filtrado
@@ -1642,6 +1786,7 @@ export default function ControleEficienciaTimes({ user }) {
                       <div className="text-center py-8 text-gray-500">
                         <FiUser className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Nenhum dado de performance encontrado</p>
+                        <p className="text-xs mt-2">Dados globais não disponíveis no período</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1709,13 +1854,14 @@ export default function ControleEficienciaTimes({ user }) {
                   </div>
                 </div>
 
-                {/* Desktop: Tabelas lado a lado */}
+                {/* Desktop: Tabelas lado a lado - GLOBAIS */}
                 <div className="hidden lg:grid lg:grid-cols-2 mt-8 gap-6">
-                  {/* Tabela de Times - Desktop */}
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  {/* Tabela de Times - Desktop - GLOBAL */}
+                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <FiUsers className="h-5 w-5 mr-2 text-blue-500" />
-                      Performance dos Times
+                      Performance Global dos Times
+                      <FiGlobe className="h-4 w-4 ml-2 text-blue-400" />
                       {hasFiltrosAtivos() && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                           Filtrado
@@ -1731,6 +1877,7 @@ export default function ControleEficienciaTimes({ user }) {
                       <div className="text-center py-8 text-gray-500">
                         <FiUsers className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Nenhum dado de performance encontrado</p>
+                        <p className="text-xs mt-2">Dados globais não disponíveis no período</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1797,11 +1944,12 @@ export default function ControleEficienciaTimes({ user }) {
                     )}
                   </div>
 
-                  {/* Tabela de Usuários (Top 10) - Desktop */}
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  {/* Tabela de Usuários (Top 10) - Desktop - GLOBAL */}
+                  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <FiUser className="h-5 w-5 mr-2 text-purple-500" />
-                      Top 10 Usuários
+                      Top 10 Usuários Globais
+                      <FiGlobe className="h-4 w-4 ml-2 text-purple-400" />
                       {hasFiltrosAtivos() && (
                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                           Filtrado
@@ -1817,6 +1965,7 @@ export default function ControleEficienciaTimes({ user }) {
                       <div className="text-center py-8 text-gray-500">
                         <FiUser className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Nenhum dado de performance encontrado</p>
+                        <p className="text-xs mt-2">Dados globais não disponíveis no período</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -1898,11 +2047,12 @@ export default function ControleEficienciaTimes({ user }) {
                   </div>
                 </div>
 
-                {/* Ranking Detalhado de Times - Tabela Completa */}
-                <div className="mt-6 lg:mt-8 bg-white rounded-lg shadow-md p-4 lg:p-6">
+                {/* Ranking Detalhado de Times - Tabela Completa - GLOBAL */}
+                <div className="mt-6 lg:mt-8 bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-yellow-500">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FiAward className="h-5 w-5 mr-2 text-gold-500" />
-                    Ranking Detalhado dos Times
+                    <FiAward className="h-5 w-5 mr-2 text-yellow-500" />
+                    Ranking Global Detalhado dos Times
+                    <FiGlobe className="h-4 w-4 ml-2 text-yellow-400" />
                     {hasFiltrosAtivos() && (
                       <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                         Filtrado
@@ -1912,12 +2062,13 @@ export default function ControleEficienciaTimes({ user }) {
                   
                   {loadingTabelas ? (
                     <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold-500"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500"></div>
                     </div>
                   ) : tabelaRankingTimes.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <FiAward className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <p>Nenhum dado de ranking encontrado</p>
+                      <p className="text-xs mt-2">Dados globais não disponíveis no período</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1981,6 +2132,10 @@ export default function ControleEficienciaTimes({ user }) {
                                 <div className="text-sm font-medium text-gray-900">
                                   {time.nome}
                                 </div>
+                                <div className="text-xs text-gray-500 flex items-center">
+                                  <FiGlobe className="w-3 h-3 mr-1" />
+                                  Dados globais
+                                </div>
                               </td>
                               <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-center">
                                 <span className="text-sm text-gray-900 font-medium">
@@ -2038,35 +2193,90 @@ export default function ControleEficienciaTimes({ user }) {
                   )}
                 </div>
 
-                {/* Legenda de Classificação */}
-                <div className="mt-6 bg-white rounded-lg shadow-md p-4 lg:p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Legenda de Performance</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-                      <span className="text-sm text-gray-700">Excelente (≥80%)</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-                      <span className="text-sm text-gray-700">Bom (60-79%)</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-                      <span className="text-sm text-gray-700">Precisa Melhorar (&lt;60%)</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded"></div>
-                      <span className="text-sm text-gray-700">Score Geral</span>
+                {/* Resumo Global e Legenda */}
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Resumo Global */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-green-500">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FiGlobe className="w-5 h-5 mr-2 text-green-600" />
+                      Resumo Global
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total de Times:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {Object.keys(filtrosDisponiveis.times).length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total de Usuários:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {Object.keys(filtrosDisponiveis.usuarios).length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Times com Dados:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {tabelaTimes.length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Usuários com Dados:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {tabelaUsuarios.length}
+                        </span>
+                      </div>
+                      <div className="pt-3 border-t border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Score Médio Global:</span>
+                          <span className={`text-sm font-bold ${
+                            ((kpisEficiencia.taxaConclusao + kpisDisciplina.taxaDisciplina) / 2) >= 80 
+                              ? 'text-green-600' 
+                              : ((kpisEficiencia.taxaConclusao + kpisDisciplina.taxaDisciplina) / 2) >= 60 
+                                ? 'text-yellow-600' 
+                                : 'text-red-600'
+                          }`}>
+                            {formatPercentage((kpisEficiencia.taxaConclusao + kpisDisciplina.taxaDisciplina) / 2)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Métricas:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
-                      <div>• <strong>Eficiência:</strong> % de tarefas concluídas</div>
-                      <div>• <strong>Disciplina:</strong> % de rotinas cumpridas</div>
-                      <div>• <strong>Score Geral:</strong> Média entre eficiência e disciplina</div>
-                      <div>• <strong>T:</strong> Tarefas | <strong>R:</strong> Rotinas</div>
+
+                  {/* Legenda de Classificação */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-blue-500">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Legenda de Performance</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
+                        <span className="text-sm text-gray-700">Excelente (≥80%)</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
+                        <span className="text-sm text-gray-700">Bom (60-79%)</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
+                        <span className="text-sm text-gray-700">Precisa Melhorar (&lt;60%)</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded"></div>
+                        <span className="text-sm text-gray-700">Score Geral</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Métricas Globais:</h4>
+                      <div className="grid grid-cols-1 gap-1 text-xs text-gray-600">
+                        <div>• <strong>Eficiência:</strong> % de tarefas concluídas globalmente</div>
+                        <div>• <strong>Disciplina:</strong> % de rotinas cumpridas globalmente</div>
+                        <div>• <strong>Score Geral:</strong> Média entre eficiência e disciplina</div>
+                        <div>• <strong>T:</strong> Tarefas | <strong>R:</strong> Rotinas</div>
+                        <div className="flex items-center mt-2">
+                          <FiGlobe className="w-3 h-3 mr-1 text-blue-500" />
+                          <span>Dados agregados de todos os usuários e times</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
