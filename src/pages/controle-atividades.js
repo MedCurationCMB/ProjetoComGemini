@@ -365,80 +365,116 @@ export default function ControleEficienciaTimes({ user }) {
       try {
         setLoadingDisciplina(true);
 
-        // Total de rotinas no período - TODAS AS ROTINAS DE TODOS OS USUÁRIOS
-        let queryTotalRotinas = supabase.from('routine_tasks_status')
-          .select('*', { count: 'exact', head: true });
-        
-        queryTotalRotinas = construirQueryComFiltros(queryTotalRotinas, 'routine_tasks_status');
+        // Calcular período de análise
+        let dataInicioFiltro = null;
+        let dataFimFiltro = null;
 
-        // Se há filtro de time ou usuário, precisamos fazer join
-        if (filtros.time_id || filtros.usuario_id) {
-          queryTotalRotinas = supabase.from('routine_tasks_status')
-            .select(`
-              *,
-              routine_tasks!inner(
-                task_list_id,
-                usuario_id
-              )
-            `, { count: 'exact', head: true });
-          
-          queryTotalRotinas = construirQueryComFiltros(queryTotalRotinas, 'routine_tasks_status');
-          
-          if (filtros.time_id) {
-            queryTotalRotinas = queryTotalRotinas.eq('routine_tasks.task_list_id', filtros.time_id);
-          }
-          
-          if (filtros.usuario_id) {
-            queryTotalRotinas = queryTotalRotinas.eq('routine_tasks.usuario_id', filtros.usuario_id);
-          }
+        if (filtros.periodo && filtros.periodo !== 'personalizado') {
+          const periodo = calcularPeriodo(filtros.periodo);
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
+        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+          dataInicioFiltro = filtros.data_inicio;
+          dataFimFiltro = filtros.data_fim;
         }
 
-        const { count: totalRotinas, error: totalRotinasError } = await queryTotalRotinas;
-        if (totalRotinasError) throw totalRotinasError;
-
-        // Rotinas completas - TODAS AS ROTINAS COMPLETAS DE TODOS OS USUÁRIOS
-        let queryRotinasCompletas = supabase.from('routine_tasks_status')
-          .select('*', { count: 'exact', head: true })
-          .eq('completed', true);
-        
-        queryRotinasCompletas = construirQueryComFiltros(queryRotinasCompletas, 'routine_tasks_status');
-
-        if (filtros.time_id || filtros.usuario_id) {
-          queryRotinasCompletas = supabase.from('routine_tasks_status')
-            .select(`
-              *,
-              routine_tasks!inner(
-                task_list_id,
-                usuario_id
-              )
-            `, { count: 'exact', head: true })
-            .eq('completed', true);
-          
-          queryRotinasCompletas = construirQueryComFiltros(queryRotinasCompletas, 'routine_tasks_status');
-          
-          if (filtros.time_id) {
-            queryRotinasCompletas = queryRotinasCompletas.eq('routine_tasks.task_list_id', filtros.time_id);
-          }
-          
-          if (filtros.usuario_id) {
-            queryRotinasCompletas = queryRotinasCompletas.eq('routine_tasks.usuario_id', filtros.usuario_id);
-          }
+        if (!dataInicioFiltro || !dataFimFiltro) {
+          // Se não há período definido, usar um período padrão
+          const periodo = calcularPeriodoPadrao();
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
         }
 
-        const { count: rotinasCompletas, error: rotinasCompletasError } = await queryRotinasCompletas;
-        if (rotinasCompletasError) throw rotinasCompletasError;
+        // ✅ NOVA LÓGICA: Buscar todas as rotinas que se sobrepõem ao período
+        let queryRotinas = supabase.from('routine_tasks')
+          .select(`
+            *,
+            routine_tasks_status(*)
+          `)
+          .lte('start_date', dataFimFiltro)
+          .or(`end_date.is.null,end_date.gte.${dataInicioFiltro}`);
 
-        const rotinasPendentes = (totalRotinas || 0) - (rotinasCompletas || 0);
-        const taxaDisciplina = totalRotinas > 0 ? ((rotinasCompletas || 0) / totalRotinas * 100) : 0;
+        // Aplicar filtros opcionais
+        if (filtros.time_id) {
+          queryRotinas = queryRotinas.eq('task_list_id', filtros.time_id);
+        }
+        
+        if (filtros.usuario_id) {
+          queryRotinas = queryRotinas.eq('usuario_id', filtros.usuario_id);
+        }
+
+        const { data: rotinas, error: rotinasError } = await queryRotinas;
+        if (rotinasError) throw rotinasError;
+
+        // ✅ FUNÇÃO AUXILIAR: Calcular ocorrências de uma rotina no período
+        const calcularOcorrenciasRotina = (rotina, dataInicio, dataFim) => {
+          const ocorrencias = [];
+          const inicioRotina = new Date(Math.max(new Date(rotina.start_date), new Date(dataInicio)));
+          const fimRotina = rotina.end_date 
+            ? new Date(Math.min(new Date(rotina.end_date), new Date(dataFim)))
+            : new Date(dataFim);
+
+          let dataAtual = new Date(inicioRotina);
+
+          while (dataAtual <= fimRotina) {
+            let deveIncluir = false;
+
+            if (rotina.recurrence_type === 'daily') {
+              // Para rotinas diárias, verificar o intervalo
+              const diffTime = dataAtual.getTime() - new Date(rotina.start_date).getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              deveIncluir = diffDays >= 0 && diffDays % rotina.recurrence_interval === 0;
+            } else if (rotina.recurrence_type === 'weekly') {
+              // Para rotinas semanais, verificar os dias da semana
+              const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay(); // Converter domingo de 0 para 7
+              deveIncluir = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
+            } else if (rotina.recurrence_type === 'monthly') {
+              // Para rotinas mensais, verificar se é o mesmo dia do mês
+              const diaInicioRotina = new Date(rotina.start_date).getDate();
+              deveIncluir = dataAtual.getDate() === diaInicioRotina;
+            }
+
+            if (deveIncluir) {
+              const dataISO = dataAtual.toISOString().split('T')[0];
+              ocorrencias.push(dataISO);
+            }
+
+            // Avançar para o próximo dia
+            dataAtual.setDate(dataAtual.getDate() + 1);
+          }
+
+          return ocorrencias;
+        };
+
+        // ✅ CALCULAR TOTAL DE OCORRÊNCIAS E COMPLETAS
+        let totalRotinas = 0;
+        let rotinasCompletas = 0;
+
+        rotinas.forEach(rotina => {
+          // Calcular todas as ocorrências desta rotina no período
+          const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
+          totalRotinas += ocorrencias.length;
+
+          // Contar quantas dessas ocorrências foram completadas
+          const statusCompletados = rotina.routine_tasks_status?.filter(status => 
+            status.completed && 
+            ocorrencias.includes(status.date)
+          ) || [];
+          
+          rotinasCompletas += statusCompletados.length;
+        });
+
+        const rotinasPendentes = totalRotinas - rotinasCompletas;
+        const taxaDisciplina = totalRotinas > 0 ? (rotinasCompletas / totalRotinas * 100) : 0;
 
         setKpisDisciplina({
-          totalRotinas: totalRotinas || 0,
-          rotinasCompletas: rotinasCompletas || 0,
+          totalRotinas: totalRotinas,
+          rotinasCompletas: rotinasCompletas,
           rotinasPendentes: rotinasPendentes,
           taxaDisciplina: taxaDisciplina
         });
 
-        console.log(`KPIs Disciplina: ${totalRotinas} total, ${rotinasCompletas} completas`);
+        console.log(`✅ KPIs Disciplina CORRIGIDOS: ${totalRotinas} total, ${rotinasCompletas} completas (${taxaDisciplina.toFixed(1)}%)`);
 
       } catch (error) {
         console.error('Erro ao buscar KPIs de disciplina:', error);
@@ -459,7 +495,67 @@ export default function ControleEficienciaTimes({ user }) {
       try {
         setLoadingTabelas(true);
 
-        // Buscar TODOS os dados por time - SEM RESTRIÇÕES DE USUÁRIO
+        // ✅ CALCULAR PERÍODO DE ANÁLISE
+        let dataInicioFiltro = null;
+        let dataFimFiltro = null;
+
+        if (filtros.periodo && filtros.periodo !== 'personalizado') {
+          const periodo = calcularPeriodo(filtros.periodo);
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
+        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+          dataInicioFiltro = filtros.data_inicio;
+          dataFimFiltro = filtros.data_fim;
+        }
+
+        if (!dataInicioFiltro || !dataFimFiltro) {
+          // Se não há período definido, usar um período padrão
+          const periodo = calcularPeriodoPadrao();
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
+        }
+
+        // ✅ FUNÇÃO AUXILIAR: Calcular ocorrências de uma rotina no período
+        const calcularOcorrenciasRotina = (rotina, dataInicio, dataFim) => {
+          const ocorrencias = [];
+          const inicioRotina = new Date(Math.max(new Date(rotina.start_date), new Date(dataInicio)));
+          const fimRotina = rotina.end_date 
+            ? new Date(Math.min(new Date(rotina.end_date), new Date(dataFim)))
+            : new Date(dataFim);
+
+          let dataAtual = new Date(inicioRotina);
+
+          while (dataAtual <= fimRotina) {
+            let deveIncluir = false;
+
+            if (rotina.recurrence_type === 'daily') {
+              // Para rotinas diárias, verificar o intervalo
+              const diffTime = dataAtual.getTime() - new Date(rotina.start_date).getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              deveIncluir = diffDays >= 0 && diffDays % rotina.recurrence_interval === 0;
+            } else if (rotina.recurrence_type === 'weekly') {
+              // Para rotinas semanais, verificar os dias da semana
+              const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay(); // Converter domingo de 0 para 7
+              deveIncluir = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
+            } else if (rotina.recurrence_type === 'monthly') {
+              // Para rotinas mensais, verificar se é o mesmo dia do mês
+              const diaInicioRotina = new Date(rotina.start_date).getDate();
+              deveIncluir = dataAtual.getDate() === diaInicioRotina;
+            }
+
+            if (deveIncluir) {
+              const dataISO = dataAtual.toISOString().split('T')[0];
+              ocorrencias.push(dataISO);
+            }
+
+            // Avançar para o próximo dia
+            dataAtual.setDate(dataAtual.getDate() + 1);
+          }
+
+          return ocorrencias;
+        };
+
+        // ✅ BUSCAR TODAS AS TAREFAS NORMAIS - SEM RESTRIÇÕES DE USUÁRIO
         const { data: timesComTarefas, error: timesError } = await supabase
           .from('tasks')
           .select(`
@@ -471,57 +567,35 @@ export default function ControleEficienciaTimes({ user }) {
 
         if (timesError) throw timesError;
 
-        // Buscar TODOS os dados de rotinas por time - SEM RESTRIÇÕES DE USUÁRIO
-        const { data: timesComRotinas, error: timesRotinasError } = await supabase
-          .from('routine_tasks_status')
+        // ✅ BUSCAR TODAS AS ROTINAS COM STATUS - SEM RESTRIÇÕES DE USUÁRIO
+        const { data: todasRotinas, error: rotinasError } = await supabase
+          .from('routine_tasks')
           .select(`
-            completed,
-            date,
-            routine_tasks!inner(
-              task_list_id,
-              tasks_list!inner(nome_lista)
-            )
+            *,
+            routine_tasks_status(*),
+            tasks_list!inner(nome_lista),
+            usuarios!inner(nome)
           `);
 
-        if (timesRotinasError) throw timesRotinasError;
+        if (rotinasError) throw rotinasError;
 
-        // Processar dados dos times
+        // ✅ PROCESSAR DADOS DOS TIMES
         const timesMap = {};
         
-        // Filtrar tarefas por data se necessário
+        // ✅ FILTRAR TAREFAS POR DATA SE NECESSÁRIO
         let tarefasFiltradas = timesComTarefas;
-        if (filtros.periodo && filtros.periodo !== 'personalizado') {
-          const periodo = calcularPeriodo(filtros.periodo);
-          if (periodo.dataInicio && periodo.dataFim) {
-            tarefasFiltradas = timesComTarefas.filter(tarefa => {
-              const dataTarefa = tarefa.created_at.split('T')[0];
-              return dataTarefa >= periodo.dataInicio && dataTarefa <= periodo.dataFim;
-            });
-          }
-        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+        if (dataInicioFiltro && dataFimFiltro) {
           tarefasFiltradas = timesComTarefas.filter(tarefa => {
             const dataTarefa = tarefa.created_at.split('T')[0];
-            return dataTarefa >= filtros.data_inicio && dataTarefa <= filtros.data_fim;
+            return dataTarefa >= dataInicioFiltro && dataTarefa <= dataFimFiltro;
           });
         }
 
-        // Filtrar rotinas por data se necessário
-        let rotinasFiltradas = timesComRotinas;
-        if (filtros.periodo && filtros.periodo !== 'personalizado') {
-          const periodo = calcularPeriodo(filtros.periodo);
-          if (periodo.dataInicio && periodo.dataFim) {
-            rotinasFiltradas = timesComRotinas.filter(rotina => {
-              return rotina.date >= periodo.dataInicio && rotina.date <= periodo.dataFim;
-            });
-          }
-        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
-          rotinasFiltradas = timesComRotinas.filter(rotina => {
-            return rotina.date >= filtros.data_inicio && rotina.date <= filtros.data_fim;
-          });
-        }
-
-        // Processar tarefas normais
+        // ✅ PROCESSAR TAREFAS NORMAIS
         tarefasFiltradas.forEach(tarefa => {
+          // Aplicar filtros opcionais
+          if (filtros.time_id && tarefa.task_list_id !== filtros.time_id) return;
+          
           const timeId = tarefa.task_list_id;
           const nomeTime = tarefa.tasks_list.nome_lista;
           
@@ -542,10 +616,19 @@ export default function ControleEficienciaTimes({ user }) {
           }
         });
 
-        // Processar rotinas
+        // ✅ PROCESSAR ROTINAS COM CÁLCULO CORRETO DE OCORRÊNCIAS
+        const rotinasFiltradas = todasRotinas.filter(rotina => {
+          const fimRotina = rotina.end_date || dataFimFiltro;
+          return rotina.start_date <= dataFimFiltro && fimRotina >= dataInicioFiltro;
+        });
+
         rotinasFiltradas.forEach(rotina => {
-          const timeId = rotina.routine_tasks.task_list_id;
-          const nomeTime = rotina.routine_tasks.tasks_list.nome_lista;
+          // Aplicar filtros opcionais
+          if (filtros.time_id && rotina.task_list_id !== filtros.time_id) return;
+          if (filtros.usuario_id && rotina.usuario_id !== filtros.usuario_id) return;
+
+          const timeId = rotina.task_list_id;
+          const nomeTime = rotina.tasks_list.nome_lista;
           
           if (!timesMap[timeId]) {
             timesMap[timeId] = {
@@ -558,13 +641,22 @@ export default function ControleEficienciaTimes({ user }) {
             };
           }
           
-          timesMap[timeId].totalRotinas++;
-          if (rotina.completed) {
-            timesMap[timeId].rotinasCompletas++;
-          }
+          // ✅ CALCULAR TODAS AS OCORRÊNCIAS DESTA ROTINA NO PERÍODO
+          const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
+          
+          // ✅ CONTAR QUANTAS DESSAS OCORRÊNCIAS FORAM COMPLETADAS
+          const statusCompletados = rotina.routine_tasks_status?.filter(status => 
+            status.completed && 
+            status.date >= dataInicioFiltro &&
+            status.date <= dataFimFiltro &&
+            ocorrencias.includes(status.date)
+          ) || [];
+          
+          timesMap[timeId].totalRotinas += ocorrencias.length;
+          timesMap[timeId].rotinasCompletas += statusCompletados.length;
         });
 
-        // Calcular métricas finais para times
+        // ✅ CALCULAR MÉTRICAS FINAIS PARA TIMES
         const dadosTimes = Object.values(timesMap).map(time => ({
           ...time,
           taxaEficiencia: time.totalTarefas > 0 ? (time.tarefasCompletas / time.totalTarefas * 100) : 0,
@@ -575,7 +667,7 @@ export default function ControleEficienciaTimes({ user }) {
           scoreGeral: (time.taxaEficiencia + time.taxaDisciplina) / 2
         })).sort((a, b) => b.scoreGeral - a.scoreGeral);
 
-        // Buscar TODOS os dados por usuário - SEM RESTRIÇÕES
+        // ✅ BUSCAR TODAS AS TAREFAS DOS USUÁRIOS - SEM RESTRIÇÕES
         const { data: usuariosComTarefas, error: usuariosError } = await supabase
           .from('tasks')
           .select(`
@@ -587,49 +679,23 @@ export default function ControleEficienciaTimes({ user }) {
 
         if (usuariosError) throw usuariosError;
 
-        const { data: usuariosComRotinas, error: usuariosRotinasError } = await supabase
-          .from('routine_tasks_status')
-          .select(`
-            completed,
-            date,
-            routine_tasks!inner(
-              usuario_id,
-              usuarios!inner(nome)
-            )
-          `);
-
-        if (usuariosRotinasError) throw usuariosRotinasError;
-
-        // Filtrar dados dos usuários por período
+        // ✅ FILTRAR DADOS DOS USUÁRIOS POR PERÍODO
         let tarefasUsuariosFiltradas = usuariosComTarefas;
-        let rotinasUsuariosFiltradas = usuariosComRotinas;
-
-        if (filtros.periodo && filtros.periodo !== 'personalizado') {
-          const periodo = calcularPeriodo(filtros.periodo);
-          if (periodo.dataInicio && periodo.dataFim) {
-            tarefasUsuariosFiltradas = usuariosComTarefas.filter(tarefa => {
-              const dataTarefa = tarefa.created_at.split('T')[0];
-              return dataTarefa >= periodo.dataInicio && dataTarefa <= periodo.dataFim;
-            });
-            rotinasUsuariosFiltradas = usuariosComRotinas.filter(rotina => {
-              return rotina.date >= periodo.dataInicio && rotina.date <= periodo.dataFim;
-            });
-          }
-        } else if (filtros.periodo === 'personalizado' && filtros.data_inicio && filtros.data_fim) {
+        if (dataInicioFiltro && dataFimFiltro) {
           tarefasUsuariosFiltradas = usuariosComTarefas.filter(tarefa => {
             const dataTarefa = tarefa.created_at.split('T')[0];
-            return dataTarefa >= filtros.data_inicio && dataTarefa <= filtros.data_fim;
-          });
-          rotinasUsuariosFiltradas = usuariosComRotinas.filter(rotina => {
-            return rotina.date >= filtros.data_inicio && rotina.date <= filtros.data_fim;
+            return dataTarefa >= dataInicioFiltro && dataTarefa <= dataFimFiltro;
           });
         }
 
-        // Processar dados dos usuários
+        // ✅ PROCESSAR DADOS DOS USUÁRIOS
         const usuariosMap = {};
         
-        // Processar tarefas normais dos usuários
+        // ✅ PROCESSAR TAREFAS NORMAIS DOS USUÁRIOS
         tarefasUsuariosFiltradas.forEach(tarefa => {
+          // Aplicar filtros opcionais
+          if (filtros.usuario_id && tarefa.usuario_id !== filtros.usuario_id) return;
+          
           const usuarioId = tarefa.usuario_id;
           const nomeUsuario = tarefa.usuarios.nome;
           
@@ -650,10 +716,14 @@ export default function ControleEficienciaTimes({ user }) {
           }
         });
 
-        // Processar rotinas dos usuários
-        rotinasUsuariosFiltradas.forEach(rotina => {
-          const usuarioId = rotina.routine_tasks.usuario_id;
-          const nomeUsuario = rotina.routine_tasks.usuarios.nome;
+        // ✅ PROCESSAR ROTINAS DOS USUÁRIOS COM CÁLCULO CORRETO
+        rotinasFiltradas.forEach(rotina => {
+          // Aplicar filtros opcionais
+          if (filtros.time_id && rotina.task_list_id !== filtros.time_id) return;
+          if (filtros.usuario_id && rotina.usuario_id !== filtros.usuario_id) return;
+
+          const usuarioId = rotina.usuario_id;
+          const nomeUsuario = rotina.usuarios.nome;
           
           if (!usuariosMap[usuarioId]) {
             usuariosMap[usuarioId] = {
@@ -666,13 +736,22 @@ export default function ControleEficienciaTimes({ user }) {
             };
           }
           
-          usuariosMap[usuarioId].totalRotinas++;
-          if (rotina.completed) {
-            usuariosMap[usuarioId].rotinasCompletas++;
-          }
+          // ✅ CALCULAR TODAS AS OCORRÊNCIAS DESTA ROTINA NO PERÍODO
+          const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
+          
+          // ✅ CONTAR QUANTAS DESSAS OCORRÊNCIAS FORAM COMPLETADAS
+          const statusCompletados = rotina.routine_tasks_status?.filter(status => 
+            status.completed && 
+            status.date >= dataInicioFiltro &&
+            status.date <= dataFimFiltro &&
+            ocorrencias.includes(status.date)
+          ) || [];
+          
+          usuariosMap[usuarioId].totalRotinas += ocorrencias.length;
+          usuariosMap[usuarioId].rotinasCompletas += statusCompletados.length;
         });
 
-        // Calcular métricas finais para usuários
+        // ✅ CALCULAR MÉTRICAS FINAIS PARA USUÁRIOS
         const dadosUsuarios = Object.values(usuariosMap).map(usuario => ({
           ...usuario,
           taxaEficiencia: usuario.totalTarefas > 0 ? (usuario.tarefasCompletas / usuario.totalTarefas * 100) : 0,
@@ -683,11 +762,16 @@ export default function ControleEficienciaTimes({ user }) {
           scoreGeral: (usuario.taxaEficiencia + usuario.taxaDisciplina) / 2
         })).sort((a, b) => b.scoreGeral - a.scoreGeral);
 
+        // ✅ ATUALIZAR ESTADOS
         setTabelaTimes(dadosTimes);
         setTabelaUsuarios(dadosUsuarios);
         setTabelaRankingTimes(dadosTimes.slice(0, 10)); // Top 10
 
-        console.log(`Processados ${dadosTimes.length} times e ${dadosUsuarios.length} usuários`);
+        console.log(`✅ Tabelas processadas: ${dadosTimes.length} times e ${dadosUsuarios.length} usuários`);
+        console.log('📊 Exemplo de dados corrigidos:', {
+          primeiroTime: dadosTimes[0],
+          primeiroUsuario: dadosUsuarios[0]
+        });
 
       } catch (error) {
         console.error('Erro ao buscar dados das tabelas:', error);
