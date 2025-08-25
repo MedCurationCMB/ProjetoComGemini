@@ -1,4 +1,4 @@
-// Arquivo: src/pages/tarefas-rotinas.js - VERSÃO CORRIGIDA PARA SCHEMA REAL
+// Arquivo: src/pages/tarefas-rotinas.js - VERSÃO COMPLETA COM EXCEL IMPORTER
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
+import ExcelImporter from '../components/ExcelImporter';
 import { 
   FiSearch, 
   FiFilter, 
@@ -30,7 +31,9 @@ import {
   FiClock,
   FiTarget,
   FiActivity,
-  FiCheckCircle
+  FiCheckCircle,
+  FiDownload,
+  FiUpload
 } from 'react-icons/fi';
 
 export default function TarefasRotinas({ user }) {
@@ -40,6 +43,7 @@ export default function TarefasRotinas({ user }) {
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showExcelImporter, setShowExcelImporter] = useState(false);
   const inputRef = useRef(null);
 
   // Estados para dados base
@@ -576,6 +580,23 @@ export default function TarefasRotinas({ user }) {
       console.error('Erro ao excluir rotina:', error);
       toast.error('Erro ao excluir rotina');
     }
+  };
+
+  // =====================================
+  // FUNÇÕES PARA EXCEL IMPORTER
+  // =====================================
+
+  const handleExcelImportSuccess = () => {
+    setShowExcelImporter(false);
+    
+    // Recarregar dados após importação
+    if (activeTab === 'tarefas') {
+      fetchTarefas();
+    } else {
+      fetchRotinas();
+    }
+    
+    toast.success('Importação concluída com sucesso!');
   };
 
   // =====================================
@@ -1701,21 +1722,52 @@ export default function TarefasRotinas({ user }) {
                   </p>
                 </div>
                 
-                <button
-                  onClick={() => {
-                    if (activeTab === 'tarefas') {
-                      setNewTask({});
-                      setEditingTask('new');
-                    } else {
-                      setNewRoutine({});
-                      setEditingRoutine('new');
-                    }
-                  }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <FiPlus className="w-4 h-4 mr-2" />
-                  Adicionar {activeTab === 'tarefas' ? 'Tarefa' : 'Rotina'}
-                </button>
+                {/* Dropdown melhorado para adicionar */}
+                <div className="relative group">
+                  <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <FiPlus className="w-4 h-4 mr-2" />
+                    Adicionar {activeTab === 'tarefas' ? 'Tarefa' : 'Rotina'}
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          if (activeTab === 'tarefas') {
+                            setNewTask({});
+                            setEditingTask('new');
+                          } else {
+                            setNewRoutine({});
+                            setEditingRoutine('new');
+                          }
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-gray-700"
+                      >
+                        <FiEdit3 className="w-4 h-4 mr-3" />
+                        <div>
+                          <div className="font-medium">Adicionar Individual</div>
+                          <div className="text-xs text-gray-500">Criar uma {activeTab === 'tarefas' ? 'tarefa' : 'rotina'} por vez</div>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => setShowExcelImporter(true)}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-gray-700"
+                      >
+                        <FiUpload className="w-4 h-4 mr-3" />
+                        <div>
+                          <div className="font-medium">Importar via Excel</div>
+                          <div className="text-xs text-gray-500">Adicionar múltiplas {activeTab} de uma vez</div>
+                        </div>
+                      </button>
+                      
+                      <div className="border-t border-gray-100 my-1"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1985,7 +2037,37 @@ export default function TarefasRotinas({ user }) {
             </ul>
           </div>
         </div>
+
+        {/* Seção de informações sobre importação Excel */}
+        <div className="mt-6 p-4 bg-green-50 rounded-lg">
+          <h4 className="text-sm font-medium text-green-900 mb-2 flex items-center gap-2">
+            <FiUpload className="w-4 h-4" />
+            📊 Importação em massa via Excel:
+          </h4>
+          <div className="text-sm text-green-800 space-y-1">
+            <p>• <strong>Template automático:</strong> Baixe template com exemplos e instruções detalhadas</p>
+            <p>• <strong>Validação completa:</strong> Sistema verifica listas, usuários e permissões automaticamente</p>
+            <p>• <strong>Flexibilidade:</strong> Use nomes ou IDs para listas e usuários</p>
+            <p>• <strong>Processo guiado:</strong> 3 etapas simples - Download → Preenchimento → Upload</p>
+            <p>• <strong>Campos específicos:</strong> {activeTab === 'tarefas' ? 'Descrição, Lista, Responsável, Data, Status' : 'Descrição, Lista, Responsável, Recorrência, Datas'}</p>
+            <p>• <strong>Validação em tempo real:</strong> Erros são mostrados antes da importação</p>
+            <p>• <strong>Preview completo:</strong> Visualize todos os dados antes de confirmar</p>
+          </div>
+        </div>
       </div>
+
+      {/* Excel Importer Modal */}
+      {showExcelImporter && (
+        <ExcelImporter
+          onClose={() => setShowExcelImporter(false)}
+          onSuccess={handleExcelImportSuccess}
+          type={activeTab}
+          listas={listas}
+          projetos={projetos}
+          usuarios={usuarios}
+          usuariosListas={usuariosListas}
+        />
+      )}
 
       {/* Modal de Confirmação para Edição Inline */}
       {mostrarModal && (

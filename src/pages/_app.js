@@ -1,11 +1,8 @@
-// ✅ ARQUIVO CORRIGIDO: src/pages/_app.js
-// A principal mudança é carregar os dados completos da tabela 'usuarios'
-
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { isUserActiveSimple } from '../utils/userUtils';
+import { isUserActiveSimple } from '../utils/userUtils'; // ✅ USANDO A VERSÃO SIMPLES
 import '../styles/globals.css';
 import '../styles/tiptap.css';
 
@@ -15,52 +12,11 @@ function MyApp({ Component, pageProps }) {
   const [userActive, setUserActive] = useState(true);
   const router = useRouter();
 
-  // ✅ NOVA FUNÇÃO: Carregar dados completos do usuário
-  const carregarDadosCompletos = async (authUser) => {
-    if (!authUser?.id) return null;
-
-    try {
-      console.log('🔄 Carregando dados completos do usuário...');
-      
-      // ✅ BUSCAR DADOS DA TABELA 'usuarios' COM TODOS OS CAMPOS
-      const { data: userData, error } = await supabase
-        .from('usuarios')
-        .select('*') // ← Todos os campos: admin, gestor, ativo, etc.
-        .eq('id', authUser.id)
-        .single();
-
-      if (error) {
-        console.error('❌ Erro ao buscar dados do usuário:', error);
-        // ✅ Em caso de erro, retornar apenas dados do auth
-        return authUser;
-      }
-
-      // ✅ COMBINAR dados do auth.users com dados da tabela usuarios
-      const usuarioCompleto = {
-        ...authUser,        // Dados do auth (id, email, etc.)
-        ...userData         // Dados da tabela usuarios (admin, gestor, nome, etc.)
-      };
-
-      console.log('✅ Dados completos carregados:', {
-        id: usuarioCompleto.id,
-        email: usuarioCompleto.email,
-        nome: usuarioCompleto.nome,
-        admin: usuarioCompleto.admin,
-        gestor: usuarioCompleto.gestor,
-        ativo: usuarioCompleto.ativo
-      });
-
-      return usuarioCompleto;
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados completos:', error);
-      return authUser; // Fallback para dados básicos
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
-    let hasInitialized = false;
+    let hasInitialized = false; // ✅ FLAG PARA EVITAR MÚLTIPLAS INICIALIZAÇÕES
     
+    // ✅ FUNÇÃO ULTRA SIMPLIFICADA PARA VERIFICAR USUÁRIO
     const checkUser = async () => {
       if (hasInitialized || !mounted) return;
       hasInitialized = true;
@@ -68,6 +24,7 @@ function MyApp({ Component, pageProps }) {
       try {
         console.log('🔄 Verificando autenticação inicial...');
         
+        // ✅ APENAS OBTER SESSÃO LOCAL - SEM VERIFICAÇÕES COMPLEXAS
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -83,30 +40,27 @@ function MyApp({ Component, pageProps }) {
         if (session?.user) {
           console.log('✅ Sessão encontrada para:', session.user.email);
           
-          // ✅ CARREGAR DADOS COMPLETOS (INCLUINDO admin, gestor)
-          const usuarioCompleto = await carregarDadosCompletos(session.user);
-          
-          if (!mounted) return;
-
-          // ✅ VERIFICAÇÃO DE STATUS ATIVO
+          // ✅ VERIFICAÇÃO SIMPLES DE STATUS ATIVO (SEM RETRY, SEM TIMEOUT LONGO)
           try {
             const active = await isUserActiveSimple(session.user.id);
             
             if (!mounted) return;
             
             setUserActive(active);
-            setUser(usuarioCompleto); // ← Usar dados completos
+            setUser(session.user);
             
             console.log('✅ Status do usuário:', active ? 'ATIVO' : 'INATIVO');
             
+            // ✅ SÓ REDIRECIONAR SE REALMENTE INATIVO
             if (!active && router.pathname !== '/acesso-negado') {
               console.log('🔄 Redirecionando para acesso negado');
               router.push('/acesso-negado');
             }
           } catch (activeError) {
             console.warn('⚠️ Erro ao verificar status, permitindo acesso:', activeError.message);
+            // ✅ EM CASO DE ERRO, SEMPRE PERMITIR ACESSO
             if (mounted) {
-              setUser(usuarioCompleto); // ← Usar dados completos
+              setUser(session.user);
               setUserActive(true);
             }
           }
@@ -131,9 +85,10 @@ function MyApp({ Component, pageProps }) {
       }
     };
     
+    // ✅ EXECUTAR VERIFICAÇÃO INICIAL
     checkUser();
     
-    // ✅ LISTENER PARA MUDANÇAS DE AUTH
+    // ✅ LISTENER SIMPLIFICADO PARA MUDANÇAS DE AUTH
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -141,14 +96,12 @@ function MyApp({ Component, pageProps }) {
       
       console.log('🔄 Auth state change:', event);
       
+      // ✅ APENAS REAGIR A EVENTOS IMPORTANTES
       if (event === 'SIGNED_IN') {
         if (session?.user) {
           console.log('✅ Usuário logado:', session.user.email);
-          
-          // ✅ CARREGAR DADOS COMPLETOS NO LOGIN
-          const usuarioCompleto = await carregarDadosCompletos(session.user);
-          setUser(usuarioCompleto);
-          setUserActive(true);
+          setUser(session.user);
+          setUserActive(true); // ✅ ASSUMIR ATIVO INICIALMENTE
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('ℹ️ Usuário deslogado');
@@ -156,20 +109,18 @@ function MyApp({ Component, pageProps }) {
         setUserActive(true);
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('🔄 Token renovado');
-        // ✅ NO REFRESH, RECARREGAR DADOS COMPLETOS TAMBÉM
-        if (session?.user) {
-          const usuarioCompleto = await carregarDadosCompletos(session.user);
-          setUser(usuarioCompleto);
-        }
+        // ✅ NÃO FAZER NADA ESPECIAL NO REFRESH - MANTER ESTADO ATUAL
       }
     });
     
+    // ✅ CLEANUP FUNCTION SIMPLES
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // ✅ DEPENDÊNCIAS VAZIAS - SÓ EXECUTAR UMA VEZ
 
+  // ✅ LOADING STATE SIMPLES
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -181,6 +132,7 @@ function MyApp({ Component, pageProps }) {
     );
   }
 
+  // ✅ PÁGINAS PÚBLICAS
   const publicPages = ['/acesso-negado', '/login', '/cadastro'];
   const isPublicPage = publicPages.includes(router.pathname);
 
