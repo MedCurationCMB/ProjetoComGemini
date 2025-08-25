@@ -758,10 +758,10 @@ export default function VisualizacaoAtividades({ user }) {
               <div className="flex items-center justify-between">
                 {/* Data principal - Estilo grande como no design do chefe */}
                 <div className="flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+                  <h1 className="text-xl md:text-4xl font-bold text-gray-900 leading-tight">
                     {dataSelecionada.getDate()} de {dataSelecionada.toLocaleDateString('pt-BR', { month: 'long' })}
                   </h1>
-                  <p className="text-lg text-gray-500 capitalize mt-1">
+                  <p className="text-sm md:text-lg text-gray-500 capitalize mt-1">
                     {formatarDiaSemana(dataSelecionada)}, {dataSelecionada.getFullYear()}
                   </p>
                 </div>
@@ -861,7 +861,7 @@ export default function VisualizacaoAtividades({ user }) {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center mb-4">
                     <FiCheckCircle className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900">
                       Atividades do Dia
                       {!isDataHoje(dataSelecionada) && (
                         <span className="text-sm font-normal text-gray-500 ml-2">
@@ -949,7 +949,7 @@ export default function VisualizacaoAtividades({ user }) {
                                   </div>
                                 ) : (
                                   <>
-                                    <h4 className={`font-medium ${
+                                    <h4 className={`text-sm md:text-base font-medium ${
                                       atividade.completed 
                                         ? 'text-green-800 line-through' 
                                         : isAtividadeHoje 
@@ -1020,7 +1020,7 @@ export default function VisualizacaoAtividades({ user }) {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center mb-4">
                     <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">Atividades de Rotina</h3>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades de Rotina</h3>
                   </div>
                   
                   {atividadesRotina.length === 0 ? (
@@ -1060,7 +1060,7 @@ export default function VisualizacaoAtividades({ user }) {
                               </button>
                               
                               <div className="flex-1">
-                                <h4 className={`font-medium ${
+                                <h4 className={`text-sm md:text-base font-medium ${
                                   isCompleted ? 'text-green-800 line-through' : 'text-[#012060]'
                                 }`}>
                                   {rotina.content}
@@ -1200,7 +1200,7 @@ export default function VisualizacaoAtividades({ user }) {
                 value={novaAtividade}
                 onChange={(e) => setNovaAtividade(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
-                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-base"
+                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
               />
               <button
                 onClick={adicionarAtividade}
