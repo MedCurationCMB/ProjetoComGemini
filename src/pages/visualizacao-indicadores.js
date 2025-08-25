@@ -1,4 +1,4 @@
-// Arquivo: src/pages/visualizacao-indicadores.js - Versão com controle de indicadores arquivados
+// Arquivo: src/pages/visualizacao-indicadores.js - Versão com controle de indicadores arquivados e lógica de KPI corrigida
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -81,6 +81,95 @@ export default function VisualizacaoIndicadores({ user }) {
       importantes: filtroImportantes,
       arquivados: filtroArquivados
     };
+  };
+
+  // =====================================
+  // ✅ NOVA LÓGICA: Sempre REALIZADO + Meta do mesmo período
+  // =====================================
+
+  const agruparIndicadoresPriorizandoRealizado = (data) => {
+    const indicadoresAgrupados = {};
+    
+    // Agrupa todos os registros por id_controleindicador
+    (data || []).forEach(indicador => {
+      const controlId = indicador.id_controleindicador;
+      
+      if (!indicadoresAgrupados[controlId]) {
+        indicadoresAgrupados[controlId] = [];
+      }
+      
+      indicadoresAgrupados[controlId].push(indicador);
+    });
+
+    const indicadoresFinais = {};
+    
+    Object.keys(indicadoresAgrupados).forEach(controlId => {
+      const registros = indicadoresAgrupados[controlId];
+      
+      // Separa realizados (tipo 1) e metas (tipo 2)
+      const realizados = registros.filter(r => r.tipo_indicador === 1);
+      const metas = registros.filter(r => r.tipo_indicador === 2);
+      
+      // ✅ NOVA LÓGICA: Filtra apenas realizados com valor preenchido
+      const realizadosComValor = realizados.filter(r => {
+        const valor = r.valor_indicador_apresentado;
+        return valor !== null && 
+              valor !== undefined && 
+              valor !== '' && 
+              valor !== '-' && 
+              String(valor).trim() !== '' &&
+              String(valor).trim() !== '-';
+      });
+      
+      if (realizadosComValor.length > 0) {
+        // ✅ Pega o REALIZADO mais recente que tenha valor preenchido
+        const realizadoEscolhido = realizadosComValor.reduce((mais_recente, atual) => {
+          const dataAtual = new Date(atual.periodo_referencia);
+          const dataMaisRecente = new Date(mais_recente.periodo_referencia);
+          
+          if (dataAtual > dataMaisRecente) {
+            return atual;
+          } else if (dataAtual.getTime() === dataMaisRecente.getTime()) {
+            return new Date(atual.created_at) > new Date(mais_recente.created_at) ? atual : mais_recente;
+          }
+          
+          return mais_recente;
+        });
+        
+        // ✅ Busca a META do mesmo período do realizado escolhido
+        const metaDoPeriodo = metas.find(meta => 
+          meta.periodo_referencia === realizadoEscolhido.periodo_referencia
+        );
+        
+        // ✅ Adiciona a meta como propriedade extra do indicador
+        const indicadorFinal = {
+          ...realizadoEscolhido,
+          meta_do_periodo: metaDoPeriodo ? metaDoPeriodo.valor_indicador_apresentado : null
+        };
+        
+        indicadoresFinais[controlId] = indicadorFinal;
+      }
+      // ✅ Se não há realizados com valor, não mostra nada
+    });
+
+    return Object.values(indicadoresFinais)
+      .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+  };
+
+  // ✅ FUNÇÃO PARA FORMATAR VALOR DA META
+  const formatarValorMeta = (valor) => {
+    if (valor === null || valor === undefined || valor === '' || valor === '-') {
+      return '-';
+    }
+    
+    const valorStr = String(valor).trim();
+    if (valorStr === '' || valorStr === '-') {
+      return '-';
+    }
+    
+    const num = parseFloat(valor);
+    if (isNaN(num)) return valor;
+    return num.toLocaleString('pt-BR');
   };
 
   // =====================================
@@ -245,19 +334,8 @@ export default function VisualizacaoIndicadores({ user }) {
         }
       });
 
-      // ✅ Agrupar por controle e pegar o mais recente
-      const indicadoresAgrupados = {};
-      Object.values(indicadoresUnicos).forEach(indicador => {
-        const controlId = indicador.id_controleindicador;
-        
-        if (!indicadoresAgrupados[controlId] || 
-            new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
-            indicadoresAgrupados[controlId] = indicador;
-        }
-      });
-
-      const resultadosFinais = Object.values(indicadoresAgrupados)
-        .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+      // ✅ MODIFICADO: Usar nova lógica de agrupamento
+      const resultadosFinais = agruparIndicadoresPriorizandoRealizado(Object.values(indicadoresUnicos));
 
       return resultadosFinais;
 
@@ -296,6 +374,7 @@ export default function VisualizacaoIndicadores({ user }) {
     
     const dadosAgrupados = {};
     
+    // Primeiro, agrupa todos os dados por período
     dadosIndicadores.forEach(indicador => {
       const periodo = formatDateGrafico(indicador.periodo_referencia);
       const periodoCompleto = indicador.periodo_referencia;
@@ -304,24 +383,43 @@ export default function VisualizacaoIndicadores({ user }) {
         dadosAgrupados[periodo] = {
           periodo,
           periodoCompleto,
-          realizadoApresentado: 0,
-          realizadoIndicador: 0,
-          metaApresentado: 0,
-          metaIndicador: 0
+          realizadoApresentado: null,
+          realizadoIndicador: null,
+          metaApresentado: null,
+          metaIndicador: null,
+          temRealizadoValido: false // ✅ NOVO: controla se tem realizado válido
         };
       }
       
       if (indicador.tipo_indicador === 1) { // Realizado
-        dadosAgrupados[periodo].realizadoApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
-        dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
+        const valor = indicador.valor_indicador_apresentado;
+        
+        // ✅ NOVA LÓGICA: Verifica se o valor é válido (não vazio)
+        const valorValido = valor !== null && 
+                          valor !== undefined && 
+                          valor !== '' && 
+                          valor !== '-' && 
+                          String(valor).trim() !== '' &&
+                          String(valor).trim() !== '-';
+        
+        if (valorValido) {
+          dadosAgrupados[periodo].realizadoApresentado = parseFloat(valor) || 0;
+          dadosAgrupados[periodo].realizadoIndicador = parseFloat(indicador.valor_indicador) || 0;
+          dadosAgrupados[periodo].temRealizadoValido = true; // ✅ MARCA como válido
+        }
+        
       } else if (indicador.tipo_indicador === 2) { // Meta
         dadosAgrupados[periodo].metaApresentado = parseFloat(indicador.valor_indicador_apresentado) || 0;
         dadosAgrupados[periodo].metaIndicador = parseFloat(indicador.valor_indicador) || 0;
       }
     });
     
-    return Object.values(dadosAgrupados)
+    // ✅ NOVA LÓGICA: Filtra apenas períodos com realizado válido
+    const periodosComRealizadoValido = Object.values(dadosAgrupados)
+      .filter(item => item.temRealizadoValido) // ✅ SÓ PERÍODOS COM REALIZADO PREENCHIDO
       .sort((a, b) => new Date(a.periodoCompleto) - new Date(b.periodoCompleto));
+    
+    return periodosComRealizadoValido;
   };
 
   const formatDateGrafico = (dateString) => {
@@ -588,7 +686,15 @@ export default function VisualizacaoIndicadores({ user }) {
   };
 
   const formatarValorIndicador = (valor) => {
-    if (valor === null || valor === undefined || valor === '') return '-';
+    if (valor === null || valor === undefined || valor === '' || valor === '-') {
+      return '-';
+    }
+    
+    const valorStr = String(valor).trim();
+    if (valorStr === '' || valorStr === '-') {
+      return '-';
+    }
+    
     const num = parseFloat(valor);
     if (isNaN(num)) return valor;
     return num.toLocaleString('pt-BR');
@@ -656,6 +762,7 @@ export default function VisualizacaoIndicadores({ user }) {
     return descricao && descricao.trim() !== '' ? descricao.trim() : null;
   };
 
+  // ✅ MODIFICADO: renderKPICard com exibição da meta
   const renderKPICard = (indicador, className = "") => (
     <div key={indicador.id} className={className}>
       <Link href={`/indicador/${indicador.id_controleindicador}`}>
@@ -688,10 +795,16 @@ export default function VisualizacaoIndicadores({ user }) {
             </div>
           </div>
           
+          {/* ✅ MODIFICADO: Valor com meta do período */}
           <div className="mb-4">
             <div className="text-5xl font-bold text-black">
               {formatarValorIndicador(indicador.valor_indicador_apresentado)}
             </div>
+            {indicador.meta_do_periodo && (
+              <div className="flex items-center text-gray-400 text-xs mt-1">
+                (Meta: {formatarValorMeta(indicador.meta_do_periodo)})
+              </div>
+            )}
           </div>
           
           <div className="flex items-center justify-between">
@@ -1001,7 +1114,7 @@ export default function VisualizacaoIndicadores({ user }) {
     }
   }, [user]);
 
-  // ✅ MODIFICADO: useEffect principal com lógica de filtro de arquivados
+  // ✅ MODIFICADO: useEffect principal com nova lógica de agrupamento
   useEffect(() => {
     const fetchIndicadores = async () => {
       try {
@@ -1089,18 +1202,8 @@ export default function VisualizacaoIndicadores({ user }) {
 
         if (error) throw error;
 
-        const indicadoresAgrupados = {};
-        (data || []).forEach(indicador => {
-          const controlId = indicador.id_controleindicador;
-          
-          if (!indicadoresAgrupados[controlId] || 
-              new Date(indicador.periodo_referencia) > new Date(indicadoresAgrupados[controlId].periodo_referencia)) {
-              indicadoresAgrupados[controlId] = indicador;
-          }
-        });
-
-        const indicadoresFinais = Object.values(indicadoresAgrupados)
-          .sort((a, b) => new Date(b.periodo_referencia) - new Date(a.periodo_referencia));
+        // ✅ MODIFICADO: Usar nova lógica de agrupamento
+        const indicadoresFinais = agruparIndicadoresPriorizandoRealizado(data);
 
         setIndicadores(indicadoresFinais);
       } catch (error) {
@@ -1924,10 +2027,16 @@ export default function VisualizacaoIndicadores({ user }) {
                               {(() => {
                                 if (isKPI) {
                                   return (
+                                    /* ✅ MODIFICADO: Layout mobile com valor e meta */
                                     <div className="mb-3">
                                       <div className="text-4xl font-bold text-black">
                                         {formatarValorIndicador(indicador.valor_indicador_apresentado)}
                                       </div>
+                                      {indicador.meta_do_periodo && (
+                                        <div className="flex items-center text-gray-400 text-xs mt-1">
+                                          (Meta: {formatarValorMeta(indicador.meta_do_periodo)})
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 } else if (isGrafico) {
