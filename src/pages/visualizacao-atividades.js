@@ -36,6 +36,7 @@ import {
   FiAlertCircle
 } from 'react-icons/fi';
 import { LuCalendarPlus } from "react-icons/lu";
+import { MdOutlineStickyNote2 } from "react-icons/md";
 
 export default function VisualizacaoAtividades({ user }) {
   const router = useRouter();
@@ -78,6 +79,12 @@ export default function VisualizacaoAtividades({ user }) {
   const [atividadePopup, setAtividadePopup] = useState('');
   const [dataPopup, setDataPopup] = useState(new Date());
   const [adicionandoAtividadePopup, setAdicionandoAtividadePopup] = useState(false);
+  
+  // Estados para as notas
+  const [showNotePopup, setShowNotePopup] = useState(false);
+  const [noteContent, setNoteContent] = useState('');
+  const [editandoNota, setEditandoNota] = useState(null);
+  const [textoNota, setTextoNota] = useState('');
 
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
@@ -626,6 +633,48 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
+  const abrirNotePopup = (atividade) => {
+    setNoteContent(atividade.note || '');
+    setShowNotePopup(true);
+  };
+
+  const fecharNotePopup = () => {
+    setShowNotePopup(false);
+    setNoteContent('');
+  };
+
+  const iniciarEdicaoNota = (atividade) => {
+    setEditandoNota(atividade.id);
+    setTextoNota(atividade.note || '');
+    setMenuAberto(null);
+  };
+
+  const cancelarEdicaoNota = () => {
+    setEditandoNota(null);
+    setTextoNota('');
+  };
+
+  const salvarNota = async (taskId) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ note: textoNota.trim() || null })
+        .eq('id', taskId);
+      
+      if (error) throw error;
+      
+      toast.success('Nota salva com sucesso!');
+      
+      setEditandoNota(null);
+      setTextoNota('');
+      await fetchAtividadesDia();
+      
+    } catch (error) {
+      console.error('Erro ao salvar nota:', error);
+      toast.error('Erro ao salvar nota');
+    }
+  };
+
   // ✅ VERSÃO CORRIGIDA: toggleRotinaCompleta com suporte a datas específicas
   const toggleRotinaCompleta = async (rotina, completed) => {
     try {
@@ -1140,15 +1189,26 @@ export default function VisualizacaoAtividades({ user }) {
                                   </div>
                                 ) : (
                                   <>
-                                    <h4 className={`text-sm md:text-base font-medium ${
-                                      atividade.completed 
-                                        ? 'text-green-800 line-through' 
-                                        : isAtividadeHoje 
-                                          ? 'text-[#012060]'
-                                          : 'text-yellow-800'
-                                    }`}>
-                                      {atividade.content}
-                                    </h4>
+                                    <div className="flex items-center space-x-2">
+                                      <h4 className={`text-sm md:text-base font-medium ${
+                                        atividade.completed 
+                                          ? 'text-green-800 line-through' 
+                                          : isAtividadeHoje 
+                                            ? 'text-[#012060]'
+                                            : 'text-yellow-800'
+                                      }`}>
+                                        {atividade.content}
+                                      </h4>
+                                      {atividade.note && atividade.note.trim() !== '' && (
+                                        <button
+                                          onClick={() => abrirNotePopup(atividade)}
+                                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                          title="Ver nota"
+                                        >
+                                          <MdOutlineStickyNote2 className="w-4 h-4 text-yellow-600" />
+                                        </button>
+                                      )}
+                                    </div>
                                     
                                     {atividade.completed && atividade.completed_at && (
                                       <div className="flex items-center mt-1 text-xs text-green-600">
@@ -1165,6 +1225,42 @@ export default function VisualizacaoAtividades({ user }) {
                                       </span>
                                     </div>
                                   </>
+                                )}
+
+                                {editandoNota === atividade.id && (
+                                  <div className="mt-3 space-y-2 border-t pt-3">
+                                    <label className="block text-xs font-medium text-gray-700">
+                                      Nota da atividade:
+                                    </label>
+                                    <textarea
+                                      value={textoNota}
+                                      onChange={(e) => setTextoNota(e.target.value)}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey) {
+                                          salvarNota(atividade.id);
+                                        } else if (e.key === 'Escape') {
+                                          cancelarEdicaoNota();
+                                        }
+                                      }}
+                                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                                      placeholder="Digite a nota para esta atividade..."
+                                      rows={3}
+                                    />
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => salvarNota(atividade.id)}
+                                        className="px-3 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
+                                      >
+                                        Salvar Nota
+                                      </button>
+                                      <button
+                                        onClick={cancelarEdicaoNota}
+                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
 
@@ -1185,6 +1281,13 @@ export default function VisualizacaoAtividades({ user }) {
                                     >
                                       <FiEdit className="w-3 h-3 mr-2" />
                                       Editar
+                                    </button>
+                                    <button
+                                      onClick={() => iniciarEdicaoNota(atividade)}
+                                      className="w-full px-3 py-2 text-left hover:bg-yellow-50 flex items-center text-yellow-600 text-sm"
+                                    >
+                                      <MdOutlineStickyNote2 className="w-3 h-3 mr-2" />
+                                      {atividade.note ? 'Editar Nota' : 'Adicionar Nota'}
                                     </button>
                                     <button
                                       onClick={() => excluirAtividade(atividade.id)}
@@ -1399,6 +1502,53 @@ export default function VisualizacaoAtividades({ user }) {
                     <span>Adicionar Atividade</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP PARA VISUALIZAR NOTA */}
+      {showNotePopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {/* Header do Popup */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <MdOutlineStickyNote2 className="w-5 h-5 text-yellow-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Nota da Atividade</h3>
+              </div>
+              <button
+                onClick={fecharNotePopup}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Conteúdo do Popup */}
+            <div className="p-6">
+              {noteContent && noteContent.trim() !== '' ? (
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {noteContent}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <MdOutlineStickyNote2 className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">Esta atividade não possui nenhuma nota.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer do Popup */}
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={fecharNotePopup}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Fechar
               </button>
             </div>
           </div>
