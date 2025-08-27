@@ -32,7 +32,8 @@ import {
   FiMoreVertical,
   FiTrash2,
   FiEdit,
-  FiCircle
+  FiCircle,
+  FiAlertCircle
 } from 'react-icons/fi';
 import { LuCalendarPlus } from "react-icons/lu";
 
@@ -113,6 +114,90 @@ export default function VisualizacaoAtividades({ user }) {
     return dia === 0 ? 7 : dia;
   };
 
+  // ✅ NOVA FUNÇÃO: Gera todas as datas previstas para uma rotina
+  const gerarDatasRecorrencia = (rotina) => {
+    const datas = [];
+    const start = new Date(rotina.start_date + 'T12:00:00'); // Força meio-dia para evitar problemas de timezone
+    
+    // ✅ CORREÇÃO CRÍTICA: Se não tiver end_date, usar uma data limite razoável (não hoje)
+    const hoje = new Date();
+    const end = rotina.end_date 
+      ? new Date(rotina.end_date + 'T12:00:00')
+      : new Date(hoje.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 ano no futuro se não tiver fim
+    
+    let current = new Date(start);
+    
+    // ✅ SEGURANÇA: Limite máximo de iterações para evitar loops infinitos
+    let iteracoes = 0;
+    const MAX_ITERACOES = 3650; // ~10 anos
+    
+    console.log('🔄 Gerando datas para rotina:', rotina.content, {
+      start: rotina.start_date,
+      end: rotina.end_date,
+      type: rotina.recurrence_type,
+      interval: rotina.recurrence_interval
+    });
+    
+    while (current <= end && iteracoes < MAX_ITERACOES) {
+      iteracoes++;
+      
+      let adicionarData = false;
+      
+      if (rotina.recurrence_type === "daily") {
+        // ✅ DIÁRIA: Sempre adiciona a data atual
+        adicionarData = true;
+        
+      } else if (rotina.recurrence_type === "weekly") {
+        // ✅ SEMANAL: Verifica se o dia da semana está nos dias permitidos
+        const diaSemana = current.getDay() === 0 ? 7 : current.getDay(); // Domingo=7, Segunda=1
+        adicionarData = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
+        
+      } else if (rotina.recurrence_type === "monthly") {
+        // ✅ MENSAL: Verifica se é o mesmo dia do mês da data de início
+        adicionarData = current.getDate() === start.getDate();
+      }
+      
+      if (adicionarData) {
+        datas.push(current.toISOString().split("T")[0]);
+      }
+      
+      // ✅ INCREMENTO BASEADO NO TIPO DE RECORRÊNCIA
+      if (rotina.recurrence_type === "daily") {
+        current.setDate(current.getDate() + (rotina.recurrence_interval || 1));
+      } else if (rotina.recurrence_type === "weekly") {
+        current.setDate(current.getDate() + 1); // Avança dia por dia para verificar dias da semana
+      } else if (rotina.recurrence_type === "monthly") {
+        current.setMonth(current.getMonth() + (rotina.recurrence_interval || 1));
+      }
+    }
+    
+    if (iteracoes >= MAX_ITERACOES) {
+      console.warn('⚠️ Limite de iterações atingido para rotina:', rotina.content);
+    }
+    
+    console.log('✅ Datas geradas:', datas);
+    return datas;
+  };
+
+  // ✅ NOVA FUNÇÃO: Calcular diferença em dias (corrigida)
+  const calcularDiasAtraso = (dataRotina) => {
+    const hoje = new Date();
+    hoje.setHours(12, 0, 0, 0); // Meio-dia para evitar problemas de timezone
+    
+    const dataRot = new Date(dataRotina + 'T12:00:00');
+    
+    const diffTime = hoje.getTime() - dataRot.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  };
+
+  // ✅ NOVA FUNÇÃO: Formatar data específica (substituindo formatarTextoAtraso)
+  const formatarDataEspecifica = (dataRotina) => {
+    const data = new Date(dataRotina + 'T12:00:00');
+    return data.toLocaleDateString('pt-BR'); // Formato: 30/08/2025
+  };
+
   // ===========================================
   // ✅ FUNÇÕES DE CARREGAMENTO DE DADOS (ATUALIZADAS PARA LISTAS)
   // ===========================================
@@ -163,12 +248,16 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
+  // ✅ VERSÃO CORRIGIDA: fetchAtividadesRotina com lógica granular para rotinas persistentes
   const fetchAtividadesRotina = async () => {
     if (!listaSelecionada) return;
     
     try {
-      const dataAtual = formatarDataISO(dataSelecionada);
+      const dataAtual = formatarDataISO(dataSelecionada); // Data selecionada pelo usuário
       const diaSemana = getDiaSemanaNumero(dataSelecionada);
+      const hoje = formatarDataISO(new Date()); // Data real de hoje
+      
+      console.log('🔄 Carregando rotinas para:', { dataAtual, hoje, lista: listaSelecionada });
       
       // ✅ Buscar TODAS as rotinas da lista selecionada (ativas)
       const { data: todasRotinas, error } = await supabase
@@ -176,10 +265,12 @@ export default function VisualizacaoAtividades({ user }) {
         .select('*')
         .eq('usuario_id', user.id)
         .eq('task_list_id', listaSelecionada)
-        .lte('start_date', dataAtual)
-        .or(`end_date.is.null,end_date.gte.${dataAtual}`);
+        .lte('start_date', dataAtual) // ✅ Rotinas que começaram até a data selecionada
+        .or(`end_date.is.null,end_date.gte.${dataAtual}`); // Que ainda não terminaram na data selecionada
       
       if (error) throw error;
+      
+      console.log('📋 Rotinas encontradas:', todasRotinas.length);
       
       // ✅ Separar rotinas por tipo de persistência
       const rotinasNaoPersistentes = [];
@@ -193,86 +284,122 @@ export default function VisualizacaoAtividades({ user }) {
         }
       });
       
+      console.log('📊 Distribuição:', {
+        persistentes: rotinasPersistentes.length,
+        naoPersistentes: rotinasNaoPersistentes.length
+      });
+      
       // ✅ LÓGICA PARA ROTINAS NÃO PERSISTENTES (persistent = false)
-      // Comportamento atual: só aparecem no dia específico da recorrência
+      // Comportamento atual mantido: só aparecem no dia específico da recorrência
       const rotinasNaoPersistentesValidas = rotinasNaoPersistentes.filter(rotina => {
         if (rotina.recurrence_type === 'daily') {
-          const startDate = new Date(rotina.start_date);
-          const diffTime = dataSelecionada.getTime() - startDate.getTime();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          return diffDays % rotina.recurrence_interval === 0;
+          const startDate = new Date(rotina.start_date + 'T12:00:00');
+          const currentDate = new Date(dataAtual + 'T12:00:00');
+          
+          // ✅ CORREÇÃO: Verificar se a data atual está dentro do range da rotina
+          if (currentDate < startDate) return false;
+          if (rotina.end_date) {
+            const endDate = new Date(rotina.end_date + 'T12:00:00');
+            if (currentDate > endDate) return false;
+          }
+          
+          const diffTime = currentDate.getTime() - startDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays % (rotina.recurrence_interval || 1) === 0;
+          
         } else if (rotina.recurrence_type === 'weekly') {
+          // ✅ CORREÇÃO: Verificar range de datas também para semanal
+          const currentDate = new Date(dataAtual + 'T12:00:00');
+          const startDate = new Date(rotina.start_date + 'T12:00:00');
+          
+          if (currentDate < startDate) return false;
+          if (rotina.end_date) {
+            const endDate = new Date(rotina.end_date + 'T12:00:00');
+            if (currentDate > endDate) return false;
+          }
+          
           return rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
+          
         } else if (rotina.recurrence_type === 'monthly') {
-          const startDate = new Date(rotina.start_date);
-          return startDate.getDate() === dataSelecionada.getDate();
+          // ✅ CORREÇÃO: Verificar range de datas também para mensal
+          const currentDate = new Date(dataAtual + 'T12:00:00');
+          const startDate = new Date(rotina.start_date + 'T12:00:00');
+          
+          if (currentDate < startDate) return false;
+          if (rotina.end_date) {
+            const endDate = new Date(rotina.end_date + 'T12:00:00');
+            if (currentDate > endDate) return false;
+          }
+          
+          return startDate.getDate() === currentDate.getDate();
         }
         return false;
       });
       
-      // ✅ LÓGICA PARA ROTINAS PERSISTENTES (persistent = true)
-      let rotinasPersistentesValidas = [];
+      // ✅ NOVA LÓGICA PARA ROTINAS PERSISTENTES - SEGUINDO DATA SELECIONADA
+      let atividadesPersistentesVisiveis = [];
       
       if (rotinasPersistentes.length > 0) {
-        // Buscar todos os status dessas rotinas persistentes
         const rotinasPersistentesIds = rotinasPersistentes.map(r => r.id);
         
+        // Buscar TODOS os status de conclusão já registrados
         const { data: statusData, error: statusError } = await supabase
           .from('routine_tasks_status')
-          .select('routine_tasks_id, completed, date')
+          .select('routine_tasks_id, date, completed')
           .in('routine_tasks_id', rotinasPersistentesIds)
-          .eq('completed', true) // Só nos interessam as que foram concluídas
-          .gte('date', rotinasPersistentes.reduce((minDate, rotina) => {
-            const startDate = new Date(rotina.start_date);
-            return !minDate || startDate < minDate ? startDate : minDate;
-          }, null).toISOString().split('T')[0]); // A partir da menor start_date
+          .eq('completed', true); // Só nos interessam as que foram concluídas
         
         if (statusError) throw statusError;
         
-        // Criar mapa de rotinas que JÁ foram concluídas
-        const rotinasJaConcluidas = new Set();
-        if (statusData) {
-          statusData.forEach(status => {
-            rotinasJaConcluidas.add(status.routine_tasks_id);
-          });
-        }
+        console.log('📈 Status encontrados:', statusData?.length || 0);
         
-        // ✅ Para rotinas persistentes: mostrar apenas as que NUNCA foram concluídas 
-        // E que deveriam aparecer no dia atual (verificar recorrência)
-        rotinasPersistentesValidas = rotinasPersistentes.filter(rotina => {
-          // Se já foi concluída alguma vez, não mostra mais
-          if (rotinasJaConcluidas.has(rotina.id)) {
-            return false;
-          }
+        // ✅ Para cada rotina persistente, gerar todas as datas e verificar o que não foi concluído
+        rotinasPersistentes.forEach(rotina => {
+          console.log('🔍 Processando rotina persistente:', rotina.content);
           
-          // ✅ VERIFICAR SE HOJE É UM DIA VÁLIDO PARA ESTA ROTINA
-          if (rotina.recurrence_type === 'daily') {
-            const startDate = new Date(rotina.start_date);
-            const diffTime = dataSelecionada.getTime() - startDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays % rotina.recurrence_interval === 0;
-          } else if (rotina.recurrence_type === 'weekly') {
-            return rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
-          } else if (rotina.recurrence_type === 'monthly') {
-            const startDate = new Date(rotina.start_date);
-            return startDate.getDate() === dataSelecionada.getDate();
-          }
+          const datasRecorrencia = gerarDatasRecorrencia(rotina);
           
-          return false;
+          console.log('📅 Datas de recorrência:', datasRecorrencia);
+          
+          datasRecorrencia.forEach(data => {
+            // Verificar se já foi concluída nesta data específica
+            const jaConcluida = statusData && statusData.some(s => 
+              s.routine_tasks_id === rotina.id && 
+              s.date === data && 
+              s.completed
+            );
+            
+            // ✅ CORREÇÃO: Mostrar apenas datas até a data selecionada
+            if (!jaConcluida && data <= dataAtual) {
+              atividadesPersistentesVisiveis.push({
+                ...rotina,
+                visible_date: data // NOVA PROPRIEDADE: data específica desta linha
+              });
+            }
+          });
         });
       }
       
-      // ✅ Combinar todas as rotinas válidas
-      const todasRotinasValidas = [
+      // ✅ Combinar rotinas não persistentes (lógica atual) com persistentes (nova lógica)
+      const todasAtividadesRotina = [
         ...rotinasNaoPersistentesValidas,
-        ...rotinasPersistentesValidas
+        ...atividadesPersistentesVisiveis
       ];
       
-      setAtividadesRotina(todasRotinasValidas);
+      console.log('📋 Total de atividades de rotina:', todasAtividadesRotina.length);
       
-      // ✅ Buscar status das rotinas para a data selecionada (para mostrar se foi concluída HOJE)
-      if (todasRotinasValidas.length > 0) {
-        const rotinaIds = todasRotinasValidas.map(r => r.id);
+      // ✅ Ordenar por data (mais antigas primeiro para rotinas persistentes)
+      todasAtividadesRotina.sort((a, b) => {
+        const dataA = a.visible_date || dataAtual;
+        const dataB = b.visible_date || dataAtual;
+        return new Date(dataA) - new Date(dataB);
+      });
+      
+      setAtividadesRotina(todasAtividadesRotina);
+      
+      // ✅ Buscar status das rotinas para a data selecionada (para rotinas não persistentes)
+      if (rotinasNaoPersistentesValidas.length > 0) {
+        const rotinaIds = rotinasNaoPersistentesValidas.map(r => r.id);
         const { data: statusHoje, error: statusHojeError } = await supabase
           .from('routine_tasks_status')
           .select('*')
@@ -291,7 +418,7 @@ export default function VisualizacaoAtividades({ user }) {
       }
       
     } catch (error) {
-      console.error('Erro ao carregar atividades de rotina:', error);
+      console.error('❌ Erro ao carregar atividades de rotina:', error);
       toast.error('Erro ao carregar atividades de rotina');
     }
   };
@@ -307,7 +434,7 @@ export default function VisualizacaoAtividades({ user }) {
         .from('tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
+        .eq('task_list_id', listaSelecionada)
         .eq('date', dataAtual)
         .order('created_at', { ascending: false });
       
@@ -318,7 +445,7 @@ export default function VisualizacaoAtividades({ user }) {
         .from('tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
+        .eq('task_list_id', listaSelecionada)
         .eq('completed', false)
         .lt('date', dataAtual)
         .order('date', { ascending: false });
@@ -340,7 +467,7 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   // ===========================================
-  // ✅ FUNÇÕES DE AÇÕES (ATUALIZADAS PARA LISTAS)
+  // ✅ FUNÇÕES DE AÇÕES (ATUALIZADAS)
   // ===========================================
 
   const adicionarAtividade = async () => {
@@ -352,12 +479,11 @@ export default function VisualizacaoAtividades({ user }) {
     try {
       setAdicionandoAtividade(true);
       
-      // ✅ Inserir com task_list_id
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           usuario_id: user.id,
-          task_list_id: listaSelecionada, // ✅ Mudança aqui
+          task_list_id: listaSelecionada,
           content: novaAtividade.trim(),
           date: formatarDataISO(dataSelecionada),
           completed: false
@@ -370,7 +496,6 @@ export default function VisualizacaoAtividades({ user }) {
       setNovaAtividade('');
       toast.success('Atividade adicionada com sucesso!');
       
-      // Recarregar atividades
       await fetchAtividadesDia();
       
     } catch (error) {
@@ -390,12 +515,11 @@ export default function VisualizacaoAtividades({ user }) {
     try {
       setAdicionandoAtividadePopup(true);
       
-      // ✅ Inserir com task_list_id
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           usuario_id: user.id,
-          task_list_id: listaSelecionada, // ✅ Mudança aqui
+          task_list_id: listaSelecionada,
           content: atividadePopup.trim(),
           date: formatarDataISO(dataPopup),
           completed: false
@@ -405,14 +529,12 @@ export default function VisualizacaoAtividades({ user }) {
       
       if (error) throw error;
       
-      // Limpar estados do popup
       setAtividadePopup('');
       setDataPopup(new Date());
       setShowPopupCalendario(false);
       
       toast.success('Atividade adicionada com sucesso!');
       
-      // Recarregar atividades se a data selecionada for a mesma da data atual
       if (formatarDataISO(dataPopup) === formatarDataISO(dataSelecionada)) {
         await fetchAtividadesDia();
       }
@@ -439,7 +561,6 @@ export default function VisualizacaoAtividades({ user }) {
       
       toast.success(!completed ? 'Atividade concluída!' : 'Atividade marcada como pendente');
       
-      // Recarregar atividades
       await fetchAtividadesDia();
       
     } catch (error) {
@@ -475,7 +596,6 @@ export default function VisualizacaoAtividades({ user }) {
       
       toast.success('Atividade atualizada com sucesso!');
       
-      // Limpar estados de edição e recarregar atividades
       setEditandoAtividade(null);
       setTextoEdicao('');
       await fetchAtividadesDia();
@@ -497,7 +617,6 @@ export default function VisualizacaoAtividades({ user }) {
       
       toast.success('Atividade excluída com sucesso!');
       
-      // Fechar menu e recarregar atividades
       setMenuAberto(null);
       await fetchAtividadesDia();
       
@@ -507,50 +626,44 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
-  const toggleRotinaCompleta = async (rotinaId, completed) => {
-  try {
-    const dataAtual = formatarDataISO(dataSelecionada);
-    
-    // Encontrar a rotina para verificar se é persistente
-    const rotina = atividadesRotina.find(r => r.id === rotinaId);
-      if (!rotina) {
-        toast.error('Rotina não encontrada');
-        return;
-      }
+  // ✅ VERSÃO CORRIGIDA: toggleRotinaCompleta com suporte a datas específicas
+  const toggleRotinaCompleta = async (rotina, completed) => {
+    try {
+      // ✅ Para rotinas persistentes, usar a data específica (visible_date)
+      // Para rotinas não persistentes, usar a data selecionada atual
+      const dataParaStatus = rotina.visible_date || formatarDataISO(dataSelecionada);
       
       if (!completed) {
         // ✅ MARCAR COMO COMPLETA
         const { error } = await supabase
           .from('routine_tasks_status')
           .insert([{
-            routine_tasks_id: rotinaId,
-            date: dataAtual,
+            routine_tasks_id: rotina.id,
+            date: dataParaStatus,
             completed: true
           }]);
         
         if (error) throw error;
         
-        // ✅ Se for rotina persistente, ela vai sumir da tela após ser concluída
-        if (rotina.persistent) {
-          toast.success('Rotina persistente concluída! Ela não aparecerá mais.');
+        if (rotina.persistent && rotina.visible_date) {
+          toast.success(`Rotina concluída para o dia ${formatarDataEspecifica(rotina.visible_date)}!`);
         } else {
           toast.success('Rotina concluída!');
         }
         
       } else {
         // ✅ MARCAR COMO INCOMPLETA (desmarcar)
-        // Isso só funciona para rotinas do dia atual, não para rotinas persistentes antigas
         const { error } = await supabase
           .from('routine_tasks_status')
           .update({ completed: false })
-          .eq('routine_tasks_id', rotinaId)
-          .eq('date', dataAtual);
+          .eq('routine_tasks_id', rotina.id)
+          .eq('date', dataParaStatus);
         
         if (error) throw error;
         toast.success('Rotina marcada como pendente');
       }
       
-      // ✅ Recarregar rotinas - isso vai aplicar a nova lógica
+      // ✅ Recarregar rotinas
       await fetchAtividadesRotina();
       
     } catch (error) {
@@ -614,16 +727,12 @@ export default function VisualizacaoAtividades({ user }) {
   // ✅ EFFECT PRINCIPAL: Carregamento de dados do usuário (OTIMIZADO)
   useEffect(() => {
     const carregarDados = async () => {
-      // ✅ Só carrega se:
-      // 1. Tem usuário
-      // 2. Nunca carregou antes OU o usuário mudou (login/logout real)
       if (user && (!dadosCarregadosRef.current || user.id !== userIdRef.current)) {
         console.log('🔄 Carregando dados do usuário...', user.id);
         setLoading(true);
         await fetchListasVinculadas(user.id);
         setLoading(false);
         
-        // ✅ Marcar como carregado
         dadosCarregadosRef.current = true;
         userIdRef.current = user.id;
       } else if (user) {
@@ -649,9 +758,6 @@ export default function VisualizacaoAtividades({ user }) {
   // ✅ EFFECT: Carregamento de atividades (OTIMIZADO)
   useEffect(() => {
     const carregarAtividades = async () => {
-      // ✅ Só carrega se:
-      // 1. Tem lista selecionada
-      // 2. Nunca carregou OU a lista/data mudou realmente
       const dataISO = formatarDataISO(dataSelecionada);
       const mudouLista = listaSelecionada !== ultimaListaRef.current;
       const mudouData = dataISO !== ultimaDataRef.current;
@@ -671,7 +777,6 @@ export default function VisualizacaoAtividades({ user }) {
         ]);
         setLoadingAtividades(false);
         
-        // ✅ Marcar como carregado
         atividadesCarregadasRef.current = true;
         ultimaListaRef.current = listaSelecionada;
         ultimaDataRef.current = dataISO;
@@ -710,7 +815,7 @@ export default function VisualizacaoAtividades({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo - MANTIDO COMO ESTÁ */}
+      {/* Header responsivo */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -1099,7 +1204,7 @@ export default function VisualizacaoAtividades({ user }) {
                   )}
                 </div>
 
-                {/* Atividades de Rotina */}
+                {/* ✅ ATIVIDADES DE ROTINA - VERSÃO FINAL COM NOVA EXIBIÇÃO DE DATAS */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center mb-4">
                     <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
@@ -1116,22 +1221,42 @@ export default function VisualizacaoAtividades({ user }) {
                   ) : (
                     <div className="space-y-3">
                       {atividadesRotina.map((rotina) => {
-                        const status = statusRotina[rotina.id];
-                        const isCompleted = status?.completed || false;
+                        // ✅ Para rotinas persistentes, verificar se já foi concluída na data específica
+                        // Para rotinas não persistentes, usar a lógica atual (statusRotina)
+                        const isCompleted = rotina.persistent ? false : (statusRotina[rotina.id]?.completed || false);
+                        const diasAtraso = rotina.visible_date ? calcularDiasAtraso(rotina.visible_date) : 0;
+                        
+                        // ✅ Definir cores baseadas no atraso (para rotinas persistentes)
+                        let corCard = 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+                        let corTexto = 'text-[#012060]';
+                        let iconeAtraso = null;
+                        
+                        if (rotina.persistent && rotina.visible_date) {
+                          if (diasAtraso > 3) {
+                            corCard = 'bg-red-50 border-red-200 hover:bg-red-100';
+                            corTexto = 'text-red-800';
+                            iconeAtraso = <FiAlertCircle className="w-4 h-4 text-red-500 mr-1" />;
+                          } else if (diasAtraso > 1) {
+                            corCard = 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100';
+                            corTexto = 'text-yellow-800';
+                            iconeAtraso = <FiClock className="w-4 h-4 text-yellow-500 mr-1" />;
+                          }
+                        }
+                        
+                        if (isCompleted) {
+                          corCard = 'bg-green-50 border-green-200';
+                          corTexto = 'text-green-800';
+                        }
                         
                         return (
                           <div
-                            key={rotina.id}
-                            className={`p-4 border rounded-lg transition-colors ${
-                              isCompleted 
-                                ? 'bg-green-50 border-green-200' 
-                                : 'bg-blue-50 border-blue-200 hover:bg-blue-100'
-                            }`}
+                            key={`${rotina.id}-${rotina.visible_date || 'current'}`}
+                            className={`p-4 border rounded-lg transition-colors ${corCard}`}
                           >
                             <div className="flex items-start space-x-3">
-                              {/* ✅ BOTÃO PARA MARCAR/DESMARCAR ROTINA - sempre visível */}
+                              {/* ✅ BOTÃO PARA MARCAR/DESMARCAR ROTINA */}
                               <button
-                                onClick={() => toggleRotinaCompleta(rotina.id, isCompleted)}
+                                onClick={() => toggleRotinaCompleta(rotina, isCompleted)}
                                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                                   isCompleted
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
@@ -1143,23 +1268,34 @@ export default function VisualizacaoAtividades({ user }) {
                               </button>
                               
                               <div className="flex-1">
+                                {/* ✅ MUDANÇA: Título sem o texto de atraso */}
                                 <h4 className={`text-sm md:text-base font-medium ${
-                                  isCompleted ? 'text-green-800 line-through' : 'text-[#012060]'
+                                  isCompleted ? 'text-green-800 line-through' : corTexto
                                 }`}>
                                   {rotina.content}
                                 </h4>
+                                
+                                {/* ✅ Informações da recorrência */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
+                                  {iconeAtraso}
                                   <FiRepeat className="w-3 h-3 mr-1" />
                                   <span>
                                     {rotina.recurrence_type === 'daily' && `Diária (a cada ${rotina.recurrence_interval} dia${rotina.recurrence_interval > 1 ? 's' : ''})`}
                                     {rotina.recurrence_type === 'weekly' && `Semanal (${rotina.recurrence_days?.map(d => diasDaSemana[d === 7 ? 0 : d]).join(', ')})`}
                                     {rotina.recurrence_type === 'monthly' && `Mensal (dia ${new Date(rotina.start_date).getDate()})`}
                                   </span>
+                                  {rotina.persistent && (
+                                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                      Persistente
+                                    </span>
+                                  )}
                                 </div>
+                                
+                                {/* ✅ MUDANÇA: Substituir "Criado em" por "Data" */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
-                                  <FiClock className="w-3 h-3 mr-1" />
+                                  <FiCalendar className="w-3 h-3 mr-1" />
                                   <span>
-                                    Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')} às {new Date(rotina.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    Data: {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
                                   </span>
                                 </div>
                               </div>
