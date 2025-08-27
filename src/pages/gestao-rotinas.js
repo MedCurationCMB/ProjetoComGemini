@@ -56,7 +56,8 @@ export default function GestaoRotinas({ user }) {
     recurrence_interval: 1,
     recurrence_days: [],
     start_date: new Date().toISOString().split('T')[0],
-    end_date: ''
+    end_date: '',
+    persistent: true
   });
   
   // Estados de ações
@@ -104,7 +105,8 @@ export default function GestaoRotinas({ user }) {
       recurrence_interval: 1,
       recurrence_days: [],
       start_date: new Date().toISOString().split('T')[0],
-      end_date: ''
+      end_date: '',
+      persistent: true
     });
     setEditandoRotina(null);
   };
@@ -230,7 +232,8 @@ export default function GestaoRotinas({ user }) {
         recurrence_interval: formData.recurrence_interval,
         recurrence_days: formData.recurrence_type === 'weekly' ? formData.recurrence_days : null,
         start_date: formData.start_date,
-        end_date: formData.end_date || null
+        end_date: formData.end_date || null,
+        persistent: formData.persistent
       };
       
       if (editandoRotina) {
@@ -274,7 +277,8 @@ export default function GestaoRotinas({ user }) {
       recurrence_interval: rotina.recurrence_interval,
       recurrence_days: rotina.recurrence_days || [],
       start_date: rotina.start_date,
-      end_date: rotina.end_date || ''
+      end_date: rotina.end_date || '',
+      persistent: rotina.persistent !== undefined ? rotina.persistent : true
     });
     setShowForm(true);
     setMenuAberto(null);
@@ -619,9 +623,9 @@ export default function GestaoRotinas({ user }) {
                               <div className="flex items-center">
                                 <FiCalendar className="w-3 h-3 mr-1" />
                                 <span>
-                                  Início: {new Date(rotina.start_date).toLocaleDateString('pt-BR')}
+                                  Início: {new Date(rotina.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                   {rotina.end_date && (
-                                    <> | Fim: {new Date(rotina.end_date).toLocaleDateString('pt-BR')}</>
+                                    <> | Fim: {new Date(rotina.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</>
                                   )}
                                 </span>
                               </div>
@@ -825,6 +829,56 @@ export default function GestaoRotinas({ user }) {
                   </div>
                 </div>
 
+                {/* Campo Persistent */}
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Exibição
+                  </label>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="persistent-true"
+                          name="persistent"
+                          type="radio"
+                          checked={formData.persistent === true}
+                          onChange={() => setFormData(prev => ({ ...prev, persistent: true }))}
+                          className="focus:ring-[#012060] h-4 w-4 text-[#012060] border-gray-300"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor="persistent-true" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          Persistente (Recomendado)
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          Se não fizer hoje, aparece amanhã como pendente até ser concluída
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="persistent-false"
+                          name="persistent"
+                          type="radio"
+                          checked={formData.persistent === false}
+                          onChange={() => setFormData(prev => ({ ...prev, persistent: false }))}
+                          className="focus:ring-[#012060] h-4 w-4 text-[#012060] border-gray-300"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor="persistent-false" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          Não Persistente
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          Só aparece no dia específico. Se não fizer, desaparece no dia seguinte
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Preview da Recorrência */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
@@ -836,6 +890,7 @@ export default function GestaoRotinas({ user }) {
                     {formData.recurrence_type === 'daily' && (
                       <>
                         <strong>Frequência:</strong> {formData.recurrence_interval === 1 ? 'Todos os dias' : `A cada ${formData.recurrence_interval} dias`}
+                        <br />
                       </>
                     )}
                     {formData.recurrence_type === 'weekly' && (
@@ -844,20 +899,26 @@ export default function GestaoRotinas({ user }) {
                           ? formData.recurrence_days.map(d => diasDaSemana.find(dia => dia.valor === d)?.nome).join(', ')
                           : 'Nenhum dia selecionado'
                         }
+                        <br />
                       </>
                     )}
                     {formData.recurrence_type === 'monthly' && (
                       <>
                         <strong>Dia do mês:</strong> {formData.start_date ? formData.start_date.split('-')[2] : ''}
+                        <br />
                       </>
                     )}
-                    <br />
                     <strong>Período:</strong> {formData.start_date ? 
                       formData.start_date.split('-').reverse().join('/') : ''}
                     {formData.end_date && (
                       <> até {formData.end_date.split('-').reverse().join('/')}</>
                     )}
                     {!formData.end_date && <> (sem data de término)</>}
+                    <br />
+                    <strong>Persistência:</strong> {formData.persistent 
+                      ? 'Persistente (aparece até ser concluída)' 
+                      : 'Não persistente (só no dia específico)'
+                    }
                   </p>
                 </div>
               </div>

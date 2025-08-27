@@ -170,21 +170,33 @@ export default function VisualizacaoAtividades({ user }) {
       const dataAtual = formatarDataISO(dataSelecionada);
       const diaSemana = getDiaSemanaNumero(dataSelecionada);
       
-      // ✅ Buscar rotinas da lista selecionada
-      const { data, error } = await supabase
+      // ✅ Buscar TODAS as rotinas da lista selecionada (ativas)
+      const { data: todasRotinas, error } = await supabase
         .from('routine_tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
+        .eq('task_list_id', listaSelecionada)
         .lte('start_date', dataAtual)
         .or(`end_date.is.null,end_date.gte.${dataAtual}`);
       
       if (error) throw error;
       
-      // Filtrar rotinas que devem aparecer hoje
-      const rotinasValidas = data.filter(rotina => {
+      // ✅ Separar rotinas por tipo de persistência
+      const rotinasNaoPersistentes = [];
+      const rotinasPersistentes = [];
+      
+      todasRotinas.forEach(rotina => {
+        if (rotina.persistent) {
+          rotinasPersistentes.push(rotina);
+        } else {
+          rotinasNaoPersistentes.push(rotina);
+        }
+      });
+      
+      // ✅ LÓGICA PARA ROTINAS NÃO PERSISTENTES (persistent = false)
+      // Comportamento atual: só aparecem no dia específico da recorrência
+      const rotinasNaoPersistentesValidas = rotinasNaoPersistentes.filter(rotina => {
         if (rotina.recurrence_type === 'daily') {
-          // Calcular se é um dia válido baseado no intervalo
           const startDate = new Date(rotina.start_date);
           const diffTime = dataSelecionada.getTime() - startDate.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -192,30 +204,89 @@ export default function VisualizacaoAtividades({ user }) {
         } else if (rotina.recurrence_type === 'weekly') {
           return rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
         } else if (rotina.recurrence_type === 'monthly') {
-          // Simplificado: mesmo dia do mês
           const startDate = new Date(rotina.start_date);
           return startDate.getDate() === dataSelecionada.getDate();
         }
         return false;
       });
       
-      setAtividadesRotina(rotinasValidas);
+      // ✅ LÓGICA PARA ROTINAS PERSISTENTES (persistent = true)
+      let rotinasPersistentesValidas = [];
       
-      // Buscar status das rotinas para a data selecionada
-      if (rotinasValidas.length > 0) {
-        const rotinaIds = rotinasValidas.map(r => r.id);
+      if (rotinasPersistentes.length > 0) {
+        // Buscar todos os status dessas rotinas persistentes
+        const rotinasPersistentesIds = rotinasPersistentes.map(r => r.id);
+        
         const { data: statusData, error: statusError } = await supabase
+          .from('routine_tasks_status')
+          .select('routine_tasks_id, completed, date')
+          .in('routine_tasks_id', rotinasPersistentesIds)
+          .eq('completed', true) // Só nos interessam as que foram concluídas
+          .gte('date', rotinasPersistentes.reduce((minDate, rotina) => {
+            const startDate = new Date(rotina.start_date);
+            return !minDate || startDate < minDate ? startDate : minDate;
+          }, null).toISOString().split('T')[0]); // A partir da menor start_date
+        
+        if (statusError) throw statusError;
+        
+        // Criar mapa de rotinas que JÁ foram concluídas
+        const rotinasJaConcluidas = new Set();
+        if (statusData) {
+          statusData.forEach(status => {
+            rotinasJaConcluidas.add(status.routine_tasks_id);
+          });
+        }
+        
+        // ✅ Para rotinas persistentes: mostrar apenas as que NUNCA foram concluídas 
+        // E que deveriam aparecer no dia atual (verificar recorrência)
+        rotinasPersistentesValidas = rotinasPersistentes.filter(rotina => {
+          // Se já foi concluída alguma vez, não mostra mais
+          if (rotinasJaConcluidas.has(rotina.id)) {
+            return false;
+          }
+          
+          // ✅ VERIFICAR SE HOJE É UM DIA VÁLIDO PARA ESTA ROTINA
+          if (rotina.recurrence_type === 'daily') {
+            const startDate = new Date(rotina.start_date);
+            const diffTime = dataSelecionada.getTime() - startDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays % rotina.recurrence_interval === 0;
+          } else if (rotina.recurrence_type === 'weekly') {
+            return rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
+          } else if (rotina.recurrence_type === 'monthly') {
+            const startDate = new Date(rotina.start_date);
+            return startDate.getDate() === dataSelecionada.getDate();
+          }
+          
+          return false;
+        });
+      }
+      
+      // ✅ Combinar todas as rotinas válidas
+      const todasRotinasValidas = [
+        ...rotinasNaoPersistentesValidas,
+        ...rotinasPersistentesValidas
+      ];
+      
+      setAtividadesRotina(todasRotinasValidas);
+      
+      // ✅ Buscar status das rotinas para a data selecionada (para mostrar se foi concluída HOJE)
+      if (todasRotinasValidas.length > 0) {
+        const rotinaIds = todasRotinasValidas.map(r => r.id);
+        const { data: statusHoje, error: statusHojeError } = await supabase
           .from('routine_tasks_status')
           .select('*')
           .in('routine_tasks_id', rotinaIds)
           .eq('date', dataAtual);
         
-        if (statusError) throw statusError;
+        if (statusHojeError) throw statusHojeError;
         
         const statusObj = {};
-        statusData.forEach(status => {
-          statusObj[status.routine_tasks_id] = status;
-        });
+        if (statusHoje) {
+          statusHoje.forEach(status => {
+            statusObj[status.routine_tasks_id] = status;
+          });
+        }
         setStatusRotina(statusObj);
       }
       
@@ -437,11 +508,18 @@ export default function VisualizacaoAtividades({ user }) {
   };
 
   const toggleRotinaCompleta = async (rotinaId, completed) => {
-    try {
-      const dataAtual = formatarDataISO(dataSelecionada);
+  try {
+    const dataAtual = formatarDataISO(dataSelecionada);
+    
+    // Encontrar a rotina para verificar se é persistente
+    const rotina = atividadesRotina.find(r => r.id === rotinaId);
+      if (!rotina) {
+        toast.error('Rotina não encontrada');
+        return;
+      }
       
       if (!completed) {
-        // Marcar como completa
+        // ✅ MARCAR COMO COMPLETA
         const { error } = await supabase
           .from('routine_tasks_status')
           .insert([{
@@ -451,9 +529,17 @@ export default function VisualizacaoAtividades({ user }) {
           }]);
         
         if (error) throw error;
-        toast.success('Rotina concluída!');
+        
+        // ✅ Se for rotina persistente, ela vai sumir da tela após ser concluída
+        if (rotina.persistent) {
+          toast.success('Rotina persistente concluída! Ela não aparecerá mais.');
+        } else {
+          toast.success('Rotina concluída!');
+        }
+        
       } else {
-        // Marcar como incompleta
+        // ✅ MARCAR COMO INCOMPLETA (desmarcar)
+        // Isso só funciona para rotinas do dia atual, não para rotinas persistentes antigas
         const { error } = await supabase
           .from('routine_tasks_status')
           .update({ completed: false })
@@ -464,7 +550,7 @@ export default function VisualizacaoAtividades({ user }) {
         toast.success('Rotina marcada como pendente');
       }
       
-      // Recarregar status das rotinas
+      // ✅ Recarregar rotinas - isso vai aplicar a nova lógica
       await fetchAtividadesRotina();
       
     } catch (error) {
@@ -959,15 +1045,6 @@ export default function VisualizacaoAtividades({ user }) {
                                       {atividade.content}
                                     </h4>
                                     
-                                    {!isAtividadeHoje && (
-                                      <div className="flex items-center mt-1 text-xs">
-                                        <FiClock className="w-3 h-3 mr-1 text-yellow-600" />
-                                        <span className="text-yellow-600">
-                                          Pendente desde {dataAtividade.toLocaleDateString('pt-BR')}
-                                        </span>
-                                      </div>
-                                    )}
-                                    
                                     {atividade.completed && atividade.completed_at && (
                                       <div className="flex items-center mt-1 text-xs text-green-600">
                                         <FiCheckCircle className="w-3 h-3 mr-1" />
@@ -976,6 +1053,12 @@ export default function VisualizacaoAtividades({ user }) {
                                         </span>
                                       </div>
                                     )}
+                                    <div className="flex items-center mt-1 text-xs text-gray-500">
+                                      <FiClock className="w-3 h-3 mr-1" />
+                                      <span>
+                                        Criado em: {new Date(atividade.created_at).toLocaleDateString('pt-BR')} às {new Date(atividade.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
                                   </>
                                 )}
                               </div>
@@ -1071,6 +1154,12 @@ export default function VisualizacaoAtividades({ user }) {
                                     {rotina.recurrence_type === 'daily' && `Diária (a cada ${rotina.recurrence_interval} dia${rotina.recurrence_interval > 1 ? 's' : ''})`}
                                     {rotina.recurrence_type === 'weekly' && `Semanal (${rotina.recurrence_days?.map(d => diasDaSemana[d === 7 ? 0 : d]).join(', ')})`}
                                     {rotina.recurrence_type === 'monthly' && `Mensal (dia ${new Date(rotina.start_date).getDate()})`}
+                                  </span>
+                                </div>
+                                <div className="flex items-center mt-1 text-xs text-gray-500">
+                                  <FiClock className="w-3 h-3 mr-1" />
+                                  <span>
+                                    Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')} às {new Date(rotina.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                 </div>
                               </div>
