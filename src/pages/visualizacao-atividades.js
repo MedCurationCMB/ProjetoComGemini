@@ -121,53 +121,103 @@ export default function VisualizacaoAtividades({ user }) {
 
   const diasDaSemana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
+  const getOrdinalName = (ordinal) => {
+    const ordinais = {
+      1: 'Primeira',
+      2: 'Segunda', 
+      3: 'Terceira',
+      4: 'Quarta',
+      '-1': 'Última'
+    };
+    return ordinais[ordinal] || 'Primeira';
+  };
+
   const getDiaSemanaNumero = (data) => {
     // Convertendo: domingo = 7, segunda = 1, terça = 2, etc.
     const dia = data.getDay();
     return dia === 0 ? 7 : dia;
   };
 
-  // ✅ NOVA FUNÇÃO: Gera todas as datas previstas para uma rotina
+  // ✅ FUNÇÃO ATUALIZADA: Gera todas as datas previstas para uma rotina (com suporte aos novos tipos)
   const gerarDatasRecorrencia = (rotina) => {
     const datas = [];
-    const start = new Date(rotina.start_date + 'T12:00:00'); // Força meio-dia para evitar problemas de timezone
+    const start = new Date(rotina.start_date + 'T12:00:00');
     
-    // ✅ CORREÇÃO CRÍTICA: Se não tiver end_date, usar uma data limite razoável (não hoje)
     const hoje = new Date();
     const end = rotina.end_date 
       ? new Date(rotina.end_date + 'T12:00:00')
-      : new Date(hoje.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 ano no futuro se não tiver fim
+      : new Date(hoje.getTime() + (365 * 24 * 60 * 60 * 1000));
     
     let current = new Date(start);
-    
-    // ✅ SEGURANÇA: Limite máximo de iterações para evitar loops infinitos
     let iteracoes = 0;
-    const MAX_ITERACOES = 3650; // ~10 anos
+    const MAX_ITERACOES = 3650;
     
     console.log('🔄 Gerando datas para rotina:', rotina.content, {
       start: rotina.start_date,
       end: rotina.end_date,
-      type: rotina.recurrence_type,
-      interval: rotina.recurrence_interval
+      type: rotina.recurrence_type
     });
     
     while (current <= end && iteracoes < MAX_ITERACOES) {
       iteracoes++;
-      
       let adicionarData = false;
       
       if (rotina.recurrence_type === "daily") {
-        // ✅ DIÁRIA: Sempre adiciona a data atual
         adicionarData = true;
         
       } else if (rotina.recurrence_type === "weekly") {
-        // ✅ SEMANAL: Verifica se o dia da semana está nos dias permitidos
-        const diaSemana = current.getDay() === 0 ? 7 : current.getDay(); // Domingo=7, Segunda=1
+        const diaSemana = current.getDay() === 0 ? 7 : current.getDay();
         adicionarData = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
         
       } else if (rotina.recurrence_type === "monthly") {
-        // ✅ MENSAL: Verifica se é o mesmo dia do mês da data de início
         adicionarData = current.getDate() === start.getDate();
+      
+      // ✅ NOVOS TIPOS AVANÇADOS
+      } else if (["biweekly", "triweekly", "quadweekly"].includes(rotina.recurrence_type)) {
+        const diaSemana = current.getDay() === 0 ? 7 : current.getDay();
+        if (diaSemana === rotina.selected_weekday) {
+          // Verificar se está no intervalo correto de semanas
+          const diffTime = current.getTime() - start.getTime();
+          const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+          const intervalo = rotina.weekly_interval || (
+            rotina.recurrence_type === 'biweekly' ? 2 :
+            rotina.recurrence_type === 'triweekly' ? 3 : 4
+          );
+          adicionarData = diffWeeks % intervalo === 0;
+        }
+        
+      } else if (rotina.recurrence_type === "monthly_weekday") {
+        const diaSemana = current.getDay() === 0 ? 7 : current.getDay();
+        if (diaSemana === rotina.monthly_weekday) {
+          // Verificar se é a ocorrência correta do mês
+          const ultimoDiaDoMes = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+          
+          if (rotina.monthly_ordinal === -1) {
+            // Última ocorrência do mês
+            let ultimaOcorrencia = null;
+            for (let d = ultimoDiaDoMes.getDate(); d >= 1; d--) {
+              const data = new Date(current.getFullYear(), current.getMonth(), d);
+              if ((data.getDay() === 0 ? 7 : data.getDay()) === rotina.monthly_weekday) {
+                ultimaOcorrencia = data;
+                break;
+              }
+            }
+            adicionarData = ultimaOcorrencia && current.getDate() === ultimaOcorrencia.getDate();
+          } else {
+            // 1ª, 2ª, 3ª ou 4ª ocorrência
+            let contador = 0;
+            for (let d = 1; d <= ultimoDiaDoMes.getDate(); d++) {
+              const data = new Date(current.getFullYear(), current.getMonth(), d);
+              if ((data.getDay() === 0 ? 7 : data.getDay()) === rotina.monthly_weekday) {
+                contador++;
+                if (contador === rotina.monthly_ordinal && current.getDate() === d) {
+                  adicionarData = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
       }
       
       if (adicionarData) {
@@ -177,8 +227,8 @@ export default function VisualizacaoAtividades({ user }) {
       // ✅ INCREMENTO BASEADO NO TIPO DE RECORRÊNCIA
       if (rotina.recurrence_type === "daily") {
         current.setDate(current.getDate() + (rotina.recurrence_interval || 1));
-      } else if (rotina.recurrence_type === "weekly") {
-        current.setDate(current.getDate() + 1); // Avança dia por dia para verificar dias da semana
+      } else if (["weekly", "biweekly", "triweekly", "quadweekly", "monthly_weekday"].includes(rotina.recurrence_type)) {
+        current.setDate(current.getDate() + 1); // Avança dia por dia
       } else if (rotina.recurrence_type === "monthly") {
         current.setMonth(current.getMonth() + (rotina.recurrence_interval || 1));
       }
@@ -309,7 +359,6 @@ export default function VisualizacaoAtividades({ user }) {
           const startDate = new Date(rotina.start_date + 'T12:00:00');
           const currentDate = new Date(dataAtual + 'T12:00:00');
           
-          // ✅ CORREÇÃO: Verificar se a data atual está dentro do range da rotina
           if (currentDate < startDate) return false;
           if (rotina.end_date) {
             const endDate = new Date(rotina.end_date + 'T12:00:00');
@@ -321,7 +370,6 @@ export default function VisualizacaoAtividades({ user }) {
           return diffDays % (rotina.recurrence_interval || 1) === 0;
           
         } else if (rotina.recurrence_type === 'weekly') {
-          // ✅ CORREÇÃO: Verificar range de datas também para semanal
           const currentDate = new Date(dataAtual + 'T12:00:00');
           const startDate = new Date(rotina.start_date + 'T12:00:00');
           
@@ -334,7 +382,6 @@ export default function VisualizacaoAtividades({ user }) {
           return rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
           
         } else if (rotina.recurrence_type === 'monthly') {
-          // ✅ CORREÇÃO: Verificar range de datas também para mensal
           const currentDate = new Date(dataAtual + 'T12:00:00');
           const startDate = new Date(rotina.start_date + 'T12:00:00');
           
@@ -345,6 +392,71 @@ export default function VisualizacaoAtividades({ user }) {
           }
           
           return startDate.getDate() === currentDate.getDate();
+        
+        // ✅ NOVOS TIPOS AVANÇADOS
+        } else if (["biweekly", "triweekly", "quadweekly"].includes(rotina.recurrence_type)) {
+          const currentDate = new Date(dataAtual + 'T12:00:00');
+          const startDate = new Date(rotina.start_date + 'T12:00:00');
+          
+          if (currentDate < startDate) return false;
+          if (rotina.end_date) {
+            const endDate = new Date(rotina.end_date + 'T12:00:00');
+            if (currentDate > endDate) return false;
+          }
+          
+          // Verificar se é o dia da semana correto
+          if (diaSemana !== rotina.selected_weekday) return false;
+          
+          // Verificar se está no intervalo correto de semanas
+          const diffTime = currentDate.getTime() - startDate.getTime();
+          const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+          const intervalo = rotina.weekly_interval || (
+            rotina.recurrence_type === 'biweekly' ? 2 :
+            rotina.recurrence_type === 'triweekly' ? 3 : 4
+          );
+          return diffWeeks % intervalo === 0;
+          
+        } else if (rotina.recurrence_type === 'monthly_weekday') {
+          const currentDate = new Date(dataAtual + 'T12:00:00');
+          const startDate = new Date(rotina.start_date + 'T12:00:00');
+          
+          if (currentDate < startDate) return false;
+          if (rotina.end_date) {
+            const endDate = new Date(rotina.end_date + 'T12:00:00');
+            if (currentDate > endDate) return false;
+          }
+          
+          // Verificar se é o dia da semana correto
+          if (diaSemana !== rotina.monthly_weekday) return false;
+          
+          // Verificar se é a ocorrência correta do mês
+          const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+          
+          if (rotina.monthly_ordinal === -1) {
+            // Última ocorrência do mês
+            let ultimaOcorrencia = null;
+            for (let d = ultimoDiaDoMes.getDate(); d >= 1; d--) {
+              const data = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
+              if ((data.getDay() === 0 ? 7 : data.getDay()) === rotina.monthly_weekday) {
+                ultimaOcorrencia = data;
+                break;
+              }
+            }
+            return ultimaOcorrencia && currentDate.getDate() === ultimaOcorrencia.getDate();
+          } else {
+            // 1ª, 2ª, 3ª ou 4ª ocorrência
+            let contador = 0;
+            for (let d = 1; d <= ultimoDiaDoMes.getDate(); d++) {
+              const data = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
+              if ((data.getDay() === 0 ? 7 : data.getDay()) === rotina.monthly_weekday) {
+                contador++;
+                if (contador === rotina.monthly_ordinal && currentDate.getDate() === d) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          }
         }
         return false;
       });
@@ -1446,6 +1558,14 @@ export default function VisualizacaoAtividades({ user }) {
                                     {rotina.recurrence_type === 'daily' && `Diária (a cada ${rotina.recurrence_interval} dia${rotina.recurrence_interval > 1 ? 's' : ''})`}
                                     {rotina.recurrence_type === 'weekly' && `Semanal (${rotina.recurrence_days?.map(d => diasDaSemana[d === 7 ? 0 : d]).join(', ')})`}
                                     {rotina.recurrence_type === 'monthly' && `Mensal (dia ${new Date(rotina.start_date).getDate()})`}
+                                    
+                                    {/* ✅ NOVOS TIPOS AVANÇADOS */}
+                                    {["biweekly", "triweekly", "quadweekly"].includes(rotina.recurrence_type) && 
+                                      `A cada ${rotina.weekly_interval || (rotina.recurrence_type === 'biweekly' ? 2 : rotina.recurrence_type === 'triweekly' ? 3 : 4)} semanas (${diasDaSemana[rotina.selected_weekday === 7 ? 0 : (rotina.selected_weekday || 1) - 1]})`
+                                    }
+                                    {rotina.recurrence_type === 'monthly_weekday' && 
+                                      `${getOrdinalName(rotina.monthly_ordinal)} ${diasDaSemana[(rotina.monthly_weekday === 7 ? 0 : (rotina.monthly_weekday || 1) - 1)]} do mês`
+                                    }
                                   </span>
                                   {rotina.persistent && (
                                     <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">

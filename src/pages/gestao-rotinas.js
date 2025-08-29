@@ -30,7 +30,9 @@ import {
   FiEdit,
   FiCalendar,
   FiSave,
-  FiArrowLeft
+  FiArrowLeft,
+  FiChevronDown,
+  FiChevronUp
 } from 'react-icons/fi';
 
 export default function GestaoRotinas({ user }) {
@@ -38,7 +40,7 @@ export default function GestaoRotinas({ user }) {
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   
-  // ✅ Estados para listas (substituindo projetos)
+  // Estados para listas
   const [listas, setListas] = useState({});
   const [listasVinculadas, setListasVinculadas] = useState([]);
   const [listaSelecionada, setListaSelecionada] = useState('');
@@ -50,6 +52,11 @@ export default function GestaoRotinas({ user }) {
   // Estados do formulário
   const [showForm, setShowForm] = useState(false);
   const [editandoRotina, setEditandoRotina] = useState(null);
+  
+  // ✅ NOVO: Estado para opções avançadas
+  const [mostrarOpcoesAvancadas, setMostrarOpcoesAvancadas] = useState(false);
+  
+  // ✅ ATUALIZADO: FormData com novos campos
   const [formData, setFormData] = useState({
     content: '',
     recurrence_type: 'daily',
@@ -58,7 +65,12 @@ export default function GestaoRotinas({ user }) {
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     persistent: true,
-    note: ''
+    note: '',
+    // ✅ NOVOS CAMPOS AVANÇADOS
+    weekly_interval: 2, // para bi/tri/quadweekly
+    selected_weekday: 1, // dia da semana único para intervalos avançados
+    monthly_ordinal: 1, // 1=primeiro, 2=segundo, 3=terceiro, 4=quarto, -1=último
+    monthly_weekday: 1 // dia da semana para padrões mensais avançados
   });
   
   // Estados de ações
@@ -66,7 +78,7 @@ export default function GestaoRotinas({ user }) {
   const [menuAberto, setMenuAberto] = useState(null);
 
   // ===========================================
-  // FUNÇÕES UTILITÁRIAS
+  // ✅ CONSTANTES ATUALIZADAS
   // ===========================================
 
   const diasDaSemana = [
@@ -79,24 +91,61 @@ export default function GestaoRotinas({ user }) {
     { valor: 7, nome: 'Domingo', abrev: 'DOM' }
   ];
 
-  const tiposRecorrencia = [
+  // ✅ TIPOS BÁSICOS (sempre visíveis)
+  const tiposRecorrenciaBasicos = [
     { valor: 'daily', nome: 'Diária' },
     { valor: 'weekly', nome: 'Semanal' },
-    { valor: 'monthly', nome: 'Mensal' }
+    { valor: 'monthly', nome: 'Mensal (dia fixo)' }
   ];
 
+  // ✅ TIPOS AVANÇADOS (colapsáveis)
+  const tiposRecorrenciaAvancados = [
+    { valor: 'biweekly', nome: 'A cada 2 semanas' },
+    { valor: 'triweekly', nome: 'A cada 3 semanas' },
+    { valor: 'quadweekly', nome: 'A cada 4 semanas' },
+    { valor: 'monthly_weekday', nome: 'Padrão mensal' }
+  ];
+
+  // ✅ NOVOS: Ordinais para padrões mensais
+  const ordinaisMensais = [
+    { valor: 1, nome: 'Primeira' },
+    { valor: 2, nome: 'Segunda' },
+    { valor: 3, nome: 'Terceira' },
+    { valor: 4, nome: 'Quarta' },
+    { valor: -1, nome: 'Última' }
+  ];
+
+  // ✅ FUNÇÃO DE FORMATAÇÃO ATUALIZADA
   const formatarRecorrencia = (rotina) => {
-    if (rotina.recurrence_type === 'daily') {
-      return `Diária${rotina.recurrence_interval > 1 ? ` (a cada ${rotina.recurrence_interval} dias)` : ''}`;
-    } else if (rotina.recurrence_type === 'weekly') {
-      const diasSelecionados = rotina.recurrence_days?.map(d => 
-        diasDaSemana.find(dia => dia.valor === d)?.abrev
-      ).join(', ');
-      return `Semanal (${diasSelecionados})`;
-    } else if (rotina.recurrence_type === 'monthly') {
-      return `Mensal (dia ${new Date(rotina.start_date).getDate()})`;
+    switch(rotina.recurrence_type) {
+      case 'daily':
+        return `Diária${rotina.recurrence_interval > 1 ? ` (a cada ${rotina.recurrence_interval} dias)` : ''}`;
+        
+      case 'weekly':
+        const diasSelecionados = rotina.recurrence_days?.map(d => 
+          diasDaSemana.find(dia => dia.valor === d)?.abrev
+        ).join(', ');
+        return `Semanal (${diasSelecionados})`;
+        
+      case 'monthly':
+        return `Mensal (dia ${new Date(rotina.start_date).getDate()})`;
+        
+      // ✅ NOVOS CASOS AVANÇADOS
+      case 'biweekly':
+      case 'triweekly':
+      case 'quadweekly':
+        const intervaloSemanas = rotina.weekly_interval || 2;
+        const diaEscolhido = diasDaSemana.find(d => d.valor === rotina.selected_weekday)?.nome || 'Não definido';
+        return `A cada ${intervaloSemanas} semanas (${diaEscolhido})`;
+        
+      case 'monthly_weekday':
+        const ordinal = ordinaisMensais.find(o => o.valor === rotina.monthly_ordinal)?.nome || 'Primeira';
+        const diaSemana = diasDaSemana.find(d => d.valor === rotina.monthly_weekday)?.nome || 'Segunda';
+        return `${ordinal} ${diaSemana} do mês`;
+        
+      default:
+        return 'Não definida';
     }
-    return 'Não definida';
   };
 
   const resetForm = () => {
@@ -108,18 +157,23 @@ export default function GestaoRotinas({ user }) {
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       persistent: true,
-      note: ''
+      note: '',
+      // ✅ RESETAR NOVOS CAMPOS
+      weekly_interval: 2,
+      selected_weekday: 1,
+      monthly_ordinal: 1,
+      monthly_weekday: 1
     });
     setEditandoRotina(null);
+    setMostrarOpcoesAvancadas(false); // ✅ Fechar opções avançadas ao resetar
   };
 
   // ===========================================
-  // ✅ FUNÇÕES DE CARREGAMENTO DE DADOS (ATUALIZADAS PARA LISTAS)
+  // FUNÇÕES DE CARREGAMENTO DE DADOS (INALTERADAS)
   // ===========================================
 
   const fetchListasVinculadas = async (userId) => {
     try {
-      // ✅ Buscar listas vinculadas ao usuário
       const { data, error } = await supabase
         .from('relacao_usuario_list')
         .select('list_id')
@@ -131,7 +185,6 @@ export default function GestaoRotinas({ user }) {
       setListasVinculadas(listIds);
       
       if (listIds.length > 0) {
-        // ✅ Buscar dados das listas
         const { data: listasData, error: listasError } = await supabase
           .from('tasks_list')
           .select('id, nome_lista')
@@ -147,7 +200,6 @@ export default function GestaoRotinas({ user }) {
         
         setListas(listasObj);
         
-        // Selecionar primeira lista por padrão
         if (!listaSelecionada && listasData.length > 0) {
           setListaSelecionada(listasData[0].id);
         }
@@ -166,12 +218,11 @@ export default function GestaoRotinas({ user }) {
     try {
       setLoadingRotinas(true);
       
-      // ✅ Buscar rotinas da lista selecionada
       const { data, error } = await supabase
         .from('routine_tasks')
         .select('*')
         .eq('usuario_id', user.id)
-        .eq('task_list_id', listaSelecionada) // ✅ Mudança aqui
+        .eq('task_list_id', listaSelecionada)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -187,7 +238,7 @@ export default function GestaoRotinas({ user }) {
   };
 
   // ===========================================
-  // ✅ FUNÇÕES DE AÇÕES (ATUALIZADAS PARA LISTAS)
+  // ✅ VALIDAÇÃO ATUALIZADA
   // ===========================================
 
   const validarFormulario = () => {
@@ -201,9 +252,24 @@ export default function GestaoRotinas({ user }) {
       return false;
     }
     
+    // Validação para recorrências semanais básicas
     if (formData.recurrence_type === 'weekly' && formData.recurrence_days.length === 0) {
       toast.error('Selecione pelo menos um dia da semana para rotinas semanais');
       return false;
+    }
+    
+    // ✅ NOVA: Validação para recorrências avançadas semanais
+    if (['biweekly', 'triweekly', 'quadweekly'].includes(formData.recurrence_type) && !formData.selected_weekday) {
+      toast.error('Selecione um dia da semana');
+      return false;
+    }
+    
+    // ✅ NOVA: Validação para padrões mensais avançados
+    if (formData.recurrence_type === 'monthly_weekday') {
+      if (!formData.monthly_ordinal || !formData.monthly_weekday) {
+        toast.error('Configure a ocorrência e o dia da semana');
+        return false;
+      }
     }
     
     if (formData.recurrence_interval < 1) {
@@ -219,44 +285,59 @@ export default function GestaoRotinas({ user }) {
     return true;
   };
 
+  // ✅ FUNÇÃO SALVAR ATUALIZADA
   const salvarRotina = async () => {
     if (!validarFormulario()) return;
     
     try {
       setSalvandoRotina(true);
       
-      // ✅ Usar task_list_id em vez de projeto_id
+      // ✅ Preparar dados baseado no tipo de recorrência
       const dadosRotina = {
         usuario_id: user.id,
-        task_list_id: listaSelecionada, // ✅ Mudança aqui
+        task_list_id: listaSelecionada,
         content: formData.content.trim(),
         recurrence_type: formData.recurrence_type,
-        recurrence_interval: formData.recurrence_interval,
-        recurrence_days: formData.recurrence_type === 'weekly' ? formData.recurrence_days : null,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         persistent: formData.persistent,
-        note: formData.note.trim() || null
+        note: formData.note.trim() || null,
+        
+        // Campos específicos por tipo
+        ...(formData.recurrence_type === 'daily' && {
+          recurrence_interval: formData.recurrence_interval
+        }),
+        
+        ...(formData.recurrence_type === 'weekly' && {
+          recurrence_days: formData.recurrence_days
+        }),
+        
+        ...(['biweekly', 'triweekly', 'quadweekly'].includes(formData.recurrence_type) && {
+          weekly_interval: formData.recurrence_type === 'biweekly' ? 2 : 
+                          formData.recurrence_type === 'triweekly' ? 3 : 4,
+          selected_weekday: formData.selected_weekday
+        }),
+        
+        ...(formData.recurrence_type === 'monthly_weekday' && {
+          monthly_ordinal: formData.monthly_ordinal,
+          monthly_weekday: formData.monthly_weekday
+        })
       };
       
       if (editandoRotina) {
-        // Atualizar rotina existente
         const { error } = await supabase
           .from('routine_tasks')
           .update(dadosRotina)
           .eq('id', editandoRotina.id);
         
         if (error) throw error;
-        
         toast.success('Rotina atualizada com sucesso!');
       } else {
-        // Criar nova rotina
         const { error } = await supabase
           .from('routine_tasks')
           .insert([dadosRotina]);
         
         if (error) throw error;
-        
         toast.success('Rotina criada com sucesso!');
       }
       
@@ -272,17 +353,30 @@ export default function GestaoRotinas({ user }) {
     }
   };
 
+  // ✅ FUNÇÃO EDIÇÃO ATUALIZADA
   const iniciarEdicaoRotina = (rotina) => {
     setEditandoRotina(rotina);
+    
+    // ✅ Verificar se é tipo avançado para expandir automaticamente
+    const tiposAvancados = ['biweekly', 'triweekly', 'quadweekly', 'monthly_weekday'];
+    if (tiposAvancados.includes(rotina.recurrence_type)) {
+      setMostrarOpcoesAvancadas(true);
+    }
+    
     setFormData({
       content: rotina.content,
       recurrence_type: rotina.recurrence_type,
-      recurrence_interval: rotina.recurrence_interval,
+      recurrence_interval: rotina.recurrence_interval || 1,
       recurrence_days: rotina.recurrence_days || [],
       start_date: rotina.start_date,
       end_date: rotina.end_date || '',
       persistent: rotina.persistent !== undefined ? rotina.persistent : true,
-      note: rotina.note || ''
+      note: rotina.note || '',
+      // ✅ NOVOS CAMPOS
+      weekly_interval: rotina.weekly_interval || 2,
+      selected_weekday: rotina.selected_weekday || 1,
+      monthly_ordinal: rotina.monthly_ordinal || 1,
+      monthly_weekday: rotina.monthly_weekday || 1
     });
     setShowForm(true);
     setMenuAberto(null);
@@ -294,7 +388,6 @@ export default function GestaoRotinas({ user }) {
     }
     
     try {
-      // Primeiro, excluir todos os status relacionados (cascade já faz isso, mas sendo explícito)
       const { error: statusError } = await supabase
         .from('routine_tasks_status')
         .delete()
@@ -302,7 +395,6 @@ export default function GestaoRotinas({ user }) {
       
       if (statusError) throw statusError;
       
-      // Depois, excluir a rotina
       const { error } = await supabase
         .from('routine_tasks')
         .delete()
@@ -330,7 +422,7 @@ export default function GestaoRotinas({ user }) {
   };
 
   // ===========================================
-  // FUNÇÕES DE NAVEGAÇÃO
+  // FUNÇÕES DE NAVEGAÇÃO (INALTERADAS)
   // ===========================================
 
   const handleLogout = async () => {
@@ -353,7 +445,7 @@ export default function GestaoRotinas({ user }) {
   };
 
   // ===========================================
-  // ✅ EFFECTS (ATUALIZADOS PARA LISTAS)
+  // EFFECTS (INALTERADOS)
   // ===========================================
 
   useEffect(() => {
@@ -366,7 +458,7 @@ export default function GestaoRotinas({ user }) {
     const carregarDados = async () => {
       if (user) {
         setLoading(true);
-        await fetchListasVinculadas(user.id); // ✅ Mudança aqui
+        await fetchListasVinculadas(user.id);
         setLoading(false);
       }
     };
@@ -375,12 +467,11 @@ export default function GestaoRotinas({ user }) {
   }, [user]);
 
   useEffect(() => {
-    if (listaSelecionada) { // ✅ Mudança aqui
+    if (listaSelecionada) {
       fetchRotinas();
     }
-  }, [listaSelecionada]); // ✅ Mudança aqui
+  }, [listaSelecionada]);
 
-  // Fechar menu quando clicar fora
   useEffect(() => {
     const handleClickFora = (event) => {
       if (menuAberto && !event.target.closest('.menu-rotina')) {
@@ -407,7 +498,7 @@ export default function GestaoRotinas({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo */}
+      {/* Header responsivo (INALTERADO) */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -479,7 +570,6 @@ export default function GestaoRotinas({ user }) {
                     Gestão Documentos
                   </button>
                   
-                  {/* ✅ NOVO: Link para Gestão de Listas */}
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -528,7 +618,7 @@ export default function GestaoRotinas({ user }) {
         </div>
       </div>
 
-      {/* ✅ Seleção de Lista */}
+      {/* Seleção de Lista (INALTERADA) */}
       <div className="sticky top-[72px] bg-white border-b border-gray-200 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {loading ? (
@@ -572,12 +662,11 @@ export default function GestaoRotinas({ user }) {
         </div>
       </div>
 
-      {/* Conteúdo Principal */}
+      {/* Conteúdo Principal (INALTERADO) */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {listaSelecionada && (
             <>
-              {/* Lista de Rotinas */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center">
@@ -682,7 +771,7 @@ export default function GestaoRotinas({ user }) {
         </div>
       </div>
 
-      {/* Modal do Formulário */}
+      {/* ✅ MODAL DO FORMULÁRIO ATUALIZADO */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -703,7 +792,7 @@ export default function GestaoRotinas({ user }) {
               </div>
 
               <div className="space-y-6">
-                {/* ✅ Mostrar lista selecionada */}
+                {/* Mostrar lista selecionada */}
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="flex items-center text-sm">
                     <FiList className="w-4 h-4 text-[#012060] mr-2" />
@@ -727,13 +816,15 @@ export default function GestaoRotinas({ user }) {
                   />
                 </div>
 
-                {/* Tipo de Recorrência */}
+                {/* ✅ SEÇÃO DE RECORRÊNCIA ATUALIZADA */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
                     Tipo de Recorrência *
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {tiposRecorrencia.map((tipo) => (
+                  
+                  {/* Opções Básicas */}
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {tiposRecorrenciaBasicos.map((tipo) => (
                       <button
                         key={tipo.valor}
                         onClick={() => setFormData(prev => ({ 
@@ -751,7 +842,53 @@ export default function GestaoRotinas({ user }) {
                       </button>
                     ))}
                   </div>
+
+                  {/* ✅ TOGGLE PARA OPÇÕES AVANÇADAS */}
+                  <button
+                    type="button"
+                    onClick={() => setMostrarOpcoesAvancadas(!mostrarOpcoesAvancadas)}
+                    className="text-sm text-[#012060] hover:text-[#013080] flex items-center transition-colors mb-3"
+                  >
+                    {mostrarOpcoesAvancadas ? (
+                      <FiChevronUp className="w-4 h-4 mr-1" />
+                    ) : (
+                      <FiChevronDown className="w-4 h-4 mr-1" />
+                    )}
+                    Opções Avançadas
+                  </button>
+
+                  {/* ✅ OPÇÕES AVANÇADAS (COLAPSÁVEIS) */}
+                  {mostrarOpcoesAvancadas && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="grid grid-cols-2 gap-3">
+                        {tiposRecorrenciaAvancados.map((tipo) => (
+                          <button
+                            key={tipo.valor}
+                            onClick={() => setFormData(prev => ({ 
+                              ...prev, 
+                              recurrence_type: tipo.valor
+                            }))}
+                            className={`p-3 border rounded-lg text-sm font-medium transition-colors ${
+                              formData.recurrence_type === tipo.valor
+                                ? 'bg-[#012060] text-white border-[#012060]'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {tipo.nome}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* Descrições das opções avançadas */}
+                      <div className="mt-3 text-xs text-gray-600 space-y-1">
+                        <p><strong>A cada X semanas:</strong> Escolha o dia da semana e o intervalo</p>
+                        <p><strong>Padrão mensal:</strong> Ex: toda primeira segunda-feira do mês</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* ✅ CAMPOS CONDICIONAIS ATUALIZADOS */}
 
                 {/* Intervalo (apenas para diária) */}
                 {formData.recurrence_type === 'daily' && (
@@ -774,7 +911,7 @@ export default function GestaoRotinas({ user }) {
                   </div>
                 )}
 
-                {/* Dias da Semana (apenas para semanal) */}
+                {/* Dias da Semana (apenas para semanal básico) */}
                 {formData.recurrence_type === 'weekly' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -799,6 +936,98 @@ export default function GestaoRotinas({ user }) {
                     <p className="text-xs text-gray-500 mt-1">
                       Selecione os dias da semana em que a rotina deve se repetir
                     </p>
+                  </div>
+                )}
+
+                {/* ✅ NOVO: Recorrências Avançadas Semanais (bi/tri/quad) */}
+                {['biweekly', 'triweekly', 'quadweekly'].includes(formData.recurrence_type) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dia da Semana *
+                    </label>
+                    <div className="grid grid-cols-7 gap-2 mb-4">
+                      {diasDaSemana.map((dia) => (
+                        <button
+                          key={dia.valor}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, selected_weekday: dia.valor }))}
+                          className={`p-3 border rounded-lg text-xs font-medium transition-colors ${
+                            formData.selected_weekday === dia.valor
+                              ? 'bg-[#012060] text-white border-[#012060]'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {dia.abrev}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Preview:</strong> A cada{' '}
+                        {formData.recurrence_type === 'biweekly' ? '2' : 
+                         formData.recurrence_type === 'triweekly' ? '3' : '4'} semanas nas{' '}
+                        {diasDaSemana.find(d => d.valor === formData.selected_weekday)?.nome?.toLowerCase()}s
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ✅ NOVO: Padrão Mensal Avançado */}
+                {formData.recurrence_type === 'monthly_weekday' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Configuração do Padrão Mensal *
+                    </label>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      {/* Seleção da Ocorrência */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                          Qual ocorrência?
+                        </label>
+                        <select
+                          value={formData.monthly_ordinal}
+                          onChange={(e) => setFormData(prev => ({ ...prev, monthly_ordinal: parseInt(e.target.value) }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] text-sm"
+                        >
+                          {ordinaisMensais.map((ordinal) => (
+                            <option key={ordinal.valor} value={ordinal.valor}>
+                              {ordinal.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* Seleção do Dia da Semana */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                          Dia da Semana
+                        </label>
+                        <select
+                          value={formData.monthly_weekday}
+                          onChange={(e) => setFormData(prev => ({ ...prev, monthly_weekday: parseInt(e.target.value) }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] text-sm"
+                        >
+                          {diasDaSemana.map((dia) => (
+                            <option key={dia.valor} value={dia.valor}>
+                              {dia.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* Preview do Padrão */}
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Preview:</strong>{' '}
+                        {ordinaisMensais.find(o => o.valor === formData.monthly_ordinal)?.nome}{' '}
+                        {diasDaSemana.find(d => d.valor === formData.monthly_weekday)?.nome} de cada mês
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Exemplo: {ordinaisMensais.find(o => o.valor === formData.monthly_ordinal)?.nome} {diasDaSemana.find(d => d.valor === formData.monthly_weekday)?.nome} de Janeiro, Fevereiro, Março...
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -834,7 +1063,7 @@ export default function GestaoRotinas({ user }) {
                 </div>
 
                 {/* Campo Persistent */}
-                <div className="col-span-1 sm:col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo de Exibição
                   </label>
@@ -900,52 +1129,68 @@ export default function GestaoRotinas({ user }) {
                   </p>
                 </div>
 
-                {/* Preview da Recorrência */}
+                {/* ✅ PREVIEW DA RECORRÊNCIA ATUALIZADO */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
-                  <p className="text-sm text-blue-800">
-                    <strong>Lista:</strong> {listas[listaSelecionada]}
-                    <br />
-                    <strong>Tipo:</strong> {tiposRecorrencia.find(t => t.valor === formData.recurrence_type)?.nome}
-                    <br />
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p><strong>Lista:</strong> {listas[listaSelecionada]}</p>
+                    
+                    <p><strong>Tipo:</strong> {
+                      [...tiposRecorrenciaBasicos, ...tiposRecorrenciaAvancados]
+                        .find(t => t.valor === formData.recurrence_type)?.nome
+                    }</p>
+                    
+                    {/* Preview específico por tipo */}
                     {formData.recurrence_type === 'daily' && (
-                      <>
-                        <strong>Frequência:</strong> {formData.recurrence_interval === 1 ? 'Todos os dias' : `A cada ${formData.recurrence_interval} dias`}
-                        <br />
-                      </>
+                      <p><strong>Frequência:</strong> {formData.recurrence_interval === 1 ? 'Todos os dias' : `A cada ${formData.recurrence_interval} dias`}</p>
                     )}
+                    
                     {formData.recurrence_type === 'weekly' && (
-                      <>
-                        <strong>Dias:</strong> {formData.recurrence_days.length > 0 
-                          ? formData.recurrence_days.map(d => diasDaSemana.find(dia => dia.valor === d)?.nome).join(', ')
-                          : 'Nenhum dia selecionado'
-                        }
-                        <br />
-                      </>
+                      <p><strong>Dias:</strong> {formData.recurrence_days.length > 0 
+                        ? formData.recurrence_days.map(d => diasDaSemana.find(dia => dia.valor === d)?.nome).join(', ')
+                        : 'Nenhum dia selecionado'
+                      }</p>
                     )}
+                    
                     {formData.recurrence_type === 'monthly' && (
+                      <p><strong>Dia do mês:</strong> {formData.start_date ? formData.start_date.split('-')[2] : ''}</p>
+                    )}
+                    
+                    {/* ✅ NOVOS PREVIEWS AVANÇADOS */}
+                    {['biweekly', 'triweekly', 'quadweekly'].includes(formData.recurrence_type) && (
                       <>
-                        <strong>Dia do mês:</strong> {formData.start_date ? formData.start_date.split('-')[2] : ''}
-                        <br />
+                        <p><strong>Intervalo:</strong> A cada {
+                          formData.recurrence_type === 'biweekly' ? '2' : 
+                          formData.recurrence_type === 'triweekly' ? '3' : '4'
+                        } semanas</p>
+                        <p><strong>Dia:</strong> {diasDaSemana.find(d => d.valor === formData.selected_weekday)?.nome}</p>
                       </>
                     )}
-                    <strong>Período:</strong> {formData.start_date ? 
+                    
+                    {formData.recurrence_type === 'monthly_weekday' && (
+                      <>
+                        <p><strong>Padrão:</strong> {ordinaisMensais.find(o => o.valor === formData.monthly_ordinal)?.nome} {diasDaSemana.find(d => d.valor === formData.monthly_weekday)?.nome} do mês</p>
+                        <p><strong>Exemplo:</strong> {ordinaisMensais.find(o => o.valor === formData.monthly_ordinal)?.nome} {diasDaSemana.find(d => d.valor === formData.monthly_weekday)?.nome} de cada mês</p>
+                      </>
+                    )}
+                    
+                    <p><strong>Período:</strong> {formData.start_date ? 
                       formData.start_date.split('-').reverse().join('/') : ''}
                     {formData.end_date && (
                       <> até {formData.end_date.split('-').reverse().join('/')}</>
                     )}
-                    {!formData.end_date && <> (sem data de término)</>}
-                    <br />
-                    <strong>Persistência:</strong> {formData.persistent 
+                    {!formData.end_date && <> (sem data de término)</>}</p>
+                    
+                    <p><strong>Persistência:</strong> {formData.persistent 
                       ? 'Persistente (aparece até ser concluída)' 
                       : 'Não persistente (só no dia específico)'
-                    }
-                    <br />
-                    <strong>Nota:</strong> {formData.note.trim() 
+                    }</p>
+                    
+                    <p><strong>Nota:</strong> {formData.note.trim() 
                       ? formData.note.trim() 
                       : 'Nenhuma nota adicionada'
-                    }
-                  </p>
+                    }</p>
+                  </div>
                 </div>
               </div>
 
