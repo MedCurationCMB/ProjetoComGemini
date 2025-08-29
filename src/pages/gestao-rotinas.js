@@ -57,7 +57,8 @@ export default function GestaoRotinas({ user }) {
     recurrence_days: [],
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
-    persistent: true
+    persistent: true,
+    note: ''
   });
   
   // Estados de ações
@@ -106,7 +107,8 @@ export default function GestaoRotinas({ user }) {
       recurrence_days: [],
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
-      persistent: true
+      persistent: true,
+      note: ''
     });
     setEditandoRotina(null);
   };
@@ -233,7 +235,8 @@ export default function GestaoRotinas({ user }) {
         recurrence_days: formData.recurrence_type === 'weekly' ? formData.recurrence_days : null,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
-        persistent: formData.persistent
+        persistent: formData.persistent,
+        note: formData.note.trim() || null
       };
       
       if (editandoRotina) {
@@ -278,7 +281,8 @@ export default function GestaoRotinas({ user }) {
       recurrence_days: rotina.recurrence_days || [],
       start_date: rotina.start_date,
       end_date: rotina.end_date || '',
-      persistent: rotina.persistent !== undefined ? rotina.persistent : true
+      persistent: rotina.persistent !== undefined ? rotina.persistent : true,
+      note: rotina.note || ''
     });
     setShowForm(true);
     setMenuAberto(null);
@@ -879,6 +883,23 @@ export default function GestaoRotinas({ user }) {
                   </div>
                 </div>
 
+                {/* Campo de Nota */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nota (opcional)
+                  </label>
+                  <textarea
+                    value={formData.note}
+                    onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+                    placeholder="Adicione uma nota para esta rotina (ex: instruções específicas, lembretes, observações)..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Esta nota aparecerá em todas as ocorrências desta rotina
+                  </p>
+                </div>
+
                 {/* Preview da Recorrência */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
@@ -918,6 +939,11 @@ export default function GestaoRotinas({ user }) {
                     <strong>Persistência:</strong> {formData.persistent 
                       ? 'Persistente (aparece até ser concluída)' 
                       : 'Não persistente (só no dia específico)'
+                    }
+                    <br />
+                    <strong>Nota:</strong> {formData.note.trim() 
+                      ? formData.note.trim() 
+                      : 'Nenhuma nota adicionada'
                     }
                   </p>
                 </div>

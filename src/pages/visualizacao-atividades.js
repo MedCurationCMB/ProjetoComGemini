@@ -86,6 +86,12 @@ export default function VisualizacaoAtividades({ user }) {
   const [editandoNota, setEditandoNota] = useState(null);
   const [textoNota, setTextoNota] = useState('');
 
+  // Estados para notas das rotinas
+  const [editandoNotaRotina, setEditandoNotaRotina] = useState(null);
+  const [textoNotaRotina, setTextoNotaRotina] = useState('');
+  const [showNotePopupRotina, setShowNotePopupRotina] = useState(false);
+  const [noteContentRotina, setNoteContentRotina] = useState('');
+
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
   // ===========================================
@@ -273,7 +279,7 @@ export default function VisualizacaoAtividades({ user }) {
         .eq('usuario_id', user.id)
         .eq('task_list_id', listaSelecionada)
         .lte('start_date', dataAtual) // ✅ Rotinas que começaram até a data selecionada
-        .or(`end_date.is.null,end_date.gte.${dataAtual}`); // Que ainda não terminaram na data selecionada
+        .or(`persistent.eq.true,end_date.is.null,end_date.gte.${dataAtual}`); // Persistentes sempre + não persistentes válidas
       
       if (error) throw error;
       
@@ -672,6 +678,49 @@ export default function VisualizacaoAtividades({ user }) {
     } catch (error) {
       console.error('Erro ao salvar nota:', error);
       toast.error('Erro ao salvar nota');
+    }
+  };
+
+  // Funções para notas das rotinas
+  const abrirNotePopupRotina = (rotina) => {
+    setNoteContentRotina(rotina.note || '');
+    setShowNotePopupRotina(true);
+  };
+
+  const fecharNotePopupRotina = () => {
+    setShowNotePopupRotina(false);
+    setNoteContentRotina('');
+  };
+
+  const iniciarEdicaoNotaRotina = (rotina) => {
+    setEditandoNotaRotina(rotina.id);
+    setTextoNotaRotina(rotina.note || '');
+    setMenuAberto(null);
+  };
+
+  const cancelarEdicaoNotaRotina = () => {
+    setEditandoNotaRotina(null);
+    setTextoNotaRotina('');
+  };
+
+  const salvarNotaRotina = async (rotinaId) => {
+    try {
+      const { error } = await supabase
+        .from('routine_tasks')
+        .update({ note: textoNotaRotina.trim() || null })
+        .eq('id', rotinaId);
+      
+      if (error) throw error;
+      
+      toast.success('Nota da rotina salva com sucesso!');
+      
+      setEditandoNotaRotina(null);
+      setTextoNotaRotina('');
+      await fetchAtividadesRotina();
+      
+    } catch (error) {
+      console.error('Erro ao salvar nota da rotina:', error);
+      toast.error('Erro ao salvar nota da rotina');
     }
   };
 
@@ -1219,9 +1268,9 @@ export default function VisualizacaoAtividades({ user }) {
                                       </div>
                                     )}
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
-                                      <FiClock className="w-3 h-3 mr-1" />
+                                      <FiCalendar className="w-3 h-3 mr-1" />
                                       <span>
-                                        Criado em: {new Date(atividade.created_at).toLocaleDateString('pt-BR')} às {new Date(atividade.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        Atribuído para: {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                       </span>
                                     </div>
                                   </>
@@ -1371,12 +1420,23 @@ export default function VisualizacaoAtividades({ user }) {
                               </button>
                               
                               <div className="flex-1">
-                                {/* ✅ MUDANÇA: Título sem o texto de atraso */}
-                                <h4 className={`text-sm md:text-base font-medium ${
-                                  isCompleted ? 'text-green-800 line-through' : corTexto
-                                }`}>
-                                  {rotina.content}
-                                </h4>
+                                {/* ✅ MUDANÇA: Título com ícone de nota */}
+                                <div className="flex items-center space-x-2">
+                                  <h4 className={`text-sm md:text-base font-medium ${
+                                    isCompleted ? 'text-green-800 line-through' : corTexto
+                                  }`}>
+                                    {rotina.content}
+                                  </h4>
+                                  {rotina.note && rotina.note.trim() !== '' && (
+                                    <button
+                                      onClick={() => abrirNotePopupRotina(rotina)}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Ver nota da rotina"
+                                    >
+                                      <MdOutlineStickyNote2 className="w-4 h-4 text-yellow-600" />
+                                    </button>
+                                  )}
+                                </div>
                                 
                                 {/* ✅ Informações da recorrência */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
@@ -1401,6 +1461,63 @@ export default function VisualizacaoAtividades({ user }) {
                                     Data: {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
                                   </span>
                                 </div>
+                                {/* ✅ NOVA SEÇÃO: Edição de nota inline */}
+                                {editandoNotaRotina === rotina.id && (
+                                  <div className="mt-3 space-y-2 border-t pt-3">
+                                    <label className="block text-xs font-medium text-gray-700">
+                                      Nota da rotina:
+                                    </label>
+                                    <textarea
+                                      value={textoNotaRotina}
+                                      onChange={(e) => setTextoNotaRotina(e.target.value)}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey) {
+                                          salvarNotaRotina(rotina.id);
+                                        } else if (e.key === 'Escape') {
+                                          cancelarEdicaoNotaRotina();
+                                        }
+                                      }}
+                                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                                      placeholder="Digite a nota para esta rotina..."
+                                      rows={3}
+                                    />
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => salvarNotaRotina(rotina.id)}
+                                        className="px-3 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
+                                      >
+                                        Salvar Nota
+                                      </button>
+                                      <button
+                                        onClick={cancelarEdicaoNotaRotina}
+                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              {/* ✅ NOVO: Menu de 3 pontos para rotinas */}
+                              <div className="relative menu-atividade">
+                                <button
+                                  onClick={() => setMenuAberto(menuAberto === `rotina-${rotina.id}-${rotina.visible_date || 'current'}` ? null : `rotina-${rotina.id}-${rotina.visible_date || 'current'}`)}
+                                  className="p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+                                >
+                                  <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                                </button>
+                                
+                                {menuAberto === `rotina-${rotina.id}-${rotina.visible_date || 'current'}` && (
+                                  <div className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border z-20 py-1 min-w-[140px]">
+                                    <button
+                                      onClick={() => iniciarEdicaoNotaRotina(rotina)}
+                                      className="w-full px-3 py-2 text-left hover:bg-yellow-50 flex items-center text-yellow-600 text-sm"
+                                    >
+                                      <MdOutlineStickyNote2 className="w-3 h-3 mr-2" />
+                                      {rotina.note ? 'Editar Nota' : 'Adicionar Nota'}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1546,6 +1663,50 @@ export default function VisualizacaoAtividades({ user }) {
             <div className="flex items-center justify-end p-6 border-t border-gray-200">
               <button
                 onClick={fecharNotePopup}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NOVO: POPUP PARA VISUALIZAR NOTA DA ROTINA */}
+      {showNotePopupRotina && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <MdOutlineStickyNote2 className="w-5 h-5 text-yellow-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Nota da Rotina</h3>
+              </div>
+              <button
+                onClick={fecharNotePopupRotina}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {noteContentRotina && noteContentRotina.trim() !== '' ? (
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    {noteContentRotina}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <MdOutlineStickyNote2 className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">Esta rotina não possui nenhuma nota.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={fecharNotePopupRotina}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Fechar
