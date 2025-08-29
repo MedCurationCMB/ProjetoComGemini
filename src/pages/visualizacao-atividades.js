@@ -1059,12 +1059,12 @@ export default function VisualizacaoAtividades({ user }) {
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      router.push('/gestao-rotinas');
+                      router.push('/gestao-atividades-persistentes');
                     }}
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                   >
                     <FiRepeat className="mr-3 h-4 w-4" />
-                    Gestão de Rotinas
+                    Gestão Atividades Persistentes
                   </button>
                   
                   <button
@@ -1382,7 +1382,7 @@ export default function VisualizacaoAtividades({ user }) {
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
                                       <FiCalendar className="w-3 h-3 mr-1" />
                                       <span>
-                                        Atribuído para: {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                        {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                       </span>
                                     </div>
                                   </>
@@ -1468,11 +1468,11 @@ export default function VisualizacaoAtividades({ user }) {
                   )}
                 </div>
 
-                {/* ✅ ATIVIDADES DE ROTINA - VERSÃO FINAL COM NOVA EXIBIÇÃO DE DATAS */}
+                {/* ✅ ATIVIDADES RECORRENTES - VERSÃO FINAL COM NOVA EXIBIÇÃO DE DATAS */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center mb-4">
                     <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades de Rotina</h3>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
                   </div>
                   
                   {atividadesRotina.length === 0 ? (
@@ -1480,7 +1480,7 @@ export default function VisualizacaoAtividades({ user }) {
                       <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
                         <FiRepeat className="w-6 h-6 text-[#012060]" />
                       </div>
-                      <p className="text-gray-500 text-sm">Não há atividades de rotina para hoje</p>
+                      <p className="text-gray-500 text-sm">Não há atividades recorrentes para hoje</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1578,7 +1578,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
                                   <FiCalendar className="w-3 h-3 mr-1" />
                                   <span>
-                                    Data: {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
+                                    {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
                                   </span>
                                 </div>
                                 {/* ✅ NOVA SEÇÃO: Edição de nota inline */}
