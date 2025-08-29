@@ -1,4 +1,4 @@
-// Arquivo: src/pages/gestao-atividades-persistentes.js
+// Arquivo: src/pages/gestao-atividades-recorrentes.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -35,7 +35,7 @@ import {
   FiChevronUp
 } from 'react-icons/fi';
 
-export default function GestaoRotinas({ user }) {
+export default function GestaoAtividadesRecorrentes({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
@@ -494,7 +494,7 @@ export default function GestaoRotinas({ user }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Head>
-        <title>Gestão de Rotinas</title>
+        <title>Gestão de Atividades Recorrentes</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -511,7 +511,7 @@ export default function GestaoRotinas({ user }) {
               </button>
               <LogoDisplay 
                 className=""
-                fallbackText="Gestão de Rotinas"
+                fallbackText="Gestão de Atividades Recorrentes"
                 showFallback={true}
               />
             </div>
@@ -654,7 +654,7 @@ export default function GestaoRotinas({ user }) {
                   className="px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center space-x-2 transition-colors"
                 >
                   <FiPlus className="w-5 h-5" />
-                  <span>Nova Rotina</span>
+                  <span>Nova Atividade Recorrente</span>
                 </button>
               )}
             </div>
@@ -671,9 +671,9 @@ export default function GestaoRotinas({ user }) {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center">
                     <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">Rotinas Criadas</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Atividades Recorrentes Criadas</h3>
                   </div>
-                  <span className="text-sm text-gray-500">{rotinas.length} rotina{rotinas.length !== 1 ? 's' : ''}</span>
+                  <span className="text-sm text-gray-500">{rotinas.length} atividade{rotinas.length !== 1 ? 's recorrentes' : ' recorrente'}</span>
                 </div>
                 
                 {loadingRotinas ? (
@@ -685,15 +685,15 @@ export default function GestaoRotinas({ user }) {
                     <div className="mx-auto w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3">
                       <FiRepeat className="w-6 h-6 text-[#012060]" />
                     </div>
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">Nenhuma rotina criada</h4>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">Nenhuma atividade recorrente criada</h4>
                     <p className="text-gray-500 text-sm mb-4">
-                      Crie sua primeira rotina para começar a organizar suas atividades recorrentes.
+                      Crie sua primeira atividade recorrente para começar a organizar suas tarefas.
                     </p>
                     <button
                       onClick={() => setShowForm(true)}
                       className="px-6 py-2 bg-[#012060] text-white rounded-full hover:bg-[#013080] transition-colors"
                     >
-                      Criar Primeira Rotina
+                      Criar Primeira Atividade Recorrente
                     </button>
                   </div>
                 ) : (
@@ -778,7 +778,7 @@ export default function GestaoRotinas({ user }) {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {editandoRotina ? 'Editar Rotina' : 'Nova Rotina'}
+                  {editandoRotina ? 'Editar Atividade Recorrente' : 'Nova Atividade Recorrente'}
                 </h2>
                 <button
                   onClick={() => {
@@ -805,7 +805,7 @@ export default function GestaoRotinas({ user }) {
                 {/* Conteúdo da Rotina */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descrição da Rotina *
+                    Descrição da Atividade Recorrente *
                   </label>
                   <textarea
                     value={formData.content}
@@ -1120,12 +1120,12 @@ export default function GestaoRotinas({ user }) {
                   <textarea
                     value={formData.note}
                     onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-                    placeholder="Adicione uma nota para esta rotina (ex: instruções específicas, lembretes, observações)..."
+                    placeholder="Adicione uma nota para esta atividade recorrente (ex: instruções específicas, lembretes, observações)..."
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none"
                     rows={3}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Esta nota aparecerá em todas as ocorrências desta rotina
+                    Esta nota aparecerá em todas as ocorrências desta atividade recorrente
                   </p>
                 </div>
 
@@ -1218,7 +1218,7 @@ export default function GestaoRotinas({ user }) {
                   ) : (
                     <>
                       <FiSave className="w-4 h-4" />
-                      <span>{editandoRotina ? 'Atualizar' : 'Criar'} Rotina</span>
+                      <span>{editandoRotina ? 'Atualizar' : 'Criar'} Atividade Recorrente</span>
                     </>
                   )}
                 </button>

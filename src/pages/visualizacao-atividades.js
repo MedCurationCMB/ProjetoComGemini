@@ -1059,12 +1059,12 @@ export default function VisualizacaoAtividades({ user }) {
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      router.push('/gestao-atividades-persistentes');
+                      router.push('/gestao-atividades-recorrentes');
                     }}
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                   >
                     <FiRepeat className="mr-3 h-4 w-4" />
-                    Gestão Atividades Persistentes
+                    Gestão Atividades Recorrentes
                   </button>
                   
                   <button
