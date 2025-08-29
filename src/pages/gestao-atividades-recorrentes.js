@@ -1,4 +1,4 @@
-// Arquivo: src/pages/gestao-rotinas.js
+// Arquivo: src/pages/gestao-atividades-persistentes.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
