@@ -37,6 +37,8 @@ export default function Registros({ user }) {
   const [projetos, setProjetos] = useState({});
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [projetoSelecionado, setProjetoSelecionado] = useState('');
+  const [periodoReferenciaInicio, setPeriodoReferenciaInicio] = useState('');
+  const [periodoReferenciaFim, setPeriodoReferenciaFim] = useState('');
   const [apresentacaoVariaveis, setApresentacaoVariaveis] = useState({});
   
   // Estados para controlar a navegação
@@ -175,12 +177,14 @@ export default function Registros({ user }) {
   };
 
   // Verificar se há filtros ativos
-  const hasActiveFilters = categoriaSelecionada || projetoSelecionado;
+  const hasActiveFilters = categoriaSelecionada || projetoSelecionado || periodoReferenciaInicio || periodoReferenciaFim;
 
   // Limpar filtros
   const clearFilters = () => {
     setCategoriaSelecionada('');
     setProjetoSelecionado('');
+    setPeriodoReferenciaInicio('');
+    setPeriodoReferenciaFim('');
     setShowFilters(false);
   };
 
@@ -371,6 +375,33 @@ export default function Registros({ user }) {
                       Limpar
                     </button>
                   )}
+                  </div>
+
+                  {/* Segunda linha: Período de referência */}
+                  <div className="flex items-end space-x-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Período Referência - Início
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={periodoReferenciaInicio}
+                        onChange={(e) => setPeriodoReferenciaInicio(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Período Referência - Fim
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={periodoReferenciaFim}
+                        onChange={(e) => setPeriodoReferenciaFim(e.target.value)}
+                      />
+                    </div>
                 </div>
               </div>
             )}
@@ -541,6 +572,33 @@ export default function Registros({ user }) {
                       Limpar
                     </button>
                   )}
+                  </div>
+
+                  {/* Segunda linha: Período de referência */}
+                  <div className="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3 mt-3">
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Período Referência - Início
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={periodoReferenciaInicio}
+                        onChange={(e) => setPeriodoReferenciaInicio(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Período Referência - Fim
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={periodoReferenciaFim}
+                        onChange={(e) => setPeriodoReferenciaFim(e.target.value)}
+                      />
+                    </div>
                 </div>
               </div>
             )}
@@ -626,6 +684,8 @@ export default function Registros({ user }) {
                   user={user} 
                   filtroProjetoId={projetoSelecionado}
                   filtroCategoriaId={categoriaSelecionada}
+                  filtroPeriodoInicio={periodoReferenciaInicio}
+                  filtroPeriodoFim={periodoReferenciaFim}
                 />
               </div>
             )}

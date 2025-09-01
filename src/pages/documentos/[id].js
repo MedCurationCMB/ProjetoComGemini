@@ -136,7 +136,7 @@ const DetalheConteudoPopup = ({
           {/* Datas e prazos */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Prazos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Prazo Inicial</label>
                 <div className="mt-1 flex items-center text-sm text-gray-900">
@@ -150,6 +150,14 @@ const DetalheConteudoPopup = ({
                 <div className="mt-1 flex items-center text-sm text-gray-900">
                   <FiClock className="mr-2 text-blue-500" />
                   {formatDate(item.prazo_entrega)}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Período de Referência</label>
+                <div className="mt-1 flex items-center text-sm text-gray-900">
+                  <FiCalendar className="mr-2 text-green-500" />
+                  {formatDate(item.periodo_referencia) || '-'}
                 </div>
               </div>
             </div>
@@ -471,6 +479,8 @@ export default function DocumentoDetalhes({ user }) {
   const [filtroImportantes, setFiltroImportantes] = useState(false);
   const [filtroArquivados, setFiltroArquivados] = useState(false);
   const [filtroVisivel, setFiltroVisivel] = useState('todos');
+  const [filtroPeriodoInicial, setFiltroPeriodoInicial] = useState('');
+  const [filtroPeriodoFinal, setFiltroPeriodoFinal] = useState('');
 
   // Estados para o popup dos registros
   const [itemSelecionado, setItemSelecionado] = useState(null);
@@ -1029,25 +1039,46 @@ export default function DocumentoDetalhes({ user }) {
           (item.texto_analise && item.texto_analise.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
-      
+
       if (filtroLidos === 'lidos') {
         filteredData = filteredData.filter(item => item.lido === true);
       } else if (filtroLidos === 'nao_lidos') {
         filteredData = filteredData.filter(item => item.lido === false);
       }
-      
+
       if (filtroImportantes) {
         filteredData = filteredData.filter(item => item.importante === true);
       }
-      
+
       if (filtroArquivados) {
         filteredData = filteredData.filter(item => item.arquivado === true);
       }
-      
+
       if (filtroVisivel === 'visiveis') {
         filteredData = filteredData.filter(item => item.visivel === true);
       } else if (filtroVisivel === 'ocultos') {
         filteredData = filteredData.filter(item => item.visivel === false);
+      }
+
+      // Filtro por período de referência
+      if (filtroPeriodoInicial || filtroPeriodoFinal) {
+        filteredData = filteredData.filter(item => {
+          if (!item.periodo_referencia) return false;
+          
+          const periodoItem = new Date(item.periodo_referencia);
+          let validInicial = true;
+          let validFinal = true;
+          
+          if (filtroPeriodoInicial) {
+            validInicial = periodoItem >= new Date(filtroPeriodoInicial);
+          }
+          
+          if (filtroPeriodoFinal) {
+            validFinal = periodoItem <= new Date(filtroPeriodoFinal);
+          }
+          
+          return validInicial && validFinal;
+        });
       }
       
       console.log('Dados após filtros:', filteredData);
@@ -1071,7 +1102,7 @@ export default function DocumentoDetalhes({ user }) {
 
   useEffect(() => {
     fetchItensRelacionados();
-  }, [id, user, searchTerm, filtroLidos, filtroImportantes, filtroArquivados, filtroVisivel]);
+  }, [id, user, searchTerm, filtroLidos, filtroImportantes, filtroArquivados, filtroVisivel, filtroPeriodoInicial, filtroPeriodoFinal]);
 
   // Limpar filtros
   const clearFilters = () => {
@@ -1080,11 +1111,13 @@ export default function DocumentoDetalhes({ user }) {
     setFiltroImportantes(false);
     setFiltroArquivados(false);
     setFiltroVisivel('todos');
+    setFiltroPeriodoInicial('');
+    setFiltroPeriodoFinal('');
     setShowFilters(false);
   };
 
   // Verificar se há filtros ativos
-  const hasActiveFilters = searchTerm.trim() || filtroLidos || filtroImportantes || filtroArquivados || filtroVisivel !== 'todos';
+  const hasActiveFilters = searchTerm.trim() || filtroLidos || filtroImportantes || filtroArquivados || filtroVisivel !== 'todos' || filtroPeriodoInicial || filtroPeriodoFinal;
 
   // Função para determinar a cor da borda baseada no status de leitura
   const getBorderColor = (item) => {
@@ -1140,7 +1173,10 @@ export default function DocumentoDetalhes({ user }) {
     if (!dateString) return isDocumentoPrincipal ? 'Sem prazo definido' : '';
     
     try {
-      const date = new Date(dateString);
+      // ✅ CORREÇÃO: Adicionar T00:00:00 para forçar horário local
+      const dateWithTime = dateString.includes('T') ? dateString : dateString + 'T00:00:00';
+      const date = new Date(dateWithTime);
+      
       return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -1195,6 +1231,24 @@ export default function DocumentoDetalhes({ user }) {
     if (item.arquivado) status.push('Arquivado');
     
     return status.length > 0 ? status.join(', ') : 'Pendente';
+  };
+
+  // Função auxiliar para formatar data do período de referência
+  const formatPeriodoReferencia = (dateString) => {
+    if (!dateString) return null;
+    
+    try {
+      const dateWithTime = dateString.includes('T') ? dateString : dateString + 'T00:00:00';
+      const date = new Date(dateWithTime);
+      
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return 'Data inválida';
+    }
   };
 
   // Fechar modal com ESC
@@ -1502,30 +1556,54 @@ export default function DocumentoDetalhes({ user }) {
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     Filtros Avançados
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setFiltroImportantes(!filtroImportantes)}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroImportantes 
-                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <FiStar className="w-4 h-4 mr-1" />
-                      Importantes
-                    </button>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFiltroImportantes(!filtroImportantes)}
+                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                          filtroImportantes 
+                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <FiStar className="w-4 h-4 mr-1" />
+                        Importantes
+                      </button>
+                      
+                      <button
+                        onClick={() => setFiltroArquivados(!filtroArquivados)}
+                        className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                          filtroArquivados 
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <FiArchive className="w-4 h-4 mr-1" />
+                        Arquivados
+                      </button>
+                    </div>
                     
-                    <button
-                      onClick={() => setFiltroArquivados(!filtroArquivados)}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                        filtroArquivados 
-                          ? 'bg-green-100 text-green-800 border border-green-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <FiArchive className="w-4 h-4 mr-1" />
-                      Arquivados
-                    </button>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Período de Referência
+                      </label>
+                      <div className="flex space-x-2">
+                        <input
+                          type="date"
+                          className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={filtroPeriodoInicial}
+                          onChange={(e) => setFiltroPeriodoInicial(e.target.value)}
+                          placeholder="De"
+                        />
+                        <input
+                          type="date"
+                          className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={filtroPeriodoFinal}
+                          onChange={(e) => setFiltroPeriodoFinal(e.target.value)}
+                          placeholder="Até"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1595,8 +1673,8 @@ export default function DocumentoDetalhes({ user }) {
                       )}
                       
                       {/* Informações do item */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-wrap space-x-2">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
                           {item.projeto_id && (
                             <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
                               {projetos[item.projeto_id] || `Projeto ${item.projeto_id}`}
@@ -1612,9 +1690,18 @@ export default function DocumentoDetalhes({ user }) {
                           </span>
                         </div>
                         
-                        <div className="flex items-center text-gray-500 text-xs">
-                          <FiCalendar className="w-3 h-3 mr-1" />
-                          {formatDate(item, false) || 'Sem data'}
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <FiCalendar className="w-3 h-3 mr-1" />
+                            {formatDate(item, false) || 'Sem data'}
+                          </div>
+                          
+                          {item.periodo_referencia && (
+                            <div className="flex items-center">
+                              <FiCalendar className="w-3 h-3 mr-1 text-green-500" />
+                              <span className="text-green-600">Ref: {formatPeriodoReferencia(item.periodo_referencia)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       

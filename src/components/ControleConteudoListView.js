@@ -118,7 +118,7 @@ const DetalheConteudoPopup = ({
           {/* Datas e prazos */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Prazos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Prazo Inicial</label>
                 <div className="mt-1 flex items-center text-sm text-gray-900">
@@ -132,6 +132,14 @@ const DetalheConteudoPopup = ({
                 <div className="mt-1 flex items-center text-sm text-gray-900">
                   <FiClock className="mr-2 text-blue-500" />
                   {formatDate(item.prazo_entrega)}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Período de Referência</label>
+                <div className="mt-1 flex items-center text-sm text-gray-900">
+                  <FiCalendar className="mr-2 text-green-500" />
+                  {formatDate(item.periodo_referencia)}
                 </div>
               </div>
             </div>
@@ -434,7 +442,7 @@ const DetalheConteudoPopup = ({
 };
 
 // Componente principal da lista
-const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) => {
+const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId, filtroPeriodoInicio, filtroPeriodoFim }) => {
   const [controles, setControles] = useState([]);
   const [categorias, setCategorias] = useState({});
   const [projetos, setProjetos] = useState({});
@@ -571,10 +579,19 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
       if (filtroCategoriaId && filtroCategoriaId.trim() !== '') {
         query = query.eq('categoria_id', filtroCategoriaId);
       }
-      
+
+      // Aplicar filtros de período de referência
+      if (filtroPeriodoInicio && filtroPeriodoInicio.trim() !== '') {
+        query = query.gte('periodo_referencia', filtroPeriodoInicio);
+      }
+
+      if (filtroPeriodoFim && filtroPeriodoFim.trim() !== '') {
+        query = query.lte('periodo_referencia', filtroPeriodoFim);
+      }
+
       // Ordenar por prazo_entrega (mais próximos primeiro) e depois por ID
       query = query.order('prazo_entrega', { ascending: true, nullsLast: true })
-                   .order('id', { ascending: true });
+                  .order('id', { ascending: true });
       
       const { data, error } = await query;
       
@@ -1305,6 +1322,15 @@ const ControleConteudoListView = ({ user, filtroProjetoId, filtroCategoriaId }) 
                               {formatDate(item.prazo_entrega)}
                             </span>
                           </div>
+                          
+                          {item.periodo_referencia && (
+                            <div className="flex items-center text-green-600">
+                              <FiCalendar className="mr-1 h-4 w-4" />
+                              <span className="text-xs font-medium">
+                                Ref: {formatDate(item.periodo_referencia)}
+                              </span>
+                            </div>
+                          )}
                           
                           {item.recorrencia && item.recorrencia !== 'sem recorrencia' && (
                             <div className="flex items-center text-purple-600">

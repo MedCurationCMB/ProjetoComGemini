@@ -8,7 +8,8 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
   const [formData, setFormData] = useState({
     prazo_entrega: '',
     descricao: '',
-    obrigatorio: false
+    obrigatorio: false,
+    periodo_referencia: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,8 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
       setFormData({
         prazo_entrega: controleItem.prazo_entrega || '',
         descricao: controleItem.descricao || '',
-        obrigatorio: controleItem.obrigatorio || false
+        obrigatorio: controleItem.obrigatorio || false,
+        periodo_referencia: controleItem.periodo_referencia || ''
       });
       
       // Buscar documento atualmente vinculado
@@ -270,7 +272,8 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
         .update({
           prazo_entrega: formData.prazo_entrega,
           descricao: formData.descricao,
-          obrigatorio: formData.obrigatorio
+          obrigatorio: formData.obrigatorio,
+          periodo_referencia: formData.periodo_referencia || null
         })
         .eq('id', controleItem.id)
         .select();
@@ -537,6 +540,7 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
                 <p><strong>Categoria:</strong> {categorias[controleItem?.categoria_id] || 'N/A'}</p>
                 <p><strong>ID Base:</strong> {controleItem?.id_controleconteudo || 'N/A'}</p>
                 <p><strong>Prazo Inicial:</strong> {formatDate(controleItem?.prazo_entrega_inicial)}</p>
+                <p><strong>Período de Referência:</strong> {controleItem?.periodo_referencia ? formatDate(controleItem.periodo_referencia) : 'Não definido'}</p>
                 
                 {documentoAtual && (
                   <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-100">
@@ -580,7 +584,25 @@ const EditarLinhaConteudoDialog = ({ controleItem, onClose, onSuccess, categoria
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
+              {/* Período de Referência */}
+              <div>
+                <label htmlFor="periodo_referencia" className="block text-sm font-medium text-gray-700 mb-1">
+                  Período de Referência
+                </label>
+                <input
+                  type="date"
+                  id="periodo_referencia"
+                  name="periodo_referencia"
+                  value={formData.periodo_referencia}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Data de referência para este registro (opcional)
+                </p>
+              </div>
+
               {/* Obrigatório */}
               <div className="flex items-center">
                 <input
