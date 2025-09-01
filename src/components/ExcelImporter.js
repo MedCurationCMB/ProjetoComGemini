@@ -1,8 +1,18 @@
-// src/components/ExcelImporter.js - Para Tarefas e Rotinas
+// src/components/ExcelImporter.js - VERSÃO COMPLETA ATUALIZADA
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { FiX, FiDownload, FiUpload, FiCheck, FiAlertCircle, FiFile } from 'react-icons/fi';
+import { 
+  FiX, 
+  FiDownload, 
+  FiUpload, 
+  FiCheck, 
+  FiAlertCircle, 
+  FiFile,
+  FiCpu,
+  FiChevronDown,
+  FiChevronUp
+} from 'react-icons/fi';
 import ExcelJS from 'exceljs';
 
 const ExcelImporter = ({ 
@@ -19,13 +29,53 @@ const ExcelImporter = ({
   const [loading, setLoading] = useState(false);
   const [dadosParaImportar, setDadosParaImportar] = useState([]);
   const [errosValidacao, setErrosValidacao] = useState([]);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
-  // Opções para recorrência (rotinas)
+  // ✅ TIPOS DE RECORRÊNCIA COMPLETOS (igual ao tarefas-rotinas.js)
   const recurrenceTypes = [
     { value: 'daily', label: 'Diário' },
     { value: 'weekly', label: 'Semanal' },
-    { value: 'monthly', label: 'Mensal' },
+    { value: 'monthly', label: 'Mensal (dia fixo)' },
+    { value: 'yearly', label: 'Anual' },
+    { value: 'biweekly', label: 'A cada 2 semanas' },
+    { value: 'triweekly', label: 'A cada 3 semanas' },
+    { value: 'quadweekly', label: 'A cada 4 semanas' },
+    { value: 'monthly_weekday', label: 'Padrão mensal (ex: 1ª segunda)' }
+  ];
+
+  // ✅ TIPOS BÁSICOS E AVANÇADOS SEPARADOS
+  const tiposRecorrenciaBasicos = [
+    { value: 'daily', label: 'Diário' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensal (dia fixo)' },
     { value: 'yearly', label: 'Anual' }
+  ];
+
+  const tiposRecorrenciaAvancados = [
+    { value: 'biweekly', label: 'A cada 2 semanas' },
+    { value: 'triweekly', label: 'A cada 3 semanas' },
+    { value: 'quadweekly', label: 'A cada 4 semanas' },
+    { value: 'monthly_weekday', label: 'Padrão mensal' }
+  ];
+
+  // ✅ ORDINAIS PARA PADRÕES MENSIAIS
+  const ordinaisMensais = [
+    { value: 1, label: 'Primeira' },
+    { value: 2, label: 'Segunda' },
+    { value: 3, label: 'Terceira' },
+    { value: 4, label: 'Quarta' },
+    { value: -1, label: 'Última' }
+  ];
+
+  // ✅ DIAS DA SEMANA
+  const diasDaSemana = [
+    { valor: 1, nome: 'Segunda', abrev: 'SEG' },
+    { valor: 2, nome: 'Terça', abrev: 'TER' },
+    { valor: 3, nome: 'Quarta', abrev: 'QUA' },
+    { valor: 4, nome: 'Quinta', abrev: 'QUI' },
+    { valor: 5, nome: 'Sexta', abrev: 'SEX' },
+    { valor: 6, nome: 'Sábado', abrev: 'SAB' },
+    { valor: 0, nome: 'Domingo', abrev: 'DOM' }
   ];
 
   // Função para gerar planilha Excel
@@ -44,7 +94,8 @@ const ExcelImporter = ({
           { header: 'Lista (Nome ou ID) *', key: 'task_list_id', width: 30 },
           { header: 'Responsável (Nome ou ID) *', key: 'usuario_id', width: 25 },
           { header: 'Data Limite (YYYY-MM-DD)', key: 'date', width: 20 },
-          { header: 'Status (true/false)', key: 'completed', width: 15 }
+          { header: 'Status (true/false)', key: 'completed', width: 15 },
+          { header: 'Nota', key: 'note', width: 40 }
         ];
       } else {
         worksheet.columns = [
@@ -55,7 +106,13 @@ const ExcelImporter = ({
           { header: 'Intervalo Recorrência', key: 'recurrence_interval', width: 20 },
           { header: 'Dias Semana (0-6)', key: 'recurrence_days', width: 20 },
           { header: 'Data Início (YYYY-MM-DD) *', key: 'start_date', width: 20 },
-          { header: 'Data Fim (YYYY-MM-DD)', key: 'end_date', width: 20 }
+          { header: 'Data Fim (YYYY-MM-DD)', key: 'end_date', width: 20 },
+          { header: 'Persistente (true/false)', key: 'persistent', width: 15 },
+          { header: 'Nota', key: 'note', width: 40 },
+          { header: 'Intervalo Semanas (2/3/4)', key: 'weekly_interval', width: 20 },
+          { header: 'Dia da Semana (0-6)', key: 'selected_weekday', width: 20 },
+          { header: 'Ordinal Mensal (1-4, -1)', key: 'monthly_ordinal', width: 20 },
+          { header: 'Dia Semana Mensal (0-6)', key: 'monthly_weekday', width: 20 }
         ];
       }
       
@@ -75,21 +132,24 @@ const ExcelImporter = ({
             task_list_id: 'Lista de Desenvolvimento',
             usuario_id: 'João Silva',
             date: '2024-12-31',
-            completed: 'false'
+            completed: 'false',
+            note: 'Prioridade alta - cliente aguardando'
           },
           {
             content: 'Revisar documentação',
             task_list_id: 'Lista de QA',
             usuario_id: 'Maria Santos',
             date: '2024-12-15',
-            completed: 'true'
+            completed: 'true',
+            note: ''
           },
           {
             content: 'Corrigir bug crítico',
             task_list_id: 'Lista de Desenvolvimento',
             usuario_id: 'Pedro Costa',
             date: '2024-11-30',
-            completed: 'false'
+            completed: 'false',
+            note: 'Verificar logs do sistema'
           }
         ];
         
@@ -106,7 +166,13 @@ const ExcelImporter = ({
             recurrence_interval: '1',
             recurrence_days: '',
             start_date: '2024-01-01',
-            end_date: ''
+            end_date: '',
+            persistent: 'true',
+            note: 'Backup completo incluindo banco de dados',
+            weekly_interval: '',
+            selected_weekday: '',
+            monthly_ordinal: '',
+            monthly_weekday: ''
           },
           {
             content: 'Reunião semanal da equipe',
@@ -116,7 +182,13 @@ const ExcelImporter = ({
             recurrence_interval: '1',
             recurrence_days: '1,2,3,4,5',
             start_date: '2024-01-01',
-            end_date: '2024-12-31'
+            end_date: '2024-12-31',
+            persistent: 'true',
+            note: 'Todas as segundas-feiras às 10h',
+            weekly_interval: '',
+            selected_weekday: '',
+            monthly_ordinal: '',
+            monthly_weekday: ''
           },
           {
             content: 'Relatório mensal de vendas',
@@ -126,7 +198,45 @@ const ExcelImporter = ({
             recurrence_interval: '1',
             recurrence_days: '',
             start_date: '2024-01-01',
-            end_date: ''
+            end_date: '',
+            persistent: 'true',
+            note: 'Enviar para diretoria até dia 5',
+            weekly_interval: '',
+            selected_weekday: '',
+            monthly_ordinal: '',
+            monthly_weekday: ''
+          },
+          {
+            content: 'Revisão quinzenal de projetos',
+            task_list_id: 'Lista de Gestão',
+            usuario_id: 'Ana Oliveira',
+            recurrence_type: 'biweekly',
+            recurrence_interval: '1',
+            recurrence_days: '',
+            start_date: '2024-01-01',
+            end_date: '',
+            persistent: 'true',
+            note: 'A cada 2 semanas nas quartas-feiras',
+            weekly_interval: '2',
+            selected_weekday: '3',
+            monthly_ordinal: '',
+            monthly_weekday: ''
+          },
+          {
+            content: 'Reunião da primeira segunda',
+            task_list_id: 'Lista de Gestão',
+            usuario_id: 'Ana Oliveira',
+            recurrence_type: 'monthly_weekday',
+            recurrence_interval: '1',
+            recurrence_days: '',
+            start_date: '2024-01-01',
+            end_date: '',
+            persistent: 'true',
+            note: 'Primeira segunda-feira de cada mês',
+            weekly_interval: '',
+            selected_weekday: '',
+            monthly_ordinal: '1',
+            monthly_weekday: '1'
           }
         ];
         
@@ -162,22 +272,37 @@ const ExcelImporter = ({
         instrucoes.addRow(['2. CAMPOS OPCIONAIS:']);
         instrucoes.addRow(['   - Data Limite: Formato YYYY-MM-DD (ex: 2024-12-31)']);
         instrucoes.addRow(['   - Status: "true" para concluída, "false" para pendente']);
+        instrucoes.addRow(['   - Nota: Informações adicionais sobre a tarefa']);
       } else {
         instrucoes.addRow(['   - Descrição da Rotina: Texto descrevendo a rotina']);
         instrucoes.addRow(['   - Lista: Nome da lista ou ID numérico']);
         instrucoes.addRow(['   - Responsável: Nome do usuário ou ID numérico']);
-        instrucoes.addRow(['   - Tipo Recorrência: daily, weekly, monthly, yearly']);
+        instrucoes.addRow(['   - Tipo Recorrência: daily, weekly, monthly, yearly, biweekly, triweekly, quadweekly, monthly_weekday']);
         instrucoes.addRow(['   - Data Início: Formato YYYY-MM-DD (ex: 2024-01-01)']);
         instrucoes.addRow([]);
         instrucoes.addRow(['2. CAMPOS OPCIONAIS:']);
         instrucoes.addRow(['   - Intervalo Recorrência: Número (padrão: 1)']);
         instrucoes.addRow(['   - Dias Semana: Para weekly, usar 0-6 separados por vírgula']);
         instrucoes.addRow(['   - Data Fim: Formato YYYY-MM-DD ou deixar vazio']);
+        instrucoes.addRow(['   - Persistente: "true" para persistente, "false" para não persistente']);
+        instrucoes.addRow(['   - Nota: Informações adicionais sobre a rotina']);
         instrucoes.addRow([]);
-        instrucoes.addRow(['3. DIAS DA SEMANA (para recorrência semanal):']);
+        instrucoes.addRow(['3. CAMPOS PARA TIPOS AVANÇADOS:']);
+        instrucoes.addRow(['   - Intervalo Semanas: Para biweekly/triweekly/quadweekly (2, 3, 4)']);
+        instrucoes.addRow(['   - Dia da Semana: Para tipos avançados (0-6)']);
+        instrucoes.addRow(['   - Ordinal Mensal: Para monthly_weekday (1-4 = primeira-quarta, -1 = última)']);
+        instrucoes.addRow(['   - Dia Semana Mensal: Para monthly_weekday (0-6)']);
+        instrucoes.addRow([]);
+        instrucoes.addRow(['4. DIAS DA SEMANA (para recorrência semanal):']);
         instrucoes.addRow(['   - 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta']);
         instrucoes.addRow(['   - 4 = Quinta, 5 = Sexta, 6 = Sábado']);
         instrucoes.addRow(['   - Exemplo: "1,2,3,4,5" = Segunda a Sexta']);
+        instrucoes.addRow([]);
+        instrucoes.addRow(['5. TIPOS DE RECORRÊNCIA AVANÇADOS:']);
+        instrucoes.addRow(['   - biweekly: A cada 2 semanas em dia específico']);
+        instrucoes.addRow(['   - triweekly: A cada 3 semanas em dia específico']);
+        instrucoes.addRow(['   - quadweekly: A cada 4 semanas em dia específico']);
+        instrucoes.addRow(['   - monthly_weekday: Padrão mensal (ex: primeira segunda)']);
       }
       
       instrucoes.addRow([]);
@@ -194,16 +319,39 @@ const ExcelImporter = ({
       });
       
       instrucoes.addRow([]);
-      instrucoes.addRow(['4. OBSERVAÇÕES IMPORTANTES:']);
+      instrucoes.addRow(['6. OBSERVAÇÕES IMPORTANTES:']);
       instrucoes.addRow(['   - Você pode usar o nome da lista ou seu ID numérico']);
       instrucoes.addRow(['   - Você pode usar o nome do usuário ou seu ID numérico']);
       instrucoes.addRow(['   - Datas devem estar no formato YYYY-MM-DD']);
       instrucoes.addRow(['   - Remove as linhas de exemplo antes de importar seus dados']);
       instrucoes.addRow(['   - Campos obrigatórios não podem estar vazios']);
+      instrucoes.addRow(['   - Para tipos avançados, preencha os campos específicos']);
       
       // Formatar instruções
       instrucoes.getRow(1).font = { bold: true, size: 16 };
-      instrucoes.getColumn(1).width = 80;
+      instrucoes.getColumn(1).width = 100;
+      
+      // Formatar seções
+      const sections = [
+        { row: 1, bgColor: 'FF2F75B6', textColor: 'FFFFFFFF' },
+        { row: 3, bgColor: 'FFFCE4D6', textColor: 'FF8B4513' },
+        { row: type === 'tarefas' ? 9 : 11, bgColor: 'FFE7F5E6', textColor: 'FF2E8B57' },
+        { row: type === 'tarefas' ? 14 : 35, bgColor: 'FFFFF2CC', textColor: 'FF8B6914' }
+      ];
+      
+      sections.forEach(section => {
+        if (instrucoes.getRow(section.row)) {
+          instrucoes.getRow(section.row).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: section.bgColor }
+          };
+          instrucoes.getRow(section.row).font = {
+            bold: true,
+            color: { argb: section.textColor }
+          };
+        }
+      });
       
       // Gerar buffer e baixar
       const buffer = await workbook.xlsx.writeBuffer();
@@ -214,7 +362,7 @@ const ExcelImporter = ({
       const link = document.createElement('a');
       link.href = url;
       const timestamp = new Date().toISOString().split('T')[0];
-      link.download = `template_${type}_${timestamp}.xlsx`;
+      link.download = `template_${type}_completo_${timestamp}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -222,7 +370,7 @@ const ExcelImporter = ({
       // Limpar URL
       window.URL.revokeObjectURL(url);
       
-      toast.success(`Template para ${type} baixado com sucesso!`);
+      toast.success(`Template completo para ${type} baixado com sucesso!`);
       setStep(2);
       
     } catch (error) {
@@ -267,6 +415,7 @@ const ExcelImporter = ({
           dadosLinha.usuario_id = row.getCell(3).value;
           dadosLinha.date = row.getCell(4).value;
           dadosLinha.completed = row.getCell(5).value;
+          dadosLinha.note = row.getCell(6).value;
         } else {
           dadosLinha.content = row.getCell(1).value;
           dadosLinha.task_list_id = row.getCell(2).value;
@@ -276,6 +425,12 @@ const ExcelImporter = ({
           dadosLinha.recurrence_days = row.getCell(6).value;
           dadosLinha.start_date = row.getCell(7).value;
           dadosLinha.end_date = row.getCell(8).value;
+          dadosLinha.persistent = row.getCell(9).value;
+          dadosLinha.note = row.getCell(10).value;
+          dadosLinha.weekly_interval = row.getCell(11).value;
+          dadosLinha.selected_weekday = row.getCell(12).value;
+          dadosLinha.monthly_ordinal = row.getCell(13).value;
+          dadosLinha.monthly_weekday = row.getCell(14).value;
         }
         
         // Validações básicas
@@ -302,13 +457,35 @@ const ExcelImporter = ({
           }
           
           if (!recurrenceTypes.find(rt => rt.value === dadosLinha.recurrence_type)) {
-            erros.push(`Linha ${rowNumber}: Tipo de recorrência inválido. Use: daily, weekly, monthly, yearly`);
+            erros.push(`Linha ${rowNumber}: Tipo de recorrência inválido. Use: ${recurrenceTypes.map(rt => rt.value).join(', ')}`);
             return;
           }
           
           if (!dadosLinha.start_date) {
             erros.push(`Linha ${rowNumber}: Data de início é obrigatória`);
             return;
+          }
+          
+          // ✅ VALIDAÇÕES PARA TIPOS AVANÇADOS
+          if (['biweekly', 'triweekly', 'quadweekly'].includes(dadosLinha.recurrence_type)) {
+            if (!dadosLinha.selected_weekday) {
+              erros.push(`Linha ${rowNumber}: Dia da semana é obrigatório para tipo ${dadosLinha.recurrence_type}`);
+              return;
+            }
+            
+            if (!dadosLinha.weekly_interval) {
+              // Definir intervalo padrão baseado no tipo
+              if (dadosLinha.recurrence_type === 'biweekly') dadosLinha.weekly_interval = 2;
+              else if (dadosLinha.recurrence_type === 'triweekly') dadosLinha.weekly_interval = 3;
+              else if (dadosLinha.recurrence_type === 'quadweekly') dadosLinha.weekly_interval = 4;
+            }
+          }
+          
+          if (dadosLinha.recurrence_type === 'monthly_weekday') {
+            if (!dadosLinha.monthly_ordinal || !dadosLinha.monthly_weekday) {
+              erros.push(`Linha ${rowNumber}: Ordinal mensal e dia da semana são obrigatórios para monthly_weekday`);
+              return;
+            }
           }
         }
         
@@ -383,7 +560,12 @@ const ExcelImporter = ({
           dadosFinais.completed = false;
           if (dadosLinha.completed) {
             const completedStr = String(dadosLinha.completed).toLowerCase().trim();
-            dadosFinais.completed = ['true', '1', 'sim', 'concluída'].includes(completedStr);
+            dadosFinais.completed = ['true', '1', 'sim', 'concluída', 'yes'].includes(completedStr);
+          }
+          
+          // Processar nota
+          if (dadosLinha.note) {
+            dadosFinais.note = String(dadosLinha.note).trim();
           }
         } else {
           // Processar dados de rotina
@@ -420,6 +602,37 @@ const ExcelImporter = ({
               erros.push(`Linha ${rowNumber}: Data de fim deve estar no formato YYYY-MM-DD`);
               return;
             }
+          }
+          
+          // Processar persistente
+          dadosFinais.persistent = true;
+          if (dadosLinha.persistent) {
+            const persistentStr = String(dadosLinha.persistent).toLowerCase().trim();
+            dadosFinais.persistent = !['false', '0', 'não', 'nao', 'no'].includes(persistentStr);
+          }
+          
+          // Processar nota
+          if (dadosLinha.note) {
+            dadosFinais.note = String(dadosLinha.note).trim();
+          }
+          
+          // ✅ PROCESSAR CAMPOS AVANÇADOS
+          if (dadosLinha.weekly_interval) {
+            dadosFinais.weekly_interval = parseInt(dadosLinha.weekly_interval) || 
+              (dadosLinha.recurrence_type === 'biweekly' ? 2 : 
+               dadosLinha.recurrence_type === 'triweekly' ? 3 : 4);
+          }
+          
+          if (dadosLinha.selected_weekday) {
+            dadosFinais.selected_weekday = parseInt(dadosLinha.selected_weekday);
+          }
+          
+          if (dadosLinha.monthly_ordinal) {
+            dadosFinais.monthly_ordinal = parseInt(dadosLinha.monthly_ordinal);
+          }
+          
+          if (dadosLinha.monthly_weekday) {
+            dadosFinais.monthly_weekday = parseInt(dadosLinha.monthly_weekday);
           }
         }
         
@@ -498,7 +711,7 @@ const ExcelImporter = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white p-6 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
             Importar {type === 'tarefas' ? 'Tarefas' : 'Rotinas'} via Excel
@@ -542,363 +755,242 @@ const ExcelImporter = ({
               }`}>
                 3
               </div>
-              <span className="ml-2 font-medium">Confirmar</span>
+              <span className="ml-2 font-medium">Confirmação</span>
             </div>
           </div>
         </div>
 
-        {/* Etapa 1: Download Template */}
+        {/* Conteúdo por etapa */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <FiDownload className="h-5 w-5 text-blue-600 mt-0.5 mr-2" />
-                <div>
-                  <h3 className="font-medium text-blue-900">Baixar Template</h3>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Primeiro, baixe o template Excel para {type}. O arquivo conterá exemplos e instruções detalhadas.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">O que está incluído no template:</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>• Template com exemplos de dados</p>
-                <p>• Aba de instruções detalhadas</p>
-                <p>• Lista de todas as listas de projeto disponíveis</p>
-                <p>• Lista de todos os usuários disponíveis</p>
-                <p>• Validações e formatos obrigatórios</p>
-              </div>
+              <h3 className="font-semibold text-blue-800 mb-2">Como funciona:</h3>
+              <ol className="list-decimal list-inside space-y-1 text-blue-700">
+                <li>Baixe o template Excel completo com instruções</li>
+                <li>Preencha com seus dados seguindo as instruções</li>
+                <li>Faça upload do arquivo preenchido</li>
+                <li>Confirme e importe os dados</li>
+              </ol>
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="font-medium text-yellow-900 mb-2">
-                Campos obrigatórios para {type}:
-              </h4>
-              <div className="text-sm text-yellow-700 space-y-1">
-                {type === 'tarefas' ? (
-                  <>
-                    <p>• <strong>Descrição da Tarefa:</strong> Texto descrevendo a tarefa</p>
-                    <p>• <strong>Lista:</strong> Nome da lista ou ID numérico</p>
-                    <p>• <strong>Responsável:</strong> Nome do usuário ou ID numérico</p>
-                  </>
-                ) : (
-                  <>
-                    <p>• <strong>Descrição da Rotina:</strong> Texto descrevendo a rotina</p>
-                    <p>• <strong>Lista:</strong> Nome da lista ou ID numérico</p>
-                    <p>• <strong>Responsável:</strong> Nome do usuário ou ID numérico</p>
-                    <p>• <strong>Tipo de Recorrência:</strong> daily, weekly, monthly, yearly</p>
-                    <p>• <strong>Data de Início:</strong> Formato YYYY-MM-DD</p>
-                  </>
-                )}
-              </div>
+              <h3 className="font-semibold text-yellow-800 mb-2">Importante:</h3>
+              <ul className="list-disc list-inside space-y-1 text-yellow-700">
+                <li>Mantenha o formato original das colunas</li>
+                <li>Campos marcados com * são obrigatórios</li>
+                <li>Para tipos avançados de recorrência, preencha os campos específicos</li>
+                <li>Verifique se usuários têm acesso às listas selecionadas</li>
+              </ul>
             </div>
 
-            <div className="flex justify-between">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={gerarPlanilhaExcel}
-                  disabled={loading}
-                  className={`px-6 py-2 rounded-md flex items-center ${
-                    loading
-                      ? 'bg-gray-400 cursor-not-allowed text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <FiDownload className="mr-2" />
-                      Baixar Template
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center"
-                >
-                  Próximo Passo →
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={gerarPlanilhaExcel}
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <FiDownload className="mr-2" />
+                  Baixar Template Completo
+                </>
+              )}
+            </button>
           </div>
         )}
 
-        {/* Etapa 2: Upload */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <FiUpload className="h-5 w-5 text-green-600 mt-0.5 mr-2" />
-                <div>
-                  <h3 className="font-medium text-green-900">Enviar Planilha Preenchida</h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    Preencha o template baixado com suas {type} e envie o arquivo de volta.
-                  </p>
-                  <p className="text-sm text-green-700 mt-2">
-                    <strong>💡 Lembre-se:</strong> Remova as linhas de exemplo antes de importar seus dados.
-                  </p>
-                </div>
-              </div>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="excel-file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setFile(e.target.files[0])}
+                className="hidden"
+              />
+              
+              <label htmlFor="excel-file" className="cursor-pointer">
+                {file ? (
+                  <div className="text-green-600">
+                    <FiCheck className="h-12 w-12 mx-auto mb-2" />
+                    <p className="font-medium">{file.name}</p>
+                    <p className="text-sm text-gray-500">Clique para selecionar outro arquivo</p>
+                  </div>
+                ) : (
+                  <div className="text-gray-400">
+                    <FiUpload className="h-12 w-12 mx-auto mb-2" />
+                    <p className="font-medium">Clique para selecionar o arquivo Excel</p>
+                    <p className="text-sm">Formatos suportados: .xlsx, .xls</p>
+                  </div>
+                )}
+              </label>
             </div>
 
-            {/* Upload area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-              {!file ? (
-                <div className="text-center">
-                  <FiFile className="mx-auto h-12 w-12 text-gray-400" />
-                  <div className="mt-4">
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="mt-2 block text-sm font-medium text-gray-900">
-                        Selecione o arquivo Excel preenchido
-                      </span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept=".xlsx,.xls"
-                        onChange={(e) => setFile(e.target.files[0])}
-                      />
-                      <span className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 mt-2">
-                        Escolher arquivo
-                      </span>
-                    </label>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Apenas arquivos Excel (.xlsx, .xls)
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FiFile className="h-8 w-8 text-green-500" />
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                      <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setFile(null)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <FiX className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Erros de validação */}
             {errosValidacao.length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <FiAlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2" />
-                  <div>
-                    <h3 className="font-medium text-red-900">Erros encontrados na planilha:</h3>
-                    <ul className="mt-2 text-sm text-red-700 space-y-1">
-                      {errosValidacao.slice(0, 10).map((erro, index) => (
-                        <li key={index}>• {erro}</li>
-                      ))}
-                      {errosValidacao.length > 10 && (
-                        <li>• ... e mais {errosValidacao.length - 10} erro(s)</li>
-                      )}
-                    </ul>
-                  </div>
+                <h4 className="font-semibold text-red-800 mb-2">Erros encontrados:</h4>
+                <div className="max-h-32 overflow-y-auto">
+                  {errosValidacao.map((erro, index) => (
+                    <p key={index} className="text-red-700 text-sm mb-1">
+                      {erro}
+                    </p>
+                  ))}
                 </div>
               </div>
             )}
 
-            <div className="flex justify-between">
+            <div className="flex space-x-3">
               <button
                 onClick={() => setStep(1)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg"
               >
                 Voltar
               </button>
-              
               <button
                 onClick={processarArquivoExcel}
                 disabled={!file || loading}
-                className={`px-6 py-2 rounded-md flex items-center ${
-                  !file || loading
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <FiUpload className="mr-2" />
-                    Processar Planilha
-                  </>
-                )}
+                {loading ? 'Processando...' : 'Processar Arquivo'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Etapa 3: Confirmação */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <FiCheck className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
-                <div>
-                  <h3 className="font-medium text-yellow-900">Confirmar Importação</h3>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    {dadosParaImportar.length} {type} será(ão) importada(s). Revise os dados abaixo e confirme.
-                  </p>
-                </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <FiCheck className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-green-800 font-medium">
+                  {dadosParaImportar.length} {type === 'tarefas' ? 'tarefas' : 'rotinas'} prontas para importar
+                </span>
               </div>
             </div>
 
-            {/* Preview dos dados */}
-            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Linha</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lista</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Responsável</th>
-                    {type === 'tarefas' ? (
-                      <>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data Limite</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Recorrência</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Início</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fim</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {dadosParaImportar.slice(0, 20).map((item, index) => (
-                    <tr key={index}>
-                      <td className="px-3 py-2 text-sm text-gray-900">{item._rowIndex}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate" title={item.content}>
-                        {item.content}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-500">
-                        {listas[item.task_list_id]?.nome || 'Lista não encontrada'}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-500">
-                        {usuarios[item.usuario_id] || 'Usuário não encontrado'}
-                      </td>
-                      {type === 'tarefas' ? (
-                        <>
-                          <td className="px-3 py-2 text-sm text-gray-900">{item.date || '-'}</td>
-                          <td className="px-3 py-2 text-sm text-gray-900">
-                            {item.completed ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Concluída
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Pendente
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-3 py-2 text-sm text-gray-900">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                              {recurrenceTypes.find(rt => rt.value === item.recurrence_type)?.label || item.recurrence_type}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900">{item.start_date}</td>
-                          <td className="px-3 py-2 text-sm text-gray-900">{item.end_date || '-'}</td>
-                        </>
+            {/* Visualização dos dados */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 font-medium">
+                Dados para importação ({dadosParaImportar.length} registros)
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Descrição</th>
+                      <th className="px-3 py-2 text-left">Lista</th>
+                      <th className="px-3 py-2 text-left">Responsável</th>
+                      {type === 'rotinas' && (
+                        <th className="px-3 py-2 text-left">Recorrência</th>
                       )}
                     </tr>
-                  ))}
-                  {dadosParaImportar.length > 20 && (
-                    <tr>
-                      <td colSpan={type === 'tarefas' ? "6" : "7"} className="px-3 py-2 text-sm text-gray-500 text-center">
-                        ... e mais {dadosParaImportar.length - 20} registro(s)
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {dadosParaImportar.slice(0, 10).map((item, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="px-3 py-2">{item.content}</td>
+                        <td className="px-3 py-2">{listas[item.task_list_id]?.nome}</td>
+                        <td className="px-3 py-2">{usuarios[item.usuario_id]}</td>
+                        {type === 'rotinas' && (
+                          <td className="px-3 py-2">
+                            {recurrenceTypes.find(rt => rt.value === item.recurrence_type)?.label}
+                            {item.recurrence_interval > 1 && ` (a cada ${item.recurrence_interval})`}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                    {dadosParaImportar.length > 10 && (
+                      <tr>
+                        <td colSpan={type === 'tarefas' ? 3 : 4} className="px-3 py-2 text-center text-gray-500">
+                          ... e mais {dadosParaImportar.length - 10} registros
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
-                💡 <strong>Resumo da importação:</strong> {dadosParaImportar.length} {type} serão criadas no sistema.
-              </p>
-              <p className="text-sm text-blue-700 mt-1">
-                ✅ <strong>Validações realizadas:</strong> Todas as listas, usuários e permissões foram verificados.
-              </p>
-              {type === 'rotinas' && (
-                <p className="text-sm text-blue-700 mt-1">
-                  🔄 <strong>Recorrências:</strong> As rotinas serão executadas conforme a configuração definida.
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-between">
+            <div className="flex space-x-3">
               <button
                 onClick={() => setStep(2)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg"
               >
                 Voltar
               </button>
-              
               <button
                 onClick={executarImportacao}
                 disabled={loading}
-                className={`px-6 py-2 rounded-md flex items-center ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Importando...
-                  </>
-                ) : (
-                  <>
-                    <FiCheck className="mr-2" />
-                    Confirmar Importação
-                  </>
-                )}
+                {loading ? 'Importando...' : 'Confirmar Importação'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Progress indicator */}
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
-          <div 
-            className="h-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
-        </div>
+        {/* Seção de opções avançadas */}
+        {type === 'rotinas' && step === 1 && (
+          <div className="mt-6 border-t pt-4">
+            <button
+              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+            >
+              <FiCpu className="mr-2" />
+              Tipos de Recorrência Avançados
+              {showAdvancedOptions ? (
+                <FiChevronUp className="ml-2" />
+              ) : (
+                <FiChevronDown className="ml-2" />
+              )}
+            </button>
+
+            {showAdvancedOptions && (
+              <div className="mt-3 bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-3">Tipos de Recorrência Suportados:</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium text-blue-800 mb-2">Tipos Básicos:</h5>
+                    <ul className="space-y-1 text-sm">
+                      {tiposRecorrenciaBasicos.map(tipo => (
+                        <li key={tipo.value} className="flex items-center">
+                          <FiCheck className="h-3 w-3 text-green-600 mr-2" />
+                          <span className="font-medium">{tipo.label}:</span>
+                          <span className="ml-1 text-gray-600">{tipo.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-purple-800 mb-2">Tipos Avançados:</h5>
+                    <ul className="space-y-1 text-sm">
+                      {tiposRecorrenciaAvancados.map(tipo => (
+                        <li key={tipo.value} className="flex items-center">
+                          <FiCpu className="h-3 w-3 text-purple-600 mr-2" />
+                          <span className="font-medium">{tipo.label}:</span>
+                          <span className="ml-1 text-gray-600">{tipo.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-white rounded border">
+                  <h6 className="font-medium text-orange-800 mb-2">Exemplos de uso:</h6>
+                  <div className="text-xs space-y-2">
+                    <p><strong>biweekly:</strong> A cada 2 semanas nas quartas-feiras</p>
+                    <p><strong>monthly_weekday:</strong> Primeira segunda-feira de cada mês</p>
+                    <p><strong>quadweekly:</strong> A cada 4 semanas nas sextas-feiras</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

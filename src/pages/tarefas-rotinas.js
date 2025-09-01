@@ -1,4 +1,4 @@
-// Arquivo: src/pages/tarefas-rotinas.js - VERSÃO COMPLETA COM EXCEL IMPORTER
+// Arquivo: src/pages/tarefas-rotinas.js - VERSÃO COMPLETA CORRIGIDA COM TODOS OS CAMPOS
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -33,8 +33,11 @@ import {
   FiActivity,
   FiCheckCircle,
   FiDownload,
-  FiUpload
+  FiUpload,
+  FiChevronDown,
+  FiChevronUp
 } from 'react-icons/fi';
+import { MdOutlineStickyNote2 } from "react-icons/md";
 
 export default function TarefasRotinas({ user }) {
   const router = useRouter();
@@ -75,6 +78,9 @@ export default function TarefasRotinas({ user }) {
   const [salvando, setSalvando] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
 
+  // ✅ NOVO: Estado para opções avançadas de rotinas
+  const [mostrarOpcoesAvancadas, setMostrarOpcoesAvancadas] = useState({});
+
   // Opções para status das tarefas (baseado no campo completed)
   const completedOptions = [
     { value: false, label: 'Pendente', color: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
@@ -88,12 +94,40 @@ export default function TarefasRotinas({ user }) {
     { value: 'true', label: '✅ Concluídas' }
   ];
 
-  // Opções para tipo de recorrência
+  // ✅ CORRIGIDO: Tipos de recorrência COMPLETOS (baseado no schema do BD)
   const recurrenceTypes = [
     { value: 'daily', label: 'Diário' },
     { value: 'weekly', label: 'Semanal' },
-    { value: 'monthly', label: 'Mensal' },
+    { value: 'monthly', label: 'Mensal (dia fixo)' },
+    { value: 'yearly', label: 'Anual' },
+    { value: 'biweekly', label: 'A cada 2 semanas' },
+    { value: 'triweekly', label: 'A cada 3 semanas' },
+    { value: 'quadweekly', label: 'A cada 4 semanas' },
+    { value: 'monthly_weekday', label: 'Padrão mensal (ex: 1ª segunda)' }
+  ];
+
+  // ✅ NOVO: Tipos básicos e avançados separados
+  const tiposRecorrenciaBasicos = [
+    { value: 'daily', label: 'Diário' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensal (dia fixo)' },
     { value: 'yearly', label: 'Anual' }
+  ];
+
+  const tiposRecorrenciaAvancados = [
+    { value: 'biweekly', label: 'A cada 2 semanas' },
+    { value: 'triweekly', label: 'A cada 3 semanas' },
+    { value: 'quadweekly', label: 'A cada 4 semanas' },
+    { value: 'monthly_weekday', label: 'Padrão mensal' }
+  ];
+
+  // ✅ NOVO: Ordinais para padrões mensais
+  const ordinaisMensais = [
+    { value: 1, label: 'Primeira' },
+    { value: 2, label: 'Segunda' },
+    { value: 3, label: 'Terceira' },
+    { value: 4, label: 'Quarta' },
+    { value: -1, label: 'Última' }
   ];
 
   // Opções para dias da semana
@@ -105,6 +139,16 @@ export default function TarefasRotinas({ user }) {
     { value: 5, label: 'Sexta' },
     { value: 6, label: 'Sábado' },
     { value: 0, label: 'Domingo' }
+  ];
+
+  const diasDaSemana = [
+    { valor: 1, nome: 'Segunda', abrev: 'SEG' },
+    { valor: 2, nome: 'Terça', abrev: 'TER' },
+    { valor: 3, nome: 'Quarta', abrev: 'QUA' },
+    { valor: 4, nome: 'Quinta', abrev: 'QUI' },
+    { valor: 5, nome: 'Sexta', abrev: 'SEX' },
+    { valor: 6, nome: 'Sábado', abrev: 'SAB' },
+    { valor: 0, nome: 'Domingo', abrev: 'DOM' }
   ];
 
   // =====================================
@@ -274,8 +318,14 @@ export default function TarefasRotinas({ user }) {
         updateData[editando.field] = valorEdicao === 'true' || valorEdicao === true;
       }
       
-      if (editando.field === 'recurrence_interval') {
+      if (editando.field === 'recurrence_interval' || editando.field === 'weekly_interval' || 
+          editando.field === 'selected_weekday' || editando.field === 'monthly_ordinal' || 
+          editando.field === 'monthly_weekday') {
         updateData[editando.field] = parseInt(valorEdicao) || 1;
+      }
+
+      if (editando.field === 'persistent') {
+        updateData[editando.field] = valorEdicao === 'true' || valorEdicao === true;
       }
 
       const { error } = await supabase
@@ -396,7 +446,8 @@ export default function TarefasRotinas({ user }) {
             task_list_id: task.task_list_id,
             usuario_id: task.usuario_id,
             completed: task.completed || false,
-            date: task.date || null
+            date: task.date || null,
+            note: task.note || null
           })
           .eq('id', task.id);
         
@@ -411,7 +462,8 @@ export default function TarefasRotinas({ user }) {
             task_list_id: task.task_list_id,
             usuario_id: task.usuario_id,
             completed: false,
-            date: task.date || null
+            date: task.date || null,
+            note: task.note || null
           });
         
         if (error) throw error;
@@ -532,7 +584,14 @@ export default function TarefasRotinas({ user }) {
         recurrence_interval: routine.recurrence_interval || 1,
         recurrence_days: routine.recurrence_type === 'weekly' ? routine.recurrence_days : null,
         start_date: routine.start_date,
-        end_date: routine.end_date || null
+        end_date: routine.end_date || null,
+        persistent: routine.persistent !== undefined ? routine.persistent : true,
+        note: routine.note || null,
+        // ✅ NOVOS CAMPOS AVANÇADOS
+        weekly_interval: routine.weekly_interval || null,
+        selected_weekday: routine.selected_weekday || null,
+        monthly_ordinal: routine.monthly_ordinal || null,
+        monthly_weekday: routine.monthly_weekday || null
       };
       
       if (routine.id) {
@@ -643,6 +702,43 @@ export default function TarefasRotinas({ user }) {
     };
   };
 
+  // ✅ NOVA FUNÇÃO: Formatar recorrência avançada
+  const formatarRecorrenciaAvancada = (rotina) => {
+    switch(rotina.recurrence_type) {
+      case 'daily':
+        return `Diária${rotina.recurrence_interval > 1 ? ` (a cada ${rotina.recurrence_interval} dias)` : ''}`;
+        
+      case 'weekly':
+        const diasSelecionados = rotina.recurrence_days?.map(d => 
+          diasDaSemana.find(dia => dia.valor === d)?.abrev
+        ).join(', ');
+        return `Semanal (${diasSelecionados})`;
+        
+      case 'monthly':
+        return `Mensal (dia ${new Date(rotina.start_date).getDate()})`;
+        
+      case 'yearly':
+        return `Anual`;
+        
+      case 'biweekly':
+      case 'triweekly':  
+      case 'quadweekly':
+        const intervaloSemanas = rotina.weekly_interval || 
+          (rotina.recurrence_type === 'biweekly' ? 2 : 
+           rotina.recurrence_type === 'triweekly' ? 3 : 4);
+        const diaEscolhido = diasDaSemana.find(d => d.valor === rotina.selected_weekday)?.nome || 'Não definido';
+        return `A cada ${intervaloSemanas} semanas (${diaEscolhido})`;
+        
+      case 'monthly_weekday':
+        const ordinal = ordinaisMensais.find(o => o.value === rotina.monthly_ordinal)?.label || 'Primeira';
+        const diaSemana = diasDaSemana.find(d => d.valor === rotina.monthly_weekday)?.nome || 'Segunda';
+        return `${ordinal} ${diaSemana} do mês`;
+        
+      default:
+        return 'Não definida';
+    }
+  };
+
   // =====================================
   // EFFECTS
   // =====================================
@@ -703,7 +799,7 @@ export default function TarefasRotinas({ user }) {
   const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro;
 
   // =====================================
-  // COMPONENTES DE RENDERIZAÇÃO INLINE
+  // ✅ FUNÇÕES DE RENDERIZAÇÃO INLINE ATUALIZADAS
   // =====================================
 
   const renderizarCelulaEditavel = (item, field, tipo = 'text', options = [], itemType = 'tarefas') => {
@@ -842,6 +938,44 @@ export default function TarefasRotinas({ user }) {
         case 'start_date':
         case 'end_date':
           return valor ? formatDate(valor) : (field === 'end_date' ? 'Sem fim' : '');
+
+        // ✅ NOVO: Campo de nota
+        case 'note':
+          return valor && valor.trim() !== '' ? (
+            <div className="flex items-center gap-2">
+              <MdOutlineStickyNote2 className="w-4 h-4 text-yellow-600" />
+              <span className="text-sm text-gray-700 truncate max-w-xs" title={valor}>
+                {valor}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-gray-400">
+              <MdOutlineStickyNote2 className="w-4 h-4" />
+              <span className="text-sm italic">Clique para adicionar</span>
+            </div>
+          );
+
+        // ✅ NOVO: Campo de persistência (rotinas)
+        case 'persistent':
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              valor 
+                ? 'bg-blue-100 text-blue-800' 
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {valor ? 'Persistente' : 'Não Persistente'}
+            </span>
+          );
+
+        // ✅ NOVO: Campo de updated_at
+        case 'updated_at':
+          return valor ? (
+            <div className="text-xs text-gray-500">
+              {new Date(valor).toLocaleDateString('pt-BR')} às {new Date(valor).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          ) : (
+            <span className="text-gray-400 text-xs">Nunca atualizada</span>
+          );
           
         case 'content':
           return (
@@ -849,6 +983,22 @@ export default function TarefasRotinas({ user }) {
               <span className="text-sm">{valor}</span>
             </div>
           );
+
+        // ✅ NOVO: Campos avançados de recorrência
+        case 'weekly_interval':
+          return valor ? `${valor} semanas` : '-';
+
+        case 'selected_weekday':
+          const diaSemana = diasDaSemana.find(d => d.valor === valor);
+          return diaSemana ? diaSemana.nome : '-';
+
+        case 'monthly_ordinal':
+          const ordinal = ordinaisMensais.find(o => o.value === valor);
+          return ordinal ? ordinal.label : '-';
+
+        case 'monthly_weekday':
+          const diaSemanaM = diasDaSemana.find(d => d.valor === valor);
+          return diaSemanaM ? diaSemanaM.nome : '-';
           
         default:
           return valor;
@@ -870,7 +1020,7 @@ export default function TarefasRotinas({ user }) {
   };
 
   // =====================================
-  // COMPONENTES DE RENDERIZAÇÃO DE TABELAS
+  // ✅ COMPONENTES DE RENDERIZAÇÃO DE TABELAS ATUALIZADAS
   // =====================================
 
   const TaskRow = ({ task, isNew = false }) => {
@@ -879,7 +1029,8 @@ export default function TarefasRotinas({ user }) {
       task_list_id: '',
       usuario_id: '',
       completed: false,
-      date: ''
+      date: '',
+      note: '' // ✅ NOVO CAMPO
     });
 
     const handleSave = () => {
@@ -958,6 +1109,16 @@ export default function TarefasRotinas({ user }) {
             <option value={true}>✅ Concluída</option>
           </select>
         </td>
+        {/* ✅ NOVA COLUNA: Nota */}
+        <td className="px-4 py-3">
+          <textarea
+            value={localTask.note || ''}
+            onChange={(e) => setLocalTask({...localTask, note: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            placeholder="Nota opcional..."
+            rows={2}
+          />
+        </td>
         <td className="px-4 py-3">
           <div className="flex items-center space-x-2">
             <button
@@ -989,8 +1150,17 @@ export default function TarefasRotinas({ user }) {
       recurrence_interval: 1,
       recurrence_days: [],
       start_date: new Date().toISOString().split('T')[0],
-      end_date: ''
+      end_date: '',
+      persistent: true, // ✅ NOVO CAMPO
+      note: '', // ✅ NOVO CAMPO
+      // ✅ NOVOS CAMPOS AVANÇADOS
+      weekly_interval: 2,
+      selected_weekday: 1,
+      monthly_ordinal: 1,
+      monthly_weekday: 1
     });
+
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const handleSave = () => {
       if (!localRoutine.content.trim() || !localRoutine.task_list_id || !localRoutine.usuario_id) {
@@ -1001,6 +1171,19 @@ export default function TarefasRotinas({ user }) {
       if (localRoutine.recurrence_type === 'weekly' && (!localRoutine.recurrence_days || localRoutine.recurrence_days.length === 0)) {
         toast.error('Selecione pelo menos um dia da semana para recorrência semanal');
         return;
+      }
+
+      // ✅ Validações para tipos avançados
+      if (['biweekly', 'triweekly', 'quadweekly'].includes(localRoutine.recurrence_type) && !localRoutine.selected_weekday) {
+        toast.error('Selecione um dia da semana');
+        return;
+      }
+
+      if (localRoutine.recurrence_type === 'monthly_weekday') {
+        if (!localRoutine.monthly_ordinal || !localRoutine.monthly_weekday) {
+          toast.error('Configure a ocorrência e o dia da semana');
+          return;
+        }
       }
       
       saveRoutine(localRoutine);
@@ -1025,6 +1208,10 @@ export default function TarefasRotinas({ user }) {
       }
       
       setLocalRoutine({...localRoutine, recurrence_days: newDays});
+    };
+
+    const toggleAdvanced = () => {
+      setShowAdvanced(!showAdvanced);
     };
 
     return (
@@ -1070,19 +1257,53 @@ export default function TarefasRotinas({ user }) {
           </select>
         </td>
         <td className="px-4 py-3">
-          <select
-            value={localRoutine.recurrence_type}
-            onChange={(e) => setLocalRoutine({...localRoutine, recurrence_type: e.target.value, recurrence_days: []})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {recurrenceTypes.map(type => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            {/* ✅ Tipos básicos */}
+            <select
+              value={localRoutine.recurrence_type}
+              onChange={(e) => setLocalRoutine({...localRoutine, recurrence_type: e.target.value, recurrence_days: []})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {tiposRecorrenciaBasicos.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            
+            {/* ✅ Toggle para tipos avançados */}
+            <button
+              type="button"
+              onClick={toggleAdvanced}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              {showAdvanced ? (
+                <FiChevronUp className="w-3 h-3 mr-1" />
+              ) : (
+                <FiChevronDown className="w-3 h-3 mr-1" />
+              )}
+              Opções Avançadas
+            </button>
+            
+            {/* ✅ Tipos avançados (colapsáveis) */}
+            {showAdvanced && (
+              <select
+                value={tiposRecorrenciaAvancados.some(t => t.value === localRoutine.recurrence_type) ? localRoutine.recurrence_type : ''}
+                onChange={(e) => e.target.value && setLocalRoutine({...localRoutine, recurrence_type: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              >
+                <option value="">Selecione avançado...</option>
+                {tiposRecorrenciaAvancados.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </td>
         <td className="px-4 py-3">
+          {/* ✅ Renderização condicional baseada no tipo */}
           {localRoutine.recurrence_type === 'weekly' ? (
             <div className="flex flex-wrap gap-1">
               {weekDays.map(day => (
@@ -1096,6 +1317,49 @@ export default function TarefasRotinas({ user }) {
                   {day.label.slice(0, 3)}
                 </label>
               ))}
+            </div>
+          ) : ['biweekly', 'triweekly', 'quadweekly'].includes(localRoutine.recurrence_type) ? (
+            <div className="space-y-2">
+              <select
+                value={localRoutine.selected_weekday || 1}
+                onChange={(e) => setLocalRoutine({...localRoutine, selected_weekday: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {diasDaSemana.map(dia => (
+                  <option key={dia.valor} value={dia.valor}>
+                    {dia.nome}
+                  </option>
+                ))}
+              </select>
+              <div className="text-xs text-gray-500">
+                A cada {localRoutine.recurrence_type === 'biweekly' ? '2' : 
+                        localRoutine.recurrence_type === 'triweekly' ? '3' : '4'} semanas
+              </div>
+            </div>
+          ) : localRoutine.recurrence_type === 'monthly_weekday' ? (
+            <div className="space-y-2">
+              <select
+                value={localRoutine.monthly_ordinal || 1}
+                onChange={(e) => setLocalRoutine({...localRoutine, monthly_ordinal: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {ordinaisMensais.map(ordinal => (
+                  <option key={ordinal.value} value={ordinal.value}>
+                    {ordinal.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={localRoutine.monthly_weekday || 1}
+                onChange={(e) => setLocalRoutine({...localRoutine, monthly_weekday: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {diasDaSemana.map(dia => (
+                  <option key={dia.valor} value={dia.valor}>
+                    {dia.nome}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : (
             <input
@@ -1121,6 +1385,27 @@ export default function TarefasRotinas({ user }) {
             value={localRoutine.end_date || ''}
             onChange={(e) => setLocalRoutine({...localRoutine, end_date: e.target.value})}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </td>
+        {/* ✅ NOVA COLUNA: Persistente */}
+        <td className="px-4 py-3">
+          <select
+            value={localRoutine.persistent}
+            onChange={(e) => setLocalRoutine({...localRoutine, persistent: e.target.value === 'true'})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={true}>Persistente</option>
+            <option value={false}>Não Persistente</option>
+          </select>
+        </td>
+        {/* ✅ NOVA COLUNA: Nota */}
+        <td className="px-4 py-3">
+          <textarea
+            value={localRoutine.note || ''}
+            onChange={(e) => setLocalRoutine({...localRoutine, note: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            placeholder="Nota opcional..."
+            rows={2}
           />
         </td>
         <td className="px-4 py-3">
@@ -1193,6 +1478,16 @@ export default function TarefasRotinas({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/visualizacao-atividades');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiCheckCircle className="mr-3 h-4 w-4" />
+                      Visualizar Atividades
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                         router.push('/visualizacao-indicadores');
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
@@ -1213,41 +1508,21 @@ export default function TarefasRotinas({ user }) {
                     <button
                       onClick={() => {
                         setShowMenu(false);
+                        router.push('/gestao-listas');
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                    >
+                      <FiList className="mr-3 h-4 w-4" />
+                      Gestão de Listas
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     >
                       <FiUser className="mr-3 h-4 w-4" />
                       Perfil
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/controle-indicador');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                    >
-                      <FiEdit3 className="mr-3 h-4 w-4" />
-                      Criar Indicador Base
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/analise-multiplos-indicadores');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiCpu className="mr-3 h-4 w-4" />
-                      Análises Indicadores
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        router.push('/historico-acessos');
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                    >
-                      <FiList className="mr-3 h-4 w-4" />
-                      Histórico Acessos (admin)
                     </button>
                     <button
                       onClick={() => {
@@ -1430,6 +1705,16 @@ export default function TarefasRotinas({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          router.push('/visualizacao-atividades');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiCheckCircle className="mr-3 h-4 w-4" />
+                        Visualizar Atividades
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                           router.push('/visualizacao-indicadores');
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
@@ -1450,41 +1735,21 @@ export default function TarefasRotinas({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          router.push('/gestao-listas');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                      >
+                        <FiList className="mr-3 h-4 w-4" />
+                        Gestão de Listas
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                       >
                         <FiUser className="mr-3 h-4 w-4" />
                         Perfil
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          router.push('/controle-indicador');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                      >
-                        <FiEdit3 className="mr-3 h-4 w-4" />
-                        Criar Indicador Base
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          router.push('/analise-multiplos-indicadores');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiCpu className="mr-3 h-4 w-4" />
-                        Análises Indicadores
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          router.push('/historico-acessos');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
-                      >
-                        <FiList className="mr-3 h-4 w-4" />
-                        Histórico Acessos (admin)
                       </button>
                       <button
                         onClick={() => {
@@ -1717,7 +1982,7 @@ export default function TarefasRotinas({ user }) {
                   <p className="text-sm text-gray-500">
                     {activeTab === 'tarefas' 
                       ? 'Gerencie suas tarefas com edição inline - clique para editar'
-                      : 'Configure suas rotinas recorrentes com edição inline'
+                      : 'Configure suas rotinas recorrentes com edição inline - suporte completo a tipos avançados'
                     }
                   </p>
                 </div>
@@ -1771,7 +2036,7 @@ export default function TarefasRotinas({ user }) {
               </div>
             </div>
 
-            {/* Tabela de Tarefas com Edição Inline */}
+            {/* ✅ TABELA DE TAREFAS ATUALIZADA COM NOVAS COLUNAS */}
             {activeTab === 'tarefas' && (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1795,6 +2060,20 @@ export default function TarefasRotinas({ user }) {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
+                      {/* ✅ NOVA COLUNA: Nota */}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <MdOutlineStickyNote2 className="w-3 h-3" />
+                          Nota
+                        </div>
+                      </th>
+                      {/* ✅ NOVA COLUNA: Atualizada em */}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <FiClock className="w-3 h-3" />
+                          Atualizada em
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ações
                       </th>
@@ -1809,19 +2088,33 @@ export default function TarefasRotinas({ user }) {
                     {/* Tarefas existentes */}
                     {loading ? (
                       <tr>
-                        <td colSpan="6" className="px-4 py-8 text-center">
-                          <div className="flex justify-center">
+                        <td colSpan="8" className="px-4 py-8 text-center">
+                          <div className="flex justify-center items-center space-x-2">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                            <span className="text-gray-500 text-sm">Carregando tarefas...</span>
                           </div>
                         </td>
                       </tr>
                     ) : tarefas.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
-                          {searchTerm.trim() || completedFiltro
-                            ? 'Nenhuma tarefa encontrada com os filtros aplicados'
-                            : 'Nenhuma tarefa encontrada'
-                          }
+                        <td colSpan="8" className="px-4 py-8 text-center">
+                          <div className="py-4">
+                            <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+                              <FiTarget className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <h4 className="text-lg font-medium text-gray-900 mb-2">
+                              {searchTerm.trim() || completedFiltro
+                                ? 'Nenhuma tarefa encontrada'
+                                : 'Nenhuma tarefa criada ainda'
+                              }
+                            </h4>
+                            <p className="text-gray-500 text-sm max-w-sm mx-auto">
+                              {searchTerm.trim() || completedFiltro
+                                ? 'Tente ajustar os filtros ou termo de busca para encontrar suas tarefas'
+                                : 'Clique em "Adicionar Tarefa" para criar sua primeira tarefa'
+                              }
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     ) : (
@@ -1829,10 +2122,13 @@ export default function TarefasRotinas({ user }) {
                         editingTask === task.id ? (
                           <TaskRow key={task.id} task={task} />
                         ) : (
-                          <tr key={task.id} className={`border-b border-gray-200 hover:bg-gray-50 ${task.completed ? 'opacity-75' : ''}`}>
+                          <tr key={task.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${task.completed ? 'opacity-75' : ''}`}>
+                            {/* ✅ COLUNA: Descrição */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'content', 'textarea', [], 'tarefas')}
                             </td>
+                            
+                            {/* ✅ COLUNA: Lista (Projeto) */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'task_list_id', 'select', 
                                 Object.entries(listas).map(([id, lista]) => ({
@@ -1841,6 +2137,8 @@ export default function TarefasRotinas({ user }) {
                                 })), 'tarefas'
                               )}
                             </td>
+                            
+                            {/* ✅ COLUNA: Responsável */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'usuario_id', 'select',
                                 getUsuariosPorLista(task.task_list_id).map(usuario => ({
@@ -1849,9 +2147,13 @@ export default function TarefasRotinas({ user }) {
                                 })), 'tarefas'
                               )}
                             </td>
+                            
+                            {/* ✅ COLUNA: Data Limite */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'date', 'date', [], 'tarefas')}
                             </td>
+                            
+                            {/* ✅ COLUNA: Status */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'completed', 'select', 
                                 completedOptions.map(option => ({
@@ -1860,19 +2162,100 @@ export default function TarefasRotinas({ user }) {
                                 })), 'tarefas'
                               )}
                             </td>
+                            
+                            {/* ✅ NOVA COLUNA: Nota */}
+                            <td className="px-4 py-3 min-w-[200px]">
+                              <div
+                                onClick={() => iniciarEdicao(task.id, 'note', task.note || '', 'tarefas')}
+                                className="px-2 py-1 hover:bg-blue-50 hover:border hover:border-blue-200 rounded cursor-pointer transition-colors group min-h-[2rem] flex items-center"
+                                title="Clique para editar nota"
+                              >
+                                <div className="flex-1">
+                                  {task.note && task.note.trim() !== '' ? (
+                                    <div className="flex items-start gap-2">
+                                      <MdOutlineStickyNote2 className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-sm text-gray-700 line-clamp-2 break-words" title={task.note}>
+                                          {task.note.length > 50 ? `${task.note.substring(0, 50)}...` : task.note}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                      <MdOutlineStickyNote2 className="w-4 h-4" />
+                                      <span className="text-sm italic">Clique para adicionar</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <FiEdit3 className="ml-2 w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
+                              </div>
+                            </td>
+                            
+                            {/* ✅ NOVA COLUNA: Atualizada em */}
+                            <td className="px-4 py-3 min-w-[140px]">
+                              <div className="text-xs text-gray-500">
+                                {task.updated_at ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1">
+                                      <FiCalendar className="w-3 h-3" />
+                                      <span>{new Date(task.updated_at).toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <FiClock className="w-3 h-3" />
+                                      <span>{new Date(task.updated_at).toLocaleTimeString('pt-BR', { 
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}</span>
+                                    </div>
+                                  </div>
+                                ) : task.created_at ? (
+                                  <div className="space-y-1">
+                                    <div className="text-gray-400">Nunca atualizada</div>
+                                    <div className="flex items-center gap-1">
+                                      <FiPlus className="w-3 h-3" />
+                                      <span>Criada: {new Date(task.created_at).toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic">Sem informação</span>
+                                )}
+                              </div>
+                            </td>
+                            
+                            {/* ✅ COLUNA: Ações */}
                             <td className="px-4 py-3">
                               <div className="flex items-center space-x-2">
+                                {/* Botão de editar */}
                                 <button
                                   onClick={() => setEditingTask(task.id)}
-                                  className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                  className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors group relative"
                                   title="Editar completo"
                                 >
                                   <FiEdit3 className="w-4 h-4" />
                                 </button>
+                                
+                                {/* Botão de toggle status rápido */}
+                                <button
+                                  onClick={() => toggleCompleted(task.id, task.completed)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    task.completed
+                                      ? 'text-green-600 hover:bg-green-100'
+                                      : 'text-yellow-600 hover:bg-yellow-100'
+                                  }`}
+                                  title={task.completed ? 'Marcar como pendente' : 'Marcar como concluída'}
+                                >
+                                  {task.completed ? (
+                                    <FiCheckCircle className="w-4 h-4" />
+                                  ) : (
+                                    <FiClock className="w-4 h-4" />
+                                  )}
+                                </button>
+                                
+                                {/* Botão de excluir */}
                                 <button
                                   onClick={() => deleteTask(task.id)}
                                   className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                                  title="Excluir"
+                                  title="Excluir tarefa"
                                 >
                                   <FiTrash2 className="w-4 h-4" />
                                 </button>
@@ -1884,10 +2267,52 @@ export default function TarefasRotinas({ user }) {
                     )}
                   </tbody>
                 </table>
+                
+                {/* ✅ FOOTER DA TABELA: Informações resumidas */}
+                {tarefas.length > 0 && (
+                  <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <div className="flex items-center space-x-4">
+                        <span>Total: <strong>{tarefas.length}</strong> tarefa{tarefas.length !== 1 ? 's' : ''}</span>
+                        <span>•</span>
+                        <span className="text-yellow-600">
+                          Pendentes: <strong>{tarefas.filter(t => !t.completed).length}</strong>
+                        </span>
+                        <span>•</span>
+                        <span className="text-green-600">
+                          Concluídas: <strong>{tarefas.filter(t => t.completed).length}</strong>
+                        </span>
+                      </div>
+                      
+                      {hasActiveFilters && (
+                        <div className="flex items-center text-blue-600">
+                          <FiFilter className="w-4 h-4 mr-1" />
+                          <span>Filtros aplicados</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* ✅ BARRA DE PROGRESSO MINI */}
+                    {tarefas.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                          <span>Progresso das tarefas</span>
+                          <span>{completedStats.percentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className="bg-green-500 h-1.5 rounded-full transition-all duration-500 ease-out" 
+                            style={{width: `${completedStats.percentage}%`}}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Tabela de Rotinas com Edição Inline */}
+            {/* ✅ TABELA DE ROTINAS ATUALIZADA COM NOVAS COLUNAS E TIPOS AVANÇADOS */}
             {activeTab === 'rotinas' && (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1906,16 +2331,27 @@ export default function TarefasRotinas({ user }) {
                         Responsável
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tipo
+                        Tipo de Recorrência
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Recorrência
+                        Configuração
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Início
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Fim
+                      </th>
+                      {/* ✅ NOVA COLUNA: Persistente */}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Persistência
+                      </th>
+                      {/* ✅ NOVA COLUNA: Nota */}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <MdOutlineStickyNote2 className="w-3 h-3" />
+                          Nota
+                        </div>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ações
@@ -1931,7 +2367,7 @@ export default function TarefasRotinas({ user }) {
                     {/* Rotinas existentes */}
                     {loading ? (
                       <tr>
-                        <td colSpan="8" className="px-4 py-8 text-center">
+                        <td colSpan="10" className="px-4 py-8 text-center">
                           <div className="flex justify-center">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                           </div>
@@ -1939,7 +2375,7 @@ export default function TarefasRotinas({ user }) {
                       </tr>
                     ) : rotinas.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
                           {searchTerm.trim() 
                             ? `Nenhuma rotina encontrada para "${searchTerm}"`
                             : 'Nenhuma rotina encontrada'
@@ -1975,18 +2411,49 @@ export default function TarefasRotinas({ user }) {
                               {renderizarCelulaEditavel(routine, 'recurrence_type', 'select', recurrenceTypes, 'rotinas')}
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-sm">
-                                {routine.recurrence_type === 'weekly' 
-                                  ? formatWeekDays(routine.recurrence_days)
-                                  : `A cada ${routine.recurrence_interval} ${routine.recurrence_type === 'daily' ? 'dia(s)' : routine.recurrence_type === 'monthly' ? 'mês(es)' : 'ano(s)'}`
-                                }
-                              </span>
+                              {/* ✅ Exibição da configuração formatada */}
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">
+                                  {formatarRecorrenciaAvancada(routine)}
+                                </div>
+                                {/* ✅ Detalhes específicos por tipo */}
+                                {routine.recurrence_type === 'weekly' && routine.recurrence_days && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Dias: {routine.recurrence_days.map(d => 
+                                      diasDaSemana.find(dia => dia.valor === d)?.abrev
+                                    ).join(', ')}
+                                  </div>
+                                )}
+                                {['biweekly', 'triweekly', 'quadweekly'].includes(routine.recurrence_type) && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Intervalo: {routine.weekly_interval || 2} semanas
+                                    <br />
+                                    Dia: {diasDaSemana.find(d => d.valor === routine.selected_weekday)?.nome}
+                                  </div>
+                                )}
+                                {routine.recurrence_type === 'monthly_weekday' && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {ordinaisMensais.find(o => o.value === routine.monthly_ordinal)?.label} {diasDaSemana.find(d => d.valor === routine.monthly_weekday)?.nome}
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(routine, 'start_date', 'date', [], 'rotinas')}
                             </td>
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(routine, 'end_date', 'date', [], 'rotinas')}
+                            </td>
+                            {/* ✅ NOVA COLUNA: Persistente */}
+                            <td className="px-4 py-3">
+                              {renderizarCelulaEditavel(routine, 'persistent', 'select', [
+                                { value: 'true', label: 'Persistente' },
+                                { value: 'false', label: 'Não Persistente' }
+                              ], 'rotinas')}
+                            </td>
+                            {/* ✅ NOVA COLUNA: Nota */}
+                            <td className="px-4 py-3">
+                              {renderizarCelulaEditavel(routine, 'note', 'textarea', [], 'rotinas')}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center space-x-2">
@@ -2017,41 +2484,70 @@ export default function TarefasRotinas({ user }) {
           </div>
         )}
 
-        {/* Instruções de uso */}
+        {/* ✅ SEÇÃO DE INSTRUÇÕES ATUALIZADA */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
             <FiTarget className="w-4 h-4" />
-            💡 Como usar a edição inline:
+            💡 Como usar a edição inline COMPLETA:
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
             <ul className="space-y-1">
               <li>• <strong>Clique</strong> em qualquer célula editável para começar</li>
               <li>• Use <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Enter</kbd> para confirmar</li>
               <li>• Use <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Esc</kbd> para cancelar</li>
+              <li>• <strong>Status:</strong> Clique no ícone ✅/⏳ para alternar rapidamente</li>
             </ul>
             <ul className="space-y-1">
+              <li>• <strong>Campos novos:</strong> Nota e Persistência agora editáveis</li>
+              <li>• <strong>Tipos avançados:</strong> Suporte completo a recorrências avançadas</li>
               <li>• <strong>Clique fora</strong> do campo para confirmar automaticamente</li>
               <li>• Modal aparece apenas se houver mudanças</li>
-              <li>• Ícone <FiEdit3 className="inline w-3 h-3" /> aparece no hover</li>
-              <li>• <strong>Status:</strong> Clique no ícone ✅/⏳ para alternar rapidamente</li>
             </ul>
           </div>
         </div>
 
-        {/* Seção de informações sobre importação Excel */}
+        {/* ✅ SEÇÃO DE INFORMAÇÕES SOBRE IMPORTAÇÃO EXCEL ATUALIZADA */}
         <div className="mt-6 p-4 bg-green-50 rounded-lg">
           <h4 className="text-sm font-medium text-green-900 mb-2 flex items-center gap-2">
             <FiUpload className="w-4 h-4" />
-            📊 Importação em massa via Excel:
+            📊 Importação em massa via Excel - RECURSOS COMPLETOS:
           </h4>
           <div className="text-sm text-green-800 space-y-1">
             <p>• <strong>Template automático:</strong> Baixe template com exemplos e instruções detalhadas</p>
+            <p>• <strong>Todos os campos:</strong> Suporte completo a notas, persistência e tipos avançados</p>
+            <p>• <strong>Recorrências avançadas:</strong> Biweekly, triweekly, quadweekly, monthly_weekday</p>
             <p>• <strong>Validação completa:</strong> Sistema verifica listas, usuários e permissões automaticamente</p>
             <p>• <strong>Flexibilidade:</strong> Use nomes ou IDs para listas e usuários</p>
             <p>• <strong>Processo guiado:</strong> 3 etapas simples - Download → Preenchimento → Upload</p>
-            <p>• <strong>Campos específicos:</strong> {activeTab === 'tarefas' ? 'Descrição, Lista, Responsável, Data, Status' : 'Descrição, Lista, Responsável, Recorrência, Datas'}</p>
-            <p>• <strong>Validação em tempo real:</strong> Erros são mostrados antes da importação</p>
             <p>• <strong>Preview completo:</strong> Visualize todos os dados antes de confirmar</p>
+          </div>
+        </div>
+
+        {/* ✅ NOVA SEÇÃO: Tipos de Recorrência Suportados */}
+        <div className="mt-6 p-4 bg-purple-50 rounded-lg">
+          <h4 className="text-sm font-medium text-purple-900 mb-2 flex items-center gap-2">
+            <FiRefreshCw className="w-4 h-4" />
+            🔄 Tipos de Recorrência Suportados:
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-800">
+            <div>
+              <h5 className="font-medium mb-1">Básicos:</h5>
+              <ul className="space-y-1">
+                <li>• <strong>Diária:</strong> Todos os dias ou a cada X dias</li>
+                <li>• <strong>Semanal:</strong> Dias específicos da semana</li>
+                <li>• <strong>Mensal:</strong> Mesmo dia do mês</li>
+                <li>• <strong>Anual:</strong> Mesmo dia do ano</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-medium mb-1">Avançados:</h5>
+              <ul className="space-y-1">
+                <li>• <strong>A cada 2 semanas:</strong> Quinzenal em dia específico</li>
+                <li>• <strong>A cada 3 semanas:</strong> Tri-semanal em dia específico</li>
+                <li>• <strong>A cada 4 semanas:</strong> Quad-semanal em dia específico</li>
+                <li>• <strong>Padrão mensal:</strong> Ex: primeira segunda do mês</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -2091,6 +2587,12 @@ export default function TarefasRotinas({ user }) {
                    editando?.field === 'recurrence_type' ? 'Tipo de Recorrência' :
                    editando?.field === 'start_date' ? 'Data de Início' :
                    editando?.field === 'end_date' ? 'Data de Fim' :
+                   editando?.field === 'note' ? 'Nota' :
+                   editando?.field === 'persistent' ? 'Persistência' :
+                   editando?.field === 'weekly_interval' ? 'Intervalo Semanal' :
+                   editando?.field === 'selected_weekday' ? 'Dia da Semana' :
+                   editando?.field === 'monthly_ordinal' ? 'Ordinal Mensal' :
+                   editando?.field === 'monthly_weekday' ? 'Dia da Semana Mensal' :
                    editando?.field}
                 </strong>:
               </p>
@@ -2098,16 +2600,16 @@ export default function TarefasRotinas({ user }) {
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 w-16">De:</span>
                   <span className="text-sm font-medium text-red-600 truncate">
-                    {valorOriginal === 'true' ? '✅ Concluída' :
-                     valorOriginal === 'false' ? '⏳ Pendente' :
+                    {valorOriginal === 'true' ? '✅ Sim/Ativado' :
+                     valorOriginal === 'false' ? '❌ Não/Desativado' :
                      valorOriginal || 'Vazio'}
                   </span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 w-16">Para:</span>
                   <span className="text-sm font-medium text-green-600 truncate">
-                    {valorEdicao === 'true' ? '✅ Concluída' :
-                     valorEdicao === 'false' ? '⏳ Pendente' :
+                    {valorEdicao === 'true' ? '✅ Sim/Ativado' :
+                     valorEdicao === 'false' ? '❌ Não/Desativado' :
                      valorEdicao || 'Vazio'}
                   </span>
                 </div>

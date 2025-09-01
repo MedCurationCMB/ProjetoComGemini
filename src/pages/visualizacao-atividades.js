@@ -33,7 +33,8 @@ import {
   FiTrash2,
   FiEdit,
   FiCircle,
-  FiAlertCircle
+  FiAlertCircle,
+  FiInfo
 } from 'react-icons/fi';
 import { LuCalendarPlus } from "react-icons/lu";
 import { MdOutlineStickyNote2 } from "react-icons/md";
@@ -91,6 +92,12 @@ export default function VisualizacaoAtividades({ user }) {
   const [textoNotaRotina, setTextoNotaRotina] = useState('');
   const [showNotePopupRotina, setShowNotePopupRotina] = useState(false);
   const [noteContentRotina, setNoteContentRotina] = useState('');
+
+  // Estados para popup de informações
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [infoAtividade, setInfoAtividade] = useState(null);
+  const [showInfoPopupRotina, setShowInfoPopupRotina] = useState(false);
+  const [infoRotina, setInfoRotina] = useState(null);
 
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
@@ -836,6 +843,54 @@ export default function VisualizacaoAtividades({ user }) {
     }
   };
 
+  // Funções para popup de informações
+  const abrirInfoPopup = (atividade) => {
+    setInfoAtividade(atividade);
+    setShowInfoPopup(true);
+    setMenuAberto(null);
+  };
+
+  const fecharInfoPopup = () => {
+    setShowInfoPopup(false);
+    setInfoAtividade(null);
+  };
+
+  const abrirInfoPopupRotina = async (rotina) => {
+    try {
+      // Buscar todas as conclusões desta rotina
+      const { data: conclusoes, error } = await supabase
+        .from('routine_tasks_status')
+        .select('date, completed_at')
+        .eq('routine_tasks_id', rotina.id)
+        .eq('completed', true)
+        .order('completed_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Adicionar as conclusões ao objeto da rotina
+      const rotinaComConclusoes = {
+        ...rotina,
+        conclusoes: conclusoes || []
+      };
+      
+      setInfoRotina(rotinaComConclusoes);
+      setShowInfoPopupRotina(true);
+      setMenuAberto(null);
+      
+    } catch (error) {
+      console.error('Erro ao buscar conclusões da rotina:', error);
+      // Em caso de erro, abrir popup mesmo assim sem as conclusões
+      setInfoRotina({ ...rotina, conclusoes: [] });
+      setShowInfoPopupRotina(true);
+      setMenuAberto(null);
+    }
+  };
+
+  const fecharInfoPopupRotina = () => {
+    setShowInfoPopupRotina(false);
+    setInfoRotina(null);
+  };
+
   // ✅ VERSÃO CORRIGIDA: toggleRotinaCompleta com suporte a datas específicas
   const toggleRotinaCompleta = async (rotina, completed) => {
     try {
@@ -1371,14 +1426,14 @@ export default function VisualizacaoAtividades({ user }) {
                                       )}
                                     </div>
                                     
-                                    {atividade.completed && atividade.completed_at && (
+                                    {/* {atividade.completed && atividade.completed_at && (
                                       <div className="flex items-center mt-1 text-xs text-green-600">
                                         <FiCheckCircle className="w-3 h-3 mr-1" />
                                         <span>
                                           Concluída em {new Date(atividade.completed_at).toLocaleDateString('pt-BR')} às {new Date(atividade.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                       </div>
-                                    )}
+                                    )} */}
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
                                       <FiCalendar className="w-3 h-3 mr-1" />
                                       <span>
@@ -1449,6 +1504,13 @@ export default function VisualizacaoAtividades({ user }) {
                                     >
                                       <MdOutlineStickyNote2 className="w-3 h-3 mr-2" />
                                       {atividade.note ? 'Editar Nota' : 'Adicionar Nota'}
+                                    </button>
+                                    <button
+                                      onClick={() => abrirInfoPopup(atividade)}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center text-gray-600 text-sm"
+                                    >
+                                      <FiInfo className="w-3 h-3 mr-2" />
+                                      Informações
                                     </button>
                                     <button
                                       onClick={() => excluirAtividade(atividade.id)}
@@ -1635,6 +1697,13 @@ export default function VisualizacaoAtividades({ user }) {
                                     >
                                       <MdOutlineStickyNote2 className="w-3 h-3 mr-2" />
                                       {rotina.note ? 'Editar Nota' : 'Adicionar Nota'}
+                                    </button>
+                                    <button
+                                      onClick={() => abrirInfoPopupRotina(rotina)}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center text-gray-600 text-sm"
+                                    >
+                                      <FiInfo className="w-3 h-3 mr-2" />
+                                      Informações
                                     </button>
                                   </div>
                                 )}
@@ -1827,6 +1896,140 @@ export default function VisualizacaoAtividades({ user }) {
             <div className="flex items-center justify-end p-6 border-t border-gray-200">
               <button
                 onClick={fecharNotePopupRotina}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP DE INFORMAÇÕES - ATIVIDADES DO DIA */}
+      {showInfoPopup && infoAtividade && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {/* Header do Popup */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <FiInfo className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Informações da Atividade</h3>
+              </div>
+              <button
+                onClick={fecharInfoPopup}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Conteúdo do Popup */}
+            <div className="p-6 space-y-4">
+              {/* Nome da Atividade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Atividade
+                </label>
+                <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {infoAtividade.content}
+                </p>
+              </div>
+              
+              {/* Data de Conclusão */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de Conclusão
+                </label>
+                {infoAtividade.completed && infoAtividade.completed_at ? (
+                  <div className="flex items-center space-x-2 text-sm text-gray-900 bg-green-50 p-3 rounded-lg">
+                    <FiCheckCircle className="w-4 h-4 text-green-600" />
+                    <span>
+                      {new Date(infoAtividade.completed_at).toLocaleDateString('pt-BR')} às {' '}
+                      {new Date(infoAtividade.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                    <FiCircle className="w-4 h-4 text-gray-400" />
+                    <span>Atividade ainda não foi concluída</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Footer do Popup */}
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={fecharInfoPopup}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP DE INFORMAÇÕES - ATIVIDADES RECORRENTES */}
+      {showInfoPopupRotina && infoRotina && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {/* Header do Popup */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <FiInfo className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Informações da Rotina</h3>
+              </div>
+              <button
+                onClick={fecharInfoPopupRotina}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Conteúdo do Popup */}
+            <div className="p-6 space-y-4">
+              {/* Nome da Rotina */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Atividade Recorrente
+                </label>
+                <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {infoRotina.content}
+                </p>
+              </div>
+              
+              {/* Datas de Conclusão */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Datas de Conclusão
+                </label>
+                {infoRotina.conclusoes && infoRotina.conclusoes.length > 0 ? (
+                  <div className="space-y-2">
+                    {infoRotina.conclusoes.map((conclusao, index) => (
+                      <div key={index} className="flex items-center space-x-2 text-sm text-gray-900 bg-green-50 p-3 rounded-lg">
+                        <FiCheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <span>
+                          {new Date(conclusao.date + 'T12:00:00').toLocaleDateString('pt-BR')} às {' '}
+                          {new Date(conclusao.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                    <FiCircle className="w-4 h-4 text-gray-400" />
+                    <span>Esta rotina nunca foi concluída</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Footer do Popup */}
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={fecharInfoPopupRotina}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Fechar
