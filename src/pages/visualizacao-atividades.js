@@ -63,6 +63,10 @@ export default function VisualizacaoAtividades({ user }) {
   // Estados para edição de data
   const [editandoData, setEditandoData] = useState(null);
   const [novaDataEdicao, setNovaDataEdicao] = useState('');
+
+  // Estados para seleção de data rápida
+  const [opcaoData, setOpcaoData] = useState('hoje');
+  const [showOpcoesData, setShowOpcoesData] = useState(false);
   
   // Estados para atividades
   const [novaAtividade, setNovaAtividade] = useState('');
@@ -106,6 +110,13 @@ export default function VisualizacaoAtividades({ user }) {
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
   // ===========================================
+
+  // Função para calcular data da próxima semana
+  const calcularProximaSemana = () => {
+    const data = new Date(dataSelecionada);
+    data.setDate(data.getDate() + 7);
+    return formatarDataISO(data);
+  };
 
   const formatarData = (data) => {
     return data.toLocaleDateString('pt-BR', {
@@ -615,13 +626,37 @@ export default function VisualizacaoAtividades({ user }) {
     try {
       setAdicionandoAtividade(true);
       
+      // Determinar a data baseado na opção selecionada
+      let dataParaAdicionar;
+      switch(opcaoData) {
+        case 'hoje':
+          dataParaAdicionar = formatarDataISO(dataSelecionada);
+          break;
+        case 'proximaSemana':
+          dataParaAdicionar = calcularProximaSemana();
+          break;
+        case 'personalizado':
+          // ✅ CORREÇÃO: Usar a data do dataPopup para personalizado
+          dataParaAdicionar = formatarDataISO(dataPopup);
+          break;
+        default:
+          dataParaAdicionar = formatarDataISO(dataSelecionada);
+      }
+
+      console.log('📅 Data selecionada para adicionar:', {
+        opcao: opcaoData,
+        data: dataParaAdicionar,
+        dataPopup: formatarDataISO(dataPopup),
+        dataSelecionada: formatarDataISO(dataSelecionada)
+      });
+
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           usuario_id: user.id,
           task_list_id: listaSelecionada,
           content: novaAtividade.trim(),
-          date: formatarDataISO(dataSelecionada),
+          date: dataParaAdicionar,
           completed: false
         }])
         .select()
@@ -630,6 +665,8 @@ export default function VisualizacaoAtividades({ user }) {
       if (error) throw error;
       
       setNovaAtividade('');
+      setOpcaoData('hoje'); // Reset para padrão
+      setShowOpcoesData(false);
       toast.success('Atividade adicionada com sucesso!');
       
       await fetchAtividadesDia();
@@ -956,7 +993,6 @@ export default function VisualizacaoAtividades({ user }) {
   const fecharPopupCalendario = () => {
     setShowPopupCalendario(false);
     setAtividadePopup('');
-    setDataPopup(new Date());
   };
 
   // ===========================================
@@ -1555,9 +1591,18 @@ export default function VisualizacaoAtividades({ user }) {
 
                 {/* ✅ ATIVIDADES RECORRENTES - VERSÃO FINAL COM NOVA EXIBIÇÃO DE DATAS */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="flex items-center mb-4">
-                    <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
+                    </div>
+                    <button
+                      onClick={() => router.push('/gestao-atividades-recorrentes')}
+                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                      title="Gerenciar atividades recorrentes"
+                    >
+                      <FiSettings className="w-5 h-5" />
+                    </button>
                   </div>
                   
                   {atividadesRotina.length === 0 ? (
@@ -1744,13 +1789,13 @@ export default function VisualizacaoAtividades({ user }) {
         </div>
       )}
 
-      {/* POPUP PARA ADICIONAR ATIVIDADE COM DATA ESPECÍFICA */}
+      {/* POPUP PARA SELECIONAR DATA PERSONALIZADA */}
       {showPopupCalendario && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             {/* Header do Popup */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Nova Atividade</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Selecionar Data</h3>
               <button
                 onClick={fecharPopupCalendario}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -1759,26 +1804,12 @@ export default function VisualizacaoAtividades({ user }) {
               </button>
             </div>
             
-            {/* Conteúdo do Popup */}
+            {/* Conteúdo do Popup - SOMENTE calendário */}
             <div className="p-6 space-y-4">
-              {/* Campo de texto para a atividade */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição da Atividade
-                </label>
-                <textarea
-                  value={atividadePopup}
-                  onChange={(e) => setAtividadePopup(e.target.value)}
-                  placeholder="Digite a descrição da atividade..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-[#012060] resize-none"
-                />
-              </div>
-              
               {/* Seletor de data */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data da Atividade
+                  Selecione a data:
                 </label>
                 <input
                   type="date"
@@ -1788,19 +1819,13 @@ export default function VisualizacaoAtividades({ user }) {
                 />
               </div>
               
-              {/* Mostrar lista e data selecionada */}
+              {/* Mostrar data selecionada */}
               <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="space-y-1 text-sm">
                   <div className="flex items-center">
-                    <FiList className="w-4 h-4 text-[#012060] mr-2" />
-                    <span className="text-gray-700">
-                      Lista: <strong>{listas[listaSelecionada]}</strong>
-                    </span>
-                  </div>
-                  <div className="flex items-center">
                     <FiCalendar className="w-4 h-4 text-[#012060] mr-2" />
                     <span className="text-gray-700">
-                      Data: <strong>{formatarData(dataPopup)}</strong>
+                      Data selecionada: <strong>{formatarData(dataPopup)}</strong>
                     </span>
                   </div>
                 </div>
@@ -1810,27 +1835,23 @@ export default function VisualizacaoAtividades({ user }) {
             {/* Footer do Popup */}
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
               <button
-                onClick={fecharPopupCalendario}
+                onClick={() => {
+                  fecharPopupCalendario();
+                  // Manter a data selecionada, não resetar
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancelar
               </button>
               <button
-                onClick={adicionarAtividadeComData}
-                disabled={adicionandoAtividadePopup || !atividadePopup.trim()}
-                className="px-4 py-2 bg-[#012060] text-white rounded-lg hover:bg-[#013080] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-colors"
+                onClick={() => {
+                  setOpcaoData('personalizado');
+                  fecharPopupCalendario();
+                  // Manter a data selecionada no dataPopup
+                }}
+                className="px-4 py-2 bg-[#012060] text-white rounded-lg hover:bg-[#013080] transition-colors"
               >
-                {adicionandoAtividadePopup ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    <span>Salvando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FiPlus className="w-4 h-4" />
-                    <span>Adicionar Atividade</span>
-                  </>
-                )}
+                Confirmar Data
               </button>
             </div>
           </div>
@@ -2066,35 +2087,69 @@ export default function VisualizacaoAtividades({ user }) {
       {listaSelecionada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex space-x-3">
-              {/* Botão de calendário */}
-              <button
-                onClick={abrirPopupCalendario}
-                className="px-4 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center justify-center transition-colors"
-                title="Adicionar atividade para data específica"
-              >
-                <LuCalendarPlus className="w-5 h-5" />
-              </button>
-              
-              <input
-                type="text"
-                placeholder="Digite a atividade que deseja adicionar..."
-                value={novaAtividade}
-                onChange={(e) => setNovaAtividade(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
-                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
-              />
-              <button
-                onClick={adicionarAtividade}
-                disabled={adicionandoAtividade || !novaAtividade.trim()}
-                className="px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px] transition-colors"
-              >
-                {adicionandoAtividade ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                ) : (
-                  <FiPlus className="w-5 h-5" />
-                )}
-              </button>
+            <div className="flex flex-col space-y-3">
+              {/* Opções de data - aparece quando o input está focado */}
+              {showOpcoesData && (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setOpcaoData('hoje')}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      opcaoData === 'hoje'
+                        ? 'bg-[#012060] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Hoje
+                  </button>
+                  <button
+                    onClick={() => setOpcaoData('proximaSemana')}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      opcaoData === 'proximaSemana'
+                        ? 'bg-[#012060] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Próxima Semana
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpcaoData('personalizado');
+                      setShowPopupCalendario(true);
+                    }}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      opcaoData === 'personalizado'
+                        ? 'bg-[#012060] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Personalizado
+                  </button>
+                </div>
+              )}
+
+              <div className="flex">
+                <input
+                  type="text"
+                  placeholder="Digite a atividade que deseja adicionar..."
+                  value={novaAtividade}
+                  onChange={(e) => setNovaAtividade(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
+                  onFocus={() => setShowOpcoesData(true)}
+                  onBlur={() => setTimeout(() => setShowOpcoesData(false), 200)}
+                  className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
+                />
+                <button
+                  onClick={adicionarAtividade}
+                  disabled={adicionandoAtividade || !novaAtividade.trim()}
+                  className="ml-3 px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px] transition-colors"
+                >
+                  {adicionandoAtividade ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  ) : (
+                    <FiPlus className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
