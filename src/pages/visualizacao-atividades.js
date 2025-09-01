@@ -59,6 +59,10 @@ export default function VisualizacaoAtividades({ user }) {
   // Estados para data
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Estados para edição de data
+  const [editandoData, setEditandoData] = useState(null);
+  const [novaDataEdicao, setNovaDataEdicao] = useState('');
   
   // Estados para atividades
   const [novaAtividade, setNovaAtividade] = useState('');
@@ -704,6 +708,7 @@ export default function VisualizacaoAtividades({ user }) {
   const iniciarEdicaoAtividade = (atividade) => {
     setEditandoAtividade(atividade.id);
     setTextoEdicao(atividade.content);
+    setNovaDataEdicao(atividade.date); // Definir a data atual da atividade
     setMenuAberto(null);
   };
 
@@ -721,7 +726,10 @@ export default function VisualizacaoAtividades({ user }) {
     try {
       const { error } = await supabase
         .from('tasks')
-        .update({ content: textoEdicao.trim() })
+        .update({ 
+          content: textoEdicao.trim(),
+          date: novaDataEdicao // Atualizar a data também
+        })
         .eq('id', taskId);
       
       if (error) throw error;
@@ -730,6 +738,7 @@ export default function VisualizacaoAtividades({ user }) {
       
       setEditandoAtividade(null);
       setTextoEdicao('');
+      setNovaDataEdicao('');
       await fetchAtividadesDia();
       
     } catch (error) {
@@ -1318,7 +1327,7 @@ export default function VisualizacaoAtividades({ user }) {
                   <div className="flex items-center mb-4">
                     <FiCheckCircle className="w-5 h-5 text-[#012060] mr-2" />
                     <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                      Atividades do Dia
+                      Atividades
                       {!isDataHoje(dataSelecionada) && (
                         <span className="text-sm font-normal text-gray-500 ml-2">
                           ({formatarDataISO(dataSelecionada)})
@@ -1388,6 +1397,20 @@ export default function VisualizacaoAtividades({ user }) {
                                       className="w-full px-3 py-2 border border-[#012060] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] text-sm"
                                       autoFocus
                                     />
+                                    
+                                    {/* NOVO CAMPO: Seletor de data */}
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        Data da atividade:
+                                      </label>
+                                      <input
+                                        type="date"
+                                        value={novaDataEdicao}
+                                        onChange={(e) => setNovaDataEdicao(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] text-sm"
+                                      />
+                                    </div>
+                                    
                                     <div className="flex space-x-2">
                                       <button
                                         onClick={() => salvarEdicaoAtividade(atividade.id)}
