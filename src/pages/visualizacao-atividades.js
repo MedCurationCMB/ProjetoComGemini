@@ -25,7 +25,7 @@ import {
   FiFolder,
   FiEdit3,
   FiCpu,
-  FiList,
+  FiList, 
   FiTrendingUp,
   FiRepeat,
   FiCheckCircle,
@@ -2179,16 +2179,6 @@ export default function VisualizacaoAtividades({ user }) {
                   >
                     Personalizado
                   </button>
-                  
-                  {/* NOVO: Botão para fechar opções manualmente */}
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setShowOpcoesData(false)}
-                    className="px-3 py-2 rounded-full text-sm bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
-                    title="Fechar opções"
-                  >
-                    <FiX className="w-3 h-3" />
-                  </button>
                 </div>
               )}
 
@@ -2203,16 +2193,6 @@ export default function VisualizacaoAtividades({ user }) {
                   onBlur={handleInputBlur}
                   className="flex-1 px-4 py-3 pr-12 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
                 />
-                
-                {/* NOVO: Botão para mostrar/esconder opções integrado no input */}
-                <button
-                  onClick={toggleOpcoesData}
-                  className="absolute right-20 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-[#012060] rounded-full hover:bg-gray-200 transition-colors"
-                  title="Opções de data"
-                  style={{ right: '80px', position: 'absolute', zIndex: 1 }}
-                >
-                  <FiCalendar className="w-4 h-4" />
-                </button>
                 
                 <button
                   onClick={adicionarAtividade}
