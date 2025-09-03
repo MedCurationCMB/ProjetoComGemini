@@ -11,7 +11,7 @@ import {
   FiCalendar,
   FiChevronLeft,
   FiChevronRight,
-  FiChevronDown,
+  FiChevronDown, 
   FiMenu, 
   FiHome, 
   FiStar, 
@@ -67,6 +67,10 @@ export default function VisualizacaoAtividades({ user }) {
   // Estados para seleção de data rápida
   const [opcaoData, setOpcaoData] = useState('hoje');
   const [showOpcoesData, setShowOpcoesData] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+
+  // Ref para controlar timeout
+  const timeoutRef = useRef(null);
   
   // Estados para atividades
   const [novaAtividade, setNovaAtividade] = useState('');
@@ -110,6 +114,57 @@ export default function VisualizacaoAtividades({ user }) {
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
   // ===========================================
+
+  // Funções para controlar as opções de data
+  const handleInputFocus = () => {
+    setInputFocused(true);
+    setShowOpcoesData(true);
+    // Cancelar timeout pendente
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  };
+
+  const handleInputBlur = () => {
+    setInputFocused(false);
+    // Timer mais longo para dar tempo do usuário clicar nas opções
+    timeoutRef.current = setTimeout(() => {
+      setShowOpcoesData(false);
+    }, 300); // Aumentado de 200ms para 300ms
+  };
+
+  const handleOpcaoClick = (opcao) => {
+    // Cancelar timeout para não fechar as opções
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    setOpcaoData(opcao);
+    
+    // Se for personalizado, abrir popup
+    if (opcao === 'personalizado') {
+      setShowPopupCalendario(true);
+      setShowOpcoesData(false); // Fechar opções quando abrir popup
+    }
+    // Para outras opções, manter as opções visíveis
+    // O usuário pode continuar digitando normalmente
+  };
+
+  const toggleOpcoesData = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setShowOpcoesData(!showOpcoesData);
+  };
+
+  // Cleanup do timeout no useEffect
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Função para calcular data da próxima semana
   const calcularProximaSemana = () => {
@@ -2088,11 +2143,12 @@ export default function VisualizacaoAtividades({ user }) {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col space-y-3">
-              {/* Opções de data - aparece quando o input está focado */}
+              {/* Opções de data - controle melhorado */}
               {showOpcoesData && (
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 flex-wrap items-center">
                   <button
-                    onClick={() => setOpcaoData('hoje')}
+                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
+                    onClick={() => handleOpcaoClick('hoje')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
                       opcaoData === 'hoje'
                         ? 'bg-[#012060] text-white'
@@ -2102,7 +2158,8 @@ export default function VisualizacaoAtividades({ user }) {
                     Hoje
                   </button>
                   <button
-                    onClick={() => setOpcaoData('proximaSemana')}
+                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
+                    onClick={() => handleOpcaoClick('proximaSemana')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
                       opcaoData === 'proximaSemana'
                         ? 'bg-[#012060] text-white'
@@ -2112,10 +2169,8 @@ export default function VisualizacaoAtividades({ user }) {
                     Próxima Semana
                   </button>
                   <button
-                    onClick={() => {
-                      setOpcaoData('personalizado');
-                      setShowPopupCalendario(true);
-                    }}
+                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
+                    onClick={() => handleOpcaoClick('personalizado')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
                       opcaoData === 'personalizado'
                         ? 'bg-[#012060] text-white'
@@ -2123,6 +2178,16 @@ export default function VisualizacaoAtividades({ user }) {
                     }`}
                   >
                     Personalizado
+                  </button>
+                  
+                  {/* NOVO: Botão para fechar opções manualmente */}
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setShowOpcoesData(false)}
+                    className="px-3 py-2 rounded-full text-sm bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
+                    title="Fechar opções"
+                  >
+                    <FiX className="w-3 h-3" />
                   </button>
                 </div>
               )}
@@ -2134,10 +2199,21 @@ export default function VisualizacaoAtividades({ user }) {
                   value={novaAtividade}
                   onChange={(e) => setNovaAtividade(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
-                  onFocus={() => setShowOpcoesData(true)}
-                  onBlur={() => setTimeout(() => setShowOpcoesData(false), 200)}
-                  className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
+                  className="flex-1 px-4 py-3 pr-12 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
                 />
+                
+                {/* NOVO: Botão para mostrar/esconder opções integrado no input */}
+                <button
+                  onClick={toggleOpcoesData}
+                  className="absolute right-20 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-[#012060] rounded-full hover:bg-gray-200 transition-colors"
+                  title="Opções de data"
+                  style={{ right: '80px', position: 'absolute', zIndex: 1 }}
+                >
+                  <FiCalendar className="w-4 h-4" />
+                </button>
+                
                 <button
                   onClick={adicionarAtividade}
                   disabled={adicionandoAtividade || !novaAtividade.trim()}
@@ -2150,6 +2226,17 @@ export default function VisualizacaoAtividades({ user }) {
                   )}
                 </button>
               </div>
+              
+              {/* NOVO: Feedback visual da opção selecionada */}
+              {opcaoData !== 'hoje' && (
+                <div className="text-center">
+                  <span className="text-xs text-gray-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center">
+                    <FiInfo className="w-3 h-3 mr-1" />
+                    {opcaoData === 'proximaSemana' && `Será adicionada para: ${formatarData(new Date(calcularProximaSemana() + 'T12:00:00'))}`}
+                    {opcaoData === 'personalizado' && `Será adicionada para: ${formatarData(dataPopup)}`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
