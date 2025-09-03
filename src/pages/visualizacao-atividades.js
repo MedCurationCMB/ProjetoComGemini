@@ -2201,22 +2201,11 @@ export default function VisualizacaoAtividades({ user }) {
                 >
                   {adicionandoAtividade ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  ) : (
+                  ) : (12,
                     <FiPlus className="w-5 h-5" />
                   )}
                 </button>
               </div>
-              
-              {/* NOVO: Feedback visual da opção selecionada */}
-              {opcaoData !== 'hoje' && (
-                <div className="text-center">
-                  <span className="text-xs text-gray-600 bg-blue-50 px-3 py-1 rounded-full inline-flex items-center">
-                    <FiInfo className="w-3 h-3 mr-1" />
-                    {opcaoData === 'proximaSemana' && `Será adicionada para: ${formatarData(new Date(calcularProximaSemana() + 'T12:00:00'))}`}
-                    {opcaoData === 'personalizado' && `Será adicionada para: ${formatarData(dataPopup)}`}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
