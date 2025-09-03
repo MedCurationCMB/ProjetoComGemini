@@ -71,6 +71,9 @@ export default function VisualizacaoAtividades({ user }) {
 
   // Ref para controlar timeout
   const timeoutRef = useRef(null);
+
+  // Estado para data inline do campo "Outro"
+  const [dataInlineOutro, setDataInlineOutro] = useState(new Date().toISOString().split('T')[0]);
   
   // Estados para atividades
   const [novaAtividade, setNovaAtividade] = useState('');
@@ -127,10 +130,14 @@ export default function VisualizacaoAtividades({ user }) {
 
   const handleInputBlur = () => {
     setInputFocused(false);
+    // Se "outro" estiver selecionado, manter opções abertas
+    if (opcaoData === 'outro') {
+      return; // Não fechar as opções
+    }
     // Timer mais longo para dar tempo do usuário clicar nas opções
     timeoutRef.current = setTimeout(() => {
       setShowOpcoesData(false);
-    }, 300); // Aumentado de 200ms para 300ms
+    }, 300);
   };
 
   const handleOpcaoClick = (opcao) => {
@@ -141,13 +148,16 @@ export default function VisualizacaoAtividades({ user }) {
     
     setOpcaoData(opcao);
     
-    // Se for personalizado, abrir popup
-    if (opcao === 'personalizado') {
-      setShowPopupCalendario(true);
-      setShowOpcoesData(false); // Fechar opções quando abrir popup
+    // Se for outro, manter opções abertas para mostrar campo de data
+    if (opcao === 'outro') {
+      // Não fechar opções, apenas manter tudo aberto
+      setDataInlineOutro(formatarDataISO(new Date())); // Reset para hoje
+    } else {
+      // Para outras opções, pode fechar depois de um tempo
+      timeoutRef.current = setTimeout(() => {
+        setShowOpcoesData(false);
+      }, 2000); // Fechar após 2 segundos
     }
-    // Para outras opções, manter as opções visíveis
-    // O usuário pode continuar digitando normalmente
   };
 
   const toggleOpcoesData = () => {
@@ -171,6 +181,19 @@ export default function VisualizacaoAtividades({ user }) {
     const data = new Date(dataSelecionada);
     data.setDate(data.getDate() + 7);
     return formatarDataISO(data);
+  };
+
+  // Função para calcular data de amanhã
+  const calcularAmanha = () => {
+    const data = new Date(dataSelecionada);
+    data.setDate(data.getDate() + 1);
+    return formatarDataISO(data);
+  };
+
+  // Função para formatar data em formato brasileiro para os botões
+  const formatarDataBotao = (dataISO) => {
+    const data = new Date(dataISO + 'T12:00:00');
+    return data.toLocaleDateString('pt-BR');
   };
 
   const formatarData = (data) => {
@@ -687,12 +710,14 @@ export default function VisualizacaoAtividades({ user }) {
         case 'hoje':
           dataParaAdicionar = formatarDataISO(dataSelecionada);
           break;
+        case 'amanha':
+          dataParaAdicionar = calcularAmanha();
+          break;
         case 'proximaSemana':
           dataParaAdicionar = calcularProximaSemana();
           break;
-        case 'personalizado':
-          // ✅ CORREÇÃO: Usar a data do dataPopup para personalizado
-          dataParaAdicionar = formatarDataISO(dataPopup);
+        case 'outro':
+          dataParaAdicionar = dataInlineOutro;
           break;
         default:
           dataParaAdicionar = formatarDataISO(dataSelecionada);
@@ -2147,7 +2172,7 @@ export default function VisualizacaoAtividades({ user }) {
               {showOpcoesData && (
                 <div className="flex space-x-2 flex-wrap items-center">
                   <button
-                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleOpcaoClick('hoje')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
                       opcaoData === 'hoje'
@@ -2155,10 +2180,21 @@ export default function VisualizacaoAtividades({ user }) {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Hoje
+                    {formatarDataBotao(formatarDataISO(dataSelecionada))}
                   </button>
                   <button
-                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleOpcaoClick('amanha')}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      opcaoData === 'amanha'
+                        ? 'bg-[#012060] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {formatarDataBotao(calcularAmanha())}
+                  </button>
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleOpcaoClick('proximaSemana')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
                       opcaoData === 'proximaSemana'
@@ -2166,23 +2202,51 @@ export default function VisualizacaoAtividades({ user }) {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Próxima Semana
+                    {formatarDataBotao(calcularProximaSemana())}
                   </button>
                   <button
-                    onMouseDown={(e) => e.preventDefault()} // Previne blur do input
-                    onClick={() => handleOpcaoClick('personalizado')}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleOpcaoClick('outro')}
                     className={`px-3 py-2 rounded-full text-sm transition-colors ${
-                      opcaoData === 'personalizado'
+                      opcaoData === 'outro'
                         ? 'bg-[#012060] text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Personalizado
+                    Outro
+                  </button>
+                  
+                  {/* 🆕 NOVO: Botão para gestão de atividades recorrentes */}
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      // Cancelar timeout para não fechar as opções
+                      if (timeoutRef.current) {
+                        clearTimeout(timeoutRef.current);
+                      }
+                      // Fechar opções e navegar
+                      setShowOpcoesData(false);
+                      router.push('/gestao-atividades-recorrentes');
+                    }}
+                    className="p-2 rounded-full text-sm transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-[#012060]"
+                    title="Gestão de Atividades Recorrentes"
+                  >
+                    <FiRepeat className="w-4 h-4" />
                   </button>
                 </div>
               )}
 
-              <div className="flex">
+              <div className="flex items-center space-x-3">
+                {/* Campo de data inline - só aparece quando "outro" está selecionado */}
+                {opcaoData === 'outro' && (
+                  <input
+                    type="date"
+                    value={dataInlineOutro}
+                    onChange={(e) => setDataInlineOutro(e.target.value)}
+                    className="px-3 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm w-auto"
+                  />
+                )}
+                
                 <input
                   type="text"
                   placeholder="Digite a atividade que deseja adicionar..."
@@ -2191,17 +2255,19 @@ export default function VisualizacaoAtividades({ user }) {
                   onKeyPress={(e) => e.key === 'Enter' && adicionarAtividade()}
                   onFocus={handleInputFocus}
                   onBlur={handleInputBlur}
-                  className="flex-1 px-4 py-3 pr-12 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base"
+                  className={`px-4 py-3 pr-12 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm md:text-base transition-all ${
+                    opcaoData === 'outro' ? 'flex-1' : 'flex-1'
+                  }`}
                 />
                 
                 <button
                   onClick={adicionarAtividade}
                   disabled={adicionandoAtividade || !novaAtividade.trim()}
-                  className="ml-3 px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px] transition-colors"
+                  className="px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px] transition-colors"
                 >
                   {adicionandoAtividade ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  ) : (12,
+                  ) : (
                     <FiPlus className="w-5 h-5" />
                   )}
                 </button>
