@@ -1951,41 +1951,44 @@ export default function atividadesrecorrentes({ user }) {
 
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Estatísticas rápidas - Apenas para atividades */}
+        {/* Estatísticas rápidas - VERSÃO MOBILE COMPACTA */}
         {activeTab === 'atividades' && atividades.length > 0 && (
-          <div className="mb-6 grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{completedStats.total}</div>
-                  <div className="text-sm font-medium text-gray-600">Total de atividades</div>
+          <div className="mb-6 grid grid-cols-3 gap-2 md:gap-4">
+            <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm">
+              <div className="flex flex-col items-center text-center md:flex-row md:items-center md:justify-between md:text-left">
+                <div className="md:flex-1">
+                  <div className="text-xl md:text-2xl font-bold text-gray-900">{completedStats.total}</div>
+                  <div className="text-xs md:text-sm font-medium text-gray-600 mt-1">
+                    <span className="block md:hidden">Total</span>
+                    <span className="hidden md:block">Total de atividades</span>
+                  </div>
                 </div>
-                <div className="p-2 rounded-full bg-gray-100">
-                  <FiTarget className="w-5 h-5 text-gray-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">{completedStats.pending}</div>
-                  <div className="text-sm font-medium text-yellow-700">Pendentes</div>
-                </div>
-                <div className="p-2 rounded-full bg-yellow-100">
-                  <FiClock className="w-5 h-5 text-yellow-600" />
+                <div className="p-2 rounded-full bg-gray-100 mt-2 md:mt-0 md:ml-2">
+                  <FiTarget className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-600">{completedStats.completed}</div>
-                  <div className="text-sm font-medium text-green-700">Concluídas</div>
+            <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm">
+              <div className="flex flex-col items-center text-center md:flex-row md:items-center md:justify-between md:text-left">
+                <div className="md:flex-1">
+                  <div className="text-xl md:text-2xl font-bold text-yellow-600">{completedStats.pending}</div>
+                  <div className="text-xs md:text-sm font-medium text-yellow-700 mt-1">Pendentes</div>
                 </div>
-                <div className="p-2 rounded-full bg-green-100">
-                  <FiCheckCircle className="w-5 h-5 text-green-600" />
+                <div className="p-2 rounded-full bg-yellow-100 mt-2 md:mt-0 md:ml-2">
+                  <FiClock className="w-4 h-4 md:w-5 md:h-5 text-yellow-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-3 md:p-4 rounded-lg shadow-sm">
+              <div className="flex flex-col items-center text-center md:flex-row md:items-center md:justify-between md:text-left">
+                <div className="md:flex-1">
+                  <div className="text-xl md:text-2xl font-bold text-green-600">{completedStats.completed}</div>
+                  <div className="text-xs md:text-sm font-medium text-green-700 mt-1">Concluídas</div>
+                </div>
+                <div className="p-2 rounded-full bg-green-100 mt-2 md:mt-0 md:ml-2">
+                  <FiCheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                 </div>
               </div>
             </div>
@@ -2045,44 +2048,42 @@ export default function atividadesrecorrentes({ user }) {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm">
-            {/* Header da tabela */}
-            <div className="px-6 py-4 border-b border-gray-200">
+            {/* Header da tabela - RESPONSIVO */}
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                    <h2 className="text-base md:text-lg font-semibold text-gray-900 flex items-center gap-1 md:gap-2">
                       {activeTab === 'atividades' ? (
                         <>
-                          <FiTarget className="w-5 h-5 text-blue-600" />
-                          Atividades
+                          <FiTarget className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                          <span className="hidden sm:inline">Atividades</span>
+                          <span className="sm:hidden">Atividades</span>
                         </>
                       ) : (
                         <>
-                          <FiRefreshCw className="w-5 h-5 text-purple-600" />
-                          Atividades Recorrentes
+                          <FiRefreshCw className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                          <span className="hidden sm:inline">Atividades Recorrentes</span>
+                          <span className="sm:hidden">Recorrentes</span>
                         </>
                       )}
                     </h2>
                     
-                    {/* NOVO: Ícone de Ajuda */}
+                    {/* Ícone de Ajuda */}
                     <button
                       onClick={() => {
                         setHelpModalType(activeTab);
                         setShowHelpModal(true);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors group relative"
+                      className="p-1 md:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors group relative"
                       title={`Ajuda sobre ${activeTab === 'atividades' ? 'Atividades' : 'Atividades Recorrentes'}`}
                     >
-                      <FiHelpCircle className="w-5 h-5" />
-                      
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                        Clique para ver ajuda
-                      </div>
+                      <FiHelpCircle className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
                   </div>
                   
-                  <p className="text-sm text-gray-500">
+                  {/* Descrição - apenas no desktop */}
+                  <p className="hidden md:block text-sm text-gray-500">
                     {activeTab === 'atividades' 
                       ? 'Gerencie suas atividades com edição inline - clique para editar'
                       : 'Configure suas atividades recorrentes com edição inline - suporte completo a tipos avançados'
@@ -2090,17 +2091,22 @@ export default function atividadesrecorrentes({ user }) {
                   </p>
                 </div>
                 
-                {/* Dropdown melhorado para adicionar */}
-                <div className="relative group">
-                  <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <FiPlus className="w-4 h-4 mr-2" />
-                    Adicionar {activeTab === 'atividades' ? 'atividade' : 'recorrente'}
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Botão Adicionar - Compacto no mobile */}
+                <div className="relative group ml-2 md:ml-4">
+                  <button className="flex items-center px-2 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
+                    <FiPlus className="w-4 h-4 mr-1 md:mr-2" />
+                    <span className="hidden sm:inline">
+                      Adicionar {activeTab === 'atividades' ? 'atividade' : 'recorrente'}
+                    </span>
+                    <span className="sm:hidden">
+                      Add
+                    </span>
+                    <svg className="w-3 h-3 md:w-4 md:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                  <div className="absolute right-0 mt-2 w-56 md:w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                     <div className="py-1">
                       <button
                         onClick={() => {
@@ -2116,8 +2122,10 @@ export default function atividadesrecorrentes({ user }) {
                       >
                         <FiEdit3 className="w-4 h-4 mr-3" />
                         <div>
-                          <div className="font-medium">Adicionar Individual</div>
-                          <div className="text-xs text-gray-500">Criar uma {activeTab === 'atividades' ? 'atividade' : 'recorrente'} por vez</div>
+                          <div className="font-medium text-sm">Adicionar Individual</div>
+                          <div className="text-xs text-gray-500">
+                            Criar uma {activeTab === 'atividades' ? 'atividade' : 'recorrente'} por vez
+                          </div>
                         </div>
                       </button>
                       
@@ -2127,8 +2135,10 @@ export default function atividadesrecorrentes({ user }) {
                       >
                         <FiUpload className="w-4 h-4 mr-3" />
                         <div>
-                          <div className="font-medium">Importar via Excel</div>
-                          <div className="text-xs text-gray-500">Adicionar múltiplas {activeTab} de uma vez</div>
+                          <div className="font-medium text-sm">Importar via Excel</div>
+                          <div className="text-xs text-gray-500">
+                            Adicionar múltiplas {activeTab} de uma vez
+                          </div>
                         </div>
                       </button>
                       
