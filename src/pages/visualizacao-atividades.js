@@ -1586,7 +1586,7 @@ export default function VisualizacaoAtividades({ user }) {
                                     )} */}
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
                                       <FiCalendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
-                                      <span>
+                                      <span className="text-xs sm:text-xs">
                                         {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                       </span>
                                     </div>
@@ -1775,7 +1775,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
                                   {iconeAtraso}
                                   <FiRepeat className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
-                                  <span>
+                                  <span className="text-xs sm:text-xs">
                                     {rotina.recurrence_type === 'daily' && `Diária (a cada ${rotina.recurrence_interval} dia${rotina.recurrence_interval > 1 ? 's' : ''})`}
                                     {rotina.recurrence_type === 'weekly' && `Semanal (${rotina.recurrence_days?.map(d => diasDaSemana[d === 7 ? 0 : d]).join(', ')})`}
                                     {rotina.recurrence_type === 'monthly' && `Mensal (dia ${new Date(rotina.start_date).getDate()})`}
@@ -1789,7 +1789,7 @@ export default function VisualizacaoAtividades({ user }) {
                                     }
                                   </span>
                                   {rotina.persistent && (
-                                    <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                    <span className="ml-1 sm:ml-2 px-1 sm:px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                                       Persistente
                                     </span>
                                   )}
@@ -1798,7 +1798,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 {/* ✅ MUDANÇA: Substituir "Criado em" por "Data" */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
                                   <FiCalendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
-                                  <span>
+                                  <span className="text-xs sm:text-xs">
                                     {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
                                   </span>
                                 </div>
