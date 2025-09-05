@@ -1403,9 +1403,10 @@ export default function VisualizacaoAtividades({ user }) {
 
               {/* ✅ SELEÇÃO DE LISTA - REDUZIDA PARA 1/3 DO TAMANHO */}
               <div className="flex items-center justify-between">
-                <div className="relative w-1/3">
+                {/* ✅ SELETOR DE LISTA - MAIOR NO MOBILE */}
+                <div className="relative w-2/3 sm:w-1/3">
                   <select
-                    className="w-full pl-12 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm font-medium text-gray-700 appearance-none cursor-pointer transition-all duration-200 hover:bg-white hover:shadow-sm"
+                    className="w-full pl-10 sm:pl-12 pr-8 sm:pr-10 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-xs sm:text-sm font-medium text-gray-700 appearance-none cursor-pointer transition-all duration-200 hover:bg-white hover:shadow-sm"
                     value={listaSelecionada}
                     onChange={(e) => setListaSelecionada(e.target.value)}
                   >
@@ -1415,20 +1416,20 @@ export default function VisualizacaoAtividades({ user }) {
                     ))}
                   </select>
                   
-                  {/* Ícone de lista à esquerda */}
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <FiList className="w-4 h-4 text-[#012060]" />
+                  {/* Ícone de lista à esquerda - AJUSTADO PARA MOBILE */}
+                  <div className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <FiList className="w-3 h-3 sm:w-4 sm:h-4 text-[#012060]" />
                   </div>
                   
-                  {/* Ícone de dropdown à direita */}
-                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <FiChevronDown className="w-4 h-4 text-gray-400" />
+                  {/* Ícone de dropdown à direita - AJUSTADO PARA MOBILE */}
+                  <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <FiChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                   </div>
                 </div>
 
-                {/* Badge opcional com contador de atividades */}
+                {/* ✅ BADGE CONTADOR - MENOR NO MOBILE */}
                 {listaSelecionada && (atividadesDia.length > 0 || atividadesRotina.length > 0) && (
-                  <div className="bg-gray-500 text-white px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap">
+                  <div className="bg-gray-500 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                     {atividadesDia.length + atividadesRotina.length} atividade{(atividadesDia.length + atividadesRotina.length) !== 1 ? 's' : ''}
                   </div>
                 )}
