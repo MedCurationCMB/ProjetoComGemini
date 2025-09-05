@@ -7,6 +7,7 @@ import { supabase } from '../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
 import ExcelImporter from '../components/ExcelImporter';
+import HelpModal from '../components/HelpModal';
 import { 
   FiSearch, 
   FiFilter, 
@@ -35,7 +36,8 @@ import {
   FiDownload,
   FiUpload,
   FiChevronDown,
-  FiChevronUp
+  FiChevronUp,
+  FiHelpCircle
 } from 'react-icons/fi';
 import { MdOutlineStickyNote2 } from "react-icons/md";
 
@@ -48,6 +50,9 @@ export default function atividadesrecorrentes({ user }) {
   const [showFilters, setShowFilters] = useState(false);
   const [showExcelImporter, setShowExcelImporter] = useState(false);
   const inputRef = useRef(null);
+
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpModalType, setHelpModalType] = useState('atividades');
 
   // Estado adicional para usuários colaboradores
   const [usuariosColaboradores, setUsuariosColaboradores] = useState({});
@@ -2060,19 +2065,39 @@ export default function atividadesrecorrentes({ user }) {
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    {activeTab === 'atividades' ? (
-                      <>
-                        <FiTarget className="w-5 h-5 text-blue-600" />
-                        Atividades
-                      </>
-                    ) : (
-                      <>
-                        <FiRefreshCw className="w-5 h-5 text-purple-600" />
-                        Atividades Recorrentes
-                      </>
-                    )}
-                  </h2>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      {activeTab === 'atividades' ? (
+                        <>
+                          <FiTarget className="w-5 h-5 text-blue-600" />
+                          Atividades
+                        </>
+                      ) : (
+                        <>
+                          <FiRefreshCw className="w-5 h-5 text-purple-600" />
+                          Atividades Recorrentes
+                        </>
+                      )}
+                    </h2>
+                    
+                    {/* NOVO: Ícone de Ajuda */}
+                    <button
+                      onClick={() => {
+                        setHelpModalType(activeTab);
+                        setShowHelpModal(true);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors group relative"
+                      title={`Ajuda sobre ${activeTab === 'atividades' ? 'Atividades' : 'Atividades Recorrentes'}`}
+                    >
+                      <FiHelpCircle className="w-5 h-5" />
+                      
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        Clique para ver ajuda
+                      </div>
+                    </button>
+                  </div>
+                  
                   <p className="text-sm text-gray-500">
                     {activeTab === 'atividades' 
                       ? 'Gerencie suas atividades com edição inline - clique para editar'
@@ -2590,72 +2615,7 @@ export default function atividadesrecorrentes({ user }) {
           </div>
         )}
 
-        {/* ✅ SEÇÃO DE INSTRUÇÕES ATUALIZADA */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
-            <FiTarget className="w-4 h-4" />
-            💡 Como usar a edição inline COMPLETA:
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
-            <ul className="space-y-1">
-              <li>• <strong>Clique</strong> em qualquer célula editável para começar</li>
-              <li>• Use <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Enter</kbd> para confirmar</li>
-              <li>• Use <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">Esc</kbd> para cancelar</li>
-              <li>• <strong>Status:</strong> Clique no ícone ✅/⏳ para alternar rapidamente</li>
-            </ul>
-            <ul className="space-y-1">
-              <li>• <strong>Campos novos:</strong> Nota e Persistência agora editáveis</li>
-              <li>• <strong>Tipos avançados:</strong> Suporte completo a recorrências avançadas</li>
-              <li>• <strong>Clique fora</strong> do campo para confirmar automaticamente</li>
-              <li>• Modal aparece apenas se houver mudanças</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* ✅ SEÇÃO DE INFORMAÇÕES SOBRE IMPORTAÇÃO EXCEL ATUALIZADA */}
-        <div className="mt-6 p-4 bg-green-50 rounded-lg">
-          <h4 className="text-sm font-medium text-green-900 mb-2 flex items-center gap-2">
-            <FiUpload className="w-4 h-4" />
-            📊 Importação em massa via Excel - RECURSOS COMPLETOS:
-          </h4>
-          <div className="text-sm text-green-800 space-y-1">
-            <p>• <strong>Template automático:</strong> Baixe template com exemplos e instruções detalhadas</p>
-            <p>• <strong>Todos os campos:</strong> Suporte completo a notas, persistência e tipos avançados</p>
-            <p>• <strong>Recorrências avançadas:</strong> Biweekly, triweekly, quadweekly, monthly_weekday</p>
-            <p>• <strong>Validação completa:</strong> Sistema verifica listas, usuários e permissões automaticamente</p>
-            <p>• <strong>Flexibilidade:</strong> Use nomes ou IDs para listas e usuários</p>
-            <p>• <strong>Processo guiado:</strong> 3 etapas simples - Download → Preenchimento → Upload</p>
-            <p>• <strong>Preview completo:</strong> Visualize todos os dados antes de confirmar</p>
-          </div>
-        </div>
-
-        {/* ✅ NOVA SEÇÃO: Tipos de Recorrência Suportados */}
-        <div className="mt-6 p-4 bg-purple-50 rounded-lg">
-          <h4 className="text-sm font-medium text-purple-900 mb-2 flex items-center gap-2">
-            <FiRefreshCw className="w-4 h-4" />
-            🔄 Tipos de Recorrência Suportados:
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-800">
-            <div>
-              <h5 className="font-medium mb-1">Básicos:</h5>
-              <ul className="space-y-1">
-                <li>• <strong>Diária:</strong> Todos os dias ou a cada X dias</li>
-                <li>• <strong>Semanal:</strong> Dias específicos da semana</li>
-                <li>• <strong>Mensal:</strong> Mesmo dia do mês</li>
-                <li>• <strong>Anual:</strong> Mesmo dia do ano</li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-medium mb-1">Avançados:</h5>
-              <ul className="space-y-1">
-                <li>• <strong>A cada 2 semanas:</strong> Quinzenal em dia específico</li>
-                <li>• <strong>A cada 3 semanas:</strong> Tri-semanal em dia específico</li>
-                <li>• <strong>A cada 4 semanas:</strong> Quad-semanal em dia específico</li>
-                <li>• <strong>Padrão mensal:</strong> Ex: primeira segunda do mês</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* Excel Importer Modal */}
@@ -2758,6 +2718,15 @@ export default function atividadesrecorrentes({ user }) {
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-10"
           onClick={() => setShowMenu(false)}
+        />
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+          type={helpModalType}
         />
       )}
     </div>
