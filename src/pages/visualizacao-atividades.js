@@ -125,7 +125,7 @@ export default function VisualizacaoAtividades({ user }) {
     const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 
                   'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     const mes = meses[data.getMonth()];
-    return `${dia}/${mes}`;
+    return `${dia} ${mes}`;
   };
 
   // Funções para controlar as opções de data
