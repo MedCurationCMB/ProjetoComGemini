@@ -1040,8 +1040,8 @@ export default function atividadesrecorrentes({ user }) {
           
         case 'content':
           return (
-            <div className="max-w-xs">
-              <span className="text-sm">{valor}</span>
+            <div className="min-w-[200px] max-w-md md:max-w-lg lg:max-w-xl">
+              <span className="text-sm break-words whitespace-pre-wrap">{valor}</span>
             </div>
           );
 
@@ -2155,7 +2155,7 @@ export default function atividadesrecorrentes({ user }) {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2 md:w-1/2 lg:w-2/5 min-w-[200px]">
                         <div className="flex items-center gap-2">
                           <FiEdit3 className="w-3 h-3" />
                           Descrição
@@ -2389,7 +2389,7 @@ export default function atividadesrecorrentes({ user }) {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2 md:w-1/2 lg:w-2/5 min-w-[200px]">
                         <div className="flex items-center gap-2">
                           <FiEdit3 className="w-3 h-3" />
                           Descrição
