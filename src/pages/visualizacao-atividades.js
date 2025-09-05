@@ -1680,11 +1680,11 @@ export default function VisualizacaoAtividades({ user }) {
                 </div>
 
                 {/* ✅ ATIVIDADES RECORRENTES - VERSÃO FINAL COM NOVA EXIBIÇÃO DE DATAS */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
                     <div className="flex items-center">
                       <FiRepeat className="w-4 h-4 sm:w-5 sm:h-5 text-[#012060] mr-2" />
-                      <h3 className="text-sm md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
+                      <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
                     </div>
                     <button
                       onClick={() => router.push('/gestao-atividades-recorrentes')}
@@ -1696,14 +1696,14 @@ export default function VisualizacaoAtividades({ user }) {
                   </div>
                   
                   {atividadesRotina.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
-                        <FiRepeat className="w-6 h-6 text-[#012060]" />
+                    <div className="text-center py-6 sm:py-8">
+                      <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+                        <FiRepeat className="w-4 h-4 sm:w-6 sm:h-6 text-[#012060]" />
                       </div>
-                      <p className="text-gray-500 text-sm">Não há atividades recorrentes para hoje</p>
+                      <p className="text-gray-500 text-xs sm:text-sm">Não há atividades recorrentes para hoje</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {atividadesRotina.map((rotina) => {
                         // ✅ Para rotinas persistentes, verificar se já foi concluída na data específica
                         // Para rotinas não persistentes, usar a lógica atual (statusRotina)
@@ -1719,11 +1719,11 @@ export default function VisualizacaoAtividades({ user }) {
                           if (diasAtraso > 3) {
                             corCard = 'bg-red-50 border-red-200 hover:bg-red-100';
                             corTexto = 'text-red-800';
-                            iconeAtraso = <FiAlertCircle className="w-4 h-4 text-red-500 mr-1" />;
+                            iconeAtraso = <FiAlertCircle className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-red-500 mr-1" />;
                           } else if (diasAtraso > 1) {
                             corCard = 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100';
                             corTexto = 'text-yellow-800';
-                            iconeAtraso = <FiClock className="w-4 h-4 text-yellow-500 mr-1" />;
+                            iconeAtraso = <FiClock className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-yellow-500 mr-1" />;
                           }
                         }
                         
@@ -1735,26 +1735,26 @@ export default function VisualizacaoAtividades({ user }) {
                         return (
                           <div
                             key={`${rotina.id}-${rotina.visible_date || 'current'}`}
-                            className={`p-4 border rounded-lg transition-colors ${corCard}`}
+                            className={`p-3 sm:p-4 border rounded-lg transition-colors ${corCard}`}
                           >
-                            <div className="flex items-start space-x-3">
+                            <div className="flex items-start space-x-2 sm:space-x-3">
                               {/* ✅ BOTÃO PARA MARCAR/DESMARCAR ROTINA */}
                               <button
                                 onClick={() => toggleRotinaCompleta(rotina, isCompleted)}
-                                className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                                className={`p-1.5 sm:p-2 rounded-full transition-colors flex-shrink-0 ${
                                   isCompleted
                                     ? 'bg-green-100 text-green-600 hover:bg-green-200'
                                     : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-[#012060]'
                                 }`}
                                 title={isCompleted ? 'Marcar como pendente' : 'Marcar como concluída'}
                               >
-                                {isCompleted ? <FiCheck className="w-4 h-4" /> : <FiCircle className="w-4 h-4" />}
+                                {isCompleted ? <FiCheck className="w-3 h-3 sm:w-4 sm:h-4" /> : <FiCircle className="w-3 h-3 sm:w-4 sm:h-4" />}
                               </button>
                               
                               <div className="flex-1">
                                 {/* ✅ MUDANÇA: Título com ícone de nota */}
-                                <div className="flex items-center space-x-2">
-                                  <h4 className={`text-xs sm:text-base font-medium ${
+                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                  <h4 className={`text-xs sm:text-sm md:text-base font-medium ${
                                     isCompleted ? 'text-green-800 line-through' : corTexto
                                   }`}>
                                     {rotina.content}
@@ -1762,10 +1762,10 @@ export default function VisualizacaoAtividades({ user }) {
                                   {rotina.note && rotina.note.trim() !== '' && (
                                     <button
                                       onClick={() => abrirNotePopupRotina(rotina)}
-                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      className="p-0.5 sm:p-1 hover:bg-gray-200 rounded transition-colors"
                                       title="Ver nota da rotina"
                                     >
-                                      <MdOutlineStickyNote2 className="w-4 h-4 text-yellow-600" />
+                                      <MdOutlineStickyNote2 className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
                                     </button>
                                   )}
                                 </div>
@@ -1788,7 +1788,7 @@ export default function VisualizacaoAtividades({ user }) {
                                     }
                                   </span>
                                   {rotina.persistent && (
-                                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                    <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                                       Persistente
                                     </span>
                                   )}
@@ -1796,14 +1796,14 @@ export default function VisualizacaoAtividades({ user }) {
                                 
                                 {/* ✅ MUDANÇA: Substituir "Criado em" por "Data" */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
-                                  <FiCalendar className="w-3 h-3 mr-1" />
+                                  <FiCalendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
                                   <span>
                                     {rotina.visible_date ? formatarDataEspecifica(rotina.visible_date) : formatarDataEspecifica(formatarDataISO(dataSelecionada))}
                                   </span>
                                 </div>
                                 {/* ✅ NOVA SEÇÃO: Edição de nota inline */}
                                 {editandoNotaRotina === rotina.id && (
-                                  <div className="mt-3 space-y-2 border-t pt-3">
+                                  <div className="mt-2 sm:mt-3 space-y-2 border-t pt-2 sm:pt-3">
                                     <label className="block text-xs font-medium text-gray-700">
                                       Nota da rotina:
                                     </label>
@@ -1817,20 +1817,20 @@ export default function VisualizacaoAtividades({ user }) {
                                           cancelarEdicaoNotaRotina();
                                         }
                                       }}
-                                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                                      className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-xs sm:text-sm"
                                       placeholder="Digite a nota para esta rotina..."
                                       rows={3}
                                     />
                                     <div className="flex space-x-2">
                                       <button
                                         onClick={() => salvarNotaRotina(rotina.id)}
-                                        className="px-3 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
+                                        className="px-2 py-1 sm:px-3 sm:py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
                                       >
                                         Salvar Nota
                                       </button>
                                       <button
                                         onClick={cancelarEdicaoNotaRotina}
-                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition-colors"
+                                        className="px-2 py-1 sm:px-3 sm:py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400 transition-colors"
                                       >
                                         Cancelar
                                       </button>
@@ -1842,25 +1842,25 @@ export default function VisualizacaoAtividades({ user }) {
                               <div className="relative menu-atividade">
                                 <button
                                   onClick={() => setMenuAberto(menuAberto === `rotina-${rotina.id}-${rotina.visible_date || 'current'}` ? null : `rotina-${rotina.id}-${rotina.visible_date || 'current'}`)}
-                                  className="p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+                                  className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
                                 >
-                                  <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                                  <FiMoreVertical className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
                                 </button>
                                 
                                 {menuAberto === `rotina-${rotina.id}-${rotina.visible_date || 'current'}` && (
-                                  <div className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border z-20 py-1 min-w-[140px]">
+                                  <div className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border z-20 py-1 min-w-[120px] sm:min-w-[140px]">
                                     <button
                                       onClick={() => iniciarEdicaoNotaRotina(rotina)}
-                                      className="w-full px-3 py-2 text-left hover:bg-yellow-50 flex items-center text-yellow-600 text-sm"
+                                      className="w-full px-2 py-1.5 sm:px-3 sm:py-2 text-left hover:bg-yellow-50 flex items-center text-yellow-600 text-xs sm:text-sm"
                                     >
-                                      <MdOutlineStickyNote2 className="w-3 h-3 mr-2" />
+                                      <MdOutlineStickyNote2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1 sm:mr-2" />
                                       {rotina.note ? 'Editar Nota' : 'Adicionar Nota'}
                                     </button>
                                     <button
                                       onClick={() => abrirInfoPopupRotina(rotina)}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center text-gray-600 text-sm"
+                                      className="w-full px-2 py-1.5 sm:px-3 sm:py-2 text-left hover:bg-gray-50 flex items-center text-gray-600 text-xs sm:text-sm"
                                     >
-                                      <FiInfo className="w-3 h-3 mr-2" />
+                                      <FiInfo className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1 sm:mr-2" />
                                       Informações
                                     </button>
                                   </div>
