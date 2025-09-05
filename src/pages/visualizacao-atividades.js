@@ -1344,33 +1344,33 @@ export default function VisualizacaoAtividades({ user }) {
             <div className="space-y-6">
               {/* ✅ SEÇÃO DA DATA - Estilo grande e destaque inspirado no design */}
               <div className="flex items-center justify-between">
-                {/* Data principal - Estilo grande como no design do chefe */}
+                {/* Data principal - Tamanhos reduzidos para mobile */}
                 <div className="flex-1">
-                  <h1 className="text-xl md:text-4xl font-bold text-gray-900 leading-tight">
+                  <h1 className="text-lg md:text-4xl font-bold text-gray-900 leading-tight">
                     {dataSelecionada.getDate()} de {dataSelecionada.toLocaleDateString('pt-BR', { month: 'long' })}
                   </h1>
-                  <p className="text-sm md:text-lg text-gray-500 capitalize mt-1">
+                  <p className="text-xs md:text-lg text-gray-500 capitalize mt-1">
                     {formatarDiaSemana(dataSelecionada)}, {dataSelecionada.getFullYear()}
                   </p>
                 </div>
 
-                {/* Controles de navegação */}
-                <div className="flex items-center space-x-3">
+                {/* Controles de navegação - Dimensões reduzidas */}
+                <div className="flex items-center space-x-1 sm:space-x-3">
                   <button
                     onClick={() => mudarData(-1)}
-                    className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 sm:p-3 hover:bg-gray-100 rounded-full transition-colors"
                     title="Dia anterior"
                   >
-                    <FiChevronLeft className="w-6 h-6 text-gray-600" />
+                    <FiChevronLeft className="w-4 h-4 sm:w-6 sm:h-6 text-gray-600" />
                   </button>
                   
                   <div className="relative">
                     <button
                       onClick={() => setShowDatePicker(!showDatePicker)}
-                      className="p-3 hover:bg-blue-50 rounded-full transition-colors bg-blue-100"
+                      className="p-2 sm:p-3 hover:bg-blue-50 rounded-full transition-colors bg-blue-100"
                       title="Selecionar data"
                     >
-                      <FiCalendar className="w-6 h-6 text-[#012060]" />
+                      <FiCalendar className="w-4 h-4 sm:w-6 sm:h-6 text-[#012060]" />
                     </button>
                     
                     {showDatePicker && (
@@ -1385,7 +1385,7 @@ export default function VisualizacaoAtividades({ user }) {
                             setDataSelecionada(new Date(e.target.value + 'T12:00:00'));
                             setShowDatePicker(false);
                           }}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060]"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] w-full"
                         />
                       </div>
                     )}
@@ -1393,10 +1393,10 @@ export default function VisualizacaoAtividades({ user }) {
                   
                   <button
                     onClick={() => mudarData(1)}
-                    className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 sm:p-3 hover:bg-gray-100 rounded-full transition-colors"
                     title="Próximo dia"
                   >
-                    <FiChevronRight className="w-6 h-6 text-gray-600" />
+                    <FiChevronRight className="w-4 h-4 sm:w-6 sm:h-6 text-gray-600" />
                   </button>
                 </div>
               </div>
@@ -1451,11 +1451,11 @@ export default function VisualizacaoAtividades({ user }) {
                 {/* Atividades do Dia */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center mb-4">
-                    <FiCheckCircle className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-base md:text-lg font-semibold text-gray-900">
+                    <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#012060] mr-2" />
+                    <h3 className="text-sm md:text-lg font-semibold text-gray-900">
                       Atividades
                       {!isDataHoje(dataSelecionada) && (
-                        <span className="text-sm font-normal text-gray-500 ml-2">
+                        <span className="text-xs sm:text-sm font-normal text-gray-500 ml-2">
                           ({formatarDataISO(dataSelecionada)})
                         </span>
                       )}
@@ -1463,11 +1463,11 @@ export default function VisualizacaoAtividades({ user }) {
                   </div>
                   
                   {atividadesDia.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
-                        <FiCheckCircle className="w-6 h-6 text-[#012060]" />
+                    <div className="text-center py-6 sm:py-8">
+                      <div className="mx-auto w-8 h-8 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+                        <FiCheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-[#012060]" />
                       </div>
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-gray-500 text-xs sm:text-sm">
                         {isDataHoje(dataSelecionada) 
                           ? 'Nenhuma atividade adicionada hoje'
                           : 'Nenhuma atividade para esta data'
@@ -1555,7 +1555,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 ) : (
                                   <>
                                     <div className="flex items-center space-x-2">
-                                      <h4 className={`text-sm md:text-base font-medium ${
+                                      <h4 className={`text-xs sm:text-base font-medium ${
                                         atividade.completed 
                                           ? 'text-green-800 line-through' 
                                           : isAtividadeHoje 
@@ -1584,7 +1584,7 @@ export default function VisualizacaoAtividades({ user }) {
                                       </div>
                                     )} */}
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
-                                      <FiCalendar className="w-3 h-3 mr-1" />
+                                      <FiCalendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
                                       <span>
                                         {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                       </span>
@@ -1683,15 +1683,15 @@ export default function VisualizacaoAtividades({ user }) {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
-                      <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
+                      <FiRepeat className="w-4 h-4 sm:w-5 sm:h-5 text-[#012060] mr-2" />
+                      <h3 className="text-sm md:text-lg font-semibold text-gray-900">Atividades Recorrentes</h3>
                     </div>
                     <button
                       onClick={() => router.push('/gestao-atividades-recorrentes')}
-                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                       title="Gerenciar atividades recorrentes"
                     >
-                      <FiSettings className="w-5 h-5" />
+                      <FiSettings className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </div>
                   
@@ -1754,7 +1754,7 @@ export default function VisualizacaoAtividades({ user }) {
                               <div className="flex-1">
                                 {/* ✅ MUDANÇA: Título com ícone de nota */}
                                 <div className="flex items-center space-x-2">
-                                  <h4 className={`text-sm md:text-base font-medium ${
+                                  <h4 className={`text-xs sm:text-base font-medium ${
                                     isCompleted ? 'text-green-800 line-through' : corTexto
                                   }`}>
                                     {rotina.content}
@@ -1773,7 +1773,7 @@ export default function VisualizacaoAtividades({ user }) {
                                 {/* ✅ Informações da recorrência */}
                                 <div className="flex items-center mt-1 text-xs text-gray-500">
                                   {iconeAtraso}
-                                  <FiRepeat className="w-3 h-3 mr-1" />
+                                  <FiRepeat className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
                                   <span>
                                     {rotina.recurrence_type === 'daily' && `Diária (a cada ${rotina.recurrence_interval} dia${rotina.recurrence_interval > 1 ? 's' : ''})`}
                                     {rotina.recurrence_type === 'weekly' && `Semanal (${rotina.recurrence_days?.map(d => diasDaSemana[d === 7 ? 0 : d]).join(', ')})`}
