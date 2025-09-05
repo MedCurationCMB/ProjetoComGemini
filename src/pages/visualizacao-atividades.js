@@ -152,12 +152,9 @@ export default function VisualizacaoAtividades({ user }) {
     if (opcao === 'outro') {
       // Não fechar opções, apenas manter tudo aberto
       setDataInlineOutro(formatarDataISO(new Date())); // Reset para hoje
-    } else {
-      // Para outras opções, pode fechar depois de um tempo
-      timeoutRef.current = setTimeout(() => {
-        setShowOpcoesData(false);
-      }, 2000); // Fechar após 2 segundos
     }
+    // ✅ REMOVIDO: Timeout para fechar após outras opções
+    // As opções agora ficam abertas até o usuário fazer blur do campo ou clicar fora
   };
 
   const toggleOpcoesData = () => {
@@ -1368,6 +1365,9 @@ export default function VisualizacaoAtividades({ user }) {
                     
                     {showDatePicker && (
                       <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border z-30 p-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Selecione a data que deseja visualizar
+                        </label>
                         <input
                           type="date"
                           value={formatarDataISO(dataSelecionada)}
