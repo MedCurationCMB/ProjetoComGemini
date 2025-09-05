@@ -1,4 +1,4 @@
-// Arquivo: src/pages/tarefas-rotinas.js - VERSÃO COMPLETA CORRIGIDA COM TODOS OS CAMPOS
+// Arquivo: src/pages/atividades-recorrentes.js - VERSÃO COMPLETA CORRIGIDA COM TODOS OS CAMPOS
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -39,15 +39,19 @@ import {
 } from 'react-icons/fi';
 import { MdOutlineStickyNote2 } from "react-icons/md";
 
-export default function TarefasRotinas({ user }) {
+export default function atividadesrecorrentes({ user }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('tarefas');
+  const [activeTab, setActiveTab] = useState('atividades');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showExcelImporter, setShowExcelImporter] = useState(false);
   const inputRef = useRef(null);
+
+  // Estado adicional para usuários colaboradores
+  const [usuariosColaboradores, setUsuariosColaboradores] = useState({});
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState('');
 
   // Estados para dados base
   const [projetosVinculados, setProjetosVinculados] = useState([]);
@@ -61,13 +65,13 @@ export default function TarefasRotinas({ user }) {
   const [listaSelecionada, setListaSelecionada] = useState('');
   const [completedFiltro, setCompletedFiltro] = useState(''); // Filtro baseado no campo completed
 
-  // Estados para tarefas
-  const [tarefas, setTarefas] = useState([]);
+  // Estados para atividades
+  const [atividades, setatividades] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
   const [newTask, setNewTask] = useState(null);
 
-  // Estados para rotinas
-  const [rotinas, setRotinas] = useState([]);
+  // Estados para recorrentes
+  const [recorrentes, setrecorrentes] = useState([]);
   const [editingRoutine, setEditingRoutine] = useState(null);
   const [newRoutine, setNewRoutine] = useState(null);
 
@@ -78,10 +82,10 @@ export default function TarefasRotinas({ user }) {
   const [salvando, setSalvando] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
 
-  // ✅ NOVO: Estado para opções avançadas de rotinas
+  // ✅ NOVO: Estado para opções avançadas de recorrentes
   const [mostrarOpcoesAvancadas, setMostrarOpcoesAvancadas] = useState({});
 
-  // Opções para status das tarefas (baseado no campo completed)
+  // Opções para status das atividades (baseado no campo completed)
   const completedOptions = [
     { value: false, label: 'Pendente', color: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
     { value: true, label: 'Concluída', color: 'bg-green-100 text-green-800', icon: '✅' }
@@ -89,7 +93,7 @@ export default function TarefasRotinas({ user }) {
 
   // Opções para filtro de status
   const statusFiltroOptions = [
-    { value: '', label: 'Todas as tarefas' },
+    { value: '', label: 'Todas as atividades' },
     { value: 'false', label: '⏳ Pendentes' },
     { value: 'true', label: '✅ Concluídas' }
   ];
@@ -154,6 +158,41 @@ export default function TarefasRotinas({ user }) {
   // =====================================
   // FUNÇÕES DE CARREGAMENTO DE DADOS
   // =====================================
+
+  // Função para buscar usuários que compartilham projetos
+  const fetchUsuariosColaboradores = async (projetoIds) => {
+    if (projetoIds.length === 0) return {};
+    
+    try {
+      // Buscar todos os usuários vinculados aos mesmos projetos
+      const { data, error } = await supabase
+        .from('relacao_usuarios_projetos')
+        .select(`
+          usuario_id,
+          usuarios(id, nome, email)
+        `)
+        .in('projeto_id', projetoIds);
+      
+      if (error) throw error;
+      
+      const colaboradoresObj = {};
+      
+      data.forEach(relacao => {
+        if (relacao.usuarios && relacao.usuario_id !== user.id) { // Exclui o próprio usuário
+          colaboradoresObj[relacao.usuarios.id] = {
+            nome: relacao.usuarios.nome,
+            email: relacao.usuarios.email
+          };
+        }
+      });
+      
+      setUsuariosColaboradores(colaboradoresObj);
+      return colaboradoresObj;
+    } catch (error) {
+      console.error('Erro ao carregar usuários colaboradores:', error);
+      return {};
+    }
+  };
 
   const fetchProjetosVinculados = async (userId) => {
     try {
@@ -278,7 +317,7 @@ export default function TarefasRotinas({ user }) {
   }, [editando]);
 
   // Iniciar edição inline
-  const iniciarEdicao = (rowId, field, valorAtual, type = 'tarefas') => {
+  const iniciarEdicao = (rowId, field, valorAtual, type = 'atividades') => {
     setEditando({ rowId, field, type });
     setValorEdicao(valorAtual);
     setValorOriginal(valorAtual);
@@ -306,7 +345,7 @@ export default function TarefasRotinas({ user }) {
     setMostrarModal(false);
 
     try {
-      const tabela = editando.type === 'tarefas' ? 'tasks' : 'routine_tasks';
+      const tabela = editando.type === 'atividades' ? 'tasks' : 'routine_tasks';
       let updateData = { [editando.field]: valorEdicao };
 
       // Conversões específicas para alguns campos
@@ -336,24 +375,24 @@ export default function TarefasRotinas({ user }) {
       if (error) throw error;
 
       // Atualizar dados localmente
-      if (editando.type === 'tarefas') {
-        setTarefas(prevTarefas => 
-          prevTarefas.map(tarefa => 
-            tarefa.id === editando.rowId 
-              ? { ...tarefa, [editando.field]: updateData[editando.field] }
-              : tarefa
+      if (editando.type === 'atividades') {
+        setatividades(prevatividades => 
+          prevatividades.map(atividade => 
+            atividade.id === editando.rowId 
+              ? { ...atividade, [editando.field]: updateData[editando.field] }
+              : atividade
           )
         );
-        toast.success('Tarefa atualizada com sucesso!');
+        toast.success('atividade atualizada com sucesso!');
       } else {
-        setRotinas(prevRotinas => 
-          prevRotinas.map(rotina => 
-            rotina.id === editando.rowId 
-              ? { ...rotina, [editando.field]: updateData[editando.field] }
-              : rotina
+        setrecorrentes(prevrecorrentes => 
+          prevrecorrentes.map(recorrente => 
+            recorrente.id === editando.rowId 
+              ? { ...recorrente, [editando.field]: updateData[editando.field] }
+              : recorrente
           )
         );
-        toast.success('Rotina atualizada com sucesso!');
+        toast.success('recorrente atualizada com sucesso!');
       }
 
       cancelarEdicao();
@@ -381,20 +420,19 @@ export default function TarefasRotinas({ user }) {
   };
 
   // =====================================
-  // FUNÇÕES PARA TAREFAS
+  // FUNÇÕES PARA atividades
   // =====================================
 
-  const fetchTarefas = async () => {
+  const fetchatividades = async () => {
     if (projetosVinculados.length === 0) return;
     
     try {
       setLoading(true);
       
-      // Buscar listas dos projetos vinculados
       const listasIds = Object.keys(listas).map(id => parseInt(id));
       
       if (listasIds.length === 0) {
-        setTarefas([]);
+        setatividades([]);
         return;
       }
       
@@ -416,6 +454,11 @@ export default function TarefasRotinas({ user }) {
         query = query.eq('completed', completedFiltro === 'true');
       }
       
+      // ✅ NOVO FILTRO: Por usuário
+      if (usuarioSelecionado) {
+        query = query.eq('usuario_id', usuarioSelecionado);
+      }
+      
       if (searchTerm.trim()) {
         query = query.ilike('content', `%${searchTerm.trim()}%`);
       }
@@ -426,10 +469,10 @@ export default function TarefasRotinas({ user }) {
       
       if (error) throw error;
       
-      setTarefas(data || []);
+      setatividades(data || []);
     } catch (error) {
-      console.error('Erro ao carregar tarefas:', error);
-      toast.error('Erro ao carregar tarefas');
+      console.error('Erro ao carregar atividades:', error);
+      toast.error('Erro ao carregar atividades');
     } finally {
       setLoading(false);
     }
@@ -438,7 +481,7 @@ export default function TarefasRotinas({ user }) {
   const saveTask = async (task) => {
     try {
       if (task.id) {
-        // Atualizar tarefa existente
+        // Atualizar atividade existente
         const { error } = await supabase
           .from('tasks')
           .update({
@@ -452,9 +495,9 @@ export default function TarefasRotinas({ user }) {
           .eq('id', task.id);
         
         if (error) throw error;
-        toast.success('Tarefa atualizada com sucesso!');
+        toast.success('atividade atualizada com sucesso!');
       } else {
-        // Criar nova tarefa
+        // Criar nova atividade
         const { error } = await supabase
           .from('tasks')
           .insert({
@@ -467,20 +510,20 @@ export default function TarefasRotinas({ user }) {
           });
         
         if (error) throw error;
-        toast.success('Tarefa criada com sucesso!');
+        toast.success('atividade criada com sucesso!');
       }
       
       setEditingTask(null);
       setNewTask(null);
-      fetchTarefas();
+      fetchatividades();
     } catch (error) {
-      console.error('Erro ao salvar tarefa:', error);
-      toast.error('Erro ao salvar tarefa');
+      console.error('Erro ao salvar atividade:', error);
+      toast.error('Erro ao salvar atividade');
     }
   };
 
   const deleteTask = async (taskId) => {
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta atividade?')) return;
     
     try {
       const { error } = await supabase
@@ -490,11 +533,11 @@ export default function TarefasRotinas({ user }) {
       
       if (error) throw error;
       
-      toast.success('Tarefa excluída com sucesso!');
-      fetchTarefas();
+      toast.success('atividade excluída com sucesso!');
+      fetchatividades();
     } catch (error) {
-      console.error('Erro ao excluir tarefa:', error);
-      toast.error('Erro ao excluir tarefa');
+      console.error('Erro ao excluir atividade:', error);
+      toast.error('Erro ao excluir atividade');
     }
   };
 
@@ -508,15 +551,15 @@ export default function TarefasRotinas({ user }) {
       
       if (error) throw error;
       
-      setTarefas(prevTarefas => 
-        prevTarefas.map(tarefa => 
-          tarefa.id === taskId 
-            ? { ...tarefa, completed: !currentCompleted }
-            : tarefa
+      setatividades(prevatividades => 
+        prevatividades.map(atividade => 
+          atividade.id === taskId 
+            ? { ...atividade, completed: !currentCompleted }
+            : atividade
         )
       );
       
-      toast.success(`Tarefa ${!currentCompleted ? 'concluída' : 'reaberta'}!`);
+      toast.success(`atividade ${!currentCompleted ? 'concluída' : 'reaberta'}!`);
     } catch (error) {
       console.error('Erro ao alterar status:', error);
       toast.error('Erro ao alterar status');
@@ -524,20 +567,19 @@ export default function TarefasRotinas({ user }) {
   };
 
   // =====================================
-  // FUNÇÕES PARA ROTINAS
+  // FUNÇÕES PARA recorrentes
   // =====================================
 
-  const fetchRotinas = async () => {
+  const fetchrecorrentes = async () => {
     if (projetosVinculados.length === 0) return;
     
     try {
       setLoading(true);
       
-      // Buscar listas dos projetos vinculados
       const listasIds = Object.keys(listas).map(id => parseInt(id));
       
       if (listasIds.length === 0) {
-        setRotinas([]);
+        setrecorrentes([]);
         return;
       }
       
@@ -555,6 +597,11 @@ export default function TarefasRotinas({ user }) {
         query = query.eq('task_list_id', listaSelecionada);
       }
       
+      // ✅ NOVO FILTRO: Por usuário
+      if (usuarioSelecionado) {
+        query = query.eq('usuario_id', usuarioSelecionado);
+      }
+      
       if (searchTerm.trim()) {
         query = query.ilike('content', `%${searchTerm.trim()}%`);
       }
@@ -565,10 +612,10 @@ export default function TarefasRotinas({ user }) {
       
       if (error) throw error;
       
-      setRotinas(data || []);
+      setrecorrentes(data || []);
     } catch (error) {
-      console.error('Erro ao carregar rotinas:', error);
-      toast.error('Erro ao carregar rotinas');
+      console.error('Erro ao carregar recorrentes:', error);
+      toast.error('Erro ao carregar recorrentes');
     } finally {
       setLoading(false);
     }
@@ -595,35 +642,35 @@ export default function TarefasRotinas({ user }) {
       };
       
       if (routine.id) {
-        // Atualizar rotina existente
+        // Atualizar recorrente existente
         const { error } = await supabase
           .from('routine_tasks')
           .update(routineData)
           .eq('id', routine.id);
         
         if (error) throw error;
-        toast.success('Rotina atualizada com sucesso!');
+        toast.success('recorrente atualizada com sucesso!');
       } else {
-        // Criar nova rotina
+        // Criar nova recorrente
         const { error } = await supabase
           .from('routine_tasks')
           .insert(routineData);
         
         if (error) throw error;
-        toast.success('Rotina criada com sucesso!');
+        toast.success('recorrente criada com sucesso!');
       }
       
       setEditingRoutine(null);
       setNewRoutine(null);
-      fetchRotinas();
+      fetchrecorrentes();
     } catch (error) {
-      console.error('Erro ao salvar rotina:', error);
-      toast.error('Erro ao salvar rotina');
+      console.error('Erro ao salvar recorrente:', error);
+      toast.error('Erro ao salvar recorrente');
     }
   };
 
   const deleteRoutine = async (routineId) => {
-    if (!confirm('Tem certeza que deseja excluir esta rotina?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta recorrente?')) return;
     
     try {
       const { error } = await supabase
@@ -633,11 +680,11 @@ export default function TarefasRotinas({ user }) {
       
       if (error) throw error;
       
-      toast.success('Rotina excluída com sucesso!');
-      fetchRotinas();
+      toast.success('recorrente excluída com sucesso!');
+      fetchrecorrentes();
     } catch (error) {
-      console.error('Erro ao excluir rotina:', error);
-      toast.error('Erro ao excluir rotina');
+      console.error('Erro ao excluir recorrente:', error);
+      toast.error('Erro ao excluir recorrente');
     }
   };
 
@@ -649,10 +696,10 @@ export default function TarefasRotinas({ user }) {
     setShowExcelImporter(false);
     
     // Recarregar dados após importação
-    if (activeTab === 'tarefas') {
-      fetchTarefas();
+    if (activeTab === 'atividades') {
+      fetchatividades();
     } else {
-      fetchRotinas();
+      fetchrecorrentes();
     }
     
     toast.success('Importação concluída com sucesso!');
@@ -690,8 +737,15 @@ export default function TarefasRotinas({ user }) {
   };
 
   const getCompletedStats = () => {
-    const total = tarefas.length;
-    const completed = tarefas.filter(t => t.completed).length;
+    // Aplicar todos os filtros nas estatísticas também
+    let atividadesFiltradas = atividades;
+    
+    if (usuarioSelecionado) {
+      atividadesFiltradas = atividadesFiltradas.filter(t => t.usuario_id === parseInt(usuarioSelecionado));
+    }
+    
+    const total = atividadesFiltradas.length;
+    const completed = atividadesFiltradas.filter(t => t.completed).length;
     const pending = total - completed;
     
     return {
@@ -703,19 +757,19 @@ export default function TarefasRotinas({ user }) {
   };
 
   // ✅ NOVA FUNÇÃO: Formatar recorrência avançada
-  const formatarRecorrenciaAvancada = (rotina) => {
-    switch(rotina.recurrence_type) {
+  const formatarRecorrenciaAvancada = (recorrente) => {
+    switch(recorrente.recurrence_type) {
       case 'daily':
-        return `Diária${rotina.recurrence_interval > 1 ? ` (a cada ${rotina.recurrence_interval} dias)` : ''}`;
+        return `Diária${recorrente.recurrence_interval > 1 ? ` (a cada ${recorrente.recurrence_interval} dias)` : ''}`;
         
       case 'weekly':
-        const diasSelecionados = rotina.recurrence_days?.map(d => 
+        const diasSelecionados = recorrente.recurrence_days?.map(d => 
           diasDaSemana.find(dia => dia.valor === d)?.abrev
         ).join(', ');
         return `Semanal (${diasSelecionados})`;
         
       case 'monthly':
-        return `Mensal (dia ${new Date(rotina.start_date).getDate()})`;
+        return `Mensal (dia ${new Date(recorrente.start_date).getDate()})`;
         
       case 'yearly':
         return `Anual`;
@@ -723,15 +777,15 @@ export default function TarefasRotinas({ user }) {
       case 'biweekly':
       case 'triweekly':  
       case 'quadweekly':
-        const intervaloSemanas = rotina.weekly_interval || 
-          (rotina.recurrence_type === 'biweekly' ? 2 : 
-           rotina.recurrence_type === 'triweekly' ? 3 : 4);
-        const diaEscolhido = diasDaSemana.find(d => d.valor === rotina.selected_weekday)?.nome || 'Não definido';
+        const intervaloSemanas = recorrente.weekly_interval || 
+          (recorrente.recurrence_type === 'biweekly' ? 2 : 
+           recorrente.recurrence_type === 'triweekly' ? 3 : 4);
+        const diaEscolhido = diasDaSemana.find(d => d.valor === recorrente.selected_weekday)?.nome || 'Não definido';
         return `A cada ${intervaloSemanas} semanas (${diaEscolhido})`;
         
       case 'monthly_weekday':
-        const ordinal = ordinaisMensais.find(o => o.value === rotina.monthly_ordinal)?.label || 'Primeira';
-        const diaSemana = diasDaSemana.find(d => d.valor === rotina.monthly_weekday)?.nome || 'Segunda';
+        const ordinal = ordinaisMensais.find(o => o.value === recorrente.monthly_ordinal)?.label || 'Primeira';
+        const diaSemana = diasDaSemana.find(d => d.valor === recorrente.monthly_weekday)?.nome || 'Segunda';
         return `${ordinal} ${diaSemana} do mês`;
         
       default:
@@ -758,6 +812,7 @@ export default function TarefasRotinas({ user }) {
         await fetchProjetos(projetoIds);
         await fetchListas(projetoIds);
         await fetchUsuariosListas();
+        await fetchUsuariosColaboradores(projetoIds); // ✅ NOVA FUNÇÃO
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
       }
@@ -767,12 +822,12 @@ export default function TarefasRotinas({ user }) {
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === 'tarefas') {
-      fetchTarefas();
+    if (activeTab === 'atividades') {
+      fetchatividades();
     } else {
-      fetchRotinas();
+      fetchrecorrentes();
     }
-  }, [activeTab, projetosVinculados, listas, listaSelecionada, completedFiltro, searchTerm]);
+  }, [activeTab, projetosVinculados, listas, listaSelecionada, completedFiltro, searchTerm, usuarioSelecionado]);
 
   // =====================================
   // HANDLERS
@@ -793,16 +848,17 @@ export default function TarefasRotinas({ user }) {
     setProjetoSelecionado('');
     setListaSelecionada('');
     setCompletedFiltro('');
+    setUsuarioSelecionado(''); // ✅ NOVO
     setShowFilters(false);
   };
 
-  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro;
+  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro || usuarioSelecionado;
 
   // =====================================
   // ✅ FUNÇÕES DE RENDERIZAÇÃO INLINE ATUALIZADAS
   // =====================================
 
-  const renderizarCelulaEditavel = (item, field, tipo = 'text', options = [], itemType = 'tarefas') => {
+  const renderizarCelulaEditavel = (item, field, tipo = 'text', options = [], itemType = 'atividades') => {
     const isEditando = editando?.rowId === item.id && editando?.field === field && editando?.type === itemType;
     const valor = item[field];
 
@@ -883,7 +939,7 @@ export default function TarefasRotinas({ user }) {
               <button
                 onClick={() => toggleCompleted(item.id, valor)}
                 className="p-1 hover:bg-gray-100 rounded transition-colors"
-                title={`Clique para ${valor ? 'reabrir' : 'concluir'} tarefa`}
+                title={`Clique para ${valor ? 'reabrir' : 'concluir'} atividade`}
               >
                 {valor ? (
                   <FiCheckCircle className="w-5 h-5 text-green-600" />
@@ -955,7 +1011,7 @@ export default function TarefasRotinas({ user }) {
             </div>
           );
 
-        // ✅ NOVO: Campo de persistência (rotinas)
+        // ✅ NOVO: Campo de persistência (recorrentes)
         case 'persistent':
           return (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -1056,7 +1112,7 @@ export default function TarefasRotinas({ user }) {
             value={localTask.content}
             onChange={(e) => setLocalTask({...localTask, content: e.target.value})}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Descrição da tarefa"
+            placeholder="Descrição da atividade"
             rows={2}
           />
         </td>
@@ -1221,7 +1277,7 @@ export default function TarefasRotinas({ user }) {
             value={localRoutine.content}
             onChange={(e) => setLocalRoutine({...localRoutine, content: e.target.value})}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Descrição da rotina"
+            placeholder="Descrição da recorrente"
             rows={2}
           />
         </td>
@@ -1439,7 +1495,7 @@ export default function TarefasRotinas({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Tarefas e Rotinas - Gestão Inteligente</title>
+        <title>atividades e recorrentes - Gestão Inteligente</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -1451,7 +1507,7 @@ export default function TarefasRotinas({ user }) {
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
-                fallbackText="Tarefas e Rotinas"
+                fallbackText="atividades e recorrentes"
                 showFallback={true}
               />
               
@@ -1557,7 +1613,7 @@ export default function TarefasRotinas({ user }) {
                 <input
                   type="text"
                   className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                  placeholder="Buscar tarefas ou rotinas..."
+                  placeholder="Buscar atividades ou recorrentes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -1615,7 +1671,26 @@ export default function TarefasRotinas({ user }) {
                   </div>
                 </div>
 
-                {activeTab === 'tarefas' && (
+                {/* ✅ NOVO FILTRO DE USUÁRIO */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Usuário Responsável
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={usuarioSelecionado}
+                    onChange={(e) => setUsuarioSelecionado(e.target.value)}
+                  >
+                    <option value="">Todos os usuários</option>
+                    {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
+                      <option key={id} value={id}>
+                        {usuario.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {activeTab === 'atividades' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Status
@@ -1651,7 +1726,7 @@ export default function TarefasRotinas({ user }) {
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
                 className=""
-                fallbackText="Tarefas e Rotinas"
+                fallbackText="atividades e recorrentes"
                 showFallback={true}
               />
               
@@ -1663,7 +1738,7 @@ export default function TarefasRotinas({ user }) {
                   <input
                     type="text"
                     className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
-                    placeholder="Buscar tarefas ou rotinas..."
+                    placeholder="Buscar atividades ou recorrentes..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -1816,7 +1891,26 @@ export default function TarefasRotinas({ user }) {
                     </select>
                   </div>
 
-                  {activeTab === 'tarefas' && (
+                  {/* ✅ NOVO FILTRO DE USUÁRIO */}
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Usuário Responsável
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={usuarioSelecionado}
+                      onChange={(e) => setUsuarioSelecionado(e.target.value)}
+                    >
+                      <option value="">Todos os usuários</option>
+                      {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
+                        <option key={id} value={id}>
+                          {usuario.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {activeTab === 'atividades' && (
                     <div className="w-full sm:flex-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Status
@@ -1852,14 +1946,14 @@ export default function TarefasRotinas({ user }) {
 
       {/* Layout principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Estatísticas rápidas - Apenas para tarefas */}
-        {activeTab === 'tarefas' && tarefas.length > 0 && (
+        {/* Estatísticas rápidas - Apenas para atividades */}
+        {activeTab === 'atividades' && atividades.length > 0 && (
           <div className="mb-6 grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-lg shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-gray-900">{completedStats.total}</div>
-                  <div className="text-sm font-medium text-gray-600">Total de Tarefas</div>
+                  <div className="text-sm font-medium text-gray-600">Total de atividades</div>
                 </div>
                 <div className="p-2 rounded-full bg-gray-100">
                   <FiTarget className="w-5 h-5 text-gray-600" />
@@ -1893,8 +1987,8 @@ export default function TarefasRotinas({ user }) {
           </div>
         )}
 
-        {/* Progresso das tarefas */}
-        {activeTab === 'tarefas' && completedStats.total > 0 && (
+        {/* Progresso das atividades */}
+        {activeTab === 'atividades' && completedStats.total > 0 && (
           <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-700">Progresso Geral</h3>
@@ -1914,34 +2008,34 @@ export default function TarefasRotinas({ user }) {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               <button
-                onClick={() => setActiveTab('tarefas')}
+                onClick={() => setActiveTab('atividades')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'tarefas'
+                  activeTab === 'atividades'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <FiTarget className="w-4 h-4" />
-                Tarefas
-                {tarefas.length > 0 && (
+                Atividades
+                {atividades.length > 0 && (
                   <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
-                    {tarefas.length}
+                    {atividades.length}
                   </span>
                 )}
               </button>
               <button
-                onClick={() => setActiveTab('rotinas')}
+                onClick={() => setActiveTab('recorrentes')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === 'rotinas'
+                  activeTab === 'recorrentes'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <FiRefreshCw className="w-4 h-4" />
-                Rotinas
-                {rotinas.length > 0 && (
+                Recorrentes
+                {recorrentes.length > 0 && (
                   <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
-                    {rotinas.length}
+                    {recorrentes.length}
                   </span>
                 )}
               </button>
@@ -1967,22 +2061,22 @@ export default function TarefasRotinas({ user }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    {activeTab === 'tarefas' ? (
+                    {activeTab === 'atividades' ? (
                       <>
                         <FiTarget className="w-5 h-5 text-blue-600" />
-                        Tarefas
+                        Atividades
                       </>
                     ) : (
                       <>
                         <FiRefreshCw className="w-5 h-5 text-purple-600" />
-                        Rotinas
+                        Atividades Recorrentes
                       </>
                     )}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {activeTab === 'tarefas' 
-                      ? 'Gerencie suas tarefas com edição inline - clique para editar'
-                      : 'Configure suas rotinas recorrentes com edição inline - suporte completo a tipos avançados'
+                    {activeTab === 'atividades' 
+                      ? 'Gerencie suas atividades com edição inline - clique para editar'
+                      : 'Configure suas atividades recorrentes com edição inline - suporte completo a tipos avançados'
                     }
                   </p>
                 </div>
@@ -1991,7 +2085,7 @@ export default function TarefasRotinas({ user }) {
                 <div className="relative group">
                   <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <FiPlus className="w-4 h-4 mr-2" />
-                    Adicionar {activeTab === 'tarefas' ? 'Tarefa' : 'Rotina'}
+                    Adicionar {activeTab === 'atividades' ? 'atividade' : 'recorrente'}
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -2001,7 +2095,7 @@ export default function TarefasRotinas({ user }) {
                     <div className="py-1">
                       <button
                         onClick={() => {
-                          if (activeTab === 'tarefas') {
+                          if (activeTab === 'atividades') {
                             setNewTask({});
                             setEditingTask('new');
                           } else {
@@ -2014,7 +2108,7 @@ export default function TarefasRotinas({ user }) {
                         <FiEdit3 className="w-4 h-4 mr-3" />
                         <div>
                           <div className="font-medium">Adicionar Individual</div>
-                          <div className="text-xs text-gray-500">Criar uma {activeTab === 'tarefas' ? 'tarefa' : 'rotina'} por vez</div>
+                          <div className="text-xs text-gray-500">Criar uma {activeTab === 'atividades' ? 'atividade' : 'recorrente'} por vez</div>
                         </div>
                       </button>
                       
@@ -2036,8 +2130,8 @@ export default function TarefasRotinas({ user }) {
               </div>
             </div>
 
-            {/* ✅ TABELA DE TAREFAS ATUALIZADA COM NOVAS COLUNAS */}
-            {activeTab === 'tarefas' && (
+            {/* ✅ TABELA DE atividades ATUALIZADA COM NOVAS COLUNAS */}
+            {activeTab === 'atividades' && (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -2080,22 +2174,22 @@ export default function TarefasRotinas({ user }) {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Nova tarefa */}
+                    {/* Nova atividade */}
                     {editingTask === 'new' && newTask && (
                       <TaskRow task={newTask} isNew={true} />
                     )}
                     
-                    {/* Tarefas existentes */}
+                    {/* atividades existentes */}
                     {loading ? (
                       <tr>
                         <td colSpan="8" className="px-4 py-8 text-center">
                           <div className="flex justify-center items-center space-x-2">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                            <span className="text-gray-500 text-sm">Carregando tarefas...</span>
+                            <span className="text-gray-500 text-sm">Carregando atividades...</span>
                           </div>
                         </td>
                       </tr>
-                    ) : tarefas.length === 0 ? (
+                    ) : atividades.length === 0 ? (
                       <tr>
                         <td colSpan="8" className="px-4 py-8 text-center">
                           <div className="py-4">
@@ -2104,28 +2198,28 @@ export default function TarefasRotinas({ user }) {
                             </div>
                             <h4 className="text-lg font-medium text-gray-900 mb-2">
                               {searchTerm.trim() || completedFiltro
-                                ? 'Nenhuma tarefa encontrada'
-                                : 'Nenhuma tarefa criada ainda'
+                                ? 'Nenhuma atividade encontrada'
+                                : 'Nenhuma atividade criada ainda'
                               }
                             </h4>
                             <p className="text-gray-500 text-sm max-w-sm mx-auto">
                               {searchTerm.trim() || completedFiltro
-                                ? 'Tente ajustar os filtros ou termo de busca para encontrar suas tarefas'
-                                : 'Clique em "Adicionar Tarefa" para criar sua primeira tarefa'
+                                ? 'Tente ajustar os filtros ou termo de busca para encontrar suas atividades'
+                                : 'Clique em "Adicionar atividade" para criar sua primeira atividade'
                               }
                             </p>
                           </div>
                         </td>
                       </tr>
                     ) : (
-                      tarefas.map((task) => (
+                      atividades.map((task) => (
                         editingTask === task.id ? (
                           <TaskRow key={task.id} task={task} />
                         ) : (
                           <tr key={task.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${task.completed ? 'opacity-75' : ''}`}>
                             {/* ✅ COLUNA: Descrição */}
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(task, 'content', 'textarea', [], 'tarefas')}
+                              {renderizarCelulaEditavel(task, 'content', 'textarea', [], 'atividades')}
                             </td>
                             
                             {/* ✅ COLUNA: Lista (Projeto) */}
@@ -2134,7 +2228,7 @@ export default function TarefasRotinas({ user }) {
                                 Object.entries(listas).map(([id, lista]) => ({
                                   value: parseInt(id),
                                   label: `${lista.nome} (${projetos[lista.projeto_id]})`
-                                })), 'tarefas'
+                                })), 'atividades'
                               )}
                             </td>
                             
@@ -2144,13 +2238,13 @@ export default function TarefasRotinas({ user }) {
                                 getUsuariosPorLista(task.task_list_id).map(usuario => ({
                                   value: usuario.id,
                                   label: usuario.nome
-                                })), 'tarefas'
+                                })), 'atividades'
                               )}
                             </td>
                             
                             {/* ✅ COLUNA: Data Limite */}
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(task, 'date', 'date', [], 'tarefas')}
+                              {renderizarCelulaEditavel(task, 'date', 'date', [], 'atividades')}
                             </td>
                             
                             {/* ✅ COLUNA: Status */}
@@ -2159,14 +2253,14 @@ export default function TarefasRotinas({ user }) {
                                 completedOptions.map(option => ({
                                   value: option.value.toString(),
                                   label: `${option.icon} ${option.label}`
-                                })), 'tarefas'
+                                })), 'atividades'
                               )}
                             </td>
                             
                             {/* ✅ NOVA COLUNA: Nota */}
                             <td className="px-4 py-3 min-w-[200px]">
                               <div
-                                onClick={() => iniciarEdicao(task.id, 'note', task.note || '', 'tarefas')}
+                                onClick={() => iniciarEdicao(task.id, 'note', task.note || '', 'atividades')}
                                 className="px-2 py-1 hover:bg-blue-50 hover:border hover:border-blue-200 rounded cursor-pointer transition-colors group min-h-[2rem] flex items-center"
                                 title="Clique para editar nota"
                               >
@@ -2255,7 +2349,7 @@ export default function TarefasRotinas({ user }) {
                                 <button
                                   onClick={() => deleteTask(task.id)}
                                   className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                                  title="Excluir tarefa"
+                                  title="Excluir atividade"
                                 >
                                   <FiTrash2 className="w-4 h-4" />
                                 </button>
@@ -2269,19 +2363,29 @@ export default function TarefasRotinas({ user }) {
                 </table>
                 
                 {/* ✅ FOOTER DA TABELA: Informações resumidas */}
-                {tarefas.length > 0 && (
+                {atividades.length > 0 && (
                   <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <div className="flex items-center space-x-4">
-                        <span>Total: <strong>{tarefas.length}</strong> tarefa{tarefas.length !== 1 ? 's' : ''}</span>
+                        <span>Total: <strong>{atividades.length}</strong> atividade{atividades.length !== 1 ? 's' : ''}</span>
                         <span>•</span>
                         <span className="text-yellow-600">
-                          Pendentes: <strong>{tarefas.filter(t => !t.completed).length}</strong>
+                          Pendentes: <strong>{atividades.filter(t => !t.completed).length}</strong>
                         </span>
                         <span>•</span>
                         <span className="text-green-600">
-                          Concluídas: <strong>{tarefas.filter(t => t.completed).length}</strong>
+                          Concluídas: <strong>{atividades.filter(t => t.completed).length}</strong>
                         </span>
+                        {/* ✅ NOVO: Mostrar info do filtro de usuário */}
+                        {usuarioSelecionado && (
+                          <>
+                            <span>•</span>
+                            <span className="text-blue-600">
+                              <FiUser className="w-3 h-3 inline mr-1" />
+                              {usuariosColaboradores[usuarioSelecionado]?.nome}
+                            </span>
+                          </>
+                        )}
                       </div>
                       
                       {hasActiveFilters && (
@@ -2292,11 +2396,13 @@ export default function TarefasRotinas({ user }) {
                       )}
                     </div>
                     
-                    {/* ✅ BARRA DE PROGRESSO MINI */}
-                    {tarefas.length > 0 && (
+                    {atividades.length > 0 && (
                       <div className="mt-2">
                         <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>Progresso das tarefas</span>
+                          <span>
+                            Progresso das atividades
+                            {usuarioSelecionado && ` (${usuariosColaboradores[usuarioSelecionado]?.nome})`}
+                          </span>
                           <span>{completedStats.percentage}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -2312,8 +2418,8 @@ export default function TarefasRotinas({ user }) {
               </div>
             )}
 
-            {/* ✅ TABELA DE ROTINAS ATUALIZADA COM NOVAS COLUNAS E TIPOS AVANÇADOS */}
-            {activeTab === 'rotinas' && (
+            {/* ✅ TABELA DE recorrentes ATUALIZADA COM NOVAS COLUNAS E TIPOS AVANÇADOS */}
+            {activeTab === 'recorrentes' && (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -2359,12 +2465,12 @@ export default function TarefasRotinas({ user }) {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Nova rotina */}
+                    {/* Nova recorrente */}
                     {editingRoutine === 'new' && newRoutine && (
                       <RoutineRow routine={newRoutine} isNew={true} />
                     )}
                     
-                    {/* Rotinas existentes */}
+                    {/* recorrentes existentes */}
                     {loading ? (
                       <tr>
                         <td colSpan="10" className="px-4 py-8 text-center">
@@ -2373,30 +2479,30 @@ export default function TarefasRotinas({ user }) {
                           </div>
                         </td>
                       </tr>
-                    ) : rotinas.length === 0 ? (
+                    ) : recorrentes.length === 0 ? (
                       <tr>
                         <td colSpan="10" className="px-4 py-8 text-center text-gray-500">
                           {searchTerm.trim() 
-                            ? `Nenhuma rotina encontrada para "${searchTerm}"`
-                            : 'Nenhuma rotina encontrada'
+                            ? `Nenhuma recorrente encontrada para "${searchTerm}"`
+                            : 'Nenhuma recorrente encontrada'
                           }
                         </td>
                       </tr>
                     ) : (
-                      rotinas.map((routine) => (
+                      recorrentes.map((routine) => (
                         editingRoutine === routine.id ? (
                           <RoutineRow key={routine.id} routine={routine} />
                         ) : (
                           <tr key={routine.id} className="border-b border-gray-200 hover:bg-gray-50">
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(routine, 'content', 'textarea', [], 'rotinas')}
+                              {renderizarCelulaEditavel(routine, 'content', 'textarea', [], 'recorrentes')}
                             </td>
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(routine, 'task_list_id', 'select', 
                                 Object.entries(listas).map(([id, lista]) => ({
                                   value: parseInt(id),
                                   label: `${lista.nome} (${projetos[lista.projeto_id]})`
-                                })), 'rotinas'
+                                })), 'recorrentes'
                               )}
                             </td>
                             <td className="px-4 py-3">
@@ -2404,11 +2510,11 @@ export default function TarefasRotinas({ user }) {
                                 getUsuariosPorLista(routine.task_list_id).map(usuario => ({
                                   value: usuario.id,
                                   label: usuario.nome
-                                })), 'rotinas'
+                                })), 'recorrentes'
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(routine, 'recurrence_type', 'select', recurrenceTypes, 'rotinas')}
+                              {renderizarCelulaEditavel(routine, 'recurrence_type', 'select', recurrenceTypes, 'recorrentes')}
                             </td>
                             <td className="px-4 py-3">
                               {/* ✅ Exibição da configuração formatada */}
@@ -2439,21 +2545,21 @@ export default function TarefasRotinas({ user }) {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(routine, 'start_date', 'date', [], 'rotinas')}
+                              {renderizarCelulaEditavel(routine, 'start_date', 'date', [], 'recorrentes')}
                             </td>
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(routine, 'end_date', 'date', [], 'rotinas')}
+                              {renderizarCelulaEditavel(routine, 'end_date', 'date', [], 'recorrentes')}
                             </td>
                             {/* ✅ NOVA COLUNA: Persistente */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(routine, 'persistent', 'select', [
                                 { value: 'true', label: 'Persistente' },
                                 { value: 'false', label: 'Não Persistente' }
-                              ], 'rotinas')}
+                              ], 'recorrentes')}
                             </td>
                             {/* ✅ NOVA COLUNA: Nota */}
                             <td className="px-4 py-3">
-                              {renderizarCelulaEditavel(routine, 'note', 'textarea', [], 'rotinas')}
+                              {renderizarCelulaEditavel(routine, 'note', 'textarea', [], 'recorrentes')}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center space-x-2">
