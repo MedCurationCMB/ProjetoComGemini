@@ -117,6 +117,16 @@ export default function VisualizacaoAtividades({ user }) {
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
   // ===========================================
+  
+  // ✅ NOVA FUNÇÃO: Formatar data no formato DD/MMM (05/set)
+  const formatarDataBotaoCompacto = (dataISO) => {
+    const data = new Date(dataISO + 'T12:00:00');
+    const dia = data.getDate().toString().padStart(2, '0');
+    const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 
+                  'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const mes = meses[data.getMonth()];
+    return `${dia}/${mes}`;
+  };
 
   // Funções para controlar as opções de data
   const handleInputFocus = () => {
@@ -2180,7 +2190,7 @@ export default function VisualizacaoAtividades({ user }) {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {formatarDataBotao(formatarDataISO(dataSelecionada))}
+                    {formatarDataBotaoCompacto(formatarDataISO(dataSelecionada))}
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -2191,7 +2201,7 @@ export default function VisualizacaoAtividades({ user }) {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {formatarDataBotao(calcularAmanha())}
+                    {formatarDataBotaoCompacto(calcularAmanha())}
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -2202,7 +2212,7 @@ export default function VisualizacaoAtividades({ user }) {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {formatarDataBotao(calcularProximaSemana())}
+                    {formatarDataBotaoCompacto(calcularProximaSemana())}
                   </button>
                   <button
                     onMouseDown={(e) => e.preventDefault()}
@@ -2216,15 +2226,12 @@ export default function VisualizacaoAtividades({ user }) {
                     Outro
                   </button>
                   
-                  {/* 🆕 NOVO: Botão para gestão de atividades recorrentes */}
                   <button
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                      // Cancelar timeout para não fechar as opções
                       if (timeoutRef.current) {
                         clearTimeout(timeoutRef.current);
                       }
-                      // Fechar opções e navegar
                       setShowOpcoesData(false);
                       router.push('/gestao-atividades-recorrentes');
                     }}
