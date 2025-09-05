@@ -1500,7 +1500,7 @@ export default function atividadesrecorrentes({ user }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>atividades e recorrentes - Gestão Inteligente</title>
+        <title>Atividades - Gestão Inteligente</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -1992,22 +1992,6 @@ export default function atividadesrecorrentes({ user }) {
           </div>
         )}
 
-        {/* Progresso das atividades */}
-        {activeTab === 'atividades' && completedStats.total > 0 && (
-          <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">Progresso Geral</h3>
-              <span className="text-sm text-gray-500">{completedStats.percentage}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                style={{width: `${completedStats.percentage}%`}}
-              ></div>
-            </div>
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
@@ -2386,60 +2370,6 @@ export default function atividadesrecorrentes({ user }) {
                     )}
                   </tbody>
                 </table>
-                
-                {/* ✅ FOOTER DA TABELA: Informações resumidas */}
-                {atividades.length > 0 && (
-                  <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <div className="flex items-center space-x-4">
-                        <span>Total: <strong>{atividades.length}</strong> atividade{atividades.length !== 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span className="text-yellow-600">
-                          Pendentes: <strong>{atividades.filter(t => !t.completed).length}</strong>
-                        </span>
-                        <span>•</span>
-                        <span className="text-green-600">
-                          Concluídas: <strong>{atividades.filter(t => t.completed).length}</strong>
-                        </span>
-                        {/* ✅ NOVO: Mostrar info do filtro de usuário */}
-                        {usuarioSelecionado && (
-                          <>
-                            <span>•</span>
-                            <span className="text-blue-600">
-                              <FiUser className="w-3 h-3 inline mr-1" />
-                              {usuariosColaboradores[usuarioSelecionado]?.nome}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      
-                      {hasActiveFilters && (
-                        <div className="flex items-center text-blue-600">
-                          <FiFilter className="w-4 h-4 mr-1" />
-                          <span>Filtros aplicados</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {atividades.length > 0 && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span>
-                            Progresso das atividades
-                            {usuarioSelecionado && ` (${usuariosColaboradores[usuarioSelecionado]?.nome})`}
-                          </span>
-                          <span>{completedStats.percentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className="bg-green-500 h-1.5 rounded-full transition-all duration-500 ease-out" 
-                            style={{width: `${completedStats.percentage}%`}}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
 
