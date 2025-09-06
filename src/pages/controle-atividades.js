@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -33,7 +33,8 @@ import {
   FiCalendar,
   FiActivity,
   FiAward,
-  FiGlobe
+  FiGlobe,
+  FiFastForward
 } from 'react-icons/fi';
 import { TfiPencil } from 'react-icons/tfi';
 
@@ -41,6 +42,7 @@ export default function ControleEficienciaTimes({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [loadingDisciplina, setLoadingDisciplina] = useState(true);
+  const [loadingFuturo, setLoadingFuturo] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
@@ -60,10 +62,34 @@ export default function ControleEficienciaTimes({ user }) {
     taxaDisciplina: 0
   });
 
+  // KPIs de disciplina separados por tipo
+  const [kpisDisciplinaPersistente, setKpisDisciplinaPersistente] = useState({
+    totalRotinas: 0,
+    rotinasCompletas: 0,
+    rotinasPendentes: 0,
+    taxaDisciplina: 0
+  });
+
+  const [kpisDisciplinaTemporaria, setKpisDisciplinaTemporaria] = useState({
+    totalRotinas: 0,
+    rotinasCompletas: 0,
+    rotinasPendentes: 0,
+    taxaDisciplina: 0
+  });
+
+  // KPIs de período futuro - GLOBAIS
+  const [kpisFuturo, setKpisFuturo] = useState({
+    totalRotinas: 0,
+    rotinasAgendadas: 0,
+    tarefasAgendadas: 0,
+    totalAtividades: 0
+  });
+
   // Dados das tabelas - GLOBAIS
   const [tabelaTimes, setTabelaTimes] = useState([]);
   const [tabelaUsuarios, setTabelaUsuarios] = useState([]);
   const [tabelaRankingTimes, setTabelaRankingTimes] = useState([]);
+  const [tabelaFuturo, setTabelaFuturo] = useState([]);
   const [loadingTabelas, setLoadingTabelas] = useState(true);
 
   // Estados para filtros
@@ -83,20 +109,152 @@ export default function ControleEficienciaTimes({ user }) {
     return `${ano}-${mes}-${dia}`;
   };
 
-  // Função para calcular período padrão (últimos 30 dias)
+  // ✅ FUNÇÃO GLOBAL MELHORADA - UMA SÓ VEZ
+  const calcularOcorrenciasRotina = useCallback((rotina, dataInicio, dataFim) => {
+    const ocorrencias = [];
+    const inicioRotina = new Date(Math.max(new Date(rotina.start_date), new Date(dataInicio)));
+    const fimRotina = rotina.end_date 
+      ? new Date(Math.min(new Date(rotina.end_date), new Date(dataFim)))
+      : new Date(dataFim);
+
+    let dataAtual = new Date(inicioRotina);
+
+    while (dataAtual <= fimRotina) {
+      let deveIncluir = false;
+
+      if (rotina.recurrence_type === 'daily') {
+        const diffTime = dataAtual.getTime() - new Date(rotina.start_date).getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        deveIncluir = diffDays >= 0 && diffDays % (rotina.recurrence_interval || 1) === 0;
+        
+      } else if (rotina.recurrence_type === 'weekly') {
+        const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay();
+        // ✅ CORRIGIR: usar recurrence_days diretamente para weekly básico
+        const targetDays = rotina.recurrence_days || [];
+        deveIncluir = targetDays.includes(diaSemana);
+        
+      } else if (rotina.recurrence_type === 'biweekly') {
+        const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay();
+        const weeksSinceStart = Math.floor(
+          (dataAtual.getTime() - new Date(rotina.start_date).getTime()) / (7 * 24 * 60 * 60 * 1000)
+        );
+        const isCorrectWeek = weeksSinceStart % 2 === 0;
+        
+        // ✅ CORRIGIR: usar selected_weekday para tipos avançados
+        const targetDay = rotina.selected_weekday;
+        deveIncluir = isCorrectWeek && targetDay && diaSemana === targetDay;
+        
+      } else if (rotina.recurrence_type === 'triweekly') {
+        const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay();
+        const weeksSinceStart = Math.floor(
+          (dataAtual.getTime() - new Date(rotina.start_date).getTime()) / (7 * 24 * 60 * 60 * 1000)
+        );
+        const isCorrectWeek = weeksSinceStart % 3 === 0;
+        
+        // ✅ CORRIGIR: usar selected_weekday para tipos avançados
+        const targetDay = rotina.selected_weekday;
+        deveIncluir = isCorrectWeek && targetDay && diaSemana === targetDay;
+        
+      } else if (rotina.recurrence_type === 'quadweekly') {
+        const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay();
+        const weeksSinceStart = Math.floor(
+          (dataAtual.getTime() - new Date(rotina.start_date).getTime()) / (7 * 24 * 60 * 60 * 1000)
+        );
+        const isCorrectWeek = weeksSinceStart % 4 === 0;
+        
+        // ✅ CORRIGIR: usar selected_weekday para tipos avançados
+        const targetDay = rotina.selected_weekday;
+        deveIncluir = isCorrectWeek && targetDay && diaSemana === targetDay;
+        
+      } else if (rotina.recurrence_type === 'monthly') {
+        // ✅ CORRIGIR: monthly básico usa dia fixo do mês
+        const diaInicioRotina = new Date(rotina.start_date).getDate();
+        deveIncluir = dataAtual.getDate() === diaInicioRotina;
+        
+      } else if (rotina.recurrence_type === 'monthly_weekday') {
+        // ✅ CORRIGIR: monthly_weekday usa ordinal + weekday
+        if (rotina.monthly_ordinal && rotina.monthly_weekday) {
+          deveIncluir = isNthWeekdayOfMonth(dataAtual, rotina.monthly_ordinal, rotina.monthly_weekday);
+        }
+      }
+
+      // ✅ CORRIGIR: Remover verificação de persistent daqui
+      if (deveIncluir) {
+        ocorrencias.push(dataAtual.toISOString().split('T')[0]);
+      }
+
+      dataAtual.setDate(dataAtual.getDate() + 1);
+    }
+
+    return ocorrencias;
+  }, []);
+
+  // ✅ FUNÇÃO AUXILIAR GLOBAL
+  const isNthWeekdayOfMonth = useCallback((date, ordinal, weekday) => {
+    // ✅ CORRIGIR: Converter weekday corretamente (1-7 para 0-6)
+    const targetWeekday = weekday === 7 ? 0 : weekday;
+    const currentWeekday = date.getDay();
+    
+    if (currentWeekday !== targetWeekday) return false;
+    
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    if (ordinal === -1) {
+      // ✅ ADICIONAR: Lógica para "última" ocorrência
+      const lastDayOfMonth = new Date(year, month + 1, 0);
+      for (let day = lastDayOfMonth.getDate(); day >= 1; day--) {
+        const testDate = new Date(year, month, day);
+        if (testDate.getDay() === targetWeekday) {
+          return date.getDate() === day;
+        }
+      }
+      return false;
+    } else {
+      // ✅ CORRIGIR: Lógica para N-ésima ocorrência
+      let count = 0;
+      for (let day = 1; day <= 31; day++) {
+        const testDate = new Date(year, month, day);
+        if (testDate.getMonth() !== month) break; // Saiu do mês
+        
+        if (testDate.getDay() === targetWeekday) {
+          count++;
+          if (count === ordinal) {
+            return date.getDate() === day;
+          }
+        }
+      }
+      return false;
+    }
+  }, []);
+
+  // Função para calcular período padrão (últimos 7 dias - MUDANÇA AQUI)
   const calcularPeriodoPadrao = () => {
     const hoje = new Date();
     const dataInicio = new Date(hoje);
-    dataInicio.setDate(dataInicio.getDate() - 30);
+    dataInicio.setDate(dataInicio.getDate() - 7); // MUDOU DE 30 PARA 7 DIAS
 
     return {
       dataInicio: formatarDataLocal(dataInicio),
       dataFim: formatarDataLocal(hoje),
-      periodo: '30dias'
+      periodo: '7dias' // MUDOU DE '30dias' PARA '7dias'
     };
   };
 
-  // Inicializar filtros com período padrão
+  // Função para calcular período futuro padrão (próximos 7 dias)
+  const calcularPeriodoFuturoPadrao = () => {
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + 7);
+
+    return {
+      dataInicio: formatarDataLocal(hoje),
+      dataFim: formatarDataLocal(dataFim),
+      periodo: '7dias'
+    };
+  };
+
+  // Inicializar filtros com período padrão (últimos 7 dias)
   const [filtros, setFiltros] = useState(() => {
     const periodoPadrao = calcularPeriodoPadrao();
     return {
@@ -105,6 +263,16 @@ export default function ControleEficienciaTimes({ user }) {
       periodo: periodoPadrao.periodo,
       data_inicio: periodoPadrao.dataInicio,
       data_fim: periodoPadrao.dataFim
+    };
+  });
+
+  // Filtros para período futuro
+  const [filtrosFuturo, setFiltrosFuturo] = useState(() => {
+    const periodoFuturo = calcularPeriodoFuturoPadrao();
+    return {
+      periodo: periodoFuturo.periodo,
+      data_inicio: periodoFuturo.dataInicio,
+      data_fim: periodoFuturo.dataFim
     };
   });
 
@@ -175,6 +343,32 @@ export default function ControleEficienciaTimes({ user }) {
     };
   };
 
+  // Função para calcular datas dos períodos futuros
+  const calcularPeriodoFuturo = (tipo) => {
+    const hoje = new Date();
+    const dataInicio = new Date(hoje);
+    let dataFim = new Date(hoje);
+
+    switch (tipo) {
+      case '7dias':
+        dataFim.setDate(dataFim.getDate() + 7);
+        break;
+      case '30dias':
+        dataFim.setDate(dataFim.getDate() + 30);
+        break;
+      case '60dias':
+        dataFim.setDate(dataFim.getDate() + 60);
+        break;
+      default:
+        return { dataInicio: null, dataFim: null };
+    }
+
+    return {
+      dataInicio: formatarDataLocal(dataInicio),
+      dataFim: formatarDataLocal(dataFim)
+    };
+  };
+
   // Função para gerar texto descritivo baseado nos filtros
   const gerarTextoDescritivo = () => {
     let descricao = "Dados globais de todos os usuários e times";
@@ -193,6 +387,36 @@ export default function ControleEficienciaTimes({ user }) {
       dataFim = filtros.data_fim;
     } else {
       const periodo = calcularPeriodo(filtros.periodo);
+      dataInicio = periodo.dataInicio;
+      dataFim = periodo.dataFim;
+    }
+
+    const formatarData = (dataString) => {
+      const partes = dataString.split('-');
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    };
+
+    return `${descricao} entre ${formatarData(dataInicio)} e ${formatarData(dataFim)}`;
+  };
+
+  // Função para gerar texto descritivo para período futuro
+  const gerarTextoDescritivoFuturo = () => {
+    let descricao = "Atividades programadas";
+    
+    if (!filtrosFuturo.periodo) {
+      return descricao + " - Todos os períodos";
+    }
+
+    let dataInicio, dataFim;
+
+    if (filtrosFuturo.periodo === 'personalizado') {
+      if (!filtrosFuturo.data_inicio || !filtrosFuturo.data_fim) {
+        return descricao + " - Todos os períodos";
+      }
+      dataInicio = filtrosFuturo.data_inicio;
+      dataFim = filtrosFuturo.data_fim;
+    } else {
+      const periodo = calcularPeriodoFuturo(filtrosFuturo.periodo);
       dataInicio = periodo.dataInicio;
       dataFim = periodo.dataFim;
     }
@@ -359,7 +583,7 @@ export default function ControleEficienciaTimes({ user }) {
     }
   }, [user, filtros]);
 
-  // Buscar dados dos KPIs de disciplina (rotinas) - GLOBAIS
+  // Buscar dados dos KPIs de disciplina (rotinas) - GLOBAIS COM SEPARAÇÃO - CORRIGIDO
   useEffect(() => {
     const fetchKPIsDisciplina = async () => {
       try {
@@ -385,96 +609,114 @@ export default function ControleEficienciaTimes({ user }) {
           dataFimFiltro = periodo.dataFim;
         }
 
-        // ✅ NOVA LÓGICA: Buscar todas as rotinas que se sobrepõem ao período
-        let queryRotinas = supabase.from('routine_tasks')
+        // ✅ CORREÇÃO 1: Buscar rotinas persistentes COM FILTRO CORRETO
+        let queryPersistentes = supabase.from('routine_tasks')
           .select(`
             *,
             routine_tasks_status(*)
           `)
           .lte('start_date', dataFimFiltro)
-          .or(`end_date.is.null,end_date.gte.${dataInicioFiltro}`);
+          .or(`end_date.is.null,end_date.gte.${dataInicioFiltro}`)
+          .eq('persistent', true); // ✅ ADICIONADO: filtro por persistent = true
 
-        // Aplicar filtros opcionais
+        // ✅ CORREÇÃO 2: Aplicar filtros opcionais para persistentes
         if (filtros.time_id) {
-          queryRotinas = queryRotinas.eq('task_list_id', filtros.time_id);
+          queryPersistentes = queryPersistentes.eq('task_list_id', filtros.time_id);
         }
         
         if (filtros.usuario_id) {
-          queryRotinas = queryRotinas.eq('usuario_id', filtros.usuario_id);
+          queryPersistentes = queryPersistentes.eq('usuario_id', filtros.usuario_id);
         }
 
-        const { data: rotinas, error: rotinasError } = await queryRotinas;
-        if (rotinasError) throw rotinasError;
+        // ✅ CORREÇÃO 3: Buscar rotinas temporárias COM FILTROS APLICADOS
+        let queryTemporarias = supabase.from('routine_tasks')
+          .select(`
+            *,
+            routine_tasks_status(*)
+          `)
+          .lte('start_date', dataFimFiltro)
+          .or(`end_date.is.null,end_date.gte.${dataInicioFiltro}`)
+          .eq('persistent', false); // ✅ Filtro por persistent = false
 
-        // ✅ FUNÇÃO AUXILIAR: Calcular ocorrências de uma rotina no período
-        const calcularOcorrenciasRotina = (rotina, dataInicio, dataFim) => {
-          const ocorrencias = [];
-          const inicioRotina = new Date(Math.max(new Date(rotina.start_date), new Date(dataInicio)));
-          const fimRotina = rotina.end_date 
-            ? new Date(Math.min(new Date(rotina.end_date), new Date(dataFim)))
-            : new Date(dataFim);
+        // ✅ CORREÇÃO 4: Aplicar filtros opcionais para temporárias
+        if (filtros.time_id) {
+          queryTemporarias = queryTemporarias.eq('task_list_id', filtros.time_id);
+        }
+        
+        if (filtros.usuario_id) {
+          queryTemporarias = queryTemporarias.eq('usuario_id', filtros.usuario_id);
+        }
 
-          let dataAtual = new Date(inicioRotina);
+        // ✅ CORREÇÃO 5: Executar as queries
+        const [
+          { data: rotinasPersistentes, error: persistentesError },
+          { data: rotinasTemporarias, error: temporariasError }
+        ] = await Promise.all([queryPersistentes, queryTemporarias]);
 
-          while (dataAtual <= fimRotina) {
-            let deveIncluir = false;
+        if (persistentesError) throw persistentesError;
+        if (temporariasError) throw temporariasError;
 
-            if (rotina.recurrence_type === 'daily') {
-              // Para rotinas diárias, verificar o intervalo
-              const diffTime = dataAtual.getTime() - new Date(rotina.start_date).getTime();
-              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-              deveIncluir = diffDays >= 0 && diffDays % rotina.recurrence_interval === 0;
-            } else if (rotina.recurrence_type === 'weekly') {
-              // Para rotinas semanais, verificar os dias da semana
-              const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay(); // Converter domingo de 0 para 7
-              deveIncluir = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
-            } else if (rotina.recurrence_type === 'monthly') {
-              // Para rotinas mensais, verificar se é o mesmo dia do mês
-              const diaInicioRotina = new Date(rotina.start_date).getDate();
-              deveIncluir = dataAtual.getDate() === diaInicioRotina;
-            }
+        console.log(`✅ DEBUG: Rotinas encontradas - Persistentes: ${rotinasPersistentes?.length || 0}, Temporárias: ${rotinasTemporarias?.length || 0}`);
 
-            if (deveIncluir) {
-              const dataISO = dataAtual.toISOString().split('T')[0];
-              ocorrencias.push(dataISO);
-            }
+        // Calcular KPIs para persistentes
+        let totalRotinasPers = 0;
+        let rotinasCompletasPers = 0;
 
-            // Avançar para o próximo dia
-            dataAtual.setDate(dataAtual.getDate() + 1);
-          }
-
-          return ocorrencias;
-        };
-
-        // ✅ CALCULAR TOTAL DE OCORRÊNCIAS E COMPLETAS
-        let totalRotinas = 0;
-        let rotinasCompletas = 0;
-
-        rotinas.forEach(rotina => {
-          // Calcular todas as ocorrências desta rotina no período
+        rotinasPersistentes?.forEach(rotina => {
           const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
-          totalRotinas += ocorrencias.length;
+          totalRotinasPers += ocorrencias.length;
 
-          // Contar quantas dessas ocorrências foram completadas
           const statusCompletados = rotina.routine_tasks_status?.filter(status => 
             status.completed && 
             ocorrencias.includes(status.date)
           ) || [];
           
-          rotinasCompletas += statusCompletados.length;
+          rotinasCompletasPers += statusCompletados.length;
         });
 
-        const rotinasPendentes = totalRotinas - rotinasCompletas;
-        const taxaDisciplina = totalRotinas > 0 ? (rotinasCompletas / totalRotinas * 100) : 0;
+        // Calcular KPIs para temporárias
+        let totalRotinasTemp = 0;
+        let rotinasCompletasTemp = 0;
 
+        rotinasTemporarias?.forEach(rotina => {
+          const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
+          totalRotinasTemp += ocorrencias.length;
+
+          const statusCompletados = rotina.routine_tasks_status?.filter(status => 
+            status.completed && 
+            ocorrencias.includes(status.date)
+          ) || [];
+          
+          rotinasCompletasTemp += statusCompletados.length;
+        });
+
+        // Atualizar estados separados
+        setKpisDisciplinaPersistente({
+          totalRotinas: totalRotinasPers,
+          rotinasCompletas: rotinasCompletasPers,
+          rotinasPendentes: totalRotinasPers - rotinasCompletasPers,
+          taxaDisciplina: totalRotinasPers > 0 ? (rotinasCompletasPers / totalRotinasPers * 100) : 0
+        });
+
+        setKpisDisciplinaTemporaria({
+          totalRotinas: totalRotinasTemp,
+          rotinasCompletas: rotinasCompletasTemp,
+          rotinasPendentes: totalRotinasTemp - rotinasCompletasTemp,
+          taxaDisciplina: totalRotinasTemp > 0 ? (rotinasCompletasTemp / totalRotinasTemp * 100) : 0
+        });
+
+        // Manter o KPI geral (soma dos dois)
+        const totalGeralRotinas = totalRotinasPers + totalRotinasTemp;
+        const totalGeralCompletas = rotinasCompletasPers + rotinasCompletasTemp;
+        
         setKpisDisciplina({
-          totalRotinas: totalRotinas,
-          rotinasCompletas: rotinasCompletas,
-          rotinasPendentes: rotinasPendentes,
-          taxaDisciplina: taxaDisciplina
+          totalRotinas: totalGeralRotinas,
+          rotinasCompletas: totalGeralCompletas,
+          rotinasPendentes: totalGeralRotinas - totalGeralCompletas,
+          taxaDisciplina: totalGeralRotinas > 0 ? (totalGeralCompletas / totalGeralRotinas * 100) : 0
         });
 
-        console.log(`✅ KPIs Disciplina CORRIGIDOS: ${totalRotinas} total, ${rotinasCompletas} completas (${taxaDisciplina.toFixed(1)}%)`);
+        console.log(`✅ KPIs Disciplina CORRIGIDOS: Persistentes ${totalRotinasPers}, Temporárias ${totalRotinasTemp}, Total ${totalGeralRotinas}`);
 
       } catch (error) {
         console.error('Erro ao buscar KPIs de disciplina:', error);
@@ -487,7 +729,101 @@ export default function ControleEficienciaTimes({ user }) {
     if (user) {
       fetchKPIsDisciplina();
     }
-  }, [user, filtros]);
+  }, [user, filtros, calcularOcorrenciasRotina, isNthWeekdayOfMonth]);
+
+  // Buscar dados dos KPIs do período futuro - COM FILTROS APLICADOS
+  useEffect(() => {
+    const fetchKPIsFuturo = async () => {
+      try {
+        setLoadingFuturo(true);
+
+        // Calcular período futuro
+        let dataInicioFiltro = null;
+        let dataFimFiltro = null;
+
+        if (filtrosFuturo.periodo && filtrosFuturo.periodo !== 'personalizado') {
+          const periodo = calcularPeriodoFuturo(filtrosFuturo.periodo);
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
+        } else if (filtrosFuturo.periodo === 'personalizado' && filtrosFuturo.data_inicio && filtrosFuturo.data_fim) {
+          dataInicioFiltro = filtrosFuturo.data_inicio;
+          dataFimFiltro = filtrosFuturo.data_fim;
+        }
+
+        if (!dataInicioFiltro || !dataFimFiltro) {
+          const periodo = calcularPeriodoFuturoPadrao();
+          dataInicioFiltro = periodo.dataInicio;
+          dataFimFiltro = periodo.dataFim;
+        }
+
+        // ✅ Buscar tarefas agendadas no período futuro COM FILTROS
+        let queryTarefas = supabase
+          .from('tasks')
+          .select('*')
+          .gte('created_at', dataInicioFiltro)
+          .lte('created_at', dataFimFiltro + 'T23:59:59')
+          .eq('completed', false);
+
+        // ✅ APLICAR FILTROS OPCIONAIS DE TIME E USUÁRIO
+        if (filtros.time_id) {
+          queryTarefas = queryTarefas.eq('task_list_id', filtros.time_id);
+        }
+        
+        if (filtros.usuario_id) {
+          queryTarefas = queryTarefas.eq('usuario_id', filtros.usuario_id);
+        }
+
+        const { data: tarefasFuturas, error: tarefasError } = await queryTarefas;
+
+        if (tarefasError) throw tarefasError;
+
+        // ✅ Buscar rotinas que estarão ativas no período futuro COM FILTROS
+        let queryRotinas = supabase
+          .from('routine_tasks')
+          .select('*')
+          .lte('start_date', dataFimFiltro)
+          .or(`end_date.is.null,end_date.gte.${dataInicioFiltro}`)
+
+        // ✅ APLICAR FILTROS OPCIONAIS DE TIME E USUÁRIO
+        if (filtros.time_id) {
+          queryRotinas = queryRotinas.eq('task_list_id', filtros.time_id);
+        }
+        
+        if (filtros.usuario_id) {
+          queryRotinas = queryRotinas.eq('usuario_id', filtros.usuario_id);
+        }
+
+        const { data: rotinasFuturas, error: rotinasError } = await queryRotinas;
+
+        if (rotinasError) throw rotinasError;
+
+        let totalRotinasAgendadas = 0;
+        rotinasFuturas.forEach(rotina => {
+          const ocorrencias = calcularOcorrenciasRotina(rotina, dataInicioFiltro, dataFimFiltro);
+          totalRotinasAgendadas += ocorrencias.length;
+        });
+
+        setKpisFuturo({
+          totalRotinas: totalRotinasAgendadas,
+          rotinasAgendadas: totalRotinasAgendadas,
+          tarefasAgendadas: tarefasFuturas.length,
+          totalAtividades: totalRotinasAgendadas + tarefasFuturas.length
+        });
+
+        console.log(`✅ KPIs Futuro COM FILTROS: ${totalRotinasAgendadas} rotinas, ${tarefasFuturas.length} tarefas agendadas`);
+
+      } catch (error) {
+        console.error('Erro ao buscar KPIs do futuro:', error);
+        toast.error('Erro ao carregar dados do período futuro');
+      } finally {
+        setLoadingFuturo(false);
+      }
+    };
+
+    if (user) {
+      fetchKPIsFuturo();
+    }
+  }, [user, filtrosFuturo, filtros]); // ✅ AGORA ESCUTA AMBOS OS FILTROS
 
   // Buscar dados das tabelas - GLOBAIS (todos os times e usuários)
   useEffect(() => {
@@ -515,46 +851,6 @@ export default function ControleEficienciaTimes({ user }) {
           dataFimFiltro = periodo.dataFim;
         }
 
-        // ✅ FUNÇÃO AUXILIAR: Calcular ocorrências de uma rotina no período
-        const calcularOcorrenciasRotina = (rotina, dataInicio, dataFim) => {
-          const ocorrencias = [];
-          const inicioRotina = new Date(Math.max(new Date(rotina.start_date), new Date(dataInicio)));
-          const fimRotina = rotina.end_date 
-            ? new Date(Math.min(new Date(rotina.end_date), new Date(dataFim)))
-            : new Date(dataFim);
-
-          let dataAtual = new Date(inicioRotina);
-
-          while (dataAtual <= fimRotina) {
-            let deveIncluir = false;
-
-            if (rotina.recurrence_type === 'daily') {
-              // Para rotinas diárias, verificar o intervalo
-              const diffTime = dataAtual.getTime() - new Date(rotina.start_date).getTime();
-              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-              deveIncluir = diffDays >= 0 && diffDays % rotina.recurrence_interval === 0;
-            } else if (rotina.recurrence_type === 'weekly') {
-              // Para rotinas semanais, verificar os dias da semana
-              const diaSemana = dataAtual.getDay() === 0 ? 7 : dataAtual.getDay(); // Converter domingo de 0 para 7
-              deveIncluir = rotina.recurrence_days && rotina.recurrence_days.includes(diaSemana);
-            } else if (rotina.recurrence_type === 'monthly') {
-              // Para rotinas mensais, verificar se é o mesmo dia do mês
-              const diaInicioRotina = new Date(rotina.start_date).getDate();
-              deveIncluir = dataAtual.getDate() === diaInicioRotina;
-            }
-
-            if (deveIncluir) {
-              const dataISO = dataAtual.toISOString().split('T')[0];
-              ocorrencias.push(dataISO);
-            }
-
-            // Avançar para o próximo dia
-            dataAtual.setDate(dataAtual.getDate() + 1);
-          }
-
-          return ocorrencias;
-        };
-
         // ✅ BUSCAR TODAS AS TAREFAS NORMAIS - SEM RESTRIÇÕES DE USUÁRIO
         const { data: timesComTarefas, error: timesError } = await supabase
           .from('tasks')
@@ -575,7 +871,7 @@ export default function ControleEficienciaTimes({ user }) {
             routine_tasks_status(*),
             tasks_list!inner(nome_lista),
             usuarios!inner(nome)
-          `);
+          `)
 
         if (rotinasError) throw rotinasError;
 
@@ -784,7 +1080,7 @@ export default function ControleEficienciaTimes({ user }) {
     if (user) {
       fetchTabelas();
     }
-  }, [user, filtros]);
+  }, [user, filtros, calcularOcorrenciasRotina, isNthWeekdayOfMonth]);
 
   // Função para limpar filtros
   const limparFiltros = () => {
@@ -974,61 +1270,172 @@ export default function ControleEficienciaTimes({ user }) {
 
             {/* Filtros Mobile */}
             {showFilters && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center space-x-2">
-                    <FiGlobe className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-sm font-medium text-gray-700">Filtros Globais</h3>
+              <div className="mb-4 space-y-4">
+                {/* Filtros de Período Passado */}
+                <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center space-x-2">
+                      <FiGlobe className="w-4 h-4 text-blue-600" />
+                      <h3 className="text-sm font-medium text-gray-700">Filtros Globais (Período Passado)</h3>
+                    </div>
+                    {hasFiltrosAtivos() && (
+                      <button
+                        onClick={limparFiltros}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Limpar filtros
+                      </button>
+                    )}
                   </div>
-                  {hasFiltrosAtivos() && (
-                    <button
-                      onClick={limparFiltros}
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Limpar filtros
-                    </button>
-                  )}
+
+                  <div className="space-y-3">
+                    {/* Filtro de Time */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Time (Opcional)</label>
+                      <select
+                        value={filtros.time_id}
+                        onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
+                        {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro de Usuário */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
+                      <select
+                        value={filtros.usuario_id}
+                        onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
+                        {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro de Período */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Período de Análise</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            const periodo = calcularPeriodo('7dias');
+                            setFiltros(prev => ({ 
+                              ...prev, 
+                              periodo: '7dias',
+                              data_inicio: periodo.dataInicio,
+                              data_fim: periodo.dataFim
+                            }));
+                          }}
+                          className={`px-3 py-2 rounded-lg text-xs transition-colors ${
+                            filtros.periodo === '7dias'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Últimos 7 dias
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            const periodo = calcularPeriodo('30dias');
+                            setFiltros(prev => ({ 
+                              ...prev, 
+                              periodo: '30dias',
+                              data_inicio: periodo.dataInicio,
+                              data_fim: periodo.dataFim
+                            }));
+                          }}
+                          className={`px-3 py-2 rounded-lg text-xs transition-colors ${
+                            filtros.periodo === '30dias'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Últimos 30 dias
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            const periodo = calcularPeriodo('60dias');
+                            setFiltros(prev => ({ 
+                              ...prev, 
+                              periodo: '60dias',
+                              data_inicio: periodo.dataInicio,
+                              data_fim: periodo.dataFim
+                            }));
+                          }}
+                          className={`px-3 py-2 rounded-lg text-xs transition-colors ${
+                            filtros.periodo === '60dias'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Últimos 60 dias
+                        </button>
+                        
+                        <button
+                          onClick={() => setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: 'personalizado'
+                          }))}
+                          className={`px-3 py-2 rounded-lg text-xs transition-colors ${
+                            filtros.periodo === 'personalizado'
+                              ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Período Personalizado
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Campos de data personalizada */}
+                    {filtros.periodo === 'personalizado' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Data Início</label>
+                          <input
+                            type="date"
+                            value={filtros.data_inicio}
+                            onChange={(e) => setFiltros(prev => ({ ...prev, data_inicio: e.target.value }))}
+                            className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Data Fim</label>
+                          <input
+                            type="date"
+                            value={filtros.data_fim}
+                            onChange={(e) => setFiltros(prev => ({ ...prev, data_fim: e.target.value }))}
+                            className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Filtro de Time */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Time (Opcional)</label>
-                    <select
-                      value={filtros.time_id}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
-                      {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
-                        <option key={id} value={id}>{nome}</option>
-                      ))}
-                    </select>
+                {/* Filtros de Período Futuro */}
+                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <FiFastForward className="w-4 h-4 text-green-600" />
+                    <h3 className="text-sm font-medium text-gray-700">Filtros do Período Futuro</h3>
                   </div>
 
-                  {/* Filtro de Usuário */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
-                    <select
-                      value={filtros.usuario_id}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
-                      {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
-                        <option key={id} value={id}>{nome}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filtro de Período */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">Período de Análise</label>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
-                          const periodo = calcularPeriodo('7dias');
-                          setFiltros(prev => ({ 
+                          const periodo = calcularPeriodoFuturo('7dias');
+                          setFiltrosFuturo(prev => ({ 
                             ...prev, 
                             periodo: '7dias',
                             data_inicio: periodo.dataInicio,
@@ -1036,18 +1443,18 @@ export default function ControleEficienciaTimes({ user }) {
                           }));
                         }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
-                          filtros.periodo === '7dias'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          filtrosFuturo.periodo === '7dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        Últimos 7 dias
+                        Próximos 7 dias
                       </button>
                       
                       <button
                         onClick={() => {
-                          const periodo = calcularPeriodo('30dias');
-                          setFiltros(prev => ({ 
+                          const periodo = calcularPeriodoFuturo('30dias');
+                          setFiltrosFuturo(prev => ({ 
                             ...prev, 
                             periodo: '30dias',
                             data_inicio: periodo.dataInicio,
@@ -1055,18 +1462,18 @@ export default function ControleEficienciaTimes({ user }) {
                           }));
                         }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
-                          filtros.periodo === '30dias'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          filtrosFuturo.periodo === '30dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        Últimos 30 dias
+                        Próximos 30 dias
                       </button>
                       
                       <button
                         onClick={() => {
-                          const periodo = calcularPeriodo('60dias');
-                          setFiltros(prev => ({ 
+                          const periodo = calcularPeriodoFuturo('60dias');
+                          setFiltrosFuturo(prev => ({ 
                             ...prev, 
                             periodo: '60dias',
                             data_inicio: periodo.dataInicio,
@@ -1074,21 +1481,21 @@ export default function ControleEficienciaTimes({ user }) {
                           }));
                         }}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
-                          filtros.periodo === '60dias'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                          filtrosFuturo.periodo === '60dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        Últimos 60 dias
+                        Próximos 60 dias
                       </button>
                       
                       <button
-                        onClick={() => setFiltros(prev => ({ 
+                        onClick={() => setFiltrosFuturo(prev => ({ 
                           ...prev, 
                           periodo: 'personalizado'
                         }))}
                         className={`px-3 py-2 rounded-lg text-xs transition-colors ${
-                          filtros.periodo === 'personalizado'
+                          filtrosFuturo.periodo === 'personalizado'
                             ? 'bg-purple-100 text-purple-800 border border-purple-300' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
@@ -1098,25 +1505,25 @@ export default function ControleEficienciaTimes({ user }) {
                     </div>
                   </div>
 
-                  {/* Campos de data personalizada */}
-                  {filtros.periodo === 'personalizado' && (
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Campos de data personalizada para período futuro */}
+                  {filtrosFuturo.periodo === 'personalizado' && (
+                    <div className="grid grid-cols-2 gap-2 mt-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Data Início</label>
                         <input
                           type="date"
-                          value={filtros.data_inicio}
-                          onChange={(e) => setFiltros(prev => ({ ...prev, data_inicio: e.target.value }))}
-                          className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={filtrosFuturo.data_inicio}
+                          onChange={(e) => setFiltrosFuturo(prev => ({ ...prev, data_inicio: e.target.value }))}
+                          className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Data Fim</label>
                         <input
                           type="date"
-                          value={filtros.data_fim}
-                          onChange={(e) => setFiltros(prev => ({ ...prev, data_fim: e.target.value }))}
-                          className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={filtrosFuturo.data_fim}
+                          onChange={(e) => setFiltrosFuturo(prev => ({ ...prev, data_fim: e.target.value }))}
+                          className="w-full px-2 py-2 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
                         />
                       </div>
                     </div>
@@ -1260,155 +1667,272 @@ export default function ControleEficienciaTimes({ user }) {
 
             {/* Filtros Desktop */}
             {showFilters && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center space-x-2">
-                    <FiGlobe className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-sm font-medium text-gray-700">Filtros Globais (Opcionais)</h3>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      Dados de todos os usuários e times
+              <div className="mb-4 space-y-4">
+                {/* Filtros de Período Passado - Desktop */}
+                <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center space-x-2">
+                      <FiGlobe className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-sm font-medium text-gray-700">Filtros Globais (Período Passado) - Opcionais</h3>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        Dados de todos os usuários e times
+                      </span>
+                    </div>
+                    {hasFiltrosAtivos() && (
+                      <button
+                        onClick={limparFiltros}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Limpar filtros
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Filtro de Time */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Time (Opcional)</label>
+                      <select
+                        value={filtros.time_id}
+                        onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
+                        {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro de Usuário */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
+                      <select
+                        value={filtros.usuario_id}
+                        onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
+                        {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
+                          <option key={id} value={id}>{nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Campos de data personalizada */}
+                    {filtros.periodo === 'personalizado' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Data Início</label>
+                          <input
+                            type="date"
+                            value={filtros.data_inicio}
+                            onChange={(e) => setFiltros(prev => ({ ...prev, data_inicio: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Data Fim</label>
+                          <input
+                            type="date"
+                            value={filtros.data_fim}
+                            onChange={(e) => setFiltros(prev => ({ ...prev, data_fim: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Filtro de Período */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Período de Análise</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodo('7dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '7dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtros.periodo === '7dias'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Últimos 7 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodo('30dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '30dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtros.periodo === '30dias'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Últimos 30 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodo('60dias');
+                          setFiltros(prev => ({ 
+                            ...prev, 
+                            periodo: '60dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtros.periodo === '60dias'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Últimos 60 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => setFiltros(prev => ({ 
+                          ...prev, 
+                          periodo: 'personalizado'
+                        }))}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtros.periodo === 'personalizado'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Período Personalizado
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filtros de Período Futuro - Desktop */}
+                <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <FiFastForward className="w-5 h-5 text-green-600" />
+                    <h3 className="text-sm font-medium text-gray-700">Filtros do Período Futuro</h3>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                      Atividades programadas
                     </span>
                   </div>
-                  {hasFiltrosAtivos() && (
-                    <button
-                      onClick={limparFiltros}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      Limpar filtros
-                    </button>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Filtro de Time */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Time (Opcional)</label>
-                    <select
-                      value={filtros.time_id}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, time_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todos os times ({Object.keys(filtrosDisponiveis.times).length})</option>
-                      {Object.entries(filtrosDisponiveis.times).map(([id, nome]) => (
-                        <option key={id} value={id}>{nome}</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Campos de data personalizada para período futuro */}
+                    {filtrosFuturo.periodo === 'personalizado' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Data Início</label>
+                          <input
+                            type="date"
+                            value={filtrosFuturo.data_inicio}
+                            onChange={(e) => setFiltrosFuturo(prev => ({ ...prev, data_inicio: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Data Fim</label>
+                          <input
+                            type="date"
+                            value={filtrosFuturo.data_fim}
+                            onChange={(e) => setFiltrosFuturo(prev => ({ ...prev, data_fim: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {/* Filtro de Usuário */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Usuário (Opcional)</label>
-                    <select
-                      value={filtros.usuario_id}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, usuario_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Todos os usuários ({Object.keys(filtrosDisponiveis.usuarios).length})</option>
-                      {Object.entries(filtrosDisponiveis.usuarios).map(([id, nome]) => (
-                        <option key={id} value={id}>{nome}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Campos de data personalizada */}
-                  {filtros.periodo === 'personalizado' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Data Início</label>
-                        <input
-                          type="date"
-                          value={filtros.data_inicio}
-                          onChange={(e) => setFiltros(prev => ({ ...prev, data_inicio: e.target.value }))}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Data Fim</label>
-                        <input
-                          type="date"
-                          value={filtros.data_fim}
-                          onChange={(e) => setFiltros(prev => ({ ...prev, data_fim: e.target.value }))}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Filtro de Período */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">Período de Análise</label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        const periodo = calcularPeriodo('7dias');
-                        setFiltros(prev => ({ 
+                  {/* Filtro de Período Futuro */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Período de Análise Futuro</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodoFuturo('7dias');
+                          setFiltrosFuturo(prev => ({ 
+                            ...prev, 
+                            periodo: '7dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtrosFuturo.periodo === '7dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Próximos 7 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodoFuturo('30dias');
+                          setFiltrosFuturo(prev => ({ 
+                            ...prev, 
+                            periodo: '30dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtrosFuturo.periodo === '30dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Próximos 30 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const periodo = calcularPeriodoFuturo('60dias');
+                          setFiltrosFuturo(prev => ({ 
+                            ...prev, 
+                            periodo: '60dias',
+                            data_inicio: periodo.dataInicio,
+                            data_fim: periodo.dataFim
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtrosFuturo.periodo === '60dias'
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Próximos 60 dias
+                      </button>
+                      
+                      <button
+                        onClick={() => setFiltrosFuturo(prev => ({ 
                           ...prev, 
-                          periodo: '7dias',
-                          data_inicio: periodo.dataInicio,
-                          data_fim: periodo.dataFim
-                        }));
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                        filtros.periodo === '7dias'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Últimos 7 dias
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        const periodo = calcularPeriodo('30dias');
-                        setFiltros(prev => ({ 
-                          ...prev, 
-                          periodo: '30dias',
-                          data_inicio: periodo.dataInicio,
-                          data_fim: periodo.dataFim
-                        }));
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                        filtros.periodo === '30dias'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Últimos 30 dias
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        const periodo = calcularPeriodo('60dias');
-                        setFiltros(prev => ({ 
-                          ...prev, 
-                          periodo: '60dias',
-                          data_inicio: periodo.dataInicio,
-                          data_fim: periodo.dataFim
-                        }));
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                        filtros.periodo === '60dias'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Últimos 60 dias
-                    </button>
-                    
-                    <button
-                      onClick={() => setFiltros(prev => ({ 
-                        ...prev, 
-                        periodo: 'personalizado'
-                      }))}
-                      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                        filtros.periodo === 'personalizado'
-                          ? 'bg-purple-100 text-purple-800 border border-purple-300' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Período Personalizado
-                    </button>
+                          periodo: 'personalizado'
+                        }))}
+                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                          filtrosFuturo.periodo === 'personalizado'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Período Personalizado
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1668,6 +2192,281 @@ export default function ControleEficienciaTimes({ user }) {
                     <div className="mt-3 lg:mt-4">
                       <p className="text-xs text-gray-400 mt-1">
                         Disciplina global em rotinas
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Seção de Rotinas Persistentes */}
+            <div className="mb-6 lg:mb-8">
+              <div className="mb-4 lg:mb-6">
+                <h2 className="text-xl lg:text-2xl font-bold text-black flex items-center">
+                  <FiCalendar className="w-5 h-5 mr-2 text-blue-600" />
+                  Rotinas Persistentes (Contínuas)
+                </h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  Rotinas que continuam indefinidamente - Hábitos e disciplinas permanentes
+                </p>
+              </div>
+
+              {loadingDisciplina ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  {/* KPI 1: Total Persistentes */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-blue-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Total Persistentes</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaPersistente.totalRotinas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiCalendar className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Completas Persistentes */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-green-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Completas Persistentes</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaPersistente.rotinasCompletas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiActivity className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Pendentes Persistentes */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-orange-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Pendentes Persistentes</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaPersistente.rotinasPendentes)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiAlertTriangle className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Taxa Persistentes */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-teal-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Taxa Persistentes</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatPercentage(kpisDisciplinaPersistente.taxaDisciplina)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiAward className="h-6 w-6 lg:h-8 lg:w-8 text-teal-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Seção de Rotinas Temporárias */}
+            <div className="mb-6 lg:mb-8">
+              <div className="mb-4 lg:mb-6">
+                <h2 className="text-xl lg:text-2xl font-bold text-black flex items-center">
+                  <FiTarget className="w-5 h-5 mr-2 text-orange-600" />
+                  Rotinas Temporárias (Projetos)
+                </h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  Rotinas com prazo definido - Projetos e objetivos específicos
+                </p>
+              </div>
+
+              {loadingDisciplina ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  {/* KPI 1: Total Temporárias */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-orange-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Total Temporárias</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaTemporaria.totalRotinas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiTarget className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Completas Temporárias */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-emerald-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Completas Temporárias</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaTemporaria.rotinasCompletas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiCheckCircle className="h-6 w-6 lg:h-8 lg:w-8 text-emerald-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Pendentes Temporárias */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-red-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Pendentes Temporárias</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisDisciplinaTemporaria.rotinasPendentes)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiClock className="h-6 w-6 lg:h-8 lg:w-8 text-red-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Taxa Temporárias */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-purple-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Taxa Temporárias</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatPercentage(kpisDisciplinaTemporaria.taxaDisciplina)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <FiBarChart className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Nova Seção: KPIs do Período Futuro - GLOBAIS */}
+            <div className="mb-6 lg:mb-8">
+              <div className="mb-4 lg:mb-6">
+                <h2 className="text-xl lg:text-2xl font-bold text-black flex items-center">
+                  <FiFastForward className="w-5 h-5 mr-2 text-green-600" />
+                  Planejamento Global - Período Futuro
+                </h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  {gerarTextoDescritivoFuturo()}
+                </p>
+              </div>
+
+              {loadingFuturo ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  {/* KPI 1: Total Rotinas Agendadas - FUTURO */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-green-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Rotinas Agendadas</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisFuturo.rotinasAgendadas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="relative">
+                          <FiCalendar className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
+                          <FiFastForward className="h-3 w-3 text-green-400 absolute -top-1 -right-1" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 lg:mt-4">
+                      <p className="text-xs text-gray-400 mt-1">
+                        Rotinas programadas no período futuro
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Tarefas Agendadas - FUTURO */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-cyan-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Tarefas Agendadas</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisFuturo.tarefasAgendadas)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="relative">
+                          <FiClipboard className="h-6 w-6 lg:h-8 lg:w-8 text-cyan-500" />
+                          <FiFastForward className="h-3 w-3 text-cyan-400 absolute -top-1 -right-1" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 lg:mt-4">
+                      <p className="text-xs text-gray-400 mt-1">
+                        Tarefas não concluídas no período futuro
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Total Atividades Futuras */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-purple-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Total de Atividades</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {formatNumber(kpisFuturo.totalAtividades)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="relative">
+                          <FiBarChart2 className="h-6 w-6 lg:h-8 lg:w-8 text-purple-500" />
+                          <FiFastForward className="h-3 w-3 text-purple-400 absolute -top-1 -right-1" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 lg:mt-4">
+                      <p className="text-xs text-gray-400 mt-1">
+                        Soma de todas as atividades futuras
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Capacidade de Planejamento */}
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 border-l-4 border-orange-500">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-600">Capacidade de Planejamento</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-1">
+                          {kpisFuturo.totalAtividades > 0 ? 'Alta' : 'Baixa'}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="relative">
+                          <FiTarget className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
+                          <FiFastForward className="h-3 w-3 text-orange-400 absolute -top-1 -right-1" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 lg:mt-4">
+                      <p className="text-xs text-gray-400 mt-1">
+                        Avaliação do nível de organização futura
                       </p>
                     </div>
                   </div>
@@ -2324,6 +3123,14 @@ export default function ControleEficienciaTimes({ user }) {
                           </span>
                         </div>
                       </div>
+                      <div className="pt-3 border-t border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Atividades Futuras:</span>
+                          <span className="text-sm font-bold text-green-600">
+                            {formatNumber(kpisFuturo.totalAtividades)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -2359,6 +3166,10 @@ export default function ControleEficienciaTimes({ user }) {
                         <div className="flex items-center mt-2">
                           <FiGlobe className="w-3 h-3 mr-1 text-blue-500" />
                           <span>Dados agregados de todos os usuários e times</span>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <FiFastForward className="w-3 h-3 mr-1 text-green-500" />
+                          <span>Período futuro: atividades programadas e planejamento</span>
                         </div>
                       </div>
                     </div>

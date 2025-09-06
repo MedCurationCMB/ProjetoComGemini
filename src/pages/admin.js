@@ -1,4 +1,4 @@
-// src/pages/admin.js (versão atualizada com vinculações de listas)
+// src/pages/admin.js (versão atualizada com seletor de tipo de usuário)
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -30,7 +30,8 @@ import {
   FiTrash2,
   FiCheckCircle,
   FiEdit,
-  FiSave
+  FiSave,
+  FiCheck
 } from 'react-icons/fi';
 
 export default function Admin({ user }) {
@@ -50,6 +51,9 @@ export default function Admin({ user }) {
   const [showNovaVinculacao, setShowNovaVinculacao] = useState(false);
   const [novaVinculacao, setNovaVinculacao] = useState({ usuario_id: '', list_id: '' });
   const [salvandoVinculacao, setSalvandoVinculacao] = useState(false);
+
+  // Estados para alteração de tipo de usuário
+  const [updatingUserType, setUpdatingUserType] = useState(null);
 
   // Verificar se o usuário é administrador
   useEffect(() => {
@@ -169,29 +173,81 @@ export default function Admin({ user }) {
     }
   };
 
-  // Função para alternar status de admin do usuário
-  const toggleAdminStatus = async (userId, currentAdminStatus, userEmail) => {
-    const newAdminStatus = !currentAdminStatus;
-    
-    // Verificar se não está tentando alterar seu próprio status
+  // Função para obter o tipo de usuário baseado nas flags admin e gestor
+  const getUserType = (admin, gestor) => {
+    if (admin) return 'admin';
+    if (gestor) return 'gestor';
+    return 'user';
+  };
+
+  // Função para obter o label do tipo de usuário
+  const getUserTypeLabel = (userType) => {
+    switch (userType) {
+      case 'admin': return 'Administrador';
+      case 'gestor': return 'Gestor';
+      case 'user': return 'Usuário';
+      default: return 'Usuário';
+    }
+  };
+
+  // Função para obter as classes CSS do tipo de usuário
+  const getUserTypeClasses = (userType) => {
+    switch (userType) {
+      case 'admin': 
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'gestor': 
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'user': 
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: 
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Função para alterar o tipo de usuário
+  const changeUserType = async (userId, newUserType, userEmail) => {
+    // Verificar se não está tentando alterar seu próprio tipo
     if (userId === user.id) {
-      toast.error("Você não pode alterar seu próprio status de administrador");
+      toast.error("Você não pode alterar seu próprio tipo de usuário");
       return;
     }
 
+    // Determinar os valores das flags baseado no tipo selecionado
+    let adminFlag = false;
+    let gestorFlag = false;
+
+    switch (newUserType) {
+      case 'admin':
+        adminFlag = true;
+        gestorFlag = false;
+        break;
+      case 'gestor':
+        adminFlag = false;
+        gestorFlag = true;
+        break;
+      case 'user':
+        adminFlag = false;
+        gestorFlag = false;
+        break;
+    }
+
     // Confirmação para ações críticas
-    const action = newAdminStatus ? 'promover como administrador' : 'remover privilégios de administrador';
+    const typeLabel = getUserTypeLabel(newUserType);
     const confirmed = window.confirm(
-      `Tem certeza que deseja ${action} o usuário ${userEmail}?\n\n${
-        newAdminStatus 
+      `Tem certeza que deseja alterar o tipo do usuário ${userEmail} para "${typeLabel}"?\n\n${
+        newUserType === 'admin' 
           ? 'Este usuário terá acesso total ao sistema.' 
-          : 'Este usuário perderá acesso às configurações administrativas.'
+          : newUserType === 'gestor'
+            ? 'Este usuário terá privilégios de gestão.'
+            : 'Este usuário terá acesso básico ao sistema.'
       }`
     );
 
     if (!confirmed) return;
 
     try {
+      setUpdatingUserType(userId);
+
       // Obter sessão atual
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -200,8 +256,8 @@ export default function Admin({ user }) {
         return;
       }
 
-      // Chamar a API para alterar permissões
-      const response = await fetch("/api/admin/manage-permissions", {
+      // Chamar a API para alterar o tipo de usuário
+      const response = await fetch("/api/admin/change-user-type", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,26 +265,33 @@ export default function Admin({ user }) {
         },
         body: JSON.stringify({
           userId: userId,
-          isAdmin: newAdminStatus
+          admin: adminFlag,
+          gestor: gestorFlag
         })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao alterar permissões");
+        throw new Error(data.error || "Erro ao alterar tipo de usuário");
       }
 
       toast.success(data.message);
 
       // Atualizar lista de usuários
       setUsers(
-        users.map((u) => (u.id === userId ? { ...u, admin: newAdminStatus } : u))
+        users.map((u) => (u.id === userId ? { 
+          ...u, 
+          admin: adminFlag, 
+          gestor: gestorFlag 
+        } : u))
       );
 
     } catch (error) {
-      console.error("Erro ao alterar permissões:", error);
-      toast.error(error.message || "Não foi possível alterar as permissões do usuário");
+      console.error("Erro ao alterar tipo de usuário:", error);
+      toast.error(error.message || "Não foi possível alterar o tipo do usuário");
+    } finally {
+      setUpdatingUserType(null);
     }
   };
 
@@ -718,7 +781,7 @@ export default function Admin({ user }) {
                           Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Admin
+                          Tipo de Usuário
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Ações
@@ -727,52 +790,78 @@ export default function Admin({ user }) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {users.length > 0 ? (
-                        users.map((item) => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                  <FiUser className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {item.nome || "Nome não disponível"}
+                        users.map((item) => {
+                          const currentUserType = getUserType(item.admin, item.gestor);
+                          const isUpdating = updatingUserType === item.id;
+                          
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <FiUser className="w-4 h-4 text-blue-600" />
                                   </div>
-                                  <div className="text-sm text-gray-500">
-                                    {item.email}
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {item.nome || "Nome não disponível"}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {item.email}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {new Date(item.created_at).toLocaleDateString('pt-BR')}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  item.ativo
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {item.ativo ? "Ativo" : "Inativo"}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  item.admin
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {item.admin ? "Admin" : "Usuário"}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex space-x-2">
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    item.ativo
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {item.ativo ? "Ativo" : "Inativo"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {item.id === user.id ? (
+                                  // Usuário atual não pode alterar seu próprio tipo
+                                  <span
+                                    className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getUserTypeClasses(currentUserType)}`}
+                                  >
+                                    {getUserTypeLabel(currentUserType)} (Você)
+                                  </span>
+                                ) : (
+                                  // Dropdown para outros usuários
+                                  <div className="relative">
+                                    <select
+                                      value={currentUserType}
+                                      onChange={(e) => changeUserType(item.id, e.target.value, item.email)}
+                                      disabled={isUpdating}
+                                      className={`text-xs font-medium rounded-full border px-3 py-1 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                        isUpdating 
+                                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                                          : `${getUserTypeClasses(currentUserType)} hover:opacity-80`
+                                      }`}
+                                    >
+                                      <option value="user">Usuário</option>
+                                      <option value="gestor">Gestor</option>
+                                      <option value="admin">Administrador</option>
+                                    </select>
+                                    
+                                    {isUpdating && (
+                                      <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                                        <div className="animate-spin rounded-full h-3 w-3 border border-gray-400 border-t-transparent"></div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button
                                   onClick={() => toggleUserStatus(item.id, item.ativo)}
                                   className={`text-white px-3 py-1 rounded-lg text-sm transition-colors ${
@@ -783,41 +872,10 @@ export default function Admin({ user }) {
                                 >
                                   {item.ativo ? "Desativar" : "Ativar"}
                                 </button>
-                                
-                                <button
-                                  onClick={() => toggleAdminStatus(item.id, item.admin, item.email)}
-                                  disabled={item.id === user.id}
-                                  className={`px-3 py-1 rounded-lg text-sm transition-colors flex items-center ${
-                                    item.id === user.id
-                                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                      : item.admin
-                                        ? "bg-orange-600 hover:bg-orange-700 text-white"
-                                        : "bg-purple-600 hover:bg-purple-700 text-white"
-                                  }`}
-                                  title={
-                                    item.id === user.id 
-                                      ? "Você não pode alterar seu próprio status" 
-                                      : item.admin 
-                                        ? "Remover privilégios de admin" 
-                                        : "Promover a admin"
-                                  }
-                                >
-                                  {item.admin ? (
-                                    <>
-                                      <FiUserCheck className="w-3 h-3 mr-1" />
-                                      Remover Admin
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FiShield className="w-3 h-3 mr-1" />
-                                      Tornar Admin
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
                           <td
@@ -835,6 +893,31 @@ export default function Admin({ user }) {
                   </table>
                 </div>
               )}
+
+              {/* Legenda dos tipos de usuário */}
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Tipos de Usuário:</h4>
+                <div className="flex flex-wrap gap-4 text-xs">
+                  <div className="flex items-center">
+                    <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-800 border border-gray-200 mr-2">
+                      Usuário
+                    </span>
+                    <span className="text-gray-600">Acesso básico ao sistema</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 mr-2">
+                      Gestor
+                    </span>
+                    <span className="text-gray-600">Privilégios de gestão e coordenação</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 mr-2">
+                      Administrador
+                    </span>
+                    <span className="text-gray-600">Acesso total e configurações do sistema</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
