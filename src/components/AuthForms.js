@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 
 // Função para obter data/hora no fuso horário de Brasília
@@ -60,6 +59,35 @@ const registrarLoginHistorico = async (usuario) => {
   }
 };
 
+// Função para verificar permissões do usuário na tabela usuarios
+const verificarPermissoesUsuario = async (userId) => {
+  try {
+    console.log('Verificando permissões do usuário:', userId);
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('admin, gestor')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Erro ao verificar permissões:', error);
+      return { admin: false, gestor: false };
+    }
+
+    console.log('Permissões encontradas:', data);
+    
+    return {
+      admin: data?.admin === true,
+      gestor: data?.gestor === true
+    };
+
+  } catch (error) {
+    console.error('Erro ao verificar permissões:', error);
+    return { admin: false, gestor: false };
+  }
+};
+
 export const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,17 +119,26 @@ export const LoginForm = () => {
         console.warn('Falha ao registrar login no histórico (não crítico)');
       }
       
-      // Verificar se o usuário é admin
-      const adminStatus = await isUserAdmin(data.user.id);
+      // Verificar permissões do usuário na tabela usuarios
+      const permissoes = await verificarPermissoesUsuario(data.user.id);
       
       toast.success('Login realizado com sucesso!');
       
-      // Redirecionar baseado no status de admin
-      if (adminStatus) {
+      // Lógica de redirecionamento baseada nas permissões
+      if (permissoes.gestor) {
+        // Se gestor for TRUE, redirecionar para /gestao-listas
+        console.log('Usuário é gestor, redirecionando para /gestao-listas');
+        router.push('/gestao-listas');
+      } else if (permissoes.admin) {
+        // Se admin for TRUE (e gestor for FALSE), redirecionar para /inicio
+        console.log('Usuário é admin, redirecionando para /inicio');
         router.push('/inicio');
       } else {
-        router.push('/inicio');
+        // Se ambas as condições forem false, redirecionar para /visualizacao-atividades
+        console.log('Usuário é comum, redirecionando para /visualizacao-atividades');
+        router.push('/visualizacao-atividades');
       }
+      
     } catch (error) {
       toast.error(error.message || 'Erro ao fazer login');
     } finally {
