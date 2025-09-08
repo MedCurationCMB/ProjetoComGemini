@@ -1141,13 +1141,13 @@ export default function VisualizacaoAtividades({ user }) {
     router.push('/configuracoes');
   };
 
-  const handleGestaoListasClick = async () => {
+  const handlePainelGestao = async () => {
     try {
       const temPermissao = await verificarPermissaoGestaoListas(user.id);
       
       if (temPermissao) {
         setShowMenu(false);
-        router.push('/gestao-listas');
+        router.push('/painel-gestor');
       } else {
         setShowMenu(false);
         toast.error('Você não tem permissão para acessar essa página!');
@@ -1292,11 +1292,11 @@ export default function VisualizacaoAtividades({ user }) {
                   </button>
 
                   <button
-                    onClick={handleGestaoListasClick}
+                    onClick={handlePainelGestao}
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                   >
-                    <FiList className="mr-3 h-4 w-4" />
-                    Gestão de Listas
+                    <FiSettings className="mr-3 h-4 w-4" />
+                    Painel Gestão
                   </button>
                   
                   <button

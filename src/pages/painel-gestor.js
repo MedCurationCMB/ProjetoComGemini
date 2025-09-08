@@ -1,54 +1,75 @@
+// src/pages/painel-gestor.js
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import { isUserAdmin } from '../utils/userUtils';
 import { toast } from 'react-hot-toast';
 import LogoDisplay from '../components/LogoDisplay';
 import { 
-  FiSearch, 
   FiMenu, 
   FiHome, 
   FiUser, 
   FiSettings, 
   FiLogOut,
-  FiBarChart,
-  FiFileText,
   FiArrowRight,
-  FiTrendingUp,
-  FiFolder,
-  FiShield,
-  FiCheckCircle // ✅ NOVO ÍCONE
+  FiActivity,
+  FiEye,
+  FiUsers,
+  FiTool
 } from 'react-icons/fi';
 
-export default function Inicio({ user }) {
+export default function PainelGestor({ user }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const [checkingPermissions, setCheckingPermissions] = useState(true);
+  const [hasPermissions, setHasPermissions] = useState(false);
 
-  // Verificar se o usuário é administrador
+  // Verificar permissões ao carregar
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkPermissions = async () => {
       if (!user) {
-        setIsAdmin(false);
-        setCheckingAdmin(false);
+        router.replace('/login');
         return;
       }
 
       try {
-        const adminStatus = await isUserAdmin(user.id);
-        setIsAdmin(adminStatus);
+        // Buscar dados do usuário diretamente na tabela usuarios
+        const { data: userData, error } = await supabase
+          .from('usuarios')
+          .select('admin, gestor')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Erro ao buscar dados do usuário:', error);
+          toast.error('Erro ao verificar permissões');
+          router.replace('/inicio');
+          return;
+        }
+
+        // Verificar se é admin OU gestor
+        const isAdmin = userData?.admin === true;
+        const isGestor = userData?.gestor === true;
+        const hasAccess = isAdmin || isGestor;
+
+        setHasPermissions(hasAccess);
+        
+        if (!hasAccess) {
+          toast.error('Você não tem permissão para acessar essa página!');
+          router.replace('/visualizacao-de-atividades');
+          return;
+        }
       } catch (error) {
-        console.error('Erro ao verificar status de admin:', error);
-        setIsAdmin(false);
+        console.error('Erro ao verificar permissões:', error);
+        toast.error('Erro ao verificar permissões');
+        router.replace('/visualizacao-de-atividades');
       } finally {
-        setCheckingAdmin(false);
+        setCheckingPermissions(false);
       }
     };
 
-    checkAdminStatus();
-  }, [user]);
+    checkPermissions();
+  }, [user, router]);
 
   // Redirecionar para a página de login se o usuário não estiver autenticado
   useEffect(() => {
@@ -69,22 +90,21 @@ export default function Inicio({ user }) {
     }
   };
 
-  // Funções de navegação
-  const handleIndicadoresClick = () => {
-    router.push('/visualizacao-indicadores');
+  // Funções de navegação atualizadas
+  const handleVisualizacaoAtividadesClick = () => {
+    router.push('/visualizacao-de-atividades');
   };
 
-  const handleDocumentosClick = () => {
-    router.push('/documentos');
+  const handleControleAtividadesClick = () => {
+    router.push('/tarefas-rotinas');
   };
 
-  const handleAdminClick = () => {
-    router.push('/admin');
+  const handleVisaoGeralClick = () => {
+    router.push('/controle-atividades');
   };
 
-  // ✅ NOVA FUNÇÃO: Navegação para atividades
-  const handleAtividadesClick = () => {
-    router.push('/visualizacao-atividades');
+  const handleGestaoListasClick = () => {
+    router.push('/gestao-listas');
   };
 
   // Obter nome do usuário
@@ -98,16 +118,28 @@ export default function Inicio({ user }) {
     return 'Usuário';
   };
 
-  // Não renderizar nada até que a verificação de autenticação seja concluída
-  if (!user) {
+  // Mostrar loading enquanto verifica permissões
+  if (checkingPermissions) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Não renderizar nada se não tiver permissões ou usuário
+  if (!user || !hasPermissions) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Início - Sistema de Gerenciamento</title>
-        <meta name="description" content="Página inicial do sistema de gerenciamento" />
+        <title>Painel Gestor - Sistema de Gerenciamento</title>
+        <meta name="description" content="Painel de gestão para administradores e gestores" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -126,19 +158,6 @@ export default function Inicio({ user }) {
               
               {/* Controles à direita */}
               <div className="flex items-center space-x-2">
-                {/* Botão Admin (só aparece para admins) */}
-                {!checkingAdmin && isAdmin && (
-                  <button
-                    onClick={handleAdminClick}
-                    className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center text-sm font-medium"
-                    title="Painel de Administração"
-                  >
-                    <FiShield className="w-4 h-4 mr-1" />
-                    Admin
-                  </button>
-                )}
-                
-                {/* Menu hambúrguer */}
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
@@ -148,68 +167,47 @@ export default function Inicio({ user }) {
                     <FiMenu className="w-6 h-6 text-gray-600" />
                   </button>
                   
-                  {/* Dropdown do menu */}
                   {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/inicio');
+                          handleVisualizacaoAtividadesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiHome className="mr-3 h-4 w-4" />
-                        Início
+                        <FiActivity className="mr-3 h-4 w-4" />
+                        Visualização Atividades
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/visualizacao-atividades');
+                          handleControleAtividadesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiCheckCircle className="mr-3 h-4 w-4" />
-                        Visualizar Atividades
+                        <FiTool className="mr-3 h-4 w-4" />
+                        Controle Atividades
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/visualizacao-indicadores');
+                          handleVisaoGeralClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiTrendingUp className="mr-3 h-4 w-4" />
-                        Gestão Indicadores
+                        <FiEye className="mr-3 h-4 w-4" />
+                        Visão Geral
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/documentos');
+                          handleGestaoListasClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiFolder className="mr-3 h-4 w-4" />
-                        Gestão Documentos
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          toast.info('Perfil em desenvolvimento');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                      >
-                        <FiUser className="mr-3 h-4 w-4" />
-                        Perfil
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          router.push('/configuracoes');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                      >
-                        <FiSettings className="mr-3 h-4 w-4" />
-                        Configurações
+                        <FiUsers className="mr-3 h-4 w-4" />
+                        Gestão Usuários Listas
                       </button>
                       <button
                         onClick={() => {
@@ -228,7 +226,7 @@ export default function Inicio({ user }) {
             </div>
           </div>
 
-          {/* Desktop: Layout original */}
+          {/* Desktop: Layout atualizado */}
           <div className="hidden lg:block">
             <div className="flex items-center justify-between mb-4">
               <LogoDisplay 
@@ -240,20 +238,8 @@ export default function Inicio({ user }) {
               {/* Espaço central vazio */}
               <div className="flex-1"></div>
               
-              {/* Controles à direita */}
-              <div className="flex items-center space-x-3">
-                {/* Botão Admin (só aparece para admins) */}
-                {!checkingAdmin && isAdmin && (
-                  <button
-                    onClick={handleAdminClick}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center font-medium"
-                    title="Painel de Administração"
-                  >
-                    <FiShield className="w-4 h-4 mr-2" />
-                    Admin
-                  </button>
-                )}
-                
+              {/* Apenas o menu de 3 barras no desktop */}
+              <div className="flex items-center">
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
@@ -264,66 +250,46 @@ export default function Inicio({ user }) {
                   </button>
                   
                   {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-30">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-30">
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/inicio');
+                          handleVisualizacaoAtividadesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiHome className="mr-3 h-4 w-4" />
-                        Início
+                        <FiActivity className="mr-3 h-4 w-4" />
+                        Visualização Atividades
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/visualizacao-atividades');
+                          handleControleAtividadesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiCheckCircle className="mr-3 h-4 w-4" />
-                        Visualizar Atividades
+                        <FiTool className="mr-3 h-4 w-4" />
+                        Controle Atividades
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/visualizacao-indicadores');
+                          handleVisaoGeralClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiTrendingUp className="mr-3 h-4 w-4" />
-                        Gestão Indicadores
+                        <FiEye className="mr-3 h-4 w-4" />
+                        Visão Geral
                       </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
-                          router.push('/documentos');
+                          handleGestaoListasClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
                       >
-                        <FiFolder className="mr-3 h-4 w-4" />
-                        Gestão Documentos
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          toast.info('Perfil em desenvolvimento');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                      >
-                        <FiUser className="mr-3 h-4 w-4" />
-                        Perfil
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMenu(false);
-                          router.push('/configuracoes');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
-                      >
-                        <FiSettings className="mr-3 h-4 w-4" />
-                        Configurações
+                        <FiUsers className="mr-3 h-4 w-4" />
+                        Gestão Usuários Listas
                       </button>
                       <button
                         onClick={() => {
@@ -349,110 +315,109 @@ export default function Inicio({ user }) {
         {/* Mensagem de boas-vindas */}
         <div className="text-center mb-12">
           <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Bem-vindo, {getUserName()}!
+            Painel Gestor
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Escolha uma das opções abaixo para começar a trabalhar com o sistema de gerenciamento.
+            Acesse as principais funcionalidades de gestão e controle do sistema.
           </p>
         </div>
 
-        {/* ✅ SEÇÃO ATUALIZADA: Opções principais com 3 colunas */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-          {/* Opção Indicadores */}
+        {/* Seções principais - Layout atualizado: 2x2 no desktop */}
+        <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
+          
+          {/* Visualização de Atividades */}
           <button
-            onClick={handleIndicadoresClick}
+            onClick={handleVisualizacaoAtividadesClick}
+            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-orange-300 text-left"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                <FiActivity className="w-8 h-8 text-orange-600" />
+              </div>
+              <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
+              Visualização de Atividades
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Visualize e gerencie todas as atividades do sistema de forma integrada.
+            </p>
+          </button>
+
+          {/* Controle de Atividades */}
+          <button
+            onClick={handleControleAtividadesClick}
             className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-blue-300 text-left"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <FiBarChart className="w-8 h-8 text-blue-600" />
+                <FiTool className="w-8 h-8 text-blue-600" />
               </div>
               <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
             </div>
             
             <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-              Indicadores
+              Controle de Atividades
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Visualize e gerencie indicadores de performance, métricas e análises do sistema.
+              Gerencie tarefas e rotinas do sistema de forma organizada e eficiente.
             </p>
           </button>
 
-          {/* ✅ NOVA OPÇÃO: Atividades */}
+          {/* Visão Geral */}
           <button
-            onClick={handleAtividadesClick}
-            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300 text-left"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <FiCheckCircle className="w-8 h-8 text-purple-600" />
-              </div>
-              <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
-            </div>
-            
-            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
-              Atividades
-            </h3>
-            <p className="text-gray-600 leading-relaxed">
-              Gerencie suas tarefas diárias, rotinas e atividades de forma organizada e eficiente.
-            </p>
-          </button>
-
-          {/* Opção Documentos */}
-          <button
-            onClick={handleDocumentosClick}
-            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-green-300 text-left md:col-span-2 lg:col-span-1"
+            onClick={handleVisaoGeralClick}
+            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-green-300 text-left"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                <FiFileText className="w-8 h-8 text-green-600" />
+                <FiEye className="w-8 h-8 text-green-600" />
               </div>
               <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
             </div>
             
             <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
-              Documentos
+              Visão Geral
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Acesse, gerencie e organize documentos, registros e anexos do sistema.
+              Controle geral das atividades e indicadores de performance do sistema.
+            </p>
+          </button>
+
+          {/* Gestão de Usuários e Listas */}
+          <button
+            onClick={handleGestaoListasClick}
+            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300 text-left"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                <FiUsers className="w-8 h-8 text-purple-600" />
+              </div>
+              <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+              Gestão de Usuários e Listas
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Gerencie usuários e suas listas de tarefas de forma centralizada.
             </p>
           </button>
         </div>
 
-        {/* Informações adicionais */}
-        <div className="mt-16 text-center">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">
-              Precisa de ajuda?
-            </h4>
-            <p className="text-gray-600 mb-4">
-              Entre em contato com o suporte ou consulte a documentação do sistema.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                📚 Documentação
-              </button>
-              <button
-                onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                💬 Suporte
-              </button>
-            </div>
-          </div>
+        {/* Seção informativa adicional */}
+        <div className="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Bem-vindo ao Painel de Gestão
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Este painel oferece acesso às principais funcionalidades de gestão do sistema. 
+            Como administrador ou gestor, você tem controle total sobre as atividades, 
+            usuários e configurações do sistema.
+          </p>
         </div>
       </div>
-
-      {/* Overlay para fechar menus quando clicar fora */}
-      {showMenu && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-25 z-10"
-          onClick={() => setShowMenu(false)}
-        />
-      )}
     </div>
   );
 }
