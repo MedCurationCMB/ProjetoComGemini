@@ -70,13 +70,13 @@ export default function Admin({ user }) {
         setIsAdmin(adminStatus);
         
         if (!adminStatus) {
-          router.replace("/welcome");
+          router.replace("/visualizacao-de-atividades");
           toast.error("Você não tem permissão para acessar esta página");
           return;
         }
       } catch (error) {
         console.error('Erro ao verificar status de admin:', error);
-        router.replace("/welcome");
+        router.replace("/visualizacao-de-atividades");
         toast.error("Erro ao verificar permissões");
         return;
       } finally {

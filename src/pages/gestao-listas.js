@@ -110,7 +110,7 @@ export default function GestaoListas({ user }) {
         setHasPermissions(permissions);
 
         if (!permissions) {
-          router.replace("/inicio");
+          router.replace("/visualizacao-de-atividades");
           toast.error("Você não tem permissão para acessar esta página");
           return;
         }
@@ -118,7 +118,7 @@ export default function GestaoListas({ user }) {
         console.log("✅ Usuário tem permissões para gestão de listas");
       } catch (error) {
         console.error("Erro ao verificar permissões:", error);
-        router.replace("/inicio");
+        router.replace("/visualizacao-de-atividades");
         toast.error("Erro ao verificar permissões");
       } finally {
         setCheckingPermissions(false);

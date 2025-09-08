@@ -126,17 +126,17 @@ export const LoginForm = () => {
       
       // Lógica de redirecionamento baseada nas permissões
       if (permissoes.gestor) {
-        // Se gestor for TRUE, redirecionar para /gestao-listas
-        console.log('Usuário é gestor, redirecionando para /gestao-listas');
-        router.push('/gestao-listas');
+        // Se gestor for TRUE, redirecionar para /visualizacao-de-atividades
+        console.log('Usuário é gestor, redirecionando para /visualizacao-de-atividades');
+        router.push('/visualizacao-de-atividades');
       } else if (permissoes.admin) {
         // Se admin for TRUE (e gestor for FALSE), redirecionar para /inicio
         console.log('Usuário é admin, redirecionando para /inicio');
         router.push('/inicio');
       } else {
-        // Se ambas as condições forem false, redirecionar para /visualizacao-atividades
-        console.log('Usuário é comum, redirecionando para /visualizacao-atividades');
-        router.push('/visualizacao-atividades');
+        // Se ambas as condições forem false, redirecionar para /visualizacao-de-atividades
+        console.log('Usuário é comum, redirecionando para /visualizacao-de-atividades');
+        router.push('/visualizacao-de-atividades');
       }
       
     } catch (error) {

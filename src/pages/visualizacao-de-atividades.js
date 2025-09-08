@@ -174,6 +174,36 @@ export default function VisualizacaoAtividades({ user }) {
     setShowOpcoesData(!showOpcoesData);
   };
 
+  const verificarPermissaoGestaoListas = async (userId) => {
+    try {
+      if (!userId) {
+        console.error('ID do usuário não fornecido');
+        return false;
+      }
+
+      console.log('Verificando permissões para gestão de listas:', userId.substring(0, 8));
+      
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('admin, gestor')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        console.error('Erro ao verificar permissões:', error);
+        return false;
+      }
+      
+      const temPermissao = data?.admin === true || data?.gestor === true;
+      console.log('Resultado da verificação - Admin:', data?.admin, 'Gestor:', data?.gestor, 'Tem permissão:', temPermissao);
+      
+      return temPermissao;
+    } catch (error) {
+      console.error('Falha ao verificar permissões para gestão de listas:', error);
+      return false;
+    }
+  };
+
   // Cleanup do timeout no useEffect
   useEffect(() => {
     return () => {
@@ -1111,6 +1141,23 @@ export default function VisualizacaoAtividades({ user }) {
     router.push('/configuracoes');
   };
 
+  const handleGestaoListasClick = async () => {
+    try {
+      const temPermissao = await verificarPermissaoGestaoListas(user.id);
+      
+      if (temPermissao) {
+        setShowMenu(false);
+        router.push('/gestao-listas');
+      } else {
+        setShowMenu(false);
+        toast.error('Você não tem permissão para acessar essa página!');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar permissões:', error);
+      toast.error('Erro ao verificar permissões');
+    }
+  };
+
   // ===========================================
   // ✅ EFFECTS OTIMIZADOS (COM SOLUÇÃO useRef)
   // ===========================================
@@ -1242,6 +1289,14 @@ export default function VisualizacaoAtividades({ user }) {
                   >
                     <FiRepeat className="mr-3 h-4 w-4" />
                     Gestão Atividades Recorrentes
+                  </button>
+
+                  <button
+                    onClick={handleGestaoListasClick}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                  >
+                    <FiList className="mr-3 h-4 w-4" />
+                    Gestão de Listas
                   </button>
                   
                   <button
