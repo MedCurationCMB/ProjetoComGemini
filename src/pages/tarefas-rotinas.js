@@ -173,47 +173,62 @@ export default function atividadesrecorrentes({ user }) {
   // =====================================
 
   // ✅ FUNÇÃO MODIFICADA: Buscar usuários que compartilham projetos (com restrição)
-  const fetchUsuariosColaboradores = async (projetoIds, permissions) => {
+  const fetchUsuariosColaboradores = async (projetoIds, permissions, userId) => {
     if (projetoIds.length === 0) return {};
     
     try {
-      // Buscar todos os usuários vinculados aos mesmos projetos
-      const { data, error } = await supabase
-        .from('relacao_usuarios_projetos')
-        .select(`
-          usuario_id,
-          usuarios(id, nome, email)
-        `)
-        .in('projeto_id', projetoIds);
-      
-      if (error) throw error;
-      
-      const colaboradoresObj = {};
-      
-      data.forEach(relacao => {
-        if (relacao.usuarios) {
-          // ✅ NOVA LÓGICA: Se usuário é restrito, só inclui ele mesmo
-          if (permissions.isRestricted) {
-            if (relacao.usuario_id === user.id) {
-              colaboradoresObj[relacao.usuarios.id] = {
-                nome: relacao.usuarios.nome,
-                email: relacao.usuarios.email
-              };
-            }
-          } else {
-            // Admins e gestores veem todos os usuários (exceto eles mesmos no dropdown)
-            if (relacao.usuario_id !== user.id) {
-              colaboradoresObj[relacao.usuarios.id] = {
-                nome: relacao.usuarios.nome,
-                email: relacao.usuarios.email
-              };
-            }
+      if (permissions.admin) {
+        // Admin vê todos os usuários (exceto ele mesmo)
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('id, nome, email')
+          .neq('id', userId);
+        
+        if (error) throw error;
+        
+        const colaboradoresObj = {};
+        data.forEach(usuario => {
+          colaboradoresObj[usuario.id] = {
+            nome: usuario.nome,
+            email: usuario.email
+          };
+        });
+        
+        setUsuariosColaboradores(colaboradoresObj);
+        return colaboradoresObj;
+        
+      } else if (permissions.gestor) {
+        // Gestor vê usuários que compartilham seus projetos
+        const { data, error } = await supabase
+          .from('relacao_usuarios_projetos')
+          .select(`
+            usuario_id,
+            usuarios(id, nome, email)
+          `)
+          .in('projeto_id', projetoIds)
+          .neq('usuario_id', userId); // Excluir o próprio gestor
+        
+        if (error) throw error;
+        
+        const colaboradoresObj = {};
+        data.forEach(relacao => {
+          if (relacao.usuarios) {
+            colaboradoresObj[relacao.usuarios.id] = {
+              nome: relacao.usuarios.nome,
+              email: relacao.usuarios.email
+            };
           }
-        }
-      });
-      
-      setUsuariosColaboradores(colaboradoresObj);
-      return colaboradoresObj;
+        });
+        
+        setUsuariosColaboradores(colaboradoresObj);
+        return colaboradoresObj;
+        
+      } else {
+        // Usuário restrito não vê outros usuários
+        const colaboradoresObj = {};
+        setUsuariosColaboradores(colaboradoresObj);
+        return colaboradoresObj;
+      }
     } catch (error) {
       console.error('Erro ao carregar usuários colaboradores:', error);
       return {};
@@ -259,19 +274,32 @@ export default function atividadesrecorrentes({ user }) {
     }
   };
 
-  const fetchProjetosVinculados = async (userId) => {
+  const fetchProjetosVinculados = async (userId, permissions) => {
     try {
-      const { data, error } = await supabase
-        .from('relacao_usuarios_projetos')
-        .select('projeto_id')
-        .eq('usuario_id', userId);
-      
-      if (error) throw error;
-      
-      const projetoIds = data.map(item => item.projeto_id);
-      setProjetosVinculados(projetoIds);
-      
-      return projetoIds;
+      if (permissions.admin) {
+        // Admin vê todos os projetos
+        const { data: allProjects, error } = await supabase
+          .from('projetos')
+          .select('id');
+        
+        if (error) throw error;
+        
+        const allProjectIds = allProjects.map(p => p.id);
+        setProjetosVinculados(allProjectIds);
+        return allProjectIds;
+      } else {
+        // Gestor e usuários normais: apenas projetos vinculados
+        const { data, error } = await supabase
+          .from('relacao_usuarios_projetos')
+          .select('projeto_id')
+          .eq('usuario_id', userId);
+        
+        if (error) throw error;
+        
+        const projetoIds = data.map(item => item.projeto_id);
+        setProjetosVinculados(projetoIds);
+        return projetoIds;
+      }
     } catch (error) {
       console.error('Erro ao carregar projetos vinculados:', error);
       return [];
@@ -511,8 +539,15 @@ export default function atividadesrecorrentes({ user }) {
         .in('task_list_id', listasIds);
       
       // ✅ NOVA RESTRIÇÃO: Se usuário é restrito, só vê suas próprias atividades
+      // Aplicar filtros baseados nas permissões
       if (userPermissions.isRestricted) {
+        // Usuário restrito: só suas próprias atividades
         query = query.eq('usuario_id', user.id);
+      } else if (userPermissions.gestor) {
+        // Gestor: atividades dos projetos onde está vinculado
+        // (já filtrado pelas listas acessíveis)
+      } else if (userPermissions.admin) {
+        // Admin: todas as atividades (sem filtro adicional)
       }
       
       // Aplicar filtros
@@ -663,8 +698,15 @@ export default function atividadesrecorrentes({ user }) {
         .in('task_list_id', listasIds);
       
       // ✅ NOVA RESTRIÇÃO: Se usuário é restrito, só vê suas próprias recorrentes
+      // Aplicar filtros baseados nas permissões
       if (userPermissions.isRestricted) {
+        // Usuário restrito: só suas próprias rotinas
         query = query.eq('usuario_id', user.id);
+      } else if (userPermissions.gestor) {
+        // Gestor: rotinas dos projetos onde está vinculado
+        // (já filtrado pelas listas acessíveis)
+      } else if (userPermissions.admin) {
+        // Admin: todas as rotinas (sem filtro adicional)
       }
       
       // Aplicar filtros
@@ -793,32 +835,42 @@ export default function atividadesrecorrentes({ user }) {
   const getUsuariosPorLista = (listaId) => {
     const usuariosIds = usuariosListas[listaId] || [];
     
-    // ✅ NOVA LÓGICA: Se usuário é restrito, só retorna ele mesmo
-    if (userPermissions.isRestricted) {
-      // Verifica se o usuário atual está na lista
+    if (userPermissions.admin) {
+      // Admin vê todos os usuários da lista
+      return usuariosIds.map(id => ({ id, nome: usuarios[id] || 'Usuário não encontrado' }));
+    } else if (userPermissions.gestor) {
+      // Gestor vê usuários que compartilham seus projetos + ele mesmo se estiver na lista
+      return usuariosIds
+        .filter(id => usuariosColaboradores[id] || id === user.id)
+        .map(id => ({ 
+          id, 
+          nome: id === user.id ? 'Você' : (usuarios[id] || 'Usuário não encontrado')
+        }));
+    } else {
+      // Usuário restrito só vê a si mesmo se estiver na lista
       if (usuariosIds.includes(user.id)) {
-        return [{ id: user.id, nome: usuarios[user.id] || 'Você' }];
+        return [{ id: user.id, nome: 'Você' }];
       } else {
-        return []; // Se não estiver na lista, retorna vazio
+        return [];
       }
     }
-    
-    // Para admins/gestores, retorna todos os usuários da lista
-    return usuariosIds.map(id => ({ id, nome: usuarios[id] || 'Usuário não encontrado' }));
   };
 
   // ✅ NOVA FUNÇÃO: Filtrar listas onde o usuário tem acesso
   const getListasAcessiveis = () => {
-    if (!userPermissions.isRestricted) {
-      // Admins e gestores veem todas as listas
+    if (userPermissions.admin) {
+      // Admin vê todas as listas
       return Object.entries(listas);
+    } else if (userPermissions.gestor) {
+      // Gestor vê listas dos projetos onde está vinculado
+      return Object.entries(listas);
+    } else {
+      // Usuário restrito só vê listas onde está incluído
+      return Object.entries(listas).filter(([listaId, lista]) => {
+        const usuariosIds = usuariosListas[listaId] || [];
+        return usuariosIds.includes(user.id);
+      });
     }
-    
-    // Usuários restritos só veem listas onde estão incluídos
-    return Object.entries(listas).filter(([listaId, lista]) => {
-      const usuariosIds = usuariosListas[listaId] || [];
-      return usuariosIds.includes(user.id);
-    });
   };
 
   const formatDate = (dateString) => {
@@ -909,16 +961,19 @@ export default function atividadesrecorrentes({ user }) {
       if (!user) return;
       
       try {
-        // ✅ PRIMEIRO: Verificar permissões
+        // Primeiro: Verificar permissões
         const permissions = await checkUserPermissions(user.id);
         
-        const projetoIds = await fetchProjetosVinculados(user.id);
+        // Segundo: Carregar projetos baseado nas permissões
+        const projetoIds = await fetchProjetosVinculados(user.id, permissions);
+        
+        // Terceiro: Carregar dados relacionados
         await fetchProjetos(projetoIds);
         await fetchListas(projetoIds);
         await fetchUsuariosListas();
         
-        // ✅ MODIFICADO: Passar permissões para função
-        await fetchUsuariosColaboradores(projetoIds, permissions);
+        // Quarto: Carregar colaboradores baseado nas permissões
+        await fetchUsuariosColaboradores(projetoIds, permissions, user.id);
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
       }
@@ -954,14 +1009,14 @@ export default function atividadesrecorrentes({ user }) {
     setProjetoSelecionado('');
     setListaSelecionada('');
     setCompletedFiltro('');
-    // ✅ MODIFICADO: Só limpa filtro de usuário se não for restrito
-    if (!userPermissions.isRestricted) {
+    // Limpa filtro de usuário se for admin ou gestor
+    if (userPermissions.admin || userPermissions.gestor) {
       setUsuarioSelecionado('');
     }
     setShowFilters(false);
   };
 
-  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro || (!userPermissions.isRestricted && usuarioSelecionado);
+  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro || ((userPermissions.admin || userPermissions.gestor) && usuarioSelecionado);
 
   // =====================================
   // ✅ FUNÇÕES DE RENDERIZAÇÃO INLINE ATUALIZADAS
@@ -1210,10 +1265,16 @@ export default function atividadesrecorrentes({ user }) {
         return;
       }
       
-      // ✅ NOVA VALIDAÇÃO: Verificar se usuário restrito está tentando atribuir a outra pessoa
+      // Validação de atribuição baseada nas permissões
       if (userPermissions.isRestricted && localTask.usuario_id !== user.id) {
         toast.error('Você só pode atribuir atividades para si mesmo');
         return;
+      } else if (userPermissions.gestor && localTask.usuario_id !== user.id) {
+        // Verificar se o usuário selecionado está nos colaboradores do gestor
+        if (!usuariosColaboradores[localTask.usuario_id]) {
+          toast.error('Você só pode atribuir atividades para usuários dos seus projetos');
+          return;
+        }
       }
       
       saveTask(localTask);
@@ -1365,10 +1426,16 @@ export default function atividadesrecorrentes({ user }) {
         return;
       }
       
-      // ✅ NOVA VALIDAÇÃO: Verificar se usuário restrito está tentando atribuir a outra pessoa
+      // Validação de atribuição baseada nas permissões
       if (userPermissions.isRestricted && localRoutine.usuario_id !== user.id) {
         toast.error('Você só pode atribuir atividades recorrentes para si mesmo');
         return;
+      } else if (userPermissions.gestor && localRoutine.usuario_id !== user.id) {
+        // Verificar se o usuário selecionado está nos colaboradores do gestor
+        if (!usuariosColaboradores[localRoutine.usuario_id]) {
+          toast.error('Você só pode atribuir atividades recorrentes para usuários dos seus projetos');
+          return;
+        }
       }
       
       if (localRoutine.recurrence_type === 'weekly' && (!localRoutine.recurrence_days || localRoutine.recurrence_days.length === 0)) {
@@ -1838,8 +1905,8 @@ export default function atividadesrecorrentes({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ FILTRO DE USUÁRIO MODIFICADO: Só aparece para admins/gestores */}
-                {!userPermissions.isRestricted && (
+                {/* Filtro de usuário: disponível para admin e gestor */}
+                {(userPermissions.admin || userPermissions.gestor) && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Usuário Responsável
@@ -2061,8 +2128,8 @@ export default function atividadesrecorrentes({ user }) {
                     </select>
                   </div>
 
-                  {/* ✅ FILTRO DE USUÁRIO MODIFICADO: Só aparece para admins/gestores */}
-                  {!userPermissions.isRestricted && (
+                  {/* Filtro de usuário: disponível para admin e gestor */}
+                  {(userPermissions.admin || userPermissions.gestor) && (
                     <div className="w-full sm:flex-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Usuário Responsável
@@ -2236,6 +2303,23 @@ export default function atividadesrecorrentes({ user }) {
                       )}
                       
                       {/* ✅ NOVO: Indicador visual de restrição */}
+                      {/* Indicador de nível de acesso */}
+                      {userPermissions.admin && (
+                        <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                          <FiShield className="w-3 h-3" />
+                          <span className="hidden md:inline">Administrador - Acesso Total</span>
+                          <span className="md:hidden">Admin</span>
+                        </div>
+                      )}
+
+                      {userPermissions.gestor && !userPermissions.admin && (
+                        <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                          <FiShield className="w-3 h-3" />
+                          <span className="hidden md:inline">Gestor - Projetos Vinculados</span>
+                          <span className="md:hidden">Gestor</span>
+                        </div>
+                      )}
+
                       {userPermissions.isRestricted && (
                         <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
                           <FiShield className="w-3 h-3" />
