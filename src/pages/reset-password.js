@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../utils/supabaseClient';
-import Navbar from '../components/Navbar';
+import LogoDisplay from '../components/LogoDisplay';
 
 export default function ResetPassword({ user }) {
   const [newPassword, setNewPassword] = useState('');
@@ -46,8 +46,27 @@ export default function ResetPassword({ user }) {
   // Se já foi redefinido com sucesso
   if (passwordResetSuccess) {
     return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-screen">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Head>
+          <title>Senha Redefinida - Sistema de Gestão</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+        </Head>
+
+        {/* Header simplificado no topo */}
+        <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex justify-center">
+              <LogoDisplay 
+                className=""
+                fallbackText="Sistema de Gestão"
+                showFallback={true}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Conteúdo de sucesso */}
+        <div className="max-w-md w-full mx-4 bg-white p-8 rounded-lg shadow-md text-center mt-20">
           <div className="mb-6">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -86,14 +105,38 @@ export default function ResetPassword({ user }) {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Redefinir Senha</title>
+        <title>Redefinir Senha - Sistema de Gestão</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      <Navbar user={user} />
+      {/* Header simplificado com apenas a logo */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-center">
+            <LogoDisplay 
+              className=""
+              fallbackText="Sistema de Gestão"
+              showFallback={true}
+            />
+          </div>
+        </div>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
+      {/* Conteúdo principal */}
+      <main className="container mx-auto px-4 py-12">
+        {/* Mensagem informativa */}
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Definir nova senha
+          </h2>
+          <p className="text-gray-600">
+            Digite sua nova senha e confirme para finalizar
+          </p>
+        </div>
+
+        {/* Formulário de redefinição */}
         <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-2xl font-bold mb-6 text-center">Redefinir Senha</h1>
           
@@ -137,6 +180,15 @@ export default function ResetPassword({ user }) {
               Redefinir Senha
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Lembrou sua senha?{' '}
+              <Link href="/login" className="text-blue-600 hover:underline">
+                Voltar para Login
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
     </div>
