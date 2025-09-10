@@ -15,14 +15,18 @@ import {
   FiActivity,
   FiEye,
   FiUsers,
-  FiTool
+  FiTool,
+  FiLock
 } from 'react-icons/fi';
 
 export default function PainelGestor({ user }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [checkingPermissions, setCheckingPermissions] = useState(true);
-  const [hasPermissions, setHasPermissions] = useState(false);
+  const [userPermissions, setUserPermissions] = useState({
+    admin: false,
+    gestor: false
+  });
 
   // Verificar permissões ao carregar
   useEffect(() => {
@@ -42,27 +46,19 @@ export default function PainelGestor({ user }) {
 
         if (error) {
           console.error('Erro ao buscar dados do usuário:', error);
-          toast.error('Erro ao verificar permissões');
-          router.replace('/inicio');
-          return;
-        }
-
-        // Verificar se é admin OU gestor
-        const isAdmin = userData?.admin === true;
-        const isGestor = userData?.gestor === true;
-        const hasAccess = isAdmin || isGestor;
-
-        setHasPermissions(hasAccess);
-        
-        if (!hasAccess) {
-          toast.error('Você não tem permissão para acessar essa página!');
-          router.replace('/visualizacao-de-atividades');
-          return;
+          // Se não encontrar o usuário na tabela, definir como usuário comum
+          setUserPermissions({ admin: false, gestor: false });
+        } else {
+          // Definir as permissões do usuário
+          setUserPermissions({
+            admin: userData?.admin === true,
+            gestor: userData?.gestor === true
+          });
         }
       } catch (error) {
         console.error('Erro ao verificar permissões:', error);
-        toast.error('Erro ao verificar permissões');
-        router.replace('/visualizacao-de-atividades');
+        // Em caso de erro, definir como usuário comum
+        setUserPermissions({ admin: false, gestor: false });
       } finally {
         setCheckingPermissions(false);
       }
@@ -104,8 +100,19 @@ export default function PainelGestor({ user }) {
   };
 
   const handleGestaoListasClick = () => {
+    // Verificar se o usuário tem permissão antes de navegar
+    const hasPermission = userPermissions.admin || userPermissions.gestor;
+    
+    if (!hasPermission) {
+      toast.error('Você não tem permissão para acessar a gestão de usuários e listas!');
+      return;
+    }
+    
     router.push('/gestao-listas');
   };
+
+  // Verificar se o usuário pode acessar gestão de listas
+  const canAccessGestaoListas = userPermissions.admin || userPermissions.gestor;
 
   // Obter nome do usuário
   const getUserName = () => {
@@ -124,14 +131,14 @@ export default function PainelGestor({ user }) {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando permissões...</p>
+          <p className="text-gray-600">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  // Não renderizar nada se não tiver permissões ou usuário
-  if (!user || !hasPermissions) {
+  // Não renderizar nada se não tiver usuário
+  if (!user) {
     return null;
   }
 
@@ -139,7 +146,7 @@ export default function PainelGestor({ user }) {
     <div className="min-h-screen bg-gray-50">
       <Head>
         <title>Painel Gestor - Sistema de Gerenciamento</title>
-        <meta name="description" content="Painel de gestão para administradores e gestores" />
+        <meta name="description" content="Painel de gestão para usuários do sistema" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
@@ -204,10 +211,14 @@ export default function PainelGestor({ user }) {
                           setShowMenu(false);
                           handleGestaoListasClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                        className={`w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors ${
+                          !canAccessGestaoListas ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!canAccessGestaoListas}
                       >
                         <FiUsers className="mr-3 h-4 w-4" />
                         Gestão Usuários Listas
+                        {!canAccessGestaoListas && <FiLock className="ml-auto h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => {
@@ -296,10 +307,14 @@ export default function PainelGestor({ user }) {
                           setShowMenu(false);
                           handleGestaoListasClick();
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors"
+                        className={`w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center transition-colors ${
+                          !canAccessGestaoListas ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!canAccessGestaoListas}
                       >
                         <FiUsers className="mr-3 h-4 w-4" />
                         Gestão Usuários Listas
+                        {!canAccessGestaoListas && <FiLock className="ml-auto h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => {
@@ -408,21 +423,51 @@ export default function PainelGestor({ user }) {
           {/* Gestão de Usuários e Listas */}
           <button
             onClick={handleGestaoListasClick}
-            className="group bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300 text-left"
+            className={`group bg-white p-8 rounded-xl shadow-sm transition-all duration-300 border border-gray-200 text-left relative ${
+              canAccessGestaoListas 
+                ? 'hover:shadow-lg hover:border-purple-300 cursor-pointer' 
+                : 'opacity-60 cursor-not-allowed'
+            }`}
+            disabled={!canAccessGestaoListas}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <FiUsers className="w-8 h-8 text-purple-600" />
+              <div className={`w-16 h-16 rounded-lg flex items-center justify-center transition-colors ${
+                canAccessGestaoListas 
+                  ? 'bg-purple-100 group-hover:bg-purple-200' 
+                  : 'bg-gray-100'
+              }`}>
+                <FiUsers className={`w-8 h-8 ${
+                  canAccessGestaoListas ? 'text-purple-600' : 'text-gray-400'
+                }`} />
               </div>
-              <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+              {canAccessGestaoListas ? (
+                <FiArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+              ) : (
+                <FiLock className="w-6 h-6 text-gray-400" />
+              )}
             </div>
             
-            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+            <h3 className={`text-xl font-bold mb-2 transition-colors ${
+              canAccessGestaoListas 
+                ? 'text-gray-900 group-hover:text-purple-600' 
+                : 'text-gray-500'
+            }`}>
               Gestão de Usuários e Listas
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Gerencie usuários e suas listas de tarefas de forma centralizada.
+              {canAccessGestaoListas 
+                ? 'Gerencie usuários e suas listas de tarefas de forma centralizada.'
+                : 'Funcionalidade restrita para gestores e administradores.'
+              }
             </p>
+            
+            {!canAccessGestaoListas && (
+              <div className="absolute top-4 right-4">
+                <div className="bg-gray-200 text-gray-500 px-2 py-1 rounded text-xs font-medium">
+                  Acesso Restrito
+                </div>
+              </div>
+            )}
           </button>
         </div>
 
@@ -432,10 +477,20 @@ export default function PainelGestor({ user }) {
             Bem-vindo ao Painel de Gestão
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Este painel oferece acesso às principais funcionalidades de gestão do sistema. 
-            Como administrador ou gestor, você tem controle total sobre as atividades, 
-            usuários e configurações do sistema.
+            Este painel oferece acesso às principais funcionalidades do sistema. 
+            Explore as diferentes seções para gerenciar suas atividades e 
+            aproveitar todas as funcionalidades disponíveis.
           </p>
+          
+          {/* Mostrar informação sobre permissões se aplicável */}
+          {!canAccessGestaoListas && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-amber-800 text-sm">
+                <FiLock className="inline-block mr-2" />
+                Algumas funcionalidades são exclusivas para gestores e administradores.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

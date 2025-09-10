@@ -10,6 +10,7 @@ import ExcelImporter from '../components/ExcelImporter';
 import HelpModal from '../components/HelpModal';
 import { 
   FiSearch, 
+  FiShield,
   FiFilter, 
   FiFolder,
   FiMenu, 
@@ -53,6 +54,13 @@ export default function atividadesrecorrentes({ user }) {
 
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [helpModalType, setHelpModalType] = useState('atividades');
+
+  // ✅ NOVO: Estado para permissões do usuário
+  const [userPermissions, setUserPermissions] = useState({
+    admin: false,
+    gestor: false,
+    isRestricted: true // Por padrão, usuário é restrito
+  });
 
   // Estado adicional para usuários colaboradores
   const [usuariosColaboradores, setUsuariosColaboradores] = useState({});
@@ -164,8 +172,8 @@ export default function atividadesrecorrentes({ user }) {
   // FUNÇÕES DE CARREGAMENTO DE DADOS
   // =====================================
 
-  // Função para buscar usuários que compartilham projetos
-  const fetchUsuariosColaboradores = async (projetoIds) => {
+  // ✅ FUNÇÃO MODIFICADA: Buscar usuários que compartilham projetos (com restrição)
+  const fetchUsuariosColaboradores = async (projetoIds, permissions) => {
     if (projetoIds.length === 0) return {};
     
     try {
@@ -183,11 +191,24 @@ export default function atividadesrecorrentes({ user }) {
       const colaboradoresObj = {};
       
       data.forEach(relacao => {
-        if (relacao.usuarios && relacao.usuario_id !== user.id) { // Exclui o próprio usuário
-          colaboradoresObj[relacao.usuarios.id] = {
-            nome: relacao.usuarios.nome,
-            email: relacao.usuarios.email
-          };
+        if (relacao.usuarios) {
+          // ✅ NOVA LÓGICA: Se usuário é restrito, só inclui ele mesmo
+          if (permissions.isRestricted) {
+            if (relacao.usuario_id === user.id) {
+              colaboradoresObj[relacao.usuarios.id] = {
+                nome: relacao.usuarios.nome,
+                email: relacao.usuarios.email
+              };
+            }
+          } else {
+            // Admins e gestores veem todos os usuários (exceto eles mesmos no dropdown)
+            if (relacao.usuario_id !== user.id) {
+              colaboradoresObj[relacao.usuarios.id] = {
+                nome: relacao.usuarios.nome,
+                email: relacao.usuarios.email
+              };
+            }
+          }
         }
       });
       
@@ -196,6 +217,45 @@ export default function atividadesrecorrentes({ user }) {
     } catch (error) {
       console.error('Erro ao carregar usuários colaboradores:', error);
       return {};
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Verificar permissões do usuário
+  const checkUserPermissions = async (userId) => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('usuarios')
+        .select('admin, gestor')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.log('Usuário não encontrado na tabela usuarios, usando permissões padrão');
+        setUserPermissions({
+          admin: false,
+          gestor: false,
+          isRestricted: true
+        });
+        return { admin: false, gestor: false, isRestricted: true };
+      }
+
+      const permissions = {
+        admin: userData?.admin === true,
+        gestor: userData?.gestor === true,
+        isRestricted: !(userData?.admin === true || userData?.gestor === true)
+      };
+
+      setUserPermissions(permissions);
+      return permissions;
+    } catch (error) {
+      console.error('Erro ao verificar permissões:', error);
+      const defaultPermissions = {
+        admin: false,
+        gestor: false,
+        isRestricted: true
+      };
+      setUserPermissions(defaultPermissions);
+      return defaultPermissions;
     }
   };
 
@@ -450,6 +510,11 @@ export default function atividadesrecorrentes({ user }) {
         `)
         .in('task_list_id', listasIds);
       
+      // ✅ NOVA RESTRIÇÃO: Se usuário é restrito, só vê suas próprias atividades
+      if (userPermissions.isRestricted) {
+        query = query.eq('usuario_id', user.id);
+      }
+      
       // Aplicar filtros
       if (listaSelecionada) {
         query = query.eq('task_list_id', listaSelecionada);
@@ -459,8 +524,8 @@ export default function atividadesrecorrentes({ user }) {
         query = query.eq('completed', completedFiltro === 'true');
       }
       
-      // ✅ NOVO FILTRO: Por usuário
-      if (usuarioSelecionado) {
+      // ✅ FILTRO MODIFICADO: Por usuário (só para admins/gestores)
+      if (usuarioSelecionado && !userPermissions.isRestricted) {
         query = query.eq('usuario_id', usuarioSelecionado);
       }
       
@@ -597,13 +662,18 @@ export default function atividadesrecorrentes({ user }) {
         `)
         .in('task_list_id', listasIds);
       
+      // ✅ NOVA RESTRIÇÃO: Se usuário é restrito, só vê suas próprias recorrentes
+      if (userPermissions.isRestricted) {
+        query = query.eq('usuario_id', user.id);
+      }
+      
       // Aplicar filtros
       if (listaSelecionada) {
         query = query.eq('task_list_id', listaSelecionada);
       }
       
-      // ✅ NOVO FILTRO: Por usuário
-      if (usuarioSelecionado) {
+      // ✅ FILTRO MODIFICADO: Por usuário (só para admins/gestores)
+      if (usuarioSelecionado && !userPermissions.isRestricted) {
         query = query.eq('usuario_id', usuarioSelecionado);
       }
       
@@ -722,7 +792,33 @@ export default function atividadesrecorrentes({ user }) {
 
   const getUsuariosPorLista = (listaId) => {
     const usuariosIds = usuariosListas[listaId] || [];
+    
+    // ✅ NOVA LÓGICA: Se usuário é restrito, só retorna ele mesmo
+    if (userPermissions.isRestricted) {
+      // Verifica se o usuário atual está na lista
+      if (usuariosIds.includes(user.id)) {
+        return [{ id: user.id, nome: usuarios[user.id] || 'Você' }];
+      } else {
+        return []; // Se não estiver na lista, retorna vazio
+      }
+    }
+    
+    // Para admins/gestores, retorna todos os usuários da lista
     return usuariosIds.map(id => ({ id, nome: usuarios[id] || 'Usuário não encontrado' }));
+  };
+
+  // ✅ NOVA FUNÇÃO: Filtrar listas onde o usuário tem acesso
+  const getListasAcessiveis = () => {
+    if (!userPermissions.isRestricted) {
+      // Admins e gestores veem todas as listas
+      return Object.entries(listas);
+    }
+    
+    // Usuários restritos só veem listas onde estão incluídos
+    return Object.entries(listas).filter(([listaId, lista]) => {
+      const usuariosIds = usuariosListas[listaId] || [];
+      return usuariosIds.includes(user.id);
+    });
   };
 
   const formatDate = (dateString) => {
@@ -813,11 +909,16 @@ export default function atividadesrecorrentes({ user }) {
       if (!user) return;
       
       try {
+        // ✅ PRIMEIRO: Verificar permissões
+        const permissions = await checkUserPermissions(user.id);
+        
         const projetoIds = await fetchProjetosVinculados(user.id);
         await fetchProjetos(projetoIds);
         await fetchListas(projetoIds);
         await fetchUsuariosListas();
-        await fetchUsuariosColaboradores(projetoIds); // ✅ NOVA FUNÇÃO
+        
+        // ✅ MODIFICADO: Passar permissões para função
+        await fetchUsuariosColaboradores(projetoIds, permissions);
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
       }
@@ -832,7 +933,7 @@ export default function atividadesrecorrentes({ user }) {
     } else {
       fetchrecorrentes();
     }
-  }, [activeTab, projetosVinculados, listas, listaSelecionada, completedFiltro, searchTerm, usuarioSelecionado]);
+  }, [activeTab, projetosVinculados, listas, listaSelecionada, completedFiltro, searchTerm, usuarioSelecionado, userPermissions]);
 
   // =====================================
   // HANDLERS
@@ -853,11 +954,14 @@ export default function atividadesrecorrentes({ user }) {
     setProjetoSelecionado('');
     setListaSelecionada('');
     setCompletedFiltro('');
-    setUsuarioSelecionado(''); // ✅ NOVO
+    // ✅ MODIFICADO: Só limpa filtro de usuário se não for restrito
+    if (!userPermissions.isRestricted) {
+      setUsuarioSelecionado('');
+    }
     setShowFilters(false);
   };
 
-  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro || usuarioSelecionado;
+  const hasActiveFilters = projetoSelecionado || listaSelecionada || completedFiltro || (!userPermissions.isRestricted && usuarioSelecionado);
 
   // =====================================
   // ✅ FUNÇÕES DE RENDERIZAÇÃO INLINE ATUALIZADAS
@@ -974,7 +1078,13 @@ export default function atividadesrecorrentes({ user }) {
               <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                 <FiUser className="w-3 h-3 text-blue-600" />
               </div>
-              <span className="text-sm">{usuarios[valor] || 'Não atribuído'}</span>
+              <span className="text-sm">
+                {usuarios[valor] || 'Não atribuído'}
+                {/* ✅ NOVO: Indicador visual se é o próprio usuário */}
+                {userPermissions.isRestricted && valor === user.id && (
+                  <span className="ml-1 text-xs text-blue-600">(Você)</span>
+                )}
+              </span>
             </div>
           );
           
@@ -1099,6 +1209,13 @@ export default function atividadesrecorrentes({ user }) {
         toast.error('Preencha todos os campos obrigatórios');
         return;
       }
+      
+      // ✅ NOVA VALIDAÇÃO: Verificar se usuário restrito está tentando atribuir a outra pessoa
+      if (userPermissions.isRestricted && localTask.usuario_id !== user.id) {
+        toast.error('Você só pode atribuir atividades para si mesmo');
+        return;
+      }
+      
       saveTask(localTask);
     };
 
@@ -1125,17 +1242,28 @@ export default function atividadesrecorrentes({ user }) {
           <select
             value={localTask.task_list_id}
             onChange={(e) => {
-              setLocalTask({...localTask, task_list_id: e.target.value, usuario_id: ''});
+              const novoUsuarioId = userPermissions.isRestricted ? user.id : '';
+              setLocalTask({...localTask, task_list_id: e.target.value, usuario_id: novoUsuarioId});
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione...</option>
-            {Object.entries(listas).map(([id, lista]) => (
+            {/* ✅ MODIFICADO: Usar listas acessíveis */}
+            {getListasAcessiveis().map(([id, lista]) => (
               <option key={id} value={id}>
                 {lista.nome} ({projetos[lista.projeto_id]})
+                {userPermissions.isRestricted && ' - Acesso Permitido'}
               </option>
             ))}
           </select>
+          
+          {/* ✅ NOVO: Aviso se não há listas acessíveis */}
+          {userPermissions.isRestricted && getListasAcessiveis().length === 0 && (
+            <div className="mt-1 text-xs text-orange-600 flex items-center gap-1">
+              <FiShield className="w-3 h-3" />
+              Você não tem acesso a nenhuma lista
+            </div>
+          )}
         </td>
         <td className="px-4 py-3">
           <select
@@ -1151,6 +1279,14 @@ export default function atividadesrecorrentes({ user }) {
               </option>
             ))}
           </select>
+          
+          {/* ✅ NOVO: Indicador para usuários restritos */}
+          {userPermissions.isRestricted && localTask.task_list_id && getUsuariosPorLista(localTask.task_list_id).length === 0 && (
+            <div className="mt-1 text-xs text-orange-600 flex items-center gap-1">
+              <FiShield className="w-3 h-3" />
+              Você não tem acesso a esta lista
+            </div>
+          )}
         </td>
         <td className="px-4 py-3">
           <input
@@ -1229,6 +1365,12 @@ export default function atividadesrecorrentes({ user }) {
         return;
       }
       
+      // ✅ NOVA VALIDAÇÃO: Verificar se usuário restrito está tentando atribuir a outra pessoa
+      if (userPermissions.isRestricted && localRoutine.usuario_id !== user.id) {
+        toast.error('Você só pode atribuir atividades recorrentes para si mesmo');
+        return;
+      }
+      
       if (localRoutine.recurrence_type === 'weekly' && (!localRoutine.recurrence_days || localRoutine.recurrence_days.length === 0)) {
         toast.error('Selecione pelo menos um dia da semana para recorrência semanal');
         return;
@@ -1290,17 +1432,28 @@ export default function atividadesrecorrentes({ user }) {
           <select
             value={localRoutine.task_list_id}
             onChange={(e) => {
-              setLocalRoutine({...localRoutine, task_list_id: e.target.value, usuario_id: ''});
+              const novoUsuarioId = userPermissions.isRestricted ? user.id : '';
+              setLocalRoutine({...localRoutine, task_list_id: e.target.value, usuario_id: novoUsuarioId});
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione...</option>
-            {Object.entries(listas).map(([id, lista]) => (
+            {/* ✅ MODIFICADO: Usar listas acessíveis */}
+            {getListasAcessiveis().map(([id, lista]) => (
               <option key={id} value={id}>
                 {lista.nome} ({projetos[lista.projeto_id]})
+                {userPermissions.isRestricted && ' - Acesso Permitido'}
               </option>
             ))}
           </select>
+          
+          {/* ✅ NOVO: Aviso se não há listas acessíveis */}
+          {userPermissions.isRestricted && getListasAcessiveis().length === 0 && (
+            <div className="mt-1 text-xs text-orange-600 flex items-center gap-1">
+              <FiShield className="w-3 h-3" />
+              Você não tem acesso a nenhuma lista
+            </div>
+          )}
         </td>
         <td className="px-4 py-3">
           <select
@@ -1316,6 +1469,14 @@ export default function atividadesrecorrentes({ user }) {
               </option>
             ))}
           </select>
+          
+          {/* ✅ NOVO: Indicador para usuários restritos */}
+          {userPermissions.isRestricted && localRoutine.task_list_id && getUsuariosPorLista(localRoutine.task_list_id).length === 0 && (
+            <div className="mt-1 text-xs text-orange-600 flex items-center gap-1">
+              <FiShield className="w-3 h-3" />
+              Você não tem acesso a esta lista
+            </div>
+          )}
         </td>
         <td className="px-4 py-3">
           <div className="space-y-2">
@@ -1677,24 +1838,26 @@ export default function atividadesrecorrentes({ user }) {
                   </div>
                 </div>
 
-                {/* ✅ NOVO FILTRO DE USUÁRIO */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Usuário Responsável
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={usuarioSelecionado}
-                    onChange={(e) => setUsuarioSelecionado(e.target.value)}
-                  >
-                    <option value="">Todos os usuários</option>
-                    {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
-                      <option key={id} value={id}>
-                        {usuario.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* ✅ FILTRO DE USUÁRIO MODIFICADO: Só aparece para admins/gestores */}
+                {!userPermissions.isRestricted && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Usuário Responsável
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={usuarioSelecionado}
+                      onChange={(e) => setUsuarioSelecionado(e.target.value)}
+                    >
+                      <option value="">Todos os usuários</option>
+                      {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
+                        <option key={id} value={id}>
+                          {usuario.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {activeTab === 'atividades' && (
                   <div>
@@ -1898,24 +2061,26 @@ export default function atividadesrecorrentes({ user }) {
                     </select>
                   </div>
 
-                  {/* ✅ NOVO FILTRO DE USUÁRIO */}
-                  <div className="w-full sm:flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Usuário Responsável
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={usuarioSelecionado}
-                      onChange={(e) => setUsuarioSelecionado(e.target.value)}
-                    >
-                      <option value="">Todos os usuários</option>
-                      {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
-                        <option key={id} value={id}>
-                          {usuario.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* ✅ FILTRO DE USUÁRIO MODIFICADO: Só aparece para admins/gestores */}
+                  {!userPermissions.isRestricted && (
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Usuário Responsável
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={usuarioSelecionado}
+                        onChange={(e) => setUsuarioSelecionado(e.target.value)}
+                      >
+                        <option value="">Todos os usuários</option>
+                        {Object.entries(usuariosColaboradores).map(([id, usuario]) => (
+                          <option key={id} value={id}>
+                            {usuario.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {activeTab === 'atividades' && (
                     <div className="w-full sm:flex-1">
@@ -2068,6 +2233,15 @@ export default function atividadesrecorrentes({ user }) {
                           <span className="hidden sm:inline">Atividades Recorrentes</span>
                           <span className="sm:hidden">Recorrentes</span>
                         </>
+                      )}
+                      
+                      {/* ✅ NOVO: Indicador visual de restrição */}
+                      {userPermissions.isRestricted && (
+                        <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
+                          <FiShield className="w-3 h-3" />
+                          <span className="hidden md:inline">Visualização Restrita</span>
+                          <span className="md:hidden">Restrita</span>
+                        </div>
                       )}
                     </h2>
                     
@@ -2246,7 +2420,7 @@ export default function atividadesrecorrentes({ user }) {
                             {/* ✅ COLUNA: Lista (Projeto) */}
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(task, 'task_list_id', 'select', 
-                                Object.entries(listas).map(([id, lista]) => ({
+                                getListasAcessiveis().map(([id, lista]) => ({
                                   value: parseInt(id),
                                   label: `${lista.nome} (${projetos[lista.projeto_id]})`
                                 })), 'atividades'
@@ -2466,7 +2640,7 @@ export default function atividadesrecorrentes({ user }) {
                             </td>
                             <td className="px-4 py-3">
                               {renderizarCelulaEditavel(routine, 'task_list_id', 'select', 
-                                Object.entries(listas).map(([id, lista]) => ({
+                                getListasAcessiveis().map(([id, lista]) => ({
                                   value: parseInt(id),
                                   label: `${lista.nome} (${projetos[lista.projeto_id]})`
                                 })), 'recorrentes'
