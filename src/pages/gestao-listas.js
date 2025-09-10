@@ -19,6 +19,7 @@ import {
   FiFilter,
   FiUsers,
   FiLink,
+  FiUser
 } from "react-icons/fi";
 import LogoDisplay from "../components/LogoDisplay";
 

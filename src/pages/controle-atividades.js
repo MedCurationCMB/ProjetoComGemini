@@ -1245,6 +1245,16 @@ export default function ControleEficienciaTimes({ user }) {
                       <button
                         onClick={() => {
                           setShowMenu(false);
+                          router.push('/perfil');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      >
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
                           handleConfiguracoesClick();
                         }}
                         className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
@@ -1638,6 +1648,16 @@ export default function ControleEficienciaTimes({ user }) {
                       >
                         <FiList className="mr-3 h-4 w-4" />
                         Histórico Acessos (admin)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          router.push('/perfil');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      >
+                        <FiUser className="mr-3 h-4 w-4" />
+                        Perfil
                       </button>
                       <button
                         onClick={() => {
