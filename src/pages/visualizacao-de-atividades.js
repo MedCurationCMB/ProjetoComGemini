@@ -43,6 +43,9 @@ export default function VisualizacaoAtividades({ user }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+
+  // Estados para controle de recarregamento
+  const [ultimaAcaoConclusao, setUltimaAcaoConclusao] = useState(null);
   
   // ✅ SOLUÇÃO 2: useRef para controlar carregamentos desnecessários
   const dadosCarregadosRef = useRef(false);
@@ -117,10 +120,14 @@ export default function VisualizacaoAtividades({ user }) {
   // ===========================================
   // FUNÇÕES UTILITÁRIAS
   // ===========================================
+
+  const criarDataSegura = (dataISO) => {
+    return new Date(dataISO + 'T12:00:00');
+  };
   
   // ✅ NOVA FUNÇÃO: Formatar data no formato DD/MMM (05/set)
   const formatarDataBotaoCompacto = (dataISO) => {
-    const data = new Date(dataISO + 'T12:00:00');
+    const data = criarDataSegura(dataISO);  // ← MUDANÇA
     const dia = data.getDate().toString().padStart(2, '0');
     const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 
                   'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -229,7 +236,7 @@ export default function VisualizacaoAtividades({ user }) {
 
   // Função para formatar data em formato brasileiro para os botões
   const formatarDataBotao = (dataISO) => {
-    const data = new Date(dataISO + 'T12:00:00');
+    const data = criarDataSegura(dataISO);  // ← MUDANÇA
     return data.toLocaleDateString('pt-BR');
   };
 
@@ -278,11 +285,11 @@ export default function VisualizacaoAtividades({ user }) {
   // ✅ FUNÇÃO ATUALIZADA: Gera todas as datas previstas para uma rotina (com suporte aos novos tipos)
   const gerarDatasRecorrencia = (rotina) => {
     const datas = [];
-    const start = new Date(rotina.start_date + 'T12:00:00');
+    const start = criarDataSegura(rotina.start_date);  // ← MUDANÇA
     
     const hoje = new Date();
     const end = rotina.end_date 
-      ? new Date(rotina.end_date + 'T12:00:00')
+      ? criarDataSegura(rotina.end_date)  // ← MUDANÇA
       : new Date(hoje.getTime() + (365 * 24 * 60 * 60 * 1000));
     
     let current = new Date(start);
@@ -382,9 +389,9 @@ export default function VisualizacaoAtividades({ user }) {
   // ✅ NOVA FUNÇÃO: Calcular diferença em dias (corrigida)
   const calcularDiasAtraso = (dataRotina) => {
     const hoje = new Date();
-    hoje.setHours(12, 0, 0, 0); // Meio-dia para evitar problemas de timezone
+    hoje.setHours(12, 0, 0, 0);
     
-    const dataRot = new Date(dataRotina + 'T12:00:00');
+    const dataRot = criarDataSegura(dataRotina);  // ← MUDANÇA
     
     const diffTime = hoje.getTime() - dataRot.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -394,8 +401,8 @@ export default function VisualizacaoAtividades({ user }) {
 
   // ✅ NOVA FUNÇÃO: Formatar data específica (substituindo formatarTextoAtraso)
   const formatarDataEspecifica = (dataRotina) => {
-    const data = new Date(dataRotina + 'T12:00:00');
-    return data.toLocaleDateString('pt-BR'); // Formato: 30/08/2025
+    const data = criarDataSegura(dataRotina);  // ← MUDANÇA
+    return data.toLocaleDateString('pt-BR');
   };
 
   // ===========================================
@@ -621,8 +628,6 @@ export default function VisualizacaoAtividades({ user }) {
           
           const datasRecorrencia = gerarDatasRecorrencia(rotina);
           
-          console.log('📅 Datas de recorrência:', datasRecorrencia);
-          
           datasRecorrencia.forEach(data => {
             // Verificar se já foi concluída nesta data específica
             const jaConcluida = statusData && statusData.some(s => 
@@ -631,12 +636,28 @@ export default function VisualizacaoAtividades({ user }) {
               s.completed
             );
             
-            // ✅ CORREÇÃO: Mostrar apenas datas até a data selecionada
-            if (!jaConcluida && data <= dataAtual) {
-              atividadesPersistentesVisiveis.push({
-                ...rotina,
-                visible_date: data // NOVA PROPRIEDADE: data específica desta linha
-              });
+            // ✅ LÓGICA CORRIGIDA:
+            // - Mostrar no dia exato se foi concluída NAQUELE DIA (para aparecer verde)
+            // - Mostrar nos dias seguintes apenas se NÃO foi concluída ainda
+            
+            if (data <= dataAtual) {
+              if (data === dataAtual) {
+                // ✅ No dia atual: sempre mostrar (concluída ou não)
+                atividadesPersistentesVisiveis.push({
+                  ...rotina,
+                  visible_date: data,
+                  ja_concluida: jaConcluida
+                });
+              } else {
+                // ✅ Dias anteriores: só mostrar se NÃO foi concluída (persistir pendência)
+                if (!jaConcluida) {
+                  atividadesPersistentesVisiveis.push({
+                    ...rotina,
+                    visible_date: data,
+                    ja_concluida: false
+                  });
+                }
+              }
             }
           });
         });
@@ -691,18 +712,43 @@ export default function VisualizacaoAtividades({ user }) {
     try {
       const dataAtual = formatarDataISO(dataSelecionada);
       
-      // ✅ Buscar atividades do dia atual da lista selecionada
+      // ✅ Buscar atividades criadas nesta data (apenas não concluídas)
       const { data: atividadesHoje, error: erroHoje } = await supabase
         .from('tasks')
         .select('*')
         .eq('usuario_id', user.id)
         .eq('task_list_id', listaSelecionada)
         .eq('date', dataAtual)
+        .eq('completed', false)
         .order('created_at', { ascending: false });
       
       if (erroHoje) throw erroHoje;
       
-      // ✅ Buscar atividades pendentes de dias anteriores da lista selecionada
+      // ✅ CORREÇÃO: Buscar atividades CONCLUÍDAS nesta data específica
+      const proximodia = new Date(dataSelecionada);  // ← MUDANÇA: usar dataSelecionada
+      proximodia.setDate(proximodia.getDate() + 1);
+      const proximoDiaISO = formatarDataISO(proximodia);
+      
+      console.log('🔍 Buscando atividades concluídas entre:', {
+        inicio: dataAtual + 'T00:00:00',
+        fim: proximoDiaISO + 'T00:00:00'
+      });
+      
+      const { data: atividadesConcluidas, error: erroConcluidas } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('usuario_id', user.id)
+        .eq('task_list_id', listaSelecionada)
+        .eq('completed', true)
+        .gte('completed_at', dataAtual + 'T00:00:00')
+        .lt('completed_at', proximoDiaISO + 'T00:00:00') // ✅ CORREÇÃO: próximo dia às 00:00
+        .order('completed_at', { ascending: false });
+      
+      if (erroConcluidas) throw erroConcluidas;
+      
+      console.log('✅ Atividades concluídas encontradas:', atividadesConcluidas?.length || 0);
+      
+      // ✅ Buscar atividades pendentes de dias anteriores
       const { data: atividadesPendentes, error: erroPendentes } = await supabase
         .from('tasks')
         .select('*')
@@ -714,11 +760,19 @@ export default function VisualizacaoAtividades({ user }) {
       
       if (erroPendentes) throw erroPendentes;
       
-      // Combinar atividades
+      // ✅ Combinar TRÊS tipos de atividades
       const todasAtividades = [
-        ...(atividadesHoje || []),
-        ...(atividadesPendentes || [])
+        ...(atividadesHoje || []),           // Criadas hoje (não concluídas)
+        ...(atividadesConcluidas || []),     // Concluídas hoje (qualquer data criação)
+        ...(atividadesPendentes || [])       // Pendentes de dias anteriores
       ];
+      
+      console.log('📊 Total de atividades carregadas:', {
+        criadasHoje: atividadesHoje?.length || 0,
+        concluidasHoje: atividadesConcluidas?.length || 0,
+        pendentes: atividadesPendentes?.length || 0,
+        total: todasAtividades.length
+      });
       
       setAtividadesDia(todasAtividades);
       
@@ -1379,7 +1433,7 @@ export default function VisualizacaoAtividades({ user }) {
                     {showDatePicker && (
                       <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border z-30 p-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Selecione a data que deseja visualizar
+                          Data selecionada
                         </label>
                         <input
                           type="date"
@@ -1481,20 +1535,35 @@ export default function VisualizacaoAtividades({ user }) {
                   ) : (
                     <div className="space-y-3">
                       {atividadesDia.map((atividade) => {
-                        const isAtividadeHoje = atividade.date === formatarDataISO(dataSelecionada);
-                        const dataAtividade = new Date(atividade.date + 'T12:00:00');
+                        const dataAtividadeOriginal = atividade.date;
+                        const dataAtual = formatarDataISO(dataSelecionada);
+                        const dataCompletedAt = atividade.completed_at ? atividade.completed_at.split('T')[0] : null;
                         const isEditando = editandoAtividade === atividade.id;
+                        
+                        // ✅ NOVA LÓGICA DE CORES
+                        let corCard, corTexto, tipoAtividade;
+                        
+                        if (atividade.completed) {
+                          // ✅ Atividade concluída - mostrar no dia da conclusão
+                          corCard = 'bg-green-50 border-green-200';
+                          corTexto = 'text-green-800';
+                          tipoAtividade = 'concluida';
+                        } else if (dataAtividadeOriginal === dataAtual) {
+                          // ✅ Criada hoje e ainda pendente
+                          corCard = 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+                          corTexto = 'text-[#012060]';
+                          tipoAtividade = 'criada-hoje';
+                        } else {
+                          // ✅ Pendente de dias anteriores
+                          corCard = 'bg-yellow-50 border-yellow-200';
+                          corTexto = 'text-yellow-800';
+                          tipoAtividade = 'pendente';
+                        }
                         
                         return (
                           <div
                             key={atividade.id}
-                            className={`p-4 border rounded-lg transition-colors ${
-                              atividade.completed 
-                                ? 'bg-green-50 border-green-200' 
-                                : isAtividadeHoje
-                                  ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
-                                  : 'bg-yellow-50 border-yellow-200'
-                            }`}
+                            className={`p-4 border rounded-lg transition-colors ${corCard}`}
                           >
                             <div className="flex items-start space-x-3">                      
                               {/* ✅ BOTÃO PARA MARCAR/DESMARCAR - sempre visível */}
@@ -1562,9 +1631,7 @@ export default function VisualizacaoAtividades({ user }) {
                                       <h4 className={`text-xs sm:text-base font-medium ${
                                         atividade.completed 
                                           ? 'text-green-800 line-through' 
-                                          : isAtividadeHoje 
-                                            ? 'text-[#012060]'
-                                            : 'text-yellow-800'
+                                          : corTexto
                                       }`}>
                                         {atividade.content}
                                       </h4>
@@ -1590,7 +1657,10 @@ export default function VisualizacaoAtividades({ user }) {
                                     <div className="flex items-center mt-1 text-xs text-gray-500">
                                       <FiCalendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
                                       <span className="text-xs sm:text-xs">
-                                        {new Date(atividade.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                        {atividade.completed && dataCompletedAt !== dataAtividadeOriginal
+                                          ? `${criarDataSegura(dataAtividadeOriginal).toLocaleDateString('pt-BR')}`
+                                          : criarDataSegura(dataAtividadeOriginal).toLocaleDateString('pt-BR')
+                                        }
                                       </span>
                                     </div>
                                   </>
@@ -1711,7 +1781,9 @@ export default function VisualizacaoAtividades({ user }) {
                       {atividadesRotina.map((rotina) => {
                         // ✅ Para rotinas persistentes, verificar se já foi concluída na data específica
                         // Para rotinas não persistentes, usar a lógica atual (statusRotina)
-                        const isCompleted = rotina.persistent ? false : (statusRotina[rotina.id]?.completed || false);
+                        const isCompleted = rotina.persistent 
+                          ? (rotina.ja_concluida || false)  // ✅ Para persistentes: usar a flag ja_concluida
+                          : (statusRotina[rotina.id]?.completed || false);  // Para não persistentes: lógica atual
                         const diasAtraso = rotina.visible_date ? calcularDiasAtraso(rotina.visible_date) : 0;
                         
                         // ✅ Definir cores baseadas no atraso (para rotinas persistentes)
@@ -2149,7 +2221,7 @@ export default function VisualizacaoAtividades({ user }) {
                       <div key={index} className="flex items-center space-x-2 text-sm text-gray-900 bg-green-50 p-3 rounded-lg">
                         <FiCheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                         <span>
-                          {new Date(conclusao.date + 'T12:00:00').toLocaleDateString('pt-BR')} às {' '}
+                          {criarDataSegura(conclusao.date).toLocaleDateString('pt-BR')} às {' '}
                           {new Date(conclusao.completed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
