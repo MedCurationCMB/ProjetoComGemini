@@ -1,4 +1,4 @@
-// Arquivo: src/pages/gestao-atividades-recorrentes.js
+// Arquivo: src/pages/gestao-de-atividades-recorrentes.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -545,30 +545,30 @@ export default function GestaoAtividadesRecorrentes({ user }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </Head>
 
-      {/* Header responsivo (INALTERADO) */}
+      {/* ✅ Header Mobile Otimizado - MANTENDO LogoDisplay */}
       <div className="sticky top-0 bg-white shadow-sm z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
               <button
                 onClick={() => router.push('/visualizacao-de-atividades')}
-                className="p-2 hover:bg-gray-100 rounded-md"
+                className="p-2 hover:bg-gray-100 rounded-md flex-shrink-0"
               >
-                <FiArrowLeft className="w-6 h-6 text-gray-600" />
+                <FiArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
               </button>
               <LogoDisplay 
-                className=""
+                className="min-w-0"
                 fallbackText="Gestão de Atividades Recorrentes"
                 showFallback={true}
               />
             </div>
             
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-2 hover:bg-gray-100 rounded-md"
               >
-                <FiMenu className="w-6 h-6 text-gray-600" />
+                <FiMenu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
               </button>
               
               {showMenu && (
@@ -621,7 +621,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
         </div>
       </div>
 
-      {/* Seleção de Lista (INALTERADA) */}
+      {/* ✅ Seleção de Lista Mobile Otimizada */}
       <div className="sticky top-[72px] bg-white border-b border-gray-200 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {loading ? (
@@ -639,9 +639,9 @@ export default function GestaoAtividadesRecorrentes({ user }) {
               </p>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
+            <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:space-x-4">
               <select
-                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm mr-4"
+                className="w-full sm:flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border-0 rounded-lg sm:rounded-full focus:outline-none focus:ring-2 focus:ring-[#012060] focus:bg-white text-sm"
                 value={listaSelecionada}
                 onChange={(e) => setListaSelecionada(e.target.value)}
               >
@@ -654,10 +654,11 @@ export default function GestaoAtividadesRecorrentes({ user }) {
               {listaSelecionada && (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="px-6 py-3 bg-[#012060] text-white rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center space-x-2 transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-[#012060] text-white rounded-lg sm:rounded-full hover:bg-[#013080] focus:outline-none focus:ring-2 focus:ring-[#012060] flex items-center justify-center space-x-2 transition-colors text-sm"
                 >
-                  <FiPlus className="w-5 h-5" />
-                  <span>Nova Atividade Recorrente</span>
+                  <FiPlus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="sm:inline hidden">Nova Atividade Recorrente</span>
+                  <span className="sm:hidden">Nova Atividade</span>
                 </button>
               )}
             </div>
@@ -665,18 +666,20 @@ export default function GestaoAtividadesRecorrentes({ user }) {
         </div>
       </div>
 
-      {/* Conteúdo Principal (INALTERADO) */}
+      {/* ✅ Conteúdo Principal Mobile Otimizado */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {listaSelecionada && (
             <>
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <FiRepeat className="w-5 h-5 text-[#012060] mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">Atividades Recorrentes Criadas</h3>
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <div className="flex items-center min-w-0">
+                    <FiRepeat className="w-4 h-4 sm:w-5 sm:h-5 text-[#012060] mr-2 flex-shrink-0" />
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">Atividades Recorrentes</h3>
                   </div>
-                  <span className="text-sm text-gray-500">{rotinas.length} atividade{rotinas.length !== 1 ? 's recorrentes' : ' recorrente'}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">
+                    {rotinas.length} atividade{rotinas.length !== 1 ? 's recorrentes' : ' recorrente'}
+                  </span>
                 </div>
                 
                 {loadingRotinas ? (
@@ -684,17 +687,19 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#012060]"></div>
                   </div>
                 ) : rotinas.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-6 sm:py-8">
                     <div className="mx-auto w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-3">
                       <FiRepeat className="w-6 h-6 text-[#012060]" />
                     </div>
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">Nenhuma atividade recorrente criada</h4>
-                    <p className="text-gray-500 text-sm mb-4">
+                    <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+                      Nenhuma atividade recorrente criada
+                    </h4>
+                    <p className="text-gray-500 text-sm mb-4 px-4">
                       Crie sua primeira atividade recorrente para começar a organizar suas tarefas.
                     </p>
                     <button
                       onClick={() => setShowForm(true)}
-                      className="px-6 py-2 bg-[#012060] text-white rounded-full hover:bg-[#013080] transition-colors"
+                      className="px-4 sm:px-6 py-2 bg-[#012060] text-white rounded-full hover:bg-[#013080] transition-colors text-sm"
                     >
                       Criar Primeira Atividade Recorrente
                     </button>
@@ -704,21 +709,23 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     {rotinas.map((rotina) => (
                       <div
                         key={rotina.id}
-                        className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 mb-2">{rotina.content}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base pr-2 leading-5">
+                              {rotina.content}
+                            </h4>
                             
                             <div className="space-y-1 text-xs text-gray-500">
                               <div className="flex items-center">
-                                <FiRepeat className="w-3 h-3 mr-1" />
-                                <span>{formatarRecorrencia(rotina)}</span>
+                                <FiRepeat className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">{formatarRecorrencia(rotina)}</span>
                               </div>
                               
                               <div className="flex items-center">
-                                <FiCalendar className="w-3 h-3 mr-1" />
-                                <span>
+                                <FiCalendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">
                                   Início: {new Date(rotina.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                   {rotina.end_date && (
                                     <> | Fim: {new Date(rotina.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</>
@@ -727,16 +734,16 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                               </div>
                               
                               <div className="flex items-center">
-                                <FiClock className="w-3 h-3 mr-1" />
-                                <span>
+                                <FiClock className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">
                                   Criada em {new Date(rotina.created_at).toLocaleDateString('pt-BR')} às {new Date(rotina.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Menu de ações */}
-                          <div className="relative menu-rotina ml-4">
+                          {/* Menu de ações Mobile Otimizado */}
+                          <div className="relative menu-rotina ml-2 flex-shrink-0">
                             <button
                               onClick={() => setMenuAberto(menuAberto === rotina.id ? null : rotina.id)}
                               className="p-2 hover:bg-gray-200 rounded-full transition-colors"
@@ -774,13 +781,13 @@ export default function GestaoAtividadesRecorrentes({ user }) {
         </div>
       </div>
 
-      {/* ✅ MODAL DO FORMULÁRIO ATUALIZADO */}
+      {/* ✅ MODAL DO FORMULÁRIO MOBILE OTIMIZADO */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-lg sm:rounded-lg shadow-xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                   {editandoRotina ? 'Editar Atividade Recorrente' : 'Nova Atividade Recorrente'}
                 </h2>
                 <button
@@ -794,18 +801,18 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Mostrar lista selecionada */}
+              <div className="space-y-4 sm:space-y-6">
+                {/* Mostrar lista selecionada Mobile */}
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="flex items-center text-sm">
-                    <FiList className="w-4 h-4 text-[#012060] mr-2" />
-                    <span className="text-gray-700">
+                    <FiList className="w-4 h-4 text-[#012060] mr-2 flex-shrink-0" />
+                    <span className="text-gray-700 truncate">
                       Lista selecionada: <strong>{listas[listaSelecionada]}</strong>
                     </span>
                   </div>
                 </div>
 
-                {/* Conteúdo da Rotina */}
+                {/* Conteúdo da Rotina Mobile */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descrição da Atividade Recorrente *
@@ -814,19 +821,19 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     value={formData.content}
                     onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                     placeholder="Ex: Fazer exercícios, Revisar emails, Estudar..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none text-sm"
                     rows={3}
                   />
                 </div>
 
-                {/* ✅ SEÇÃO DE RECORRÊNCIA ATUALIZADA */}
+                {/* ✅ SEÇÃO DE RECORRÊNCIA MOBILE OTIMIZADA */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Tipo de Recorrência *
                   </label>
                   
-                  {/* Opções Básicas */}
-                  <div className="grid grid-cols-3 gap-3 mb-3">
+                  {/* Opções Básicas Mobile */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-3">
                     {tiposRecorrenciaBasicos.map((tipo) => (
                       <button
                         key={tipo.valor}
@@ -835,7 +842,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                           recurrence_type: tipo.valor,
                           recurrence_days: tipo.valor === 'weekly' ? prev.recurrence_days : []
                         }))}
-                        className={`p-3 border rounded-lg text-sm font-medium transition-colors ${
+                        className={`p-2 sm:p-3 border rounded-lg text-sm font-medium transition-colors ${
                           formData.recurrence_type === tipo.valor
                             ? 'bg-[#012060] text-white border-[#012060]'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -846,7 +853,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     ))}
                   </div>
 
-                  {/* ✅ TOGGLE PARA OPÇÕES AVANÇADAS */}
+                  {/* TOGGLE PARA OPÇÕES AVANÇADAS Mobile */}
                   <button
                     type="button"
                     onClick={() => setMostrarOpcoesAvancadas(!mostrarOpcoesAvancadas)}
@@ -860,10 +867,10 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     Opções Avançadas
                   </button>
 
-                  {/* ✅ OPÇÕES AVANÇADAS (COLAPSÁVEIS) */}
+                  {/* OPÇÕES AVANÇADAS Mobile */}
                   {mostrarOpcoesAvancadas && (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         {tiposRecorrenciaAvancados.map((tipo) => (
                           <button
                             key={tipo.valor}
@@ -871,7 +878,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                               ...prev, 
                               recurrence_type: tipo.valor
                             }))}
-                            className={`p-3 border rounded-lg text-sm font-medium transition-colors ${
+                            className={`p-2 sm:p-3 border rounded-lg text-sm font-medium transition-colors ${
                               formData.recurrence_type === tipo.valor
                                 ? 'bg-[#012060] text-white border-[#012060]'
                                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -882,7 +889,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                         ))}
                       </div>
                       
-                      {/* Descrições das opções avançadas */}
+                      {/* Descrições Mobile */}
                       <div className="mt-3 text-xs text-gray-600 space-y-1">
                         <p><strong>A cada X semanas:</strong> Escolha o dia da semana e o intervalo</p>
                         <p><strong>Padrão mensal:</strong> Ex: toda primeira segunda-feira do mês</p>
@@ -891,9 +898,9 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   )}
                 </div>
 
-                {/* ✅ CAMPOS CONDICIONAIS ATUALIZADOS */}
+                {/* ✅ CAMPOS CONDICIONAIS MOBILE OTIMIZADOS */}
 
-                {/* Intervalo (apenas para diária) */}
+                {/* Intervalo (apenas para diária) Mobile */}
                 {formData.recurrence_type === 'daily' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -905,7 +912,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                       max="365"
                       value={formData.recurrence_interval}
                       onChange={(e) => setFormData(prev => ({ ...prev, recurrence_interval: parseInt(e.target.value) || 1 }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent text-sm"
                       placeholder="1"
                     />
                     <p className="text-xs text-gray-500 mt-1">
@@ -914,19 +921,19 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 )}
 
-                {/* Dias da Semana (apenas para semanal básico) */}
+                {/* Dias da Semana Mobile Otimizado */}
                 {formData.recurrence_type === 'weekly' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Dias da Semana *
                     </label>
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
                       {diasDaSemana.map((dia) => (
                         <button
                           key={dia.valor}
                           type="button"
                           onClick={() => toggleDiaSemana(dia.valor)}
-                          className={`p-3 border rounded-lg text-xs font-medium transition-colors ${
+                          className={`p-2 sm:p-3 border rounded-lg text-xs font-medium transition-colors ${
                             formData.recurrence_days.includes(dia.valor)
                               ? 'bg-[#012060] text-white border-[#012060]'
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -942,19 +949,19 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 )}
 
-                {/* ✅ NOVO: Recorrências Avançadas Semanais (bi/tri/quad) */}
+                {/* Recorrências Avançadas Semanais Mobile */}
                 {['biweekly', 'triweekly', 'quadweekly'].includes(formData.recurrence_type) && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Dia da Semana *
                     </label>
-                    <div className="grid grid-cols-7 gap-2 mb-4">
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-4">
                       {diasDaSemana.map((dia) => (
                         <button
                           key={dia.valor}
                           type="button"
                           onClick={() => setFormData(prev => ({ ...prev, selected_weekday: dia.valor }))}
-                          className={`p-3 border rounded-lg text-xs font-medium transition-colors ${
+                          className={`p-2 sm:p-3 border rounded-lg text-xs font-medium transition-colors ${
                             formData.selected_weekday === dia.valor
                               ? 'bg-[#012060] text-white border-[#012060]'
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -975,15 +982,15 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 )}
 
-                {/* ✅ NOVO: Padrão Mensal Avançado */}
+                {/* Padrão Mensal Avançado Mobile */}
                 {formData.recurrence_type === 'monthly_weekday' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Configuração do Padrão Mensal *
                     </label>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                      {/* Seleção da Ocorrência */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                      {/* Seleção da Ocorrência Mobile */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-2">
                           Qual ocorrência?
@@ -1001,7 +1008,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                         </select>
                       </div>
                       
-                      {/* Seleção do Dia da Semana */}
+                      {/* Seleção do Dia da Semana Mobile */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-2">
                           Dia da Semana
@@ -1020,7 +1027,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                       </div>
                     </div>
                     
-                    {/* Preview do Padrão */}
+                    {/* Preview do Padrão Mobile */}
                     <div className="bg-blue-50 p-3 rounded-lg">
                       <p className="text-sm text-blue-800">
                         <strong>Preview:</strong>{' '}
@@ -1034,8 +1041,8 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 )}
 
-                {/* Datas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Datas Mobile */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Data de Início *
@@ -1044,7 +1051,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent text-sm"
                     />
                   </div>
                   
@@ -1057,7 +1064,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                       value={formData.end_date}
                       onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                       min={formData.start_date}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent text-sm"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Deixe em branco para rotina sem fim
@@ -1065,7 +1072,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 </div>
 
-                {/* Campo Persistent */}
+                {/* Campo Persistent Mobile */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo de Exibição
@@ -1115,7 +1122,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </div>
                 </div>
 
-                {/* Campo de Nota */}
+                {/* Campo de Nota Mobile */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nota (opcional)
@@ -1124,7 +1131,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     value={formData.note}
                     onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
                     placeholder="Adicione uma nota para esta atividade recorrente (ex: instruções específicas, lembretes, observações)..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#012060] focus:border-transparent resize-none text-sm"
                     rows={3}
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -1132,11 +1139,11 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                   </p>
                 </div>
 
-                {/* ✅ PREVIEW DA RECORRÊNCIA ATUALIZADO */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                {/* ✅ PREVIEW DA RECORRÊNCIA Mobile */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Preview da Recorrência</h4>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <p><strong>Lista:</strong> {listas[listaSelecionada]}</p>
+                    <p><strong>Lista:</strong> <span className="break-words">{listas[listaSelecionada]}</span></p>
                     
                     <p><strong>Tipo:</strong> {
                       [...tiposRecorrenciaBasicos, ...tiposRecorrenciaAvancados]
@@ -1190,28 +1197,28 @@ export default function GestaoAtividadesRecorrentes({ user }) {
                     }</p>
                     
                     <p><strong>Nota:</strong> {formData.note.trim() 
-                      ? formData.note.trim() 
+                      ? <span className="break-words">{formData.note.trim()}</span>
                       : 'Nenhuma nota adicionada'
                     }</p>
                   </div>
                 </div>
               </div>
 
-              {/* Botões de Ação */}
-              <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+              {/* ✅ Botões de Ação Mobile */}
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
                 <button
                   onClick={() => {
                     setShowForm(false);
                     resetForm();
                   }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={salvarRotina}
                   disabled={salvandoRotina || !formData.content.trim()}
-                  className="px-6 py-2 bg-[#012060] text-white rounded-lg hover:bg-[#013080] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-[#012060] text-white rounded-lg hover:bg-[#013080] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-colors text-sm"
                 >
                   {salvandoRotina ? (
                     <>
@@ -1231,7 +1238,7 @@ export default function GestaoAtividadesRecorrentes({ user }) {
         </div>
       )}
 
-      {/* Overlay para fechar menus quando clicar fora */}
+      {/* Overlay para fechar menus Mobile */}
       {(showMenu) && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-25 z-5"
